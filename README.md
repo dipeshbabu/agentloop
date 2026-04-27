@@ -89,14 +89,50 @@ agentloop server --host 127.0.0.1 --port 8000
 Endpoints:
 
 - `GET /health`
+- `POST /api-keys`
 - `POST /traces`
 - `GET /traces`
 - `GET /traces/{run_id}/report`
 - `GET /traces/{run_id}/optimize`
+- `GET /usage`
 
-This is the start of the hosted product path: SDK traces can be sent to an API, stored, and turned into optimization plans.
+This is the hosted product path: SDK traces can be sent to an API, stored, metered, and turned into optimization plans.
 
-### Optional API key protection
+## Hosted store and metering
+
+AgentLoop now supports a local SQLite store and a Postgres store for hosted deployments.
+
+SQLite is the default:
+
+```bash
+agentloop init-store
+agentloop demo-all
+agentloop store-trace runs/research_agent_baseline.json --project-id demo
+agentloop list-stored-traces --project-id demo
+agentloop usage-summary --project-id demo
+```
+
+Postgres mode:
+
+```bash
+pip install -e ".[server,postgres]"
+export AGENTLOOP_STORE_BACKEND=postgres
+export AGENTLOOP_DATABASE_URL=postgresql://agentloop:agentloop@localhost:5432/agentloop
+agentloop init-store
+agentloop create-api-key --project-id acme --name local-dev
+agentloop server --host 0.0.0.0 --port 8000
+```
+
+Then upload traces with the project API key:
+
+```bash
+agentloop upload runs/research_agent_baseline.json --api-url http://127.0.0.1:8000 --api-key al_xxx
+agentloop remote-usage --api-url http://127.0.0.1:8000 --api-key al_xxx
+```
+
+### Optional single-secret API key protection
+
+For simple local demos, you can still use one static key:
 
 ```bash
 export AGENTLOOP_REQUIRE_API_KEY=true
@@ -115,16 +151,17 @@ agentloop upload runs/research_agent_baseline.json --api-url http://127.0.0.1:80
 ```python
 from agentloop import AgentLoopClient
 
-client = AgentLoopClient(base_url="http://127.0.0.1:8000", api_key="dev-secret")
+client = AgentLoopClient(base_url="http://127.0.0.1:8000", api_key="al_xxx")
 response = client.upload_trace("runs/research_agent_baseline.json")
 plan = client.get_optimization_plan(response["run_id"])
+usage = client.usage_summary()
 ```
 
 Or use environment variables:
 
 ```bash
 export AGENTLOOP_API_URL=http://127.0.0.1:8000
-export AGENTLOOP_API_KEY=dev-secret
+export AGENTLOOP_API_KEY=al_xxx
 python examples/upload_trace_demo.py
 ```
 
@@ -166,6 +203,8 @@ This integration is dependency-free. AgentLoop does not import LangGraph directl
 
 ## Product path
 
-Profiler -> Execution graph -> Optimization cards -> Rewrite recommendations -> Hosted AgentLoop Cloud
+Profiler -> Execution graph -> Optimization cards -> Hosted AgentLoop Cloud
+
+The sellable wedge is cost and latency reduction for production agent loops. The first paid user should be a team already running multi-step agents where each run has measurable latency, tool-call, and token waste.
 
 See `docs/PRODUCT.md` for the go-to-market wedge.
