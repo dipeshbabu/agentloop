@@ -7,7 +7,7 @@ The product thesis is simple: agents do not execute like single prompt-response 
 ## Install
 
 ```bash
-pip install -e ".[dashboard,dev]"
+pip install -e ".[all,dev]"
 ```
 
 ## Quickstart
@@ -44,7 +44,30 @@ agentloop demo --kind optimized
 agentloop demo --kind langgraph
 ```
 
-`agentloop compare` and `agentloop audit` now auto-generate missing demo traces by default, so missing `runs/research_agent_baseline.json` should not block the local workflow.
+`agentloop compare` and `agentloop audit` auto-generate missing demo traces by default, so missing `runs/research_agent_baseline.json` should not block the local workflow.
+
+## Dashboard
+
+```bash
+streamlit run dashboard/app.py
+```
+
+The dashboard can now generate demo traces directly from the UI, so a fresh clone no longer opens to an empty unusable state.
+
+## Local API server
+
+```bash
+agentloop server --host 127.0.0.1 --port 8000
+```
+
+Endpoints:
+
+- `GET /health`
+- `POST /traces`
+- `GET /traces`
+- `GET /traces/{run_id}/report`
+
+This is the start of the hosted product path: SDK traces can be sent to an API, stored, and turned into reports.
 
 ## What AgentLoop detects
 
