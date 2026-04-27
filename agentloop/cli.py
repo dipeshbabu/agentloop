@@ -13,6 +13,7 @@ from agentloop.demo import run_baseline, run_langgraph_style, run_optimized
 from agentloop.exporters import export_report_markdown
 from agentloop.optimizer import build_optimization_plan
 from agentloop.plan_export import export_optimization_json, export_optimization_markdown
+from agentloop.store import get_store
 from agentloop.tracer import AgentTrace
 
 app = typer.Typer(help="AgentLoop profiler CLI")
@@ -125,6 +126,68 @@ def optimize(
     )
 
 
+@app.command("init-store")
+def init_store() -> None:
+    db = get_store()
+    db.init()
+    console.print("Initialized AgentLoop store")
+
+
+@app.command("create-api-key")
+def create_api_key(project_id: str = "default", name: str = "default") -> None:
+    db = get_store()
+    key = db.create_api_key(project_id=project_id, name=name)
+    console.print("Created API key. Save it now; it will not be shown again.")
+    console.print(key["api_key"])
+
+
+@app.command("store-trace")
+def store_trace(
+    path: Path = Path("runs/research_agent_baseline.json"),
+    project_id: str = "default",
+    autogen: bool = typer.Option(True),
+) -> None:
+    if autogen:
+        path = _ensure_trace(path)
+    trace = AgentTrace.from_json(path)
+    db = get_store()
+    db.save_trace(trace, project_id=project_id)
+    console.print(f"Stored trace {trace.run_id} under project {project_id}")
+
+
+@app.command("list-stored-traces")
+def list_stored_traces(project_id: str | None = None) -> None:
+    db = get_store()
+    traces = db.list_traces(project_id=project_id)
+    table = Table(title="Stored AgentLoop Traces")
+    table.add_column("Project")
+    table.add_column("Run ID")
+    table.add_column("Name")
+    table.add_column("Runtime ms")
+    table.add_column("Cost")
+    for item in traces:
+        table.add_row(
+            str(item.get("project_id", "")),
+            str(item.get("run_id", "")),
+            str(item.get("name", "")),
+            f"{float(item.get('total_runtime_ms', 0)):.2f}",
+            f"${float(item.get('estimated_cost_usd', 0)):.4f}",
+        )
+    console.print(table)
+
+
+@app.command("usage-summary")
+def usage_summary(project_id: str | None = None) -> None:
+    db = get_store()
+    summary = db.usage_summary(project_id=project_id)
+    table = Table(title="AgentLoop Usage Summary")
+    table.add_column("Metric")
+    table.add_column("Value")
+    for key, value in summary.items():
+        table.add_row(key, str(value))
+    console.print(table)
+
+
 @app.command()
 def upload(
     path: Path = Path("runs/research_agent_baseline.json"),
@@ -137,7 +200,7 @@ def upload(
     client = AgentLoopClient(base_url=api_url, api_key=api_key)
     response = client.upload_trace(path)
     console.print(f"Uploaded trace {response['run_id']} to {api_url}")
-    console.print(f"Server path: {response['path']}")
+    console.print(f"Project: {response.get('project_id', 'default')}")
 
 
 @app.command("remote-optimize")
@@ -151,6 +214,27 @@ def remote_optimize(
     plan = client.get_optimization_plan(run_id)
     export_optimization_json(plan, out)
     console.print(f"Wrote remote optimization plan to {out}")
+
+
+@app.command("remote-usage")
+def remote_usage(
+    api_url: str = typer.Option("http://127.0.0.1:8000", help="AgentLoop API base URL."),
+    api_key: str | None = typer.Option(None, help="Optional API key. Defaults to AGENTLOOP_API_KEY."),
+) -> None:
+    client = AgentLoopClient(base_url=api_url, api_key=api_key)
+    console.print_json(data=client.usage_summary())
+
+
+@app.command("remote-create-api-key")
+def remote_create_api_key(
+    project_id: str = "default",
+    name: str = "default",
+    api_url: str = typer.Option("http://127.0.0.1:8000", help="AgentLoop API base URL."),
+) -> None:
+    client = AgentLoopClient(base_url=api_url)
+    key = client.create_api_key(project_id=project_id, name=name)
+    console.print("Created hosted API key. Save it now; it will not be shown again.")
+    console.print(key["api_key"])
 
 
 @app.command()
