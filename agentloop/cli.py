@@ -119,3 +119,12 @@ def demo_all() -> None:
     console.print(f"Wrote {base}")
     console.print(f"Wrote {opt}")
     console.print(f"Wrote {lg}")
+
+
+@app.command()
+def server(host: str = "127.0.0.1", port: int = 8000, reload: bool = False) -> None:
+    try:
+        import uvicorn
+    except ImportError as exc:
+        raise typer.BadParameter("Install server dependencies with: pip install -e '.[server]'") from exc
+    uvicorn.run("agentloop.server:app", host=host, port=port, reload=reload)
