@@ -38,15 +38,17 @@ def resolve_project(
 ) -> str:
     if x_agentloop_key:
         key_record = db.verify_api_key(x_agentloop_key)
-        if key_record is None:
-            raise HTTPException(status_code=401, detail="invalid AgentLoop API key")
-        return str(key_record["project_id"])
+        if key_record is not None:
+            return str(key_record["project_id"])
+
+        expected = get_api_key()
+        if require_api_key() and expected and x_agentloop_key == expected:
+            return "default"
+
+        raise HTTPException(status_code=401, detail="invalid AgentLoop API key")
 
     if require_api_key():
-        expected = get_api_key()
-        if expected and x_agentloop_key == expected:
-            return "default"
-        raise HTTPException(status_code=401, detail="missing or invalid AgentLoop API key")
+        raise HTTPException(status_code=401, detail="missing AgentLoop API key")
 
     return "default"
 
