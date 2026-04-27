@@ -1,0 +1,197 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from enum import StrEnum
+from typing import Any
+
+from agentloop.graph import ExecutionGraph
+
+
+class RecommendationType(StrEnum):
+    PARALLELIZE_TOOLS = "parallelize_tools"
+    CACHE_CONTEXT = "cache_context"
+    BATCH_MODEL_CALLS = "batch_model_calls"
+    ROUTE_TO_SMALLER_MODEL = "route_to_smaller_model"
+    REMOVE_RETRY_LOOP = "remove_retry_loop"
+    ADD_SCHEMA_VALIDATION = "add_schema_validation"
+    SPLIT_LARGE_STEP = "split_large_step"
+
+
+@dataclass
+class OptimizationCard:
+    type: RecommendationType
+    title: str
+    why: str
+    rewrite_hint: str
+    confidence: str
+    estimated_latency_savings_ms: float = 0.0
+    estimated_cost_savings_usd: float = 0.0
+    affected_nodes: list[str] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "type": self.type.value,
+            "title": self.title,
+            "why": self.why,
+            "rewrite_hint": self.rewrite_hint,
+            "confidence": self.confidence,
+            "estimated_latency_savings_ms": round(self.estimated_latency_savings_ms, 3),
+            "estimated_cost_savings_usd": round(self.estimated_cost_savings_usd, 6),
+            "affected_nodes": self.affected_nodes or [],
+        }
+
+
+def build_optimization_plan(trace: Any, report: dict[str, Any] | None = None) -> dict[str, Any]:
+    report = report or trace.report()
+    graph = ExecutionGraph.from_trace(trace)
+    cards: list[OptimizationCard] = []
+    cards.extend(_parallelization_cards(graph))
+    cards.extend(_context_cache_cards(report, graph))
+    cards.extend(_retry_cards(graph))
+    cards.extend(_batch_model_cards(graph))
+    cards.extend(_routing_cards(graph))
+    cards.extend(_split_large_step_cards(graph))
+
+    total_latency_savings = sum(card.estimated_latency_savings_ms for card in cards)
+    total_cost_savings = sum(card.estimated_cost_savings_usd for card in cards)
+    current_runtime = report.get("total_runtime_ms", graph.total_runtime_ms())
+    current_cost = report.get("estimated_cost_usd", 0.0)
+
+    return {
+        "run_id": trace.run_id,
+        "name": trace.name,
+        "current": {
+            "runtime_ms": current_runtime,
+            "estimated_cost_usd": current_cost,
+            "input_tokens": report.get("input_tokens", 0),
+            "output_tokens": report.get("output_tokens", 0),
+            "retry_count": report.get("retry_count", 0),
+            "repeated_context_ratio": report.get("repeated_context_ratio", 0.0),
+        },
+        "estimated_after": {
+            "runtime_ms": round(max(0.0, current_runtime - total_latency_savings), 3),
+            "estimated_cost_usd": round(max(0.0, current_cost - total_cost_savings), 6),
+            "latency_reduction_pct": round((total_latency_savings / current_runtime) * 100, 2) if current_runtime else 0.0,
+            "cost_reduction_pct": round((total_cost_savings / current_cost) * 100, 2) if current_cost else 0.0,
+        },
+        "graph": graph.to_dict(),
+        "optimization_cards": [card.to_dict() for card in cards],
+    }
+
+
+def _parallelization_cards(graph: ExecutionGraph) -> list[OptimizationCard]:
+    cards = []
+    for group in graph.parallelizable_groups():
+        cards.append(
+            OptimizationCard(
+                type=RecommendationType.PARALLELIZE_TOOLS,
+                title=f"Parallelize repeated `{group['name']}` tool calls",
+                why=f"{group['count']} `{group['name']}` calls appear serial and independent.",
+                rewrite_hint="Use asyncio.gather or ThreadPoolExecutor around independent tool calls.",
+                confidence="medium",
+                estimated_latency_savings_ms=group["estimated_savings_ms"],
+                affected_nodes=group["node_ids"],
+            )
+        )
+    return cards
+
+
+def _context_cache_cards(report: dict[str, Any], graph: ExecutionGraph) -> list[OptimizationCard]:
+    ratio = report.get("repeated_context_ratio", 0.0)
+    if ratio < 0.10:
+        return []
+    model_nodes = [node.node_id for node in graph.nodes if node.event_type == "model_call"]
+    current_cost = report.get("estimated_cost_usd", 0.0)
+    return [
+        OptimizationCard(
+            type=RecommendationType.CACHE_CONTEXT,
+            title="Cache repeated prompt/context prefix",
+            why=f"Repeated context ratio is {ratio:.1%}, which suggests stable instructions or source text are being resent.",
+            rewrite_hint="Move stable instructions into cached prefixes, summaries, or framework-level memory instead of resending full text.",
+            confidence="high" if ratio >= 0.20 else "medium",
+            estimated_cost_savings_usd=current_cost * min(0.5, ratio),
+            affected_nodes=model_nodes,
+        )
+    ]
+
+
+def _retry_cards(graph: ExecutionGraph) -> list[OptimizationCard]:
+    retry_nodes = [node for node in graph.nodes if node.event_type == "retry"]
+    if not retry_nodes:
+        return []
+    retry_time = sum(node.duration_ms for node in retry_nodes)
+    return [
+        OptimizationCard(
+            type=RecommendationType.ADD_SCHEMA_VALIDATION,
+            title="Reduce retry loop with structured outputs",
+            why=f"Observed {len(retry_nodes)} retry span(s), costing {retry_time / 1000:.2f}s.",
+            rewrite_hint="Add schema validation, JSON mode, constrained decoding, or a cheap repair prompt before rerunning a full step.",
+            confidence="high",
+            estimated_latency_savings_ms=retry_time * 0.8,
+            affected_nodes=[node.node_id for node in retry_nodes],
+        )
+    ]
+
+
+def _batch_model_cards(graph: ExecutionGraph) -> list[OptimizationCard]:
+    groups: dict[str, list[Any]] = {}
+    for node in graph.nodes:
+        if node.event_type == "model_call":
+            groups.setdefault(node.name, []).append(node)
+    cards = []
+    for name, nodes in groups.items():
+        if len(nodes) < 3:
+            continue
+        duration = sum(node.duration_ms for node in nodes)
+        cards.append(
+            OptimizationCard(
+                type=RecommendationType.BATCH_MODEL_CALLS,
+                title=f"Batch repeated `{name}` model calls",
+                why=f"{len(nodes)} `{name}` calls have the same role and may be batchable.",
+                rewrite_hint="Batch documents/items into one prompt or use map-reduce only when outputs truly need independent reasoning.",
+                confidence="medium",
+                estimated_latency_savings_ms=duration * 0.35,
+                affected_nodes=[node.node_id for node in nodes],
+            )
+        )
+    return cards
+
+
+def _routing_cards(graph: ExecutionGraph) -> list[OptimizationCard]:
+    cards = []
+    for node in graph.nodes:
+        if node.event_type != "model_call" or not node.model:
+            continue
+        if "mini" in node.model.lower():
+            continue
+        if node.output_tokens <= 400 and node.input_tokens <= 2500:
+            cards.append(
+                OptimizationCard(
+                    type=RecommendationType.ROUTE_TO_SMALLER_MODEL,
+                    title=f"Route `{node.name}` to a cheaper model",
+                    why=f"`{node.name}` is a relatively small model step using {node.total_tokens} tokens on {node.model}.",
+                    rewrite_hint="Try a smaller model for planning, summarization, extraction, or verification steps and keep the larger model for final synthesis.",
+                    confidence="low",
+                    estimated_latency_savings_ms=node.duration_ms * 0.25,
+                    affected_nodes=[node.node_id],
+                )
+            )
+    return cards[:3]
+
+
+def _split_large_step_cards(graph: ExecutionGraph) -> list[OptimizationCard]:
+    cards = []
+    for node in graph.nodes:
+        if node.event_type == "model_call" and node.total_tokens >= 4000:
+            cards.append(
+                OptimizationCard(
+                    type=RecommendationType.SPLIT_LARGE_STEP,
+                    title=f"Split or compress `{node.name}`",
+                    why=f"`{node.name}` used {node.total_tokens} tokens, making it a large and fragile step.",
+                    rewrite_hint="Split into retrieve-filter-summarize or compress the context before the final reasoning call.",
+                    confidence="medium",
+                    estimated_latency_savings_ms=node.duration_ms * 0.20,
+                    affected_nodes=[node.node_id],
+                )
+            )
+    return cards
