@@ -27,6 +27,32 @@ trace.print_report()
 trace.export_json("runs/research_agent.json")
 ```
 
+## Framework integrations
+
+AgentLoop now includes dependency-free wrappers for the agent frameworks and SDKs teams are already using:
+
+- OpenAI SDK: `instrument_openai_client(...)` records model latency and usage from `responses.create` and `chat.completions.create`.
+- LangGraph: `instrument_state_graph(...)` and `trace_runnable(...)` trace graph nodes and compiled runnables.
+- CrewAI: `instrument_crew(...)`, `instrument_agent(...)`, and `instrument_task(...)` trace crew, agent, and task execution methods.
+- Vercel AI SDK / JS agents: export telemetry dictionaries and convert them with `trace_from_vercel_ai_events(...)`.
+
+See `docs/INTEGRATIONS.md` for copy-paste examples.
+
+OpenAI example:
+
+```python
+from openai import OpenAI
+from agentloop import trace_agent
+from agentloop.integrations.openai import instrument_openai_client
+
+client = instrument_openai_client(OpenAI())
+
+with trace_agent("research_agent") as trace:
+    client.responses.create(model="gpt-4.1-mini", input="Research three competitors.")
+
+trace.export_json("runs/openai_agent.json")
+```
+
 ## Run the sellable demo
 
 ```bash
