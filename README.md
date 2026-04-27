@@ -1,8 +1,10 @@
 # AgentLoop
 
-AgentLoop is a profiler and optimization layer for multi-step AI agent workflows. It traces model calls, tool calls, retries, token usage, repeated context, and latency bottlenecks, then produces concrete recommendations.
+AgentLoop is a profiler and optimization layer for AI agent execution graphs. It traces model calls, tool calls, retries, token usage, repeated context, and latency bottlenecks, then turns the trace into concrete workflow rewrite recommendations.
 
-The product thesis is simple: agents do not execute like single prompt-response apps. They loop, call tools, retry, branch, summarize, and carry context. AgentLoop measures that loop.
+AgentLoop is not memory for agents. It is performance engineering for agent loops.
+
+The product thesis is simple: agents do not execute like single prompt-response apps. They loop, call tools, retry, branch, summarize, and carry context. AgentLoop measures that loop and recommends how to restructure it.
 
 ## Install
 
@@ -33,6 +35,7 @@ The CLI demos are package-internal, so they work even when the `examples/` direc
 agentloop demo-all
 agentloop compare
 agentloop audit --out runs/audit.md
+agentloop optimize --out runs/optimization_plan.md --json-out runs/optimization_plan.json
 streamlit run dashboard/app.py
 ```
 
@@ -44,7 +47,24 @@ agentloop demo --kind optimized
 agentloop demo --kind langgraph
 ```
 
-`agentloop compare` and `agentloop audit` auto-generate missing demo traces by default, so missing `runs/research_agent_baseline.json` should not block the local workflow.
+`agentloop compare`, `agentloop audit`, and `agentloop optimize` auto-generate missing demo traces by default, so missing `runs/research_agent_baseline.json` should not block the local workflow.
+
+## Optimization plans
+
+```bash
+agentloop optimize runs/research_agent_baseline.json --out runs/optimization_plan.md --json-out runs/optimization_plan.json
+```
+
+AgentLoop reconstructs an execution graph, identifies bottlenecks, and emits optimization cards such as:
+
+- parallelize independent tool calls
+- cache repeated prompt/context prefixes
+- batch repeated model calls
+- route small steps to cheaper models
+- reduce retry loops with structured outputs
+- split or compress oversized reasoning steps
+
+Each card includes a reason, affected nodes, confidence, rewrite hint, and estimated latency or cost savings.
 
 ## Dashboard
 
@@ -52,7 +72,12 @@ agentloop demo --kind langgraph
 streamlit run dashboard/app.py
 ```
 
-The dashboard can now generate demo traces directly from the UI, so a fresh clone no longer opens to an empty unusable state.
+The dashboard can generate demo traces directly from the UI and includes tabs for:
+
+- run summary
+- timeline
+- execution graph
+- optimization plan
 
 ## Local API server
 
@@ -69,14 +94,6 @@ Endpoints:
 
 This is the start of the hosted product path: SDK traces can be sent to an API, stored, and turned into reports.
 
-## What AgentLoop detects
-
-- repeated context that should be cached or summarized
-- sequential tool calls that should be parallelized
-- retry waste caused by bad schemas or brittle parsing
-- expensive model steps that should be split, compressed, or routed to smaller models
-- latency split across model time, tool time, and retry time
-
 ## LangGraph-style usage
 
 ```python
@@ -91,6 +108,6 @@ The integration is dependency-free: it wraps normal node functions and records t
 
 ## Product path
 
-Profiler -> Audit reports -> Recommendations -> Optimizer -> Hosted AgentLoop Cloud
+Profiler -> Execution graph -> Optimization cards -> Rewrite recommendations -> Hosted AgentLoop Cloud
 
 See `docs/PRODUCT.md` for the go-to-market wedge.
