@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import urllib.error
+import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
@@ -34,6 +35,9 @@ class AgentLoopClient:
     def health(self) -> dict[str, Any]:
         return self._request("GET", "/health")
 
+    def create_api_key(self, project_id: str = "default", name: str = "default") -> dict[str, Any]:
+        return self._request("POST", "/api-keys", {"project_id": project_id, "name": name})
+
     def upload_trace(self, trace: AgentTrace | str | Path | dict[str, Any]) -> dict[str, Any]:
         if isinstance(trace, AgentTrace):
             payload = trace.to_dict()
@@ -43,8 +47,17 @@ class AgentLoopClient:
             payload = json.loads(Path(trace).read_text(encoding="utf-8"))
         return self._request("POST", "/traces", payload)
 
-    def list_traces(self) -> dict[str, Any]:
-        return self._request("GET", "/traces")
+    def list_traces(self, project_id: str | None = None) -> dict[str, Any]:
+        route = "/traces"
+        if project_id:
+            route += "?" + urllib.parse.urlencode({"project_id": project_id})
+        return self._request("GET", route)
+
+    def usage_summary(self, project_id: str | None = None) -> dict[str, Any]:
+        route = "/usage"
+        if project_id:
+            route += "?" + urllib.parse.urlencode({"project_id": project_id})
+        return self._request("GET", route)
 
     def get_report(self, run_id: str) -> dict[str, Any]:
         return self._request("GET", f"/traces/{run_id}/report")
