@@ -45,6 +45,7 @@ You can still run individual demos:
 agentloop demo --kind baseline
 agentloop demo --kind optimized
 agentloop demo --kind langgraph
+python examples/langgraph_auto_instrumentation_demo.py
 ```
 
 `agentloop compare`, `agentloop audit`, and `agentloop optimize` auto-generate missing demo traces by default, so missing `runs/research_agent_baseline.json` should not block the local workflow.
@@ -94,17 +95,41 @@ Endpoints:
 
 This is the start of the hosted product path: SDK traces can be sent to an API, stored, and turned into reports.
 
-## LangGraph-style usage
+## LangGraph usage
+
+### Decorate individual nodes
 
 ```python
+from agentloop import trace_agent
 from agentloop.integrations.langgraph import trace_node
 
 @trace_node("retrieve_sources")
 def retrieve_sources(state):
     return state
+
+with trace_agent("research_graph") as trace:
+    retrieve_sources({})
+
+trace.export_json("runs/research_graph.json")
 ```
 
-The integration is dependency-free: it wraps normal node functions and records them inside an active `trace_agent(...)` context.
+### Auto-instrument a StateGraph builder
+
+```python
+from agentloop.integrations.langgraph import instrument_state_graph, trace_runnable
+
+builder = StateGraph(State)
+instrument_state_graph(builder)
+
+builder.add_node("retrieve", retrieve)
+builder.add_node("synthesize", synthesize)
+
+app = trace_runnable(builder.compile(), name="research_graph")
+app.invoke({"question": "What is agent profiling?"})
+app.export_last_trace("runs/research_graph.json")
+```
+
+This integration is dependency-free. AgentLoop does not import LangGraph directly; it wraps StateGraph-like builders and compiled runnable-style objects.
 
 ## Product path
 
