@@ -8,6 +8,7 @@ from rich.console import Console
 from rich.table import Table
 
 from agentloop.audit import estimate_improvement
+from agentloop.client import AgentLoopClient
 from agentloop.demo import run_baseline, run_langgraph_style, run_optimized
 from agentloop.exporters import export_report_markdown
 from agentloop.optimizer import build_optimization_plan
@@ -122,6 +123,34 @@ def optimize(
         f"Estimated improvement: {after['latency_reduction_pct']:.1f}% latency, "
         f"{after['cost_reduction_pct']:.1f}% cost"
     )
+
+
+@app.command()
+def upload(
+    path: Path = Path("runs/research_agent_baseline.json"),
+    api_url: str = typer.Option("http://127.0.0.1:8000", help="AgentLoop API base URL."),
+    api_key: str | None = typer.Option(None, help="Optional API key. Defaults to AGENTLOOP_API_KEY."),
+    autogen: bool = typer.Option(True, help="Generate a demo trace if the file is missing."),
+) -> None:
+    if autogen:
+        path = _ensure_trace(path)
+    client = AgentLoopClient(base_url=api_url, api_key=api_key)
+    response = client.upload_trace(path)
+    console.print(f"Uploaded trace {response['run_id']} to {api_url}")
+    console.print(f"Server path: {response['path']}")
+
+
+@app.command("remote-optimize")
+def remote_optimize(
+    run_id: str,
+    api_url: str = typer.Option("http://127.0.0.1:8000", help="AgentLoop API base URL."),
+    api_key: str | None = typer.Option(None, help="Optional API key. Defaults to AGENTLOOP_API_KEY."),
+    out: Path = Path("runs/remote_optimization_plan.json"),
+) -> None:
+    client = AgentLoopClient(base_url=api_url, api_key=api_key)
+    plan = client.get_optimization_plan(run_id)
+    export_optimization_json(plan, out)
+    console.print(f"Wrote remote optimization plan to {out}")
 
 
 @app.command()
