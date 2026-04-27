@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import importlib
 import json
 from pathlib import Path
 
@@ -9,6 +8,7 @@ from rich.console import Console
 from rich.table import Table
 
 from agentloop.audit import estimate_improvement
+from agentloop.demo import run_baseline, run_langgraph_style, run_optimized
 from agentloop.exporters import export_report_markdown
 from agentloop.tracer import AgentTrace
 
@@ -16,14 +16,33 @@ app = typer.Typer(help="AgentLoop profiler CLI")
 console = Console()
 
 
+def _ensure_trace(path: Path, kind: str = "baseline") -> Path:
+    if path.exists():
+        return path
+    console.print(f"[yellow]Trace file not found:[/yellow] {path}")
+    console.print("Generating demo trace first...")
+    if kind == "optimized" or "optimized" in path.name:
+        return run_optimized(path.parent)
+    return run_baseline(path.parent)
+
+
 @app.command()
-def report(path: Path) -> None:
+def report(path: Path, autogen: bool = typer.Option(True, help="Generate a demo trace if the file is missing.")) -> None:
+    if autogen:
+        path = _ensure_trace(path)
     trace = AgentTrace.from_json(path)
     trace.print_report()
 
 
 @app.command()
-def compare(baseline: Path, optimized: Path) -> None:
+def compare(
+    baseline: Path = Path("runs/research_agent_baseline.json"),
+    optimized: Path = Path("runs/research_agent_optimized.json"),
+    autogen: bool = typer.Option(True, help="Generate missing demo traces first."),
+) -> None:
+    if autogen:
+        baseline = _ensure_trace(baseline, "baseline")
+        optimized = _ensure_trace(optimized, "optimized")
     base = AgentTrace.from_json(baseline).report()
     opt = AgentTrace.from_json(optimized).report()
     table = Table(title="AgentLoop Comparison")
@@ -49,7 +68,9 @@ def compare(baseline: Path, optimized: Path) -> None:
 
 
 @app.command("dump-report")
-def dump_report(path: Path, out: Path) -> None:
+def dump_report(path: Path, out: Path, autogen: bool = typer.Option(True)) -> None:
+    if autogen:
+        path = _ensure_trace(path)
     trace = AgentTrace.from_json(path)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(trace.report(), indent=2), encoding="utf-8")
@@ -57,7 +78,13 @@ def dump_report(path: Path, out: Path) -> None:
 
 
 @app.command()
-def audit(path: Path, out: Path = Path("runs/agentloop_audit.md")) -> None:
+def audit(
+    path: Path = Path("runs/research_agent_baseline.json"),
+    out: Path = Path("runs/agentloop_audit.md"),
+    autogen: bool = typer.Option(True),
+) -> None:
+    if autogen:
+        path = _ensure_trace(path)
     trace = AgentTrace.from_json(path)
     report_data = trace.report()
     improvement = estimate_improvement(report_data)
@@ -72,9 +99,23 @@ def audit(path: Path, out: Path = Path("runs/agentloop_audit.md")) -> None:
 
 
 @app.command()
-def demo(kind: str = typer.Option("baseline", help="baseline or optimized")) -> None:
-    if kind not in {"baseline", "optimized"}:
-        raise typer.BadParameter("kind must be 'baseline' or 'optimized'")
-    module_name = "examples.research_agent_demo" if kind == "baseline" else "examples.optimized_research_agent_demo"
-    module = importlib.import_module(module_name)
-    module.main()
+def demo(kind: str = typer.Option("baseline", help="baseline, optimized, or langgraph")) -> None:
+    if kind == "baseline":
+        path = run_baseline()
+    elif kind == "optimized":
+        path = run_optimized()
+    elif kind == "langgraph":
+        path = run_langgraph_style()
+    else:
+        raise typer.BadParameter("kind must be 'baseline', 'optimized', or 'langgraph'")
+    console.print(f"Wrote trace to {path}")
+
+
+@app.command("demo-all")
+def demo_all() -> None:
+    base = run_baseline()
+    opt = run_optimized()
+    lg = run_langgraph_style()
+    console.print(f"Wrote {base}")
+    console.print(f"Wrote {opt}")
+    console.print(f"Wrote {lg}")
