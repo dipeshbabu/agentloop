@@ -1,4 +1,5 @@
 from agentloop.client import AgentLoopClient, AgentLoopClientError
+from agentloop.runtime import get_last_error, get_runtime_config, init, reset_runtime
 from agentloop.tracer import (
     AgentTrace,
     current_trace,
@@ -15,8 +16,12 @@ __all__ = [
     "AgentLoopClientError",
     "AgentTrace",
     "current_trace",
+    "get_last_error",
+    "get_runtime_config",
+    "init",
     "record_model_call",
     "record_tool_call",
+    "reset_runtime",
     "trace_agent",
     "trace_model_call",
     "trace_tool_call",
