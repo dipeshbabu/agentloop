@@ -5,7 +5,8 @@ import time
 from functools import wraps
 from typing import Any
 
-from agentloop.tracer import record_tool_call, trace_agent, utc_now_iso
+from agentloop.events import utc_now_iso
+from agentloop.tracer import record_tool_call, trace_agent
 
 
 def _patch_method(obj: Any, method_name: str, span_name: str, metadata: dict[str, Any]) -> bool:
