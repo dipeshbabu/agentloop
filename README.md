@@ -29,15 +29,25 @@ trace.export_json("runs/research_agent.json")
 
 ## Run the sellable demo
 
-The CLI demos are package-internal, so they work even when the `examples/` directory is not importable as a Python package.
-
 ```bash
 agentloop demo-all
 agentloop compare
 agentloop audit --out runs/audit.md
 agentloop optimize --out runs/optimization_plan.md --json-out runs/optimization_plan.json
+agentloop init-store
+agentloop store-trace runs/research_agent_baseline.json --project-id demo
 streamlit run dashboard/app.py
 ```
+
+The dashboard now works as a local-first SaaS control panel backed by the same persistent store used by the API server. It includes:
+
+- project overview and usage metering
+- stored traces
+- trace event timelines
+- graph-aware optimization plans
+- API key creation
+- trace ingest and upload flow
+- local, hosted API, and Postgres setup commands
 
 You can still run individual demos:
 
@@ -73,12 +83,16 @@ Each card includes a reason, affected nodes, confidence, rewrite hint, and estim
 streamlit run dashboard/app.py
 ```
 
-The dashboard can generate demo traces directly from the UI and includes tabs for:
+Dashboard pages:
 
-- run summary
-- timeline
-- execution graph
-- optimization plan
+- `Overview`: usage, run count, runtime, cost, token volume, model/tool calls, retry count, recent runs, runtime chart
+- `Traces`: stored trace table, event timeline, trace JSON download
+- `Optimization`: optimization cards, bottlenecks, parallelizable groups, plan JSON download
+- `API Keys`: project-scoped API key creation
+- `Ingest`: generate demo traces, upload trace JSON, store traces under a project
+- `Setup`: local, hosted API, and Postgres deployment commands
+
+See `docs/SAAS_DASHBOARD.md` for the operating guide.
 
 ## Local API server
 
