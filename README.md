@@ -92,8 +92,41 @@ Endpoints:
 - `POST /traces`
 - `GET /traces`
 - `GET /traces/{run_id}/report`
+- `GET /traces/{run_id}/optimize`
 
-This is the start of the hosted product path: SDK traces can be sent to an API, stored, and turned into reports.
+This is the start of the hosted product path: SDK traces can be sent to an API, stored, and turned into optimization plans.
+
+### Optional API key protection
+
+```bash
+export AGENTLOOP_REQUIRE_API_KEY=true
+export AGENTLOOP_API_KEY=dev-secret
+agentloop server --host 127.0.0.1 --port 8000
+```
+
+Then upload with:
+
+```bash
+agentloop upload runs/research_agent_baseline.json --api-url http://127.0.0.1:8000 --api-key dev-secret
+```
+
+### Upload traces from Python
+
+```python
+from agentloop import AgentLoopClient
+
+client = AgentLoopClient(base_url="http://127.0.0.1:8000", api_key="dev-secret")
+response = client.upload_trace("runs/research_agent_baseline.json")
+plan = client.get_optimization_plan(response["run_id"])
+```
+
+Or use environment variables:
+
+```bash
+export AGENTLOOP_API_URL=http://127.0.0.1:8000
+export AGENTLOOP_API_KEY=dev-secret
+python examples/upload_trace_demo.py
+```
 
 ## LangGraph usage
 
