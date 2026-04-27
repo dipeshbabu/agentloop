@@ -5,7 +5,8 @@ import time
 from functools import wraps
 from typing import Any
 
-from agentloop.tracer import record_model_call, utc_now_iso
+from agentloop.events import utc_now_iso
+from agentloop.tracer import record_model_call
 
 
 def _usage_get(usage: Any, *names: str) -> int:
