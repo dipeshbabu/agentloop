@@ -27,6 +27,7 @@ class AgentTrace:
         self.events: list[AgentEvent] = []
         self.started_at = utc_now_iso()
         self._start_perf = time.perf_counter()
+        self.finalize_result: dict[str, Any] | None = None
 
     def add_event(self, event: AgentEvent) -> None:
         self.events.append(event)
@@ -91,6 +92,10 @@ def trace_agent(name: str, metadata: dict[str, Any] | None = None) -> Iterator[A
         yield trace
     finally:
         _current_trace.reset(token)
+        from agentloop.runtime import finalize_trace, should_auto_export
+
+        if should_auto_export():
+            trace.finalize_result = finalize_trace(trace)
 
 
 def record_model_call(
