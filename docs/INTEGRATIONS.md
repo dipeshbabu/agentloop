@@ -2,7 +2,45 @@
 
 AgentLoop's product wedge is low-friction instrumentation. A team should be able to wrap an existing production agent and immediately see latency, token, retry, and tool-call waste.
 
-This guide covers the dependency-free integration helpers currently shipped in `agentloop.integrations`.
+This guide covers the dependency-free integration helpers currently shipped in `agentloop.integrations` and the generic decorator SDK for custom agents.
+
+## Generic Python decorator SDK
+
+Use this path when the team has a custom agent loop rather than LangGraph, CrewAI, or another framework.
+
+```python
+import agentloop
+
+agentloop.init(
+    project_id="agentloop-demo",
+    export_dir="runs",
+    auto_upload=False,
+)
+
+@agentloop.trace_model(name="planner_llm", model="gpt-4.1-mini")
+def plan(question: str) -> str:
+    return client.responses.create(model="gpt-4.1-mini", input=question).output_text
+
+@agentloop.trace_tool(name="web_search")
+def web_search(query: str) -> list[str]:
+    return search(query)
+
+@agentloop.traceable(root=True, agent_name="research_agent")
+def run_agent(question: str) -> str:
+    plan_text = plan(question)
+    docs = web_search(question)
+    return synthesize(plan_text, docs)
+
+run_agent("Compare agent observability tools")
+```
+
+Available decorators:
+
+- `@agentloop.traceable(root=True, agent_name="...")` starts a full trace for a custom agent entrypoint.
+- `@agentloop.trace_tool(name="...")` records a tool/function span.
+- `@agentloop.trace_model(name="...", model="...")` records a model-call-like span.
+
+This is the easiest onboarding story for early customers: add three decorators, run the agent once, and get a trace.
 
 ## OpenAI SDK
 
