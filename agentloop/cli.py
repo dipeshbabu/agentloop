@@ -10,6 +10,8 @@ from rich.table import Table
 from agentloop.audit import estimate_improvement
 from agentloop.demo import run_baseline, run_langgraph_style, run_optimized
 from agentloop.exporters import export_report_markdown
+from agentloop.optimizer import build_optimization_plan
+from agentloop.plan_export import export_optimization_json, export_optimization_markdown
 from agentloop.tracer import AgentTrace
 
 app = typer.Typer(help="AgentLoop profiler CLI")
@@ -95,6 +97,30 @@ def audit(
     console.print(
         f"Estimated savings: {improvement['estimated_latency_savings_ms'] / 1000:.2f}s latency, "
         f"${improvement['estimated_cost_savings_usd']:.4f} cost per run"
+    )
+
+
+@app.command()
+def optimize(
+    path: Path = Path("runs/research_agent_baseline.json"),
+    out: Path = Path("runs/optimization_plan.md"),
+    json_out: Path | None = typer.Option(None, help="Optional JSON output path."),
+    autogen: bool = typer.Option(True, help="Generate a demo trace if the file is missing."),
+) -> None:
+    if autogen:
+        path = _ensure_trace(path)
+    trace = AgentTrace.from_json(path)
+    plan = build_optimization_plan(trace)
+    export_optimization_markdown(plan, out)
+    if json_out is not None:
+        export_optimization_json(plan, json_out)
+    console.print(f"Wrote optimization plan to {out}")
+    if json_out is not None:
+        console.print(f"Wrote optimization JSON to {json_out}")
+    after = plan["estimated_after"]
+    console.print(
+        f"Estimated improvement: {after['latency_reduction_pct']:.1f}% latency, "
+        f"{after['cost_reduction_pct']:.1f}% cost"
     )
 
 
