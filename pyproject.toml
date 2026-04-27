@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentloop"
+version = "0.1.0"
+description = "Profiler and optimizer recommendations for AI agent workflows"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [{ name = "AgentLoop" }]
+dependencies = [
+  "typer>=0.12.0",
+  "rich>=13.0.0",
+]
+
+[project.optional-dependencies]
+dashboard = ["streamlit>=1.34.0", "pandas>=2.0.0"]
+dev = ["pytest>=8.0.0", "ruff>=0.5.0"]
+
+[project.scripts]
+agentloop = "agentloop.cli:app"
+
+[tool.setuptools.packages.find]
+include = ["agentloop*"]
+
+[tool.ruff]
+line-length = 100
