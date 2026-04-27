@@ -27,13 +27,24 @@ trace.export_json("runs/research_agent.json")
 
 ## Run the sellable demo
 
+The CLI demos are package-internal, so they work even when the `examples/` directory is not importable as a Python package.
+
+```bash
+agentloop demo-all
+agentloop compare
+agentloop audit --out runs/audit.md
+streamlit run dashboard/app.py
+```
+
+You can still run individual demos:
+
 ```bash
 agentloop demo --kind baseline
 agentloop demo --kind optimized
-agentloop compare runs/research_agent_baseline.json runs/research_agent_optimized.json
-agentloop audit runs/research_agent_baseline.json --out runs/audit.md
-streamlit run dashboard/app.py
+agentloop demo --kind langgraph
 ```
+
+`agentloop compare` and `agentloop audit` now auto-generate missing demo traces by default, so missing `runs/research_agent_baseline.json` should not block the local workflow.
 
 ## What AgentLoop detects
 
