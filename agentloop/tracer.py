@@ -77,6 +77,12 @@ class AgentTrace:
             print(f"- {rec['title']}: {rec['description']}")
 
 
+def current_trace() -> AgentTrace | None:
+    """Return the active AgentLoop trace, if one is running in this context."""
+
+    return _current_trace.get()
+
+
 @contextmanager
 def trace_agent(name: str, metadata: dict[str, Any] | None = None) -> Iterator[AgentTrace]:
     trace = AgentTrace(name=name, metadata=metadata)
@@ -85,6 +91,78 @@ def trace_agent(name: str, metadata: dict[str, Any] | None = None) -> Iterator[A
         yield trace
     finally:
         _current_trace.reset(token)
+
+
+def record_model_call(
+    name: str,
+    *,
+    duration_ms: float,
+    started_at: str,
+    ended_at: str | None = None,
+    model: str | None = None,
+    input_tokens: int = 0,
+    output_tokens: int = 0,
+    input_text: str | None = None,
+    output_text: str | None = None,
+    status: str = "ok",
+    error: str | None = None,
+    metadata: dict[str, Any] | None = None,
+) -> None:
+    """Record a completed model call into the active trace.
+
+    Integrations use this when token counts are only known after a framework call
+    returns. User code should usually prefer `trace_model_call(...)`.
+    """
+
+    trace = _require_trace()
+    trace.add_event(
+        AgentEvent(
+            event_id=new_event_id(),
+            run_id=trace.run_id,
+            event_type="model_call",
+            name=name,
+            started_at=started_at,
+            ended_at=ended_at or utc_now_iso(),
+            duration_ms=duration_ms,
+            model=model,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            input_text=input_text,
+            output_text=output_text,
+            status=status,
+            error=error,
+            metadata=metadata or {},
+        )
+    )
+
+
+def record_tool_call(
+    name: str,
+    *,
+    duration_ms: float,
+    started_at: str,
+    ended_at: str | None = None,
+    status: str = "ok",
+    error: str | None = None,
+    metadata: dict[str, Any] | None = None,
+) -> None:
+    """Record a completed tool/framework step into the active trace."""
+
+    trace = _require_trace()
+    trace.add_event(
+        AgentEvent(
+            event_id=new_event_id(),
+            run_id=trace.run_id,
+            event_type="tool_call",
+            name=name,
+            started_at=started_at,
+            ended_at=ended_at or utc_now_iso(),
+            duration_ms=duration_ms,
+            status=status,
+            error=error,
+            metadata=metadata or {},
+        )
+    )
 
 
 @contextmanager
@@ -97,7 +175,7 @@ def trace_model_call(
     output_text: str | None = None,
     metadata: dict[str, Any] | None = None,
 ) -> Iterator[None]:
-    trace = _require_trace()
+    _require_trace()
     started_at = utc_now_iso()
     start = time.perf_counter()
     status = "ok"
@@ -109,13 +187,9 @@ def trace_model_call(
         error = str(exc)
         raise
     finally:
-        event = AgentEvent(
-            event_id=new_event_id(),
-            run_id=trace.run_id,
-            event_type="model_call",
-            name=name,
+        record_model_call(
+            name,
             started_at=started_at,
-            ended_at=utc_now_iso(),
             duration_ms=(time.perf_counter() - start) * 1000,
             model=model,
             input_tokens=input_tokens if input_tokens is not None else _count_tokens(input_text),
@@ -126,12 +200,11 @@ def trace_model_call(
             error=error,
             metadata=metadata or {},
         )
-        trace.add_event(event)
 
 
 @contextmanager
 def trace_tool_call(name: str, metadata: dict[str, Any] | None = None) -> Iterator[None]:
-    trace = _require_trace()
+    _require_trace()
     started_at = utc_now_iso()
     start = time.perf_counter()
     status = "ok"
@@ -143,19 +216,13 @@ def trace_tool_call(name: str, metadata: dict[str, Any] | None = None) -> Iterat
         error = str(exc)
         raise
     finally:
-        trace.add_event(
-            AgentEvent(
-                event_id=new_event_id(),
-                run_id=trace.run_id,
-                event_type="tool_call",
-                name=name,
-                started_at=started_at,
-                ended_at=utc_now_iso(),
-                duration_ms=(time.perf_counter() - start) * 1000,
-                status=status,
-                error=error,
-                metadata=metadata or {},
-            )
+        record_tool_call(
+            name,
+            started_at=started_at,
+            duration_ms=(time.perf_counter() - start) * 1000,
+            status=status,
+            error=error,
+            metadata=metadata or {},
         )
 
 
