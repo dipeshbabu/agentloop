@@ -72,6 +72,7 @@ The dashboard now works as a local-first SaaS control panel backed by the same p
 - stored traces
 - trace event timelines
 - graph-aware optimization plans
+- buyer-facing value and pricing reports
 - API key creation
 - trace ingest and upload flow
 - local, hosted API, and Postgres setup commands
@@ -108,6 +109,8 @@ A value report converts trace data into buyer-facing ROI metrics:
 
 The pricing recommendation is intentionally conservative. It maps measured monthly value into one of `free`, `pro`, `team`, `growth`, or `enterprise`, then shows the suggested monthly price and modeled value-to-price ratio. This is useful for sales calls because the buyer can see why a trace justifies a paid plan instead of only seeing raw latency metrics.
 
+The Streamlit dashboard includes a dedicated `Value & Pricing` page. Select a stored trace, adjust pilot assumptions such as monthly run volume and engineering rate, then download the value report JSON for sales follow-up. The Optimization page also has an expandable value estimate so the same trace can move from technical bottleneck to buyer ROI without leaving the dashboard.
+
 Hosted value reports are available through both API and CLI:
 
 ```bash
@@ -142,7 +145,8 @@ Dashboard pages:
 
 - `Overview`: usage, run count, runtime, cost, token volume, model/tool calls, retry count, recent runs, runtime chart
 - `Traces`: stored trace table, event timeline, trace JSON download
-- `Optimization`: optimization cards, bottlenecks, parallelizable groups, plan JSON download
+- `Optimization`: optimization cards, bottlenecks, parallelizable groups, value estimate, plan JSON download
+- `Value & Pricing`: buyer-facing ROI, reliability risk, pricing recommendation, value report JSON download
 - `API Keys`: project-scoped API key creation
 - `Ingest`: generate demo traces, upload trace JSON, store traces under a project
 - `Setup`: local, hosted API, and Postgres deployment commands
