@@ -103,7 +103,10 @@ A value report converts trace data into buyer-facing ROI metrics:
 - latency saved per run and per month
 - engineering hours saved from removing repeated bottlenecks
 - reliability risk score based on retries, context duplication, and optimization opportunities
+- suggested pricing plan and value-to-price ratio for pilots
 - a short sales summary for pilots and investor demos
+
+The pricing recommendation is intentionally conservative. It maps measured monthly value into one of `free`, `pro`, `team`, `growth`, or `enterprise`, then shows the suggested monthly price and modeled value-to-price ratio. This is useful for sales calls because the buyer can see why a trace justifies a paid plan instead of only seeing raw latency metrics.
 
 Hosted value reports are available through both API and CLI:
 
