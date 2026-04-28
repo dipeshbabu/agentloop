@@ -16,6 +16,24 @@ def test_value_report_has_buyer_metrics(tmp_path):
     assert "sales_summary" in report
 
 
+def test_value_report_includes_pricing_recommendation(tmp_path):
+    path = run_baseline(tmp_path)
+    trace = AgentTrace.from_json(path)
+
+    report = build_value_report(
+        trace,
+        runs_per_month=5000,
+        engineer_hourly_rate_usd=150,
+        incident_cost_usd=1000,
+    )
+
+    pricing = report["pricing"]
+    assert pricing["suggested_plan"] in {"free", "pro", "team", "growth", "enterprise"}
+    assert pricing["suggested_monthly_price_usd"] >= 0
+    assert pricing["estimated_customer_value_usd"] == report["monthly_value"]["total_value_usd"]
+    assert isinstance(pricing["packaging_notes"], list)
+
+
 def test_value_report_rejects_negative_assumptions(tmp_path):
     path = run_baseline(tmp_path)
     trace = AgentTrace.from_json(path)
