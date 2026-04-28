@@ -9,8 +9,9 @@ from agentloop.config import get_api_key, require_api_key
 from agentloop.optimizer import build_optimization_plan
 from agentloop.store import TraceStore, get_store
 from agentloop.tracer import AgentTrace
+from agentloop.value import build_value_report
 
-app = FastAPI(title="AgentLoop API", version="0.4.0")
+app = FastAPI(title="AgentLoop API", version="0.5.0")
 
 
 class TracePayload(BaseModel):
@@ -108,6 +109,24 @@ def optimize_trace(
     db: TraceStore = Depends(store),
 ) -> dict[str, Any]:
     return build_optimization_plan(_load_trace_or_404(db, run_id, project_id))
+
+
+@app.get("/traces/{run_id}/value")
+def value_report(
+    run_id: str,
+    runs_per_month: int = Query(default=1000, ge=0),
+    engineer_hourly_rate_usd: float = Query(default=150.0, ge=0),
+    incident_cost_usd: float = Query(default=500.0, ge=0),
+    project_id: str = Depends(resolve_project),
+    db: TraceStore = Depends(store),
+) -> dict[str, Any]:
+    trace = _load_trace_or_404(db, run_id, project_id)
+    return build_value_report(
+        trace,
+        runs_per_month=runs_per_month,
+        engineer_hourly_rate_usd=engineer_hourly_rate_usd,
+        incident_cost_usd=incident_cost_usd,
+    )
 
 
 @app.get("/usage")
