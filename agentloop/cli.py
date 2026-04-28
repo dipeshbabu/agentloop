@@ -42,6 +42,7 @@ def _print_value_summary(value: dict) -> None:
     monthly = value["monthly_value"]
     per_run = value["per_run"]
     reliability = value["reliability"]
+    pricing = value.get("pricing", {})
     table = Table(title="AgentLoop Value Report")
     table.add_column("Metric")
     table.add_column("Value")
@@ -51,6 +52,11 @@ def _print_value_summary(value: dict) -> None:
     table.add_row("Latency saved / run", f"{per_run['latency_savings_ms'] / 1000:.3f}s")
     table.add_row("Cost saved / run", f"${per_run['cost_savings_usd']:.6f}")
     table.add_row("Reliability risk score", f"{reliability['risk_score']}/100")
+    if pricing:
+        table.add_row("Suggested plan", str(pricing.get("suggested_plan", "")))
+        table.add_row("Suggested monthly price", f"${float(pricing.get('suggested_monthly_price_usd', 0)):,.0f}")
+        ratio = pricing.get("value_to_price_ratio")
+        table.add_row("Value / price ratio", "n/a" if ratio is None else f"{ratio}x")
     console.print(table)
     console.print(value["sales_summary"])
 
