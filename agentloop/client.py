@@ -65,6 +65,26 @@ class AgentLoopClient:
     def get_optimization_plan(self, run_id: str) -> dict[str, Any]:
         return self._request("GET", f"/traces/{run_id}/optimize")
 
+    def get_value_report(
+        self,
+        run_id: str,
+        *,
+        runs_per_month: int | None = None,
+        engineer_hourly_rate_usd: float | None = None,
+        incident_cost_usd: float | None = None,
+    ) -> dict[str, Any]:
+        params: dict[str, Any] = {}
+        if runs_per_month is not None:
+            params["runs_per_month"] = runs_per_month
+        if engineer_hourly_rate_usd is not None:
+            params["engineer_hourly_rate_usd"] = engineer_hourly_rate_usd
+        if incident_cost_usd is not None:
+            params["incident_cost_usd"] = incident_cost_usd
+        route = f"/traces/{run_id}/value"
+        if params:
+            route += "?" + urllib.parse.urlencode(params)
+        return self._request("GET", route)
+
     def _request(self, method: str, path: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
         url = self.base_url.rstrip("/") + path
         body = None if payload is None else json.dumps(payload).encode("utf-8")
