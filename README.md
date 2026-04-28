@@ -60,6 +60,7 @@ agentloop demo-all
 agentloop compare
 agentloop audit --out runs/audit.md
 agentloop optimize --out runs/optimization_plan.md --json-out runs/optimization_plan.json
+agentloop value-report --out runs/value_report.json --runs-per-month 5000
 agentloop init-store
 agentloop store-trace runs/research_agent_baseline.json --project-id demo
 streamlit run dashboard/app.py
@@ -84,7 +85,32 @@ agentloop demo --kind langgraph
 python examples/langgraph_auto_instrumentation_demo.py
 ```
 
-`agentloop compare`, `agentloop audit`, and `agentloop optimize` auto-generate missing demo traces by default, so missing `runs/research_agent_baseline.json` should not block the local workflow.
+`agentloop compare`, `agentloop audit`, `agentloop optimize`, and `agentloop value-report` auto-generate missing demo traces by default, so missing `runs/research_agent_baseline.json` should not block the local workflow.
+
+## Value reports
+
+```bash
+agentloop value-report runs/research_agent_baseline.json \
+  --out runs/value_report.json \
+  --runs-per-month 5000 \
+  --engineer-hourly-rate-usd 150 \
+  --incident-cost-usd 500
+```
+
+A value report converts trace data into buyer-facing ROI metrics:
+
+- direct model-cost savings per month
+- latency saved per run and per month
+- engineering hours saved from removing repeated bottlenecks
+- reliability risk score based on retries, context duplication, and optimization opportunities
+- a short sales summary for pilots and investor demos
+
+Hosted value reports are available through both API and CLI:
+
+```bash
+agentloop remote-value-report RUN_ID --api-url http://127.0.0.1:8000 --api-key al_xxx
+GET /traces/{run_id}/value?runs_per_month=5000
+```
 
 ## Optimization plans
 
@@ -134,9 +160,10 @@ Endpoints:
 - `GET /traces`
 - `GET /traces/{run_id}/report`
 - `GET /traces/{run_id}/optimize`
+- `GET /traces/{run_id}/value`
 - `GET /usage`
 
-This is the hosted product path: SDK traces can be sent to an API, stored, metered, and turned into optimization plans.
+This is the hosted product path: SDK traces can be sent to an API, stored, metered, and turned into optimization plans and value reports.
 
 ## Hosted store and metering
 
@@ -168,6 +195,7 @@ Then upload traces with the project API key:
 ```bash
 agentloop upload runs/research_agent_baseline.json --api-url http://127.0.0.1:8000 --api-key al_xxx
 agentloop remote-usage --api-url http://127.0.0.1:8000 --api-key al_xxx
+agentloop remote-value-report RUN_ID --api-url http://127.0.0.1:8000 --api-key al_xxx
 ```
 
 ### Optional single-secret API key protection
@@ -194,6 +222,7 @@ from agentloop import AgentLoopClient
 client = AgentLoopClient(base_url="http://127.0.0.1:8000", api_key="al_xxx")
 response = client.upload_trace("runs/research_agent_baseline.json")
 plan = client.get_optimization_plan(response["run_id"])
+value = client.get_value_report(response["run_id"], runs_per_month=5000)
 usage = client.usage_summary()
 ```
 
@@ -243,7 +272,7 @@ This integration is dependency-free. AgentLoop does not import LangGraph directl
 
 ## Product path
 
-Profiler -> Execution graph -> Optimization cards -> Hosted AgentLoop Cloud
+Profiler -> Execution graph -> Optimization cards -> Value report -> Hosted AgentLoop Cloud
 
 The sellable wedge is cost and latency reduction for production agent loops. The first paid user should be a team already running multi-step agents where each run has measurable latency, tool-call, and token waste.
 
