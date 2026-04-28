@@ -11,11 +11,13 @@ from agentloop.tracer import (
     trace_retry,
     trace_tool_call,
 )
+from agentloop.value import build_value_report
 
 __all__ = [
     "AgentLoopClient",
     "AgentLoopClientError",
     "AgentTrace",
+    "build_value_report",
     "current_trace",
     "get_last_error",
     "get_runtime_config",
