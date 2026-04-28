@@ -56,6 +56,12 @@ def build_value_report(
     total_value_monthly = (
         direct_model_cost_savings_monthly + engineering_value_monthly + avoided_incident_value
     )
+    pricing = _pricing_recommendation(
+        monthly_value=total_value_monthly,
+        runs_per_month=runs_per_month,
+        reliability_risk_score=reliability_risk_score,
+        cards=cards,
+    )
 
     return {
         "run_id": plan.get("run_id"),
@@ -81,6 +87,7 @@ def build_value_report(
             "avoided_incident_value_usd": round(avoided_incident_value, 2),
             "total_value_usd": round(total_value_monthly, 2),
         },
+        "pricing": pricing,
         "reliability": {
             "risk_score": reliability_risk_score,
             "retry_count": retry_count,
@@ -92,6 +99,7 @@ def build_value_report(
             latency_savings_ms_per_run=latency_savings_ms_per_run,
             cost_savings_per_run=cost_savings_per_run,
             cards=cards,
+            pricing=pricing,
         ),
         "optimization_cards": cards,
     }
@@ -136,6 +144,66 @@ def _avoided_incident_value(
     return incident_cost_usd * monthly_failure_probability * volume_multiplier
 
 
+def _pricing_recommendation(
+    *,
+    monthly_value: float,
+    runs_per_month: int,
+    reliability_risk_score: int,
+    cards: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Recommend a conservative SaaS plan from observed value.
+
+    This is not meant to be a billing system. It gives the sales/demo flow a concrete
+    anchor: a plan, a monthly price, and the buyer's modeled value-to-price ratio.
+    """
+
+    if runs_per_month == 0 or monthly_value <= 0 or not cards:
+        suggested_plan = "free"
+        suggested_monthly_price_usd = 0
+        rationale = "No meaningful optimization value was detected for this trace."
+    elif monthly_value < 750 and runs_per_month < 1000:
+        suggested_plan = "pro"
+        suggested_monthly_price_usd = 49
+        rationale = "Low-volume agent with enough waste to justify a solo developer plan."
+    elif monthly_value < 5000 and reliability_risk_score < 60:
+        suggested_plan = "team"
+        suggested_monthly_price_usd = 499
+        rationale = "Team-level ROI with hosted tracing, reports, and optimization workflow."
+    elif monthly_value < 25000:
+        suggested_plan = "growth"
+        suggested_monthly_price_usd = 1500
+        rationale = "High-volume workflow where reliability and latency savings justify a larger plan."
+    else:
+        suggested_plan = "enterprise"
+        suggested_monthly_price_usd = 5000
+        rationale = "Large modeled value; price should move to annual contract, private deployment, or usage-based terms."
+
+    value_to_price_ratio = None
+    if suggested_monthly_price_usd > 0:
+        value_to_price_ratio = round(monthly_value / suggested_monthly_price_usd, 2)
+
+    return {
+        "suggested_plan": suggested_plan,
+        "suggested_monthly_price_usd": suggested_monthly_price_usd,
+        "estimated_customer_value_usd": round(monthly_value, 2),
+        "value_to_price_ratio": value_to_price_ratio,
+        "rationale": rationale,
+        "packaging_notes": _packaging_notes(suggested_plan),
+    }
+
+
+def _packaging_notes(plan: str) -> list[str]:
+    if plan == "free":
+        return ["Local traces", "CLI reports", "Manual optimization plan export"]
+    if plan == "pro":
+        return ["Local + hosted trace upload", "Value reports", "Single project workspace"]
+    if plan == "team":
+        return ["Hosted dashboard", "API keys", "Shared projects", "Optimization reports"]
+    if plan == "growth":
+        return ["Higher usage limits", "Postgres backend", "Priority onboarding", "Pilot ROI review"]
+    return ["Private deployment", "Custom retention", "Security review", "Annual contract"]
+
+
 def _top_risks(cards: list[dict[str, Any]]) -> list[str]:
     risks = []
     for card in cards[:3]:
@@ -151,13 +219,18 @@ def _sales_summary(
     latency_savings_ms_per_run: float,
     cost_savings_per_run: float,
     cards: list[dict[str, Any]],
+    pricing: dict[str, Any],
 ) -> str:
     strongest_fix = cards[0]["title"] if cards else "No major bottleneck detected"
+    price = pricing.get("suggested_monthly_price_usd", 0)
+    plan = pricing.get("suggested_plan", "free")
+    price_line = "free local usage" if price == 0 else f"the {plan} plan at ${price:,.0f}/month"
     return (
         f"AgentLoop found {len(cards)} optimization opportunities. "
         f"The strongest immediate fix is: {strongest_fix}. "
         f"At the provided usage assumptions, this trace represents about "
         f"${monthly_value:,.0f}/month in modeled value, with "
         f"{latency_savings_ms_per_run / 1000:.2f}s latency saved and "
-        f"${cost_savings_per_run:.4f} model cost saved per run."
+        f"${cost_savings_per_run:.4f} model cost saved per run. "
+        f"A conservative packaging recommendation is {price_line}."
     )
