@@ -11,7 +11,11 @@ from agentloop.optimizer import build_optimization_plan
 from agentloop.store import get_store
 from agentloop.tracer import AgentTrace
 from agentloop.value import build_value_report
-from dashboard.value_view import assumption_inputs, render_value_report
+
+try:
+    from dashboard.value_view import assumption_inputs, render_value_report
+except ModuleNotFoundError:
+    from value_view import assumption_inputs, render_value_report
 
 st.set_page_config(page_title="AgentLoop Cloud", layout="wide")
 
