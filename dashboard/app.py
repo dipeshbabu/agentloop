@@ -10,6 +10,8 @@ from agentloop.demo import run_baseline, run_langgraph_style, run_optimized
 from agentloop.optimizer import build_optimization_plan
 from agentloop.store import get_store
 from agentloop.tracer import AgentTrace
+from agentloop.value import build_value_report
+from dashboard.value_view import assumption_inputs, render_value_report
 
 st.set_page_config(page_title="AgentLoop Cloud", layout="wide")
 
@@ -36,6 +38,12 @@ def load_trace_for_project(run_id: str, project_id: str) -> AgentTrace | None:
     return load_store().get_trace(run_id=run_id, project_id=project_id)
 
 
+def select_trace(traces: list[dict], label: str = "Choose trace") -> AgentTrace | None:
+    labels = {f"{t['name']} · {t['run_id']}": t["run_id"] for t in traces}
+    selected_label = st.selectbox(label, list(labels.keys()))
+    return load_trace_for_project(labels[selected_label], project_id)
+
+
 st.sidebar.title("AgentLoop Cloud")
 st.sidebar.caption("Hosted control panel for agent-loop performance")
 
@@ -44,7 +52,7 @@ st.session_state["project_id"] = project_id
 
 page = st.sidebar.radio(
     "Navigate",
-    ["Overview", "Traces", "Optimization", "API Keys", "Ingest", "Setup"],
+    ["Overview", "Traces", "Optimization", "Value & Pricing", "API Keys", "Ingest", "Setup"],
 )
 
 store = load_store()
@@ -121,9 +129,7 @@ elif page == "Optimization":
     if not traces:
         st.info("No traces stored for this project yet.")
     else:
-        labels = {f"{t['name']} · {t['run_id']}": t["run_id"] for t in traces}
-        selected_label = st.selectbox("Choose trace", list(labels.keys()))
-        trace = load_trace_for_project(labels[selected_label], project_id)
+        trace = select_trace(traces)
         if trace is not None:
             report = trace.report()
             plan = build_optimization_plan(trace, report)
@@ -135,6 +141,16 @@ elif page == "Optimization":
             c2.metric("Estimated runtime", seconds(after["runtime_ms"]))
             c3.metric("Latency reduction", f"{after['latency_reduction_pct']:.1f}%")
             c4.metric("Cost reduction", f"{after['cost_reduction_pct']:.1f}%")
+
+            with st.expander("Show value and pricing estimate", expanded=False):
+                rpm, rate, incident_cost = assumption_inputs("optimization_")
+                value = build_value_report(
+                    trace,
+                    runs_per_month=rpm,
+                    engineer_hourly_rate_usd=rate,
+                    incident_cost_usd=incident_cost,
+                )
+                render_value_report(value, show_download=False)
 
             st.subheader("Optimization cards")
             cards = plan["optimization_cards"]
@@ -164,6 +180,34 @@ elif page == "Optimization":
                 data=json.dumps(plan, indent=2),
                 file_name="agentloop_optimization_plan.json",
                 mime="application/json",
+            )
+
+elif page == "Value & Pricing":
+    traces = store.list_traces(project_id=project_id)
+    st.subheader("Value report and pricing recommendation")
+    st.caption("Turn an agent trace into buyer-facing ROI, reliability risk, and a conservative SaaS packaging recommendation.")
+    if not traces:
+        st.info("No traces stored for this project yet. Generate demo traces from the Ingest page first.")
+    else:
+        trace = select_trace(traces, label="Choose trace for value report")
+        if trace is not None:
+            st.markdown("#### Assumptions")
+            rpm, rate, incident_cost = assumption_inputs("value_page_")
+            value = build_value_report(
+                trace,
+                runs_per_month=rpm,
+                engineer_hourly_rate_usd=rate,
+                incident_cost_usd=incident_cost,
+            )
+            render_value_report(value)
+            st.subheader("Pilot command")
+            st.code(
+                "agentloop value-report runs/research_agent_baseline.json "
+                f"--runs-per-month {rpm} "
+                f"--engineer-hourly-rate-usd {rate} "
+                f"--incident-cost-usd {incident_cost} "
+                "--out runs/value_report.json",
+                language="bash",
             )
 
 elif page == "API Keys":
