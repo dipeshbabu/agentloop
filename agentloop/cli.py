@@ -8,8 +8,10 @@ from rich.console import Console
 from rich.table import Table
 
 from agentloop.audit import estimate_improvement
+from agentloop.autoinstrument import auto_instrument
 from agentloop.client import AgentLoopClient
 from agentloop.demo import run_baseline, run_langgraph_style, run_optimized
+from agentloop.doctor import run_doctor
 from agentloop.exporters import export_report_markdown
 from agentloop.optimizer import build_optimization_plan
 from agentloop.plan_export import export_optimization_json, export_optimization_markdown
@@ -51,6 +53,21 @@ def _print_value_summary(value: dict) -> None:
     table.add_row("Reliability risk score", f"{reliability['risk_score']}/100")
     console.print(table)
     console.print(value["sales_summary"])
+
+
+def _print_doctor(result: dict) -> None:
+    table = Table(title="AgentLoop Doctor")
+    table.add_column("Status")
+    table.add_column("Check")
+    table.add_column("Detail")
+    table.add_column("Fix")
+    for check in result["checks"]:
+        status = check["status"]
+        style = "green" if status == "ok" else "yellow" if status == "warn" else "red"
+        table.add_row(f"[{style}]{status}[/{style}]", check["name"], check["detail"], check.get("fix", ""))
+    console.print(table)
+    if result["failed"]:
+        raise typer.Exit(1)
 
 
 @app.command()
@@ -170,6 +187,27 @@ def value_report(
     _write_json(out, value)
     _print_value_summary(value)
     console.print(f"Wrote value report to {out}")
+
+
+@app.command("doctor")
+def doctor_command(
+    check_api: bool = typer.Option(True, help="Also call the configured /health endpoint."),
+    json_out: Path | None = typer.Option(None, help="Optional path for machine-readable doctor output."),
+) -> None:
+    result = run_doctor(check_api=check_api)
+    if json_out:
+        _write_json(json_out, result)
+        console.print(f"Wrote doctor output to {json_out}")
+    _print_doctor(result)
+
+
+@app.command("auto-instrument")
+def auto_instrument_command(json_out: Path | None = typer.Option(None)) -> None:
+    result = auto_instrument().to_dict()
+    if json_out:
+        _write_json(json_out, result)
+        console.print(f"Wrote auto instrumentation output to {json_out}")
+    console.print_json(data=result)
 
 
 @app.command("init-store")
