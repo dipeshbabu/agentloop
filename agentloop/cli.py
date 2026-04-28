@@ -15,6 +15,7 @@ from agentloop.optimizer import build_optimization_plan
 from agentloop.plan_export import export_optimization_json, export_optimization_markdown
 from agentloop.store import get_store
 from agentloop.tracer import AgentTrace
+from agentloop.value import build_value_report
 
 app = typer.Typer(help="AgentLoop profiler CLI")
 console = Console()
@@ -28,6 +29,28 @@ def _ensure_trace(path: Path, kind: str = "baseline") -> Path:
     if kind == "optimized" or "optimized" in path.name:
         return run_optimized(path.parent)
     return run_baseline(path.parent)
+
+
+def _write_json(out: Path, payload: dict) -> None:
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+
+def _print_value_summary(value: dict) -> None:
+    monthly = value["monthly_value"]
+    per_run = value["per_run"]
+    reliability = value["reliability"]
+    table = Table(title="AgentLoop Value Report")
+    table.add_column("Metric")
+    table.add_column("Value")
+    table.add_row("Total monthly value", f"${monthly['total_value_usd']:,.2f}")
+    table.add_row("Model cost savings / month", f"${monthly['direct_model_cost_savings_usd']:,.2f}")
+    table.add_row("Engineering hours saved / month", str(monthly["engineering_hours_saved"]))
+    table.add_row("Latency saved / run", f"{per_run['latency_savings_ms'] / 1000:.3f}s")
+    table.add_row("Cost saved / run", f"${per_run['cost_savings_usd']:.6f}")
+    table.add_row("Reliability risk score", f"{reliability['risk_score']}/100")
+    console.print(table)
+    console.print(value["sales_summary"])
 
 
 @app.command()
@@ -126,6 +149,29 @@ def optimize(
     )
 
 
+@app.command("value-report")
+def value_report(
+    path: Path = Path("runs/research_agent_baseline.json"),
+    out: Path = Path("runs/value_report.json"),
+    runs_per_month: int = typer.Option(1000, min=0),
+    engineer_hourly_rate_usd: float = typer.Option(150.0, min=0),
+    incident_cost_usd: float = typer.Option(500.0, min=0),
+    autogen: bool = typer.Option(True),
+) -> None:
+    if autogen:
+        path = _ensure_trace(path)
+    trace = AgentTrace.from_json(path)
+    value = build_value_report(
+        trace,
+        runs_per_month=runs_per_month,
+        engineer_hourly_rate_usd=engineer_hourly_rate_usd,
+        incident_cost_usd=incident_cost_usd,
+    )
+    _write_json(out, value)
+    _print_value_summary(value)
+    console.print(f"Wrote value report to {out}")
+
+
 @app.command("init-store")
 def init_store() -> None:
     db = get_store()
@@ -214,6 +260,28 @@ def remote_optimize(
     plan = client.get_optimization_plan(run_id)
     export_optimization_json(plan, out)
     console.print(f"Wrote remote optimization plan to {out}")
+
+
+@app.command("remote-value-report")
+def remote_value_report(
+    run_id: str,
+    api_url: str = typer.Option("http://127.0.0.1:8000", help="AgentLoop API base URL."),
+    api_key: str | None = typer.Option(None, help="Optional API key. Defaults to AGENTLOOP_API_KEY."),
+    out: Path = Path("runs/remote_value_report.json"),
+    runs_per_month: int = typer.Option(1000, min=0),
+    engineer_hourly_rate_usd: float = typer.Option(150.0, min=0),
+    incident_cost_usd: float = typer.Option(500.0, min=0),
+) -> None:
+    client = AgentLoopClient(base_url=api_url, api_key=api_key)
+    value = client.get_value_report(
+        run_id,
+        runs_per_month=runs_per_month,
+        engineer_hourly_rate_usd=engineer_hourly_rate_usd,
+        incident_cost_usd=incident_cost_usd,
+    )
+    _write_json(out, value)
+    _print_value_summary(value)
+    console.print(f"Wrote remote value report to {out}")
 
 
 @app.command("remote-usage")
