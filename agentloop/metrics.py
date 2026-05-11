@@ -72,7 +72,7 @@ def parallelism_opportunities(tool_events: list[Any]) -> list[dict[str, Any]]:
 
 def build_recommendations(model_events: list[Any], retry_events: list[Any], repeated: dict[str, Any], parallel: list[dict[str, Any]]) -> list[dict[str, str]]:
     recs = []
-    if repeated["repeated_context_ratio"] >= 0.15:
+    if repeated["repeated_context_ratio"] >= 0.10:
         recs.append({"title": "Cache repeated context", "description": "Stable instructions appear across multiple model calls. Use cached prefixes or reusable summaries."})
     if parallel:
         recs.append({"title": "Parallelize tool calls", "description": "Repeated tool calls appear independent. Run them concurrently to lower end-to-end latency."})

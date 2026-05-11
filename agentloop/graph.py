@@ -79,7 +79,9 @@ class ExecutionGraph:
                     metadata=event.metadata or {},
                 )
             )
-            if previous_id is not None:
+            if event.parent_id:
+                edges.append(ExecutionEdge(source=event.parent_id, target=node_id, kind="parent"))
+            elif previous_id is not None:
                 edges.append(ExecutionEdge(source=previous_id, target=node_id))
             previous_id = node_id
         return cls(nodes=nodes, edges=edges)

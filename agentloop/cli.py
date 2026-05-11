@@ -13,7 +13,9 @@ from agentloop.client import AgentLoopClient
 from agentloop.demo import run_baseline, run_langgraph_style, run_optimized
 from agentloop.doctor import run_doctor
 from agentloop.exporters import export_report_markdown
+from agentloop.findings import build_diagnosis, diagnosis_to_markdown
 from agentloop.optimizer import build_optimization_plan
+from agentloop.otel import trace_from_otel, trace_to_otel
 from agentloop.plan_export import export_optimization_json, export_optimization_markdown
 from agentloop.store import get_store
 from agentloop.tracer import AgentTrace
@@ -36,6 +38,12 @@ def _ensure_trace(path: Path, kind: str = "baseline") -> Path:
 def _write_json(out: Path, payload: dict) -> None:
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+
+def _load_trace(path: Path, *, otel: bool = False, name: str | None = None) -> AgentTrace:
+    if otel:
+        return trace_from_otel(json.loads(path.read_text(encoding="utf-8")), name=name)
+    return AgentTrace.from_json(path)
 
 
 def _print_value_summary(value: dict) -> None:
@@ -170,6 +178,51 @@ def optimize(
         f"Estimated improvement: {after['latency_reduction_pct']:.1f}% latency, "
         f"{after['cost_reduction_pct']:.1f}% cost"
     )
+
+
+@app.command("diagnose")
+def diagnose(
+    path: Path = Path("runs/research_agent_baseline.json"),
+    out: Path = Path("runs/diagnosis.md"),
+    json_out: Path | None = typer.Option(None, help="Optional machine-readable diagnosis output."),
+    otel: bool = typer.Option(False, help="Read the input path as OTLP/GenAI-style JSON."),
+    name: str | None = typer.Option(None, help="Trace name to use when importing OTLP JSON."),
+    autogen: bool = typer.Option(True, help="Generate a demo trace if the native trace file is missing."),
+) -> None:
+    if autogen and not otel:
+        path = _ensure_trace(path)
+    trace = _load_trace(path, otel=otel, name=name)
+    diagnosis = build_diagnosis(trace)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(diagnosis_to_markdown(diagnosis), encoding="utf-8")
+    if json_out is not None:
+        _write_json(json_out, diagnosis)
+    summary = diagnosis["summary"]
+    console.print(f"Wrote diagnosis to {out}")
+    if json_out is not None:
+        console.print(f"Wrote diagnosis JSON to {json_out}")
+    console.print(
+        f"Findings: {summary['finding_count']} "
+        f"({summary['patchable_count']} patchable), "
+        f"estimated improvement: {summary['estimated_latency_reduction_pct']:.1f}% latency, "
+        f"{summary['estimated_cost_reduction_pct']:.1f}% cost"
+    )
+
+
+@app.command("import-otel")
+def import_otel(path: Path, out: Path, name: str | None = typer.Option(None, help="Optional imported trace name.")) -> None:
+    trace = trace_from_otel(json.loads(path.read_text(encoding="utf-8")), name=name)
+    trace.export_json(out)
+    console.print(f"Imported OTLP trace {trace.run_id} to {out}")
+
+
+@app.command("export-otel")
+def export_otel(path: Path, out: Path, autogen: bool = typer.Option(True)) -> None:
+    if autogen:
+        path = _ensure_trace(path)
+    trace = AgentTrace.from_json(path)
+    _write_json(out, trace_to_otel(trace))
+    console.print(f"Exported OTLP-style trace to {out}")
 
 
 @app.command("value-report")

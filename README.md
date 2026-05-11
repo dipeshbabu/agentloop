@@ -135,6 +135,20 @@ AgentLoop reconstructs an execution graph, identifies bottlenecks, and emits opt
 
 Each card includes a reason, affected nodes, confidence, rewrite hint, and estimated latency or cost savings.
 
+## Diagnosis and OpenTelemetry interop
+
+```bash
+agentloop diagnose --path runs/research_agent_baseline.json --out runs/diagnosis.md --json-out runs/diagnosis.json
+agentloop export-otel runs/research_agent_baseline.json runs/research_agent_baseline.otel.json
+agentloop import-otel runs/research_agent_baseline.otel.json runs/imported_trace.json --name imported_agent
+agentloop diagnose --path runs/research_agent_baseline.otel.json --otel --out runs/otel_diagnosis.md
+```
+
+`agentloop diagnose` turns optimization opportunities into machine-actionable findings:
+stable finding IDs, affected spans, evidence rows, savings formulas, patchability, and
+replay acceptance criteria. `export-otel` and `import-otel` let AgentLoop sit above
+OpenTelemetry GenAI-style spans instead of requiring a proprietary trace source.
+
 ## Dashboard
 
 ```bash

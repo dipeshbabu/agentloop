@@ -73,7 +73,7 @@ def traceable(
         raise ValueError("kind must be 'tool' or 'model'")
 
     def decorator(func: F) -> F:
-        span_name = name or getattr(func, "__qualname__", getattr(func, "__name__", "agentloop.call"))
+        span_name = name or getattr(func, "__name__", getattr(func, "__qualname__", "agentloop.call"))
         run_name = agent_name or span_name
 
         if inspect.iscoroutinefunction(func):
