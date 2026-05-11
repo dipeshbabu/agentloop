@@ -139,6 +139,7 @@ Each card includes a reason, affected nodes, confidence, rewrite hint, and estim
 
 ```bash
 agentloop diagnose --path runs/research_agent_baseline.json --out runs/diagnosis.md --json-out runs/diagnosis.json
+agentloop patch --path runs/research_agent_baseline.json --repo . --out runs/patch_plan.md --json-out runs/patch_plan.json
 agentloop export-otel runs/research_agent_baseline.json runs/research_agent_baseline.otel.json
 agentloop import-otel runs/research_agent_baseline.otel.json runs/imported_trace.json --name imported_agent
 agentloop diagnose --path runs/research_agent_baseline.otel.json --otel --out runs/otel_diagnosis.md
@@ -148,6 +149,9 @@ agentloop diagnose --path runs/research_agent_baseline.otel.json --otel --out ru
 stable finding IDs, affected spans, evidence rows, savings formulas, patchability, and
 replay acceptance criteria. `export-otel` and `import-otel` let AgentLoop sit above
 OpenTelemetry GenAI-style spans instead of requiring a proprietary trace source.
+`agentloop patch --dry-run` turns supported findings into framework-aware patch
+plans for parallel tool execution, context caching, and structured-output repair
+without modifying source files.
 
 ## Dashboard
 

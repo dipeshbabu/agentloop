@@ -16,6 +16,7 @@ from agentloop.exporters import export_report_markdown
 from agentloop.findings import build_diagnosis, diagnosis_to_markdown
 from agentloop.optimizer import build_optimization_plan
 from agentloop.otel import trace_from_otel, trace_to_otel
+from agentloop.patches import build_patch_plan, patch_plan_to_markdown
 from agentloop.plan_export import export_optimization_json, export_optimization_markdown
 from agentloop.store import get_store
 from agentloop.tracer import AgentTrace
@@ -223,6 +224,38 @@ def export_otel(path: Path, out: Path, autogen: bool = typer.Option(True)) -> No
     trace = AgentTrace.from_json(path)
     _write_json(out, trace_to_otel(trace))
     console.print(f"Exported OTLP-style trace to {out}")
+
+
+@app.command("patch")
+def patch_command(
+    path: Path = Path("runs/research_agent_baseline.json"),
+    repo: Path = Path("."),
+    out: Path = Path("runs/patch_plan.md"),
+    json_out: Path | None = typer.Option(None, help="Optional machine-readable patch plan output."),
+    otel: bool = typer.Option(False, help="Read the input path as OTLP/GenAI-style JSON."),
+    name: str | None = typer.Option(None, help="Trace name to use when importing OTLP JSON."),
+    dry_run: bool = typer.Option(True, help="Only generate a patch plan. File edits are not supported yet."),
+    autogen: bool = typer.Option(True, help="Generate a demo trace if the native trace file is missing."),
+) -> None:
+    if not dry_run:
+        raise typer.BadParameter("Only --dry-run is supported. Generate a patch plan first, then apply manually.")
+    if autogen and not otel:
+        path = _ensure_trace(path)
+    trace = _load_trace(path, otel=otel, name=name)
+    plan = build_patch_plan(trace, repo_path=repo)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(patch_plan_to_markdown(plan), encoding="utf-8")
+    if json_out is not None:
+        _write_json(json_out, plan)
+    console.print(f"Wrote patch plan to {out}")
+    if json_out is not None:
+        console.print(f"Wrote patch plan JSON to {json_out}")
+    summary = plan["summary"]
+    console.print(
+        f"Patch plans: {summary['patch_count']}, "
+        f"unsupported findings: {summary['unsupported_finding_count']}, "
+        f"frameworks: {', '.join(summary['frameworks_detected']) or 'none'}"
+    )
 
 
 @app.command("value-report")
