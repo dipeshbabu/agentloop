@@ -58,6 +58,7 @@ trace.export_json("runs/openai_agent.json")
 ```bash
 agentloop demo-all
 agentloop compare
+agentloop replay --baseline runs/research_agent_baseline.json --candidate runs/research_agent_optimized.json --out runs/replay_report.md --json-out runs/replay_report.json
 agentloop audit --out runs/audit.md
 agentloop optimize --out runs/optimization_plan.md --json-out runs/optimization_plan.json
 agentloop value-report --out runs/value_report.json --runs-per-month 5000
@@ -87,6 +88,26 @@ python examples/langgraph_auto_instrumentation_demo.py
 ```
 
 `agentloop compare`, `agentloop audit`, `agentloop optimize`, and `agentloop value-report` auto-generate missing demo traces by default, so missing `runs/research_agent_baseline.json` should not block the local workflow.
+
+## Replay gates
+
+```bash
+agentloop replay \
+  --baseline runs/research_agent_baseline.json \
+  --candidate runs/research_agent_optimized.json \
+  --out runs/replay_report.md \
+  --json-out runs/replay_report.json \
+  --min-latency-improvement-pct 20 \
+  --min-cost-improvement-pct 5 \
+  --max-latency-regression-pct 0 \
+  --max-cost-regression-pct 0 \
+  --require-retry-non-increase
+```
+
+`agentloop replay` compares a baseline trace with a candidate trace and turns the
+result into pass/fail gates for CI and PR comments. It reports latency, cost,
+token, retry, tool-call, and model-call deltas, then exits non-zero when gates
+fail unless `--no-fail-on-gate` is used.
 
 ## Value reports
 

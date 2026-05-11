@@ -18,6 +18,7 @@ from agentloop.optimizer import build_optimization_plan
 from agentloop.otel import trace_from_otel, trace_to_otel
 from agentloop.patches import build_patch_plan, patch_plan_to_markdown
 from agentloop.plan_export import export_optimization_json, export_optimization_markdown
+from agentloop.replay import ReplayGates, build_replay_report, replay_report_to_markdown
 from agentloop.store import get_store
 from agentloop.tracer import AgentTrace
 from agentloop.value import build_value_report
@@ -124,6 +125,48 @@ def compare(
             f"{(o - b):.4f}" if isinstance(o, float) else str(o - b),
         )
     console.print(table)
+
+
+@app.command("replay")
+def replay_command(
+    baseline: Path = Path("runs/research_agent_baseline.json"),
+    candidate: Path = Path("runs/research_agent_optimized.json"),
+    out: Path = Path("runs/replay_report.md"),
+    json_out: Path | None = typer.Option(None, help="Optional machine-readable replay report output."),
+    max_cost_regression_pct: float = typer.Option(0.0, min=0.0),
+    max_latency_regression_pct: float = typer.Option(0.0, min=0.0),
+    min_latency_improvement_pct: float = typer.Option(0.0, min=0.0),
+    min_cost_improvement_pct: float = typer.Option(0.0, min=0.0),
+    require_retry_non_increase: bool = typer.Option(True),
+    fail_on_gate: bool = typer.Option(True, help="Exit non-zero when replay gates fail."),
+    autogen: bool = typer.Option(True, help="Generate missing demo traces first."),
+) -> None:
+    if autogen:
+        baseline = _ensure_trace(baseline, "baseline")
+        candidate = _ensure_trace(candidate, "optimized")
+    baseline_trace = AgentTrace.from_json(baseline)
+    candidate_trace = AgentTrace.from_json(candidate)
+    report_data = build_replay_report(
+        baseline_trace,
+        candidate_trace,
+        gates=ReplayGates(
+            max_cost_regression_pct=max_cost_regression_pct,
+            max_latency_regression_pct=max_latency_regression_pct,
+            min_latency_improvement_pct=min_latency_improvement_pct,
+            min_cost_improvement_pct=min_cost_improvement_pct,
+            require_retry_non_increase=require_retry_non_increase,
+        ),
+    )
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(replay_report_to_markdown(report_data), encoding="utf-8")
+    if json_out is not None:
+        _write_json(json_out, report_data)
+    console.print(f"Wrote replay report to {out}")
+    if json_out is not None:
+        console.print(f"Wrote replay JSON to {json_out}")
+    console.print(report_data["summary"])
+    if fail_on_gate and not report_data["gates"]["passed"]:
+        raise typer.Exit(1)
 
 
 @app.command("dump-report")
