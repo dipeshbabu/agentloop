@@ -33,13 +33,9 @@ line-length = 100
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--basetemp=runs/pytest-temp"
-cache_dir = "runs/pytest-cache"
 norecursedirs = [
   ".git",
   ".pytest_cache",
-  "runs/pytest-cache",
-  "runs/pytest-temp",
   ".ruff_cache",
   ".venv",
   "*.egg-info",
