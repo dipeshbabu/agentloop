@@ -213,6 +213,7 @@ Endpoints:
 This is the hosted product path: SDK traces can be sent to an API, stored, metered, and turned into optimization plans and value reports.
 
 For production deployment, use Postgres, API-key auth, an admin key for API-key creation, and the Docker/Compose scaffolding in `docs/PRODUCTION.md`.
+For the first paid design-partner workflow, use the readiness checklist in `docs/PILOT.md`.
 
 ```bash
 agentloop production-check

@@ -523,3 +523,7 @@ def server(host: str = "127.0.0.1", port: int = 8000, reload: bool = False) -> N
     except ImportError as exc:
         raise typer.BadParameter("Install server dependencies with: pip install -e '.[server]'") from exc
     uvicorn.run("agentloop.server:app", host=host, port=port, reload=reload)
+
+
+if __name__ == "__main__":
+    app()

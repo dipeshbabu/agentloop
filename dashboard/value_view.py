@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import json
-
-import streamlit as st
+from typing import Any
 
 
 def money(value: float, decimals: int = 2) -> str:
@@ -13,7 +12,18 @@ def seconds(ms: float) -> str:
     return f"{float(ms) / 1000:,.2f}s"
 
 
+def _streamlit() -> Any:
+    try:
+        import streamlit as st
+    except ModuleNotFoundError as exc:
+        raise ModuleNotFoundError(
+            "Install dashboard support with: pip install -e '.[dashboard]'"
+        ) from exc
+    return st
+
+
 def assumption_inputs(prefix: str = "") -> tuple[int, float, float]:
+    st = _streamlit()
     c1, c2, c3 = st.columns(3)
     runs_per_month = c1.number_input(
         "Runs per month",
@@ -40,6 +50,7 @@ def assumption_inputs(prefix: str = "") -> tuple[int, float, float]:
 
 
 def render_value_report(value: dict, *, show_download: bool = True) -> None:
+    st = _streamlit()
     monthly = value["monthly_value"]
     per_run = value["per_run"]
     pricing = value.get("pricing", {})
