@@ -35,3 +35,19 @@ jobs:
 
       - name: Test
         run: python -m pytest -q
+
+      - name: Build package
+        run: |
+          python -m pip install build
+          python -m build
+
+  docker:
+    name: Docker image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build .
