@@ -22,6 +22,7 @@ class AgentLoopClient:
 
     base_url: str = "http://127.0.0.1:8000"
     api_key: str | None = None
+    admin_api_key: str | None = None
     timeout_s: float = 10.0
 
     @classmethod
@@ -29,6 +30,7 @@ class AgentLoopClient:
         return cls(
             base_url=os.getenv("AGENTLOOP_API_URL", "http://127.0.0.1:8000"),
             api_key=os.getenv("AGENTLOOP_API_KEY"),
+            admin_api_key=os.getenv("AGENTLOOP_ADMIN_API_KEY"),
             timeout_s=float(os.getenv("AGENTLOOP_TIMEOUT_S", "10")),
         )
 
@@ -93,6 +95,8 @@ class AgentLoopClient:
             headers["Content-Type"] = "application/json"
         if self.api_key:
             headers["X-AgentLoop-Key"] = self.api_key
+        if self.admin_api_key:
+            headers["X-AgentLoop-Admin-Key"] = self.admin_api_key
         req = urllib.request.Request(url=url, data=body, method=method, headers=headers)
         try:
             with urllib.request.urlopen(req, timeout=self.timeout_s) as response:

@@ -18,6 +18,7 @@ from agentloop.tracer import (
     trace_tool_call,
 )
 from agentloop.value import build_value_report
+from agentloop.version import __version__
 
 __all__ = [
     "AgentLoopClient",
@@ -47,4 +48,5 @@ __all__ = [
     "trace_retry",
     "traceable",
     "trace_to_otel",
+    "__version__",
 ]

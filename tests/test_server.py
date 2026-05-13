@@ -11,6 +11,45 @@ def test_health() -> None:
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
+    assert response.json()["version"]
+
+
+def test_readyz() -> None:
+    client = TestClient(app)
+    response = client.get("/readyz")
+    assert response.status_code == 200
+    assert response.json()["status"] == "ready"
+
+
+def test_create_api_key_requires_admin_when_auth_is_enabled(monkeypatch) -> None:
+    monkeypatch.setenv("AGENTLOOP_REQUIRE_API_KEY", "true")
+    monkeypatch.delenv("AGENTLOOP_ADMIN_API_KEY", raising=False)
+
+    client = TestClient(app)
+    response = client.post("/api-keys", json={"project_id": "acme", "name": "prod"})
+
+    assert response.status_code == 503
+
+
+def test_create_api_key_accepts_admin_key(monkeypatch) -> None:
+    monkeypatch.setenv("AGENTLOOP_REQUIRE_API_KEY", "true")
+    monkeypatch.setenv("AGENTLOOP_ADMIN_API_KEY", "admin-secret")
+
+    client = TestClient(app)
+    rejected = client.post(
+        "/api-keys",
+        json={"project_id": "acme", "name": "prod"},
+        headers={"X-AgentLoop-Admin-Key": "wrong"},
+    )
+    accepted = client.post(
+        "/api-keys",
+        json={"project_id": "acme", "name": "prod"},
+        headers={"X-AgentLoop-Admin-Key": "admin-secret"},
+    )
+
+    assert rejected.status_code == 401
+    assert accepted.status_code == 200
+    assert accepted.json()["api_key"].startswith("al_")
 
 
 def test_ingest_trace() -> None:

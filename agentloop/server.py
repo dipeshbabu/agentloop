@@ -3,15 +3,27 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from agentloop.config import get_api_key, require_api_key
+from agentloop.config import get_admin_api_key, get_api_key, get_cors_origins, require_api_key
 from agentloop.optimizer import build_optimization_plan
 from agentloop.store import TraceStore, get_store
 from agentloop.tracer import AgentTrace
 from agentloop.value import build_value_report
+from agentloop.version import __version__
 
-app = FastAPI(title="AgentLoop API", version="0.5.0")
+app = FastAPI(title="AgentLoop API", version=__version__)
+
+_cors_origins = get_cors_origins()
+if _cors_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_cors_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 
 class TracePayload(BaseModel):
@@ -54,14 +66,37 @@ def resolve_project(
     return "default"
 
 
+def resolve_admin(x_agentloop_admin_key: str | None = Header(default=None)) -> None:
+    admin_key = get_admin_api_key()
+    if admin_key:
+        if x_agentloop_admin_key == admin_key:
+            return
+        raise HTTPException(status_code=401, detail="invalid AgentLoop admin API key")
+
+    if require_api_key():
+        raise HTTPException(
+            status_code=503,
+            detail="AGENTLOOP_ADMIN_API_KEY is required to create API keys when API auth is enabled",
+        )
+
+
 @app.get("/health")
-def health() -> dict[str, str]:
-    return {"status": "ok"}
+def health() -> dict[str, str | bool]:
+    return {"status": "ok", "version": __version__, "auth_required": require_api_key()}
+
+
+@app.get("/readyz")
+def readyz(db: TraceStore = Depends(store)) -> dict[str, str]:
+    db.usage_summary(project_id="default")
+    return {"status": "ready"}
 
 
 @app.post("/api-keys")
-def create_api_key(payload: CreateApiKeyPayload, db: TraceStore = Depends(store)) -> dict[str, Any]:
-    # Local-first bootstrap endpoint. Protect externally with network/auth at deployment time.
+def create_api_key(
+    payload: CreateApiKeyPayload,
+    _: None = Depends(resolve_admin),
+    db: TraceStore = Depends(store),
+) -> dict[str, Any]:
     return db.create_api_key(project_id=payload.project_id, name=payload.name)
 
 

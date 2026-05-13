@@ -471,8 +471,9 @@ def remote_create_api_key(
     project_id: str = "default",
     name: str = "default",
     api_url: str = typer.Option("http://127.0.0.1:8000", help="AgentLoop API base URL."),
+    admin_api_key: str | None = typer.Option(None, help="Admin API key. Defaults to AGENTLOOP_ADMIN_API_KEY."),
 ) -> None:
-    client = AgentLoopClient(base_url=api_url)
+    client = AgentLoopClient(base_url=api_url, admin_api_key=admin_api_key)
     key = client.create_api_key(project_id=project_id, name=name)
     console.print("Created hosted API key. Save it now; it will not be shown again.")
     console.print(key["api_key"])
