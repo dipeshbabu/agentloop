@@ -11,7 +11,7 @@ from agentloop.audit import estimate_improvement
 from agentloop.autoinstrument import auto_instrument
 from agentloop.client import AgentLoopClient
 from agentloop.demo import run_baseline, run_langgraph_style, run_optimized
-from agentloop.doctor import run_doctor
+from agentloop.doctor import run_doctor, run_production_check
 from agentloop.exporters import export_report_markdown
 from agentloop.findings import build_diagnosis, diagnosis_to_markdown
 from agentloop.optimizer import build_optimization_plan
@@ -333,6 +333,20 @@ def doctor_command(
     if json_out:
         _write_json(json_out, result)
         console.print(f"Wrote doctor output to {json_out}")
+    _print_doctor(result)
+
+
+@app.command("production-check")
+def production_check_command(
+    check_api: bool = typer.Option(True, help="Call the configured /health and /readyz endpoints."),
+    check_store: bool = typer.Option(True, help="Initialize and query the configured store."),
+    allow_http: bool = typer.Option(False, help="Allow non-HTTPS AGENTLOOP_API_URL for local staging."),
+    json_out: Path | None = typer.Option(None, help="Optional path for machine-readable check output."),
+) -> None:
+    result = run_production_check(check_api=check_api, check_store=check_store, allow_http=allow_http)
+    if json_out:
+        _write_json(json_out, result)
+        console.print(f"Wrote production check output to {json_out}")
     _print_doctor(result)
 
 

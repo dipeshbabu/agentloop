@@ -21,6 +21,21 @@ AGENTLOOP_CORS_ORIGINS=https://dashboard.example.com
 `AGENTLOOP_ADMIN_API_KEY` protects hosted API-key creation. When API auth is enabled,
 `POST /api-keys` returns `503` unless the admin secret is configured.
 
+Before deploying or promoting an environment, run:
+
+```bash
+agentloop production-check --no-check-api --no-check-store
+```
+
+After the API is deployed and the database is reachable, run the full gate:
+
+```bash
+agentloop production-check
+```
+
+The production check fails unless Postgres, API-key auth, a strong admin key,
+explicit CORS origins, and an HTTPS API URL are configured.
+
 ## Docker Compose
 
 For a local production-like stack:
@@ -60,6 +75,9 @@ AGENTLOOP_API_URL=http://localhost:8000 \
 AGENTLOOP_ADMIN_API_KEY="$AGENTLOOP_ADMIN_API_KEY" \
 python scripts/smoke_api.py
 ```
+
+Use `agentloop production-check --allow-http` only for local staging URLs such as
+`http://localhost:8000`; public production traffic should use HTTPS.
 
 ## Health Checks
 

@@ -214,6 +214,11 @@ This is the hosted product path: SDK traces can be sent to an API, stored, meter
 
 For production deployment, use Postgres, API-key auth, an admin key for API-key creation, and the Docker/Compose scaffolding in `docs/PRODUCTION.md`.
 
+```bash
+agentloop production-check
+python scripts/smoke_api.py
+```
+
 ## Hosted store and metering
 
 AgentLoop now supports a local SQLite store and a Postgres store for hosted deployments.
