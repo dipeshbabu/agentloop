@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import StrEnum
+from enum import Enum
 from typing import Any
 
 from agentloop.graph import ExecutionGraph
 
 
-class RecommendationType(StrEnum):
+class RecommendationType(str, Enum):
     PARALLELIZE_TOOLS = "parallelize_tools"
     CACHE_CONTEXT = "cache_context"
     BATCH_MODEL_CALLS = "batch_model_calls"
