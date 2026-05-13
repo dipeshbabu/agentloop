@@ -201,6 +201,7 @@ agentloop server --host 127.0.0.1 --port 8000
 Endpoints:
 
 - `GET /health`
+- `GET /readyz`
 - `POST /api-keys`
 - `POST /traces`
 - `GET /traces`
@@ -210,6 +211,8 @@ Endpoints:
 - `GET /usage`
 
 This is the hosted product path: SDK traces can be sent to an API, stored, metered, and turned into optimization plans and value reports.
+
+For production deployment, use Postgres, API-key auth, an admin key for API-key creation, and the Docker/Compose scaffolding in `docs/PRODUCTION.md`.
 
 ## Hosted store and metering
 
