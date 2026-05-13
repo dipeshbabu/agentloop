@@ -3,5 +3,6 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .venv/
-runs/*.json
+runs/
+*.egg-info/
 .DS_Store

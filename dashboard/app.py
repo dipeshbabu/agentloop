@@ -225,7 +225,7 @@ elif page == "API Keys":
 
     st.subheader("Use this key")
     st.code(
-        f"agentloop upload runs/research_agent_baseline.json --api-url http://127.0.0.1:8000 --api-key YOUR_KEY",
+        "agentloop upload runs/research_agent_baseline.json --api-url http://127.0.0.1:8000 --api-key YOUR_KEY",
         language="bash",
     )
 

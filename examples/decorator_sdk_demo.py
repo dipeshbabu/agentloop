@@ -35,7 +35,6 @@ def run_agent(question: str) -> str:
 def main() -> None:
     agentloop.init(export_dir="runs", auto_store=False, auto_upload=False)
     answer = run_agent("How do I reduce agent latency?")
-    trace = agentloop.current_trace()
     # The trace has already finalized after run_agent exits, so load latest JSON for display.
     latest = max(Path("runs").glob("run_*.json"), key=lambda path: path.stat().st_mtime)
     print(answer)
