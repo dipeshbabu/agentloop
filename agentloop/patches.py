@@ -18,6 +18,7 @@ class FileCandidate:
     symbols: list[str]
     confidence: str
     reason: str
+    locations: list[dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -25,6 +26,7 @@ class FileCandidate:
             "symbols": self.symbols,
             "confidence": self.confidence,
             "reason": self.reason,
+            "locations": self.locations,
         }
 
 
@@ -37,8 +39,10 @@ class PatchPlan:
     risk: str
     framework: str
     files: list[FileCandidate]
+    evidence_spans: list[str]
     before_pattern: str
     proposed_rewrite: str
+    suggested_diff: str
     validation_command: str
     acceptance_criteria: str
     notes: list[str] = field(default_factory=list)
@@ -52,8 +56,10 @@ class PatchPlan:
             "risk": self.risk,
             "framework": self.framework,
             "files": [candidate.to_dict() for candidate in self.files],
+            "evidence_spans": self.evidence_spans,
             "before_pattern": self.before_pattern,
             "proposed_rewrite": self.proposed_rewrite,
+            "suggested_diff": self.suggested_diff,
             "validation_command": self.validation_command,
             "acceptance_criteria": self.acceptance_criteria,
             "notes": self.notes,
@@ -118,10 +124,17 @@ def patch_plan_to_markdown(plan: dict[str, Any]) -> str:
                 f"- Type: `{item['type']}`",
                 f"- Risk: {item['risk']}",
                 f"- Framework: {item['framework']}",
+                f"- Evidence spans: {', '.join(item['evidence_spans']) or 'none'}",
                 f"- Before pattern: {item['before_pattern']}",
                 f"- Proposed rewrite: {item['proposed_rewrite']}",
                 f"- Validation command: `{item['validation_command']}`",
                 f"- Acceptance criteria: {item['acceptance_criteria']}",
+                "",
+                "Suggested diff shape:",
+                "",
+                "```text",
+                item["suggested_diff"],
+                "```",
                 "",
                 "Likely files:",
                 "",
@@ -131,7 +144,11 @@ def patch_plan_to_markdown(plan: dict[str, Any]) -> str:
             lines.extend(["- No likely source file found from trace span names.", ""])
         for candidate in item["files"]:
             symbols = ", ".join(candidate["symbols"]) or "unknown"
-            lines.append(f"- `{candidate['path']}` ({candidate['confidence']}): {symbols}. {candidate['reason']}")
+            location = _format_locations(candidate.get("locations", []))
+            lines.append(
+                f"- `{candidate['path']}`{location} ({candidate['confidence']}): "
+                f"{symbols}. {candidate['reason']}"
+            )
         if item["notes"]:
             lines.extend(["", "Notes:", ""])
             for note in item["notes"]:
@@ -165,8 +182,10 @@ def _plan_for_finding(
         risk=templates["risk"],
         framework=framework,
         files=files,
+        evidence_spans=list(finding.get("affected_spans", [])),
         before_pattern=templates["before_pattern"],
         proposed_rewrite=templates["proposed_rewrite"],
+        suggested_diff=templates["suggested_diff"],
         validation_command=str(finding.get("validation", {}).get("command") or "agentloop replay"),
         acceptance_criteria=str(
             finding.get("validation", {}).get("acceptance_criteria")
@@ -240,7 +259,7 @@ def _candidate_files(source_index: list[dict[str, Any]], evidence_names: list[st
     candidates: list[FileCandidate] = []
     for item in source_index:
         symbol_hits = [
-            symbol["name"]
+            symbol
             for symbol in item["symbols"]
             if symbol["name"] in evidence_names or any(symbol["name"].endswith(f"_{name}") for name in evidence_names)
         ]
@@ -248,9 +267,21 @@ def _candidate_files(source_index: list[dict[str, Any]], evidence_names: list[st
         if not symbol_hits and not text_hits:
             continue
         confidence = "high" if symbol_hits else "medium"
-        symbols = sorted(set(symbol_hits or text_hits))
+        symbols = sorted({symbol["name"] for symbol in symbol_hits} or set(text_hits))
         reason = "matched Python function/class names from trace evidence" if symbol_hits else "matched trace span names in source text"
-        candidates.append(FileCandidate(path=item["path"], symbols=symbols, confidence=confidence, reason=reason))
+        locations = [
+            {"symbol": symbol["name"], "line": symbol["line"], "kind": symbol["kind"]}
+            for symbol in symbol_hits
+        ]
+        candidates.append(
+            FileCandidate(
+                path=item["path"],
+                symbols=symbols,
+                confidence=confidence,
+                reason=reason,
+                locations=locations,
+            )
+        )
     return candidates[:8]
 
 
@@ -290,39 +321,58 @@ def _rewrite_templates(finding_type: str, framework: str) -> dict[str, str]:
 def _parallelize_template(framework: str) -> dict[str, str]:
     if framework == "langgraph":
         rewrite = "Fan out independent work with parallel LangGraph branches or Send/map nodes, then join before synthesis."
+        suggested = "Replace a serial node loop with parallel Send/map fan-out and join results before the synthesis node."
     elif framework == "openai_agents":
         rewrite = "Run independent tool calls with asyncio.gather inside the agent tool orchestration step before returning combined results."
+        suggested = "Wrap independent tool invocations in asyncio.gather and return the combined tool results to the agent."
     else:
         rewrite = "Replace serial independent tool calls with asyncio.gather for async tools or ThreadPoolExecutor for sync tools."
+        suggested = "Before: for item in items: results.append(tool(item))\nAfter: results = await asyncio.gather(*(tool(item) for item in items))"
     return {
         "risk": "medium",
         "before_pattern": "Three or more same-name tool calls appear serial and independent in the trace.",
         "proposed_rewrite": rewrite,
+        "suggested_diff": suggested,
     }
 
 
 def _cache_template(framework: str) -> dict[str, str]:
     if framework == "openai_agents":
         rewrite = "Move stable instructions into agent instructions or a cached prompt prefix; pass only run-specific inputs per step."
+        suggested = "Move stable prompt text into Agent instructions or a cached prefix; keep only task-specific data in each model call."
     else:
         rewrite = "Hoist repeated stable prompt/context into a constant, cached prefix, summary artifact, or provider prompt-cache boundary."
+        suggested = "Before: prompt = stable_context + dynamic_input on every call\nAfter: cached_prefix = stable_context; prompt = cached_prefix + dynamic_input"
     return {
         "risk": "low",
         "before_pattern": "Multiple model calls resend the same stable context or instruction prefix.",
         "proposed_rewrite": rewrite,
+        "suggested_diff": suggested,
     }
 
 
 def _schema_template(framework: str) -> dict[str, str]:
     if framework == "openai_agents":
         rewrite = "Use structured outputs or output_type validation, then repair invalid output with a cheap correction step before a full retry."
+        suggested = "Add output_type/schema validation and route validation failures to a small repair call before retrying the full step."
     else:
-        rewrite = "Add JSON schema or Pydantic validation plus a small repair prompt before rerunning the full model step.",
+        rewrite = "Add JSON schema or Pydantic validation plus a small repair prompt before rerunning the full model step."
+        suggested = "Validate model output against a schema; on failure, run one bounded repair prompt before a full retry."
     return {
         "risk": "medium",
         "before_pattern": "Retry spans indicate invalid or unusable model/tool output caused expensive reruns.",
-        "proposed_rewrite": rewrite[0] if isinstance(rewrite, tuple) else rewrite,
+        "proposed_rewrite": rewrite,
+        "suggested_diff": suggested,
     }
+
+
+def _format_locations(locations: list[dict[str, Any]]) -> str:
+    if not locations:
+        return ""
+    formatted = ", ".join(
+        f"{location.get('symbol', 'symbol')}:{location.get('line', '?')}" for location in locations[:3]
+    )
+    return f" lines {formatted}"
 
 
 def _notes(finding_type: str, files: list[FileCandidate]) -> list[str]:

@@ -43,7 +43,10 @@ def plan():
     parallel = next(item for item in plan["patch_plans"] if item["type"] == "parallelize_tools")
     assert parallel["files"][0]["path"] == "agent_workflow.py"
     assert parallel["files"][0]["symbols"] == ["read_source"]
+    assert parallel["files"][0]["locations"][0]["line"] == 1
+    assert parallel["evidence_spans"]
     assert "asyncio.gather" in parallel["proposed_rewrite"]
+    assert "Before:" in parallel["suggested_diff"]
     assert "Dry-run only" in parallel["notes"][0]
 
 
@@ -58,6 +61,7 @@ def test_patch_plan_markdown_includes_validation(tmp_path) -> None:
 
     assert "# AgentLoop Patch Plan" in markdown
     assert "Validation command: `agentloop replay`" in markdown
+    assert "Suggested diff shape" in markdown
     assert "Patch Plans" in markdown
 
 
