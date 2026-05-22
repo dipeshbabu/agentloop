@@ -61,6 +61,7 @@ agentloop compare
 agentloop replay --baseline runs/research_agent_baseline.json --candidate runs/research_agent_optimized.json --out runs/replay_report.md --json-out runs/replay_report.json
 agentloop audit --out runs/audit.md
 agentloop optimize --out runs/optimization_plan.md --json-out runs/optimization_plan.json
+agentloop ci --out runs/agentloop_ci.md --json-out runs/agentloop_ci.json
 agentloop value-report --out runs/value_report.json --runs-per-month 5000
 agentloop init-store
 agentloop store-trace runs/research_agent_baseline.json --project-id demo
@@ -173,6 +174,26 @@ OpenTelemetry GenAI-style spans instead of requiring a proprietary trace source.
 `agentloop patch --dry-run` turns supported findings into framework-aware patch
 plans for parallel tool execution, context caching, and structured-output repair
 without modifying source files.
+
+## CI and PR performance gates
+
+```bash
+agentloop ci \
+  --baseline runs/research_agent_baseline.json \
+  --candidate runs/research_agent_optimized.json \
+  --out runs/agentloop_ci.md \
+  --json-out runs/agentloop_ci.json \
+  --min-latency-improvement-pct 20 \
+  --min-cost-improvement-pct 5 \
+  --max-latency-regression-pct 0 \
+  --max-cost-regression-pct 0
+```
+
+`agentloop ci` combines replay gates with candidate diagnosis findings. It emits
+Markdown for PR summaries and JSON for automation, then exits non-zero when the
+configured cost, latency, or retry gates fail. The included GitHub Actions
+workflow runs this against the demo baseline and optimized traces and appends
+the report to the workflow step summary.
 
 ## Dashboard
 

@@ -38,6 +38,7 @@ agentloop demo-all
 agentloop diagnose --out runs/diagnosis.md --json-out runs/diagnosis.json
 agentloop patch --dry-run --out runs/patch_plan.md --json-out runs/patch_plan.json
 agentloop replay --out runs/replay_report.md --json-out runs/replay_report.json
+agentloop ci --out runs/agentloop_ci.md --json-out runs/agentloop_ci.json
 agentloop value-report --out runs/value_report.json --runs-per-month 5000
 ```
 
@@ -46,6 +47,7 @@ The local gate is ready when tests pass and these artifacts exist:
 - `runs/diagnosis.md`
 - `runs/patch_plan.md`
 - `runs/replay_report.md`
+- `runs/agentloop_ci.md`
 - `runs/value_report.json`
 
 Run the production configuration check after setting production-like environment
@@ -89,8 +91,9 @@ For a public deployment, `AGENTLOOP_API_URL` must be HTTPS and
 2. Open the diagnosis and point to one high-confidence finding.
 3. Open the patch plan and explain the proposed workflow rewrite.
 4. Open the replay report and explain the pass/fail gates.
-5. Open the value report and convert savings into monthly ROI.
-6. Ask for one real trace from their highest-volume or slowest agent workflow.
+5. Open the CI report and show how the same proof can appear in a PR.
+6. Open the value report and convert savings into monthly ROI.
+7. Ask for one real trace from their highest-volume or slowest agent workflow.
 
 ## Paid Pilot Offer
 
@@ -118,6 +121,7 @@ Ready to sell a pilot:
 - local pilot artifacts generate from `agentloop demo-all`
 - hosted API has API-key auth and Postgres
 - one buyer can upload a trace and receive optimization, replay, and value reports
+- PR-style CI report shows whether the candidate workflow passed performance gates
 - the sales call is focused on cost, latency, reliability, and proof
 
 Not ready for broader launch:
