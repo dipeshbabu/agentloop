@@ -1,0 +1,51 @@
+name: AgentLoop Performance
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  agentloop-ci:
+    name: Replay and optimization gates
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install AgentLoop
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev,all]"
+
+      - name: Generate demo traces
+        run: agentloop demo-all
+
+      - name: Run AgentLoop CI gates
+        run: |
+          agentloop ci \
+            --baseline runs/research_agent_baseline.json \
+            --candidate runs/research_agent_optimized.json \
+            --out runs/agentloop_ci.md \
+            --json-out runs/agentloop_ci.json \
+            --min-latency-improvement-pct 20 \
+            --min-cost-improvement-pct 5 \
+            --max-latency-regression-pct 0 \
+            --max-cost-regression-pct 0 \
+            --github-step-summary
+
+      - name: Upload AgentLoop reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: agentloop-ci-reports
+          path: |
+            runs/agentloop_ci.md
+            runs/agentloop_ci.json
