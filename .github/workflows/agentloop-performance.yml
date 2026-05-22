@@ -4,11 +4,42 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      baseline_trace:
+        description: Baseline trace JSON path.
+        required: false
+        default: runs/research_agent_baseline.json
+      candidate_trace:
+        description: Candidate trace JSON path.
+        required: false
+        default: runs/research_agent_optimized.json
+      generate_demo_traces:
+        description: Generate demo traces before running AgentLoop CI.
+        required: false
+        default: "true"
+      min_latency_improvement_pct:
+        description: Minimum required latency improvement percentage.
+        required: false
+        default: "20"
+      min_cost_improvement_pct:
+        description: Minimum required cost improvement percentage.
+        required: false
+        default: "5"
+
+permissions:
+  contents: read
+  pull-requests: write
 
 jobs:
   agentloop-ci:
     name: Replay and optimization gates
     runs-on: ubuntu-latest
+    env:
+      AGENTLOOP_BASELINE_TRACE: ${{ github.event.inputs.baseline_trace || 'runs/research_agent_baseline.json' }}
+      AGENTLOOP_CANDIDATE_TRACE: ${{ github.event.inputs.candidate_trace || 'runs/research_agent_optimized.json' }}
+      AGENTLOOP_GENERATE_DEMO_TRACES: ${{ github.event.inputs.generate_demo_traces || 'true' }}
+      AGENTLOOP_MIN_LATENCY_IMPROVEMENT_PCT: ${{ github.event.inputs.min_latency_improvement_pct || '20' }}
+      AGENTLOOP_MIN_COST_IMPROVEMENT_PCT: ${{ github.event.inputs.min_cost_improvement_pct || '5' }}
 
     steps:
       - name: Checkout
@@ -26,20 +57,65 @@ jobs:
           python -m pip install -e ".[dev,all]"
 
       - name: Generate demo traces
+        if: env.AGENTLOOP_GENERATE_DEMO_TRACES == 'true'
         run: agentloop demo-all
+
+      - name: Check trace artifacts
+        run: |
+          test -f "$AGENTLOOP_BASELINE_TRACE"
+          test -f "$AGENTLOOP_CANDIDATE_TRACE"
 
       - name: Run AgentLoop CI gates
         run: |
           agentloop ci \
-            --baseline runs/research_agent_baseline.json \
-            --candidate runs/research_agent_optimized.json \
+            --baseline "$AGENTLOOP_BASELINE_TRACE" \
+            --candidate "$AGENTLOOP_CANDIDATE_TRACE" \
             --out runs/agentloop_ci.md \
             --json-out runs/agentloop_ci.json \
-            --min-latency-improvement-pct 20 \
-            --min-cost-improvement-pct 5 \
+            --min-latency-improvement-pct "$AGENTLOOP_MIN_LATENCY_IMPROVEMENT_PCT" \
+            --min-cost-improvement-pct "$AGENTLOOP_MIN_COST_IMPROVEMENT_PCT" \
             --max-latency-regression-pct 0 \
             --max-cost-regression-pct 0 \
             --github-step-summary
+
+      - name: Comment on pull request
+        uses: actions/github-script@v8
+        if: always() && github.event_name == 'pull_request'
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- agentloop-ci-report -->';
+            const reportPath = 'runs/agentloop_ci.md';
+            const report = fs.existsSync(reportPath)
+              ? fs.readFileSync(reportPath, 'utf8')
+              : 'AgentLoop CI report was not generated. Check the workflow logs.';
+            const body = `${marker}\n${report}`;
+            const {owner, repo} = context.repo;
+            const issue_number = context.issue.number;
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number,
+              per_page: 100,
+            });
+            const existing = comments.find((comment) =>
+              comment.user.type === 'Bot' && comment.body.includes(marker)
+            );
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number,
+                body,
+              });
+            }
 
       - name: Upload AgentLoop reports
         uses: actions/upload-artifact@v4
