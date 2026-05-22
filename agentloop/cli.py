@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import typer
@@ -9,6 +10,7 @@ from rich.table import Table
 
 from agentloop.audit import estimate_improvement
 from agentloop.autoinstrument import auto_instrument
+from agentloop.ci import build_ci_report, ci_report_to_markdown
 from agentloop.client import AgentLoopClient
 from agentloop.demo import run_baseline, run_langgraph_style, run_optimized
 from agentloop.doctor import run_doctor, run_production_check
@@ -166,6 +168,53 @@ def replay_command(
         console.print(f"Wrote replay JSON to {json_out}")
     console.print(report_data["summary"])
     if fail_on_gate and not report_data["gates"]["passed"]:
+        raise typer.Exit(1)
+
+
+@app.command("ci")
+def ci_command(
+    baseline: Path = Path("runs/research_agent_baseline.json"),
+    candidate: Path = Path("runs/research_agent_optimized.json"),
+    out: Path = Path("runs/agentloop_ci.md"),
+    json_out: Path | None = typer.Option(None, help="Optional machine-readable CI report output."),
+    max_cost_regression_pct: float = typer.Option(0.0, min=0.0),
+    max_latency_regression_pct: float = typer.Option(0.0, min=0.0),
+    min_latency_improvement_pct: float = typer.Option(0.0, min=0.0),
+    min_cost_improvement_pct: float = typer.Option(0.0, min=0.0),
+    require_retry_non_increase: bool = typer.Option(True),
+    github_step_summary: bool = typer.Option(False, help="Append report Markdown to GITHUB_STEP_SUMMARY."),
+    fail_on_gate: bool = typer.Option(True, help="Exit non-zero when CI gates fail."),
+    autogen: bool = typer.Option(True, help="Generate missing demo traces first."),
+) -> None:
+    if autogen:
+        baseline = _ensure_trace(baseline, "baseline")
+        candidate = _ensure_trace(candidate, "optimized")
+    report_data = build_ci_report(
+        AgentTrace.from_json(baseline),
+        AgentTrace.from_json(candidate),
+        gates=ReplayGates(
+            max_cost_regression_pct=max_cost_regression_pct,
+            max_latency_regression_pct=max_latency_regression_pct,
+            min_latency_improvement_pct=min_latency_improvement_pct,
+            min_cost_improvement_pct=min_cost_improvement_pct,
+            require_retry_non_increase=require_retry_non_increase,
+        ),
+    )
+    markdown = ci_report_to_markdown(report_data)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(markdown, encoding="utf-8")
+    if json_out is not None:
+        _write_json(json_out, report_data)
+    if github_step_summary:
+        summary_path = os.getenv("GITHUB_STEP_SUMMARY")
+        if summary_path:
+            with open(summary_path, "a", encoding="utf-8") as handle:
+                handle.write(markdown)
+    console.print(f"Wrote CI report to {out}")
+    if json_out is not None:
+        console.print(f"Wrote CI JSON to {json_out}")
+    console.print(report_data["replay"]["summary"])
+    if fail_on_gate and not report_data["passed"]:
         raise typer.Exit(1)
 
 
