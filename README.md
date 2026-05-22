@@ -193,7 +193,18 @@ agentloop ci \
 Markdown for PR summaries and JSON for automation, then exits non-zero when the
 configured cost, latency, or retry gates fail. The included GitHub Actions
 workflow runs this against the demo baseline and optimized traces and appends
-the report to the workflow step summary.
+the report to the workflow step summary and pull request comments.
+
+For a real repository, have your agent test job write trace artifacts, then point
+the workflow at those paths:
+
+```bash
+agentloop ci --baseline artifacts/agentloop/baseline.json --candidate artifacts/agentloop/candidate.json
+```
+
+The workflow also supports manual inputs for baseline path, candidate path, and
+gate thresholds. Use `examples/ci_pr_trace_demo.py` to generate a local trace
+artifact pair and preview the PR report.
 
 ## Dashboard
 

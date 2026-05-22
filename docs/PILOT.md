@@ -87,11 +87,13 @@ For a public deployment, `AGENTLOOP_API_URL` must be HTTPS and
 
 ## Demo Flow
 
+Run `python examples/ci_pr_trace_demo.py` before a live walkthrough when you want a compact PR-gate artifact pair under `runs/ci_pr_demo`.
+
 1. Show the buyer the baseline trace report.
 2. Open the diagnosis and point to one high-confidence finding.
 3. Open the patch plan and explain the proposed workflow rewrite.
 4. Open the replay report and explain the pass/fail gates.
-5. Open the CI report and show how the same proof can appear in a PR.
+5. Open the CI report and show how the same proof can appear in a PR comment.
 6. Open the value report and convert savings into monthly ROI.
 7. Ask for one real trace from their highest-volume or slowest agent workflow.
 
@@ -122,6 +124,7 @@ Ready to sell a pilot:
 - hosted API has API-key auth and Postgres
 - one buyer can upload a trace and receive optimization, replay, and value reports
 - PR-style CI report shows whether the candidate workflow passed performance gates
+- workflow accepts buyer trace artifact paths instead of only generated demo traces
 - the sales call is focused on cost, latency, reliability, and proof
 
 Not ready for broader launch:
