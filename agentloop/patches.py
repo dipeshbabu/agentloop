@@ -7,7 +7,16 @@ from typing import Any
 
 from agentloop.findings import build_diagnosis
 
-SUPPORTED_PATCH_TYPES = {"parallelize_tools", "cache_context", "add_schema_validation"}
+SUPPORTED_PATCH_TYPES = {
+    "parallelize_tools",
+    "cache_context",
+    "add_schema_validation",
+    "batch_model_calls",
+    "route_to_smaller_model",
+    "split_large_step",
+    "runaway_loop",
+    "tool_oscillation",
+}
 SOURCE_SUFFIXES = {".py", ".js", ".jsx", ".ts", ".tsx"}
 SKIP_DIRS = {".git", ".pytest_cache", ".venv", "__pycache__", "agentloop.egg-info", "runs"}
 
@@ -311,10 +320,21 @@ def _rewrite_templates(finding_type: str, framework: str) -> dict[str, str]:
         return _cache_template(framework)
     if finding_type == "add_schema_validation":
         return _schema_template(framework)
+    if finding_type == "batch_model_calls":
+        return _batch_template(framework)
+    if finding_type == "route_to_smaller_model":
+        return _routing_template(framework)
+    if finding_type == "split_large_step":
+        return _split_template(framework)
+    if finding_type == "runaway_loop":
+        return _runaway_template(framework)
+    if finding_type == "tool_oscillation":
+        return _oscillation_template(framework)
     return {
         "risk": "medium",
         "before_pattern": "Trace shows a patchable optimization finding.",
         "proposed_rewrite": "Apply the rewrite hinted by the finding, then validate with replay.",
+        "suggested_diff": "Apply the finding rewrite, then compare baseline and candidate traces with agentloop replay.",
     }
 
 
@@ -366,6 +386,83 @@ def _schema_template(framework: str) -> dict[str, str]:
     }
 
 
+def _batch_template(framework: str) -> dict[str, str]:
+    if framework == "langgraph":
+        rewrite = "Replace repeated same-role model nodes with a map/batch node and one join step when independent outputs can share a prompt."
+        suggested = "Group repeated items into one batch prompt or one LangGraph map node, then unpack item-level results before synthesis."
+    else:
+        rewrite = "Batch repeated summarization, extraction, or classification calls into one prompt or bounded chunks."
+        suggested = "Before: for item in items: summarize(item)\nAfter: summarize_batch(items) with structured per-item output"
+    return {
+        "risk": "medium",
+        "before_pattern": "Three or more same-name model calls repeat the same operation shape.",
+        "proposed_rewrite": rewrite,
+        "suggested_diff": suggested,
+    }
+
+
+def _routing_template(framework: str) -> dict[str, str]:
+    if framework == "openai_agents":
+        rewrite = "Route small planning, extraction, verification, or summarization steps to a cheaper model while preserving the final model for synthesis."
+        suggested = "Set the inexpensive step model on the Agent/tool call and keep replay gates plus a quality scorer for acceptance."
+    else:
+        rewrite = "Add a model router for low-token, low-risk steps and validate with quality gates before making it the default."
+        suggested = "Before: model='large-model' for every step\nAfter: model=router.pick(step_kind, token_count, risk_level)"
+    return {
+        "risk": "medium",
+        "before_pattern": "A small model step uses an expensive model despite low token volume.",
+        "proposed_rewrite": rewrite,
+        "suggested_diff": suggested,
+    }
+
+
+def _split_template(framework: str) -> dict[str, str]:
+    rewrite = "Split oversized reasoning into retrieve/filter/compress/finalize stages so the final call receives smaller, higher-signal context."
+    suggested = (
+        "Before: final_answer(full_context)\n"
+        "After: candidates = retrieve(full_context); summary = compress(candidates); final_answer(summary)"
+    )
+    if framework == "langgraph":
+        suggested = "Insert filter and compression nodes before the final synthesis node; replay must preserve answer quality."
+    return {
+        "risk": "medium",
+        "before_pattern": "A model span carries a very large context window or fragile all-in-one reasoning step.",
+        "proposed_rewrite": rewrite,
+        "suggested_diff": suggested,
+    }
+
+
+def _runaway_template(framework: str) -> dict[str, str]:
+    if framework == "langgraph":
+        rewrite = "Add explicit max-iteration, max-cost, and unchanged-state stop conditions to the cyclic graph edge."
+        suggested = "Gate the loop edge on iteration_count, budget_remaining, and state_changed before routing back to the same node."
+    else:
+        rewrite = "Add bounded-loop guards around the agent step: max iterations, max cost, max retries, and unchanged-state detection."
+        suggested = "Before: while not done: step()\nAfter: while not done and guard.allow(state): step(); guard.record(state)"
+    return {
+        "risk": "medium",
+        "before_pattern": "The same step repeats many times in one run without an obvious convergence boundary.",
+        "proposed_rewrite": rewrite,
+        "suggested_diff": suggested,
+    }
+
+
+def _oscillation_template(framework: str) -> dict[str, str]:
+    rewrite = "Add a decision memo or state-change check so the agent does not alternate between equivalent tool calls."
+    suggested = (
+        "Before: tool_a(); tool_b(); tool_a(); tool_b()\n"
+        "After: if transition_key not in seen and state_changed: run_next_tool(); seen.add(transition_key)"
+    )
+    if framework == "langgraph":
+        suggested = "Store a transition key in graph state and block repeated A/B/A/B routes unless state materially changed."
+    return {
+        "risk": "medium",
+        "before_pattern": "Tool calls alternate between the same two tools, suggesting the workflow is revisiting equivalent state.",
+        "proposed_rewrite": rewrite,
+        "suggested_diff": suggested,
+    }
+
+
 def _format_locations(locations: list[dict[str, Any]]) -> str:
     if not locations:
         return ""
@@ -385,6 +482,16 @@ def _notes(finding_type: str, files: list[FileCandidate]) -> list[str]:
         notes.append("Confirm cached context has the same invalidation boundary as the original prompt.")
     if finding_type == "add_schema_validation":
         notes.append("Keep the repair path cheaper than a full retry and cap repair attempts.")
+    if finding_type == "batch_model_calls":
+        notes.append("Batch only items whose outputs can be validated independently after unpacking.")
+    if finding_type == "route_to_smaller_model":
+        notes.append("Require a quality scorer or golden fixture before routing production traffic to the cheaper model.")
+    if finding_type == "split_large_step":
+        notes.append("Preserve citations or source references across the compression boundary.")
+    if finding_type == "runaway_loop":
+        notes.append("Record the stop reason in trace metadata so future runs can distinguish healthy exits from guardrail exits.")
+    if finding_type == "tool_oscillation":
+        notes.append("Make the state-change predicate domain-specific; generic duplicate suppression can hide real progress.")
     return notes
 
 

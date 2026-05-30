@@ -12,7 +12,7 @@ from agentloop.audit import estimate_improvement
 from agentloop.autoinstrument import auto_instrument
 from agentloop.ci import build_ci_report, ci_report_to_markdown
 from agentloop.client import AgentLoopClient
-from agentloop.demo import run_baseline, run_langgraph_style, run_optimized
+from agentloop.demo import run_baseline, run_langgraph_style, run_optimized, run_proof_pair
 from agentloop.doctor import run_doctor, run_production_check
 from agentloop.exporters import export_report_markdown
 from agentloop.findings import build_diagnosis, diagnosis_to_markdown
@@ -140,6 +140,8 @@ def replay_command(
     min_latency_improvement_pct: float = typer.Option(0.0, min=0.0),
     min_cost_improvement_pct: float = typer.Option(0.0, min=0.0),
     require_retry_non_increase: bool = typer.Option(True),
+    require_schema_valid: bool = typer.Option(False, help="Require candidate trace metadata/report to mark schema output as valid."),
+    min_quality_score: float | None = typer.Option(None, min=0.0, help="Optional minimum candidate quality score."),
     fail_on_gate: bool = typer.Option(True, help="Exit non-zero when replay gates fail."),
     autogen: bool = typer.Option(True, help="Generate missing demo traces first."),
 ) -> None:
@@ -157,6 +159,8 @@ def replay_command(
             min_latency_improvement_pct=min_latency_improvement_pct,
             min_cost_improvement_pct=min_cost_improvement_pct,
             require_retry_non_increase=require_retry_non_increase,
+            require_schema_valid=require_schema_valid,
+            min_quality_score=min_quality_score,
         ),
     )
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -182,6 +186,8 @@ def ci_command(
     min_latency_improvement_pct: float = typer.Option(0.0, min=0.0),
     min_cost_improvement_pct: float = typer.Option(0.0, min=0.0),
     require_retry_non_increase: bool = typer.Option(True),
+    require_schema_valid: bool = typer.Option(False, help="Require candidate trace metadata/report to mark schema output as valid."),
+    min_quality_score: float | None = typer.Option(None, min=0.0, help="Optional minimum candidate quality score."),
     github_step_summary: bool = typer.Option(False, help="Append report Markdown to GITHUB_STEP_SUMMARY."),
     fail_on_gate: bool = typer.Option(True, help="Exit non-zero when CI gates fail."),
     autogen: bool = typer.Option(True, help="Generate missing demo traces first."),
@@ -198,6 +204,8 @@ def ci_command(
             min_latency_improvement_pct=min_latency_improvement_pct,
             min_cost_improvement_pct=min_cost_improvement_pct,
             require_retry_non_increase=require_retry_non_increase,
+            require_schema_valid=require_schema_valid,
+            min_quality_score=min_quality_score,
         ),
     )
     markdown = ci_report_to_markdown(report_data)
@@ -498,6 +506,19 @@ def remote_optimize(
     console.print(f"Wrote remote optimization plan to {out}")
 
 
+@app.command("remote-diagnose")
+def remote_diagnose(
+    run_id: str,
+    api_url: str = typer.Option("http://127.0.0.1:8000", help="AgentLoop API base URL."),
+    api_key: str | None = typer.Option(None, help="Optional API key. Defaults to AGENTLOOP_API_KEY."),
+    out: Path = Path("runs/remote_diagnosis.json"),
+) -> None:
+    client = AgentLoopClient(base_url=api_url, api_key=api_key)
+    diagnosis = client.get_diagnosis(run_id)
+    _write_json(out, diagnosis)
+    console.print(f"Wrote remote diagnosis to {out}")
+
+
 @app.command("remote-value-report")
 def remote_value_report(
     run_id: str,
@@ -543,15 +564,20 @@ def remote_create_api_key(
 
 
 @app.command()
-def demo(kind: str = typer.Option("baseline", help="baseline, optimized, or langgraph")) -> None:
+def demo(kind: str = typer.Option("baseline", help="baseline, optimized, langgraph, or proof")) -> None:
     if kind == "baseline":
         path = run_baseline()
     elif kind == "optimized":
         path = run_optimized()
     elif kind == "langgraph":
         path = run_langgraph_style()
+    elif kind == "proof":
+        baseline, candidate = run_proof_pair()
+        console.print(f"Wrote trace to {baseline}")
+        console.print(f"Wrote trace to {candidate}")
+        return
     else:
-        raise typer.BadParameter("kind must be 'baseline', 'optimized', or 'langgraph'")
+        raise typer.BadParameter("kind must be 'baseline', 'optimized', 'langgraph', or 'proof'")
     console.print(f"Wrote trace to {path}")
 
 
@@ -560,9 +586,12 @@ def demo_all() -> None:
     base = run_baseline()
     opt = run_optimized()
     lg = run_langgraph_style()
+    proof_base, proof_candidate = run_proof_pair()
     console.print(f"Wrote {base}")
     console.print(f"Wrote {opt}")
     console.print(f"Wrote {lg}")
+    console.print(f"Wrote {proof_base}")
+    console.print(f"Wrote {proof_candidate}")
 
 
 @app.command()

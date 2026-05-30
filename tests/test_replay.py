@@ -89,6 +89,26 @@ def test_replay_report_fails_on_latency_regression() -> None:
     assert latency_gate["passed"] is False
 
 
+def test_replay_report_checks_schema_and_quality_gates() -> None:
+    baseline = _trace("baseline", model_duration_ms=800, tool_duration_ms=200, input_tokens=1000, output_tokens=200)
+    candidate = _trace("candidate", model_duration_ms=400, tool_duration_ms=100, input_tokens=500, output_tokens=100)
+    baseline.metadata.update({"schema_validity_pct": 100.0, "quality_score": 0.91})
+    candidate.metadata.update({"schema_valid": True, "schema_validity_pct": 100.0, "quality_score": 0.94})
+
+    report = build_replay_report(
+        baseline,
+        candidate,
+        gates=ReplayGates(require_schema_valid=True, min_quality_score=0.9),
+    )
+    markdown = replay_report_to_markdown(report)
+
+    assert report["gates"]["passed"] is True
+    assert report["candidate"]["schema_valid"] is True
+    assert report["candidate"]["quality_score"] == 0.94
+    assert "schema_valid" in {item["name"] for item in report["gates"]["results"]}
+    assert "Quality score" in markdown
+
+
 def test_replay_markdown_contains_gate_table() -> None:
     baseline = _trace("baseline", model_duration_ms=500, tool_duration_ms=100, input_tokens=200, output_tokens=50)
     candidate = _trace("candidate", model_duration_ms=400, tool_duration_ms=100, input_tokens=100, output_tokens=50)

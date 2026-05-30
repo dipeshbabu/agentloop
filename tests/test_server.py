@@ -78,6 +78,25 @@ def test_optimize_trace_endpoint() -> None:
     assert "optimization_cards" in opt.json()
 
 
+def test_diagnose_trace_endpoint() -> None:
+    client = TestClient(app)
+    with trace_agent("server-diagnose-test") as trace:
+        repeated = "stable context " * 100
+        for _ in range(2):
+            with trace_model_call("summarize", input_text=repeated, output_tokens=10):
+                pass
+    response = client.post("/traces", json=trace.to_dict())
+    assert response.status_code == 200
+    run_id = response.json()["run_id"]
+
+    diagnosis = client.get(f"/traces/{run_id}/diagnose")
+
+    assert diagnosis.status_code == 200
+    body = diagnosis.json()
+    assert body["summary"]["finding_count"] >= 1
+    assert "findings" in body
+
+
 def test_value_report_endpoint() -> None:
     client = TestClient(app)
     with trace_agent("server-value-test") as trace:

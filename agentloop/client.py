@@ -67,6 +67,9 @@ class AgentLoopClient:
     def get_optimization_plan(self, run_id: str) -> dict[str, Any]:
         return self._request("GET", f"/traces/{run_id}/optimize")
 
+    def get_diagnosis(self, run_id: str) -> dict[str, Any]:
+        return self._request("GET", f"/traces/{run_id}/diagnose")
+
     def get_value_report(
         self,
         run_id: str,

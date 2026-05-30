@@ -89,7 +89,13 @@ jobs:
             const report = fs.existsSync(reportPath)
               ? fs.readFileSync(reportPath, 'utf8')
               : 'AgentLoop CI report was not generated. Check the workflow logs.';
-            const body = `${marker}\n${report}`;
+            const intro = [
+              '## AgentLoop Performance Proof',
+              '',
+              'Trace in. Rewrite plan out. Replay proof in the PR.',
+              '',
+            ].join('\n');
+            const body = `${marker}\n${intro}${report}`;
             const {owner, repo} = context.repo;
             const issue_number = context.issue.number;
             const comments = await github.paginate(github.rest.issues.listComments, {

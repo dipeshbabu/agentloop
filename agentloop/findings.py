@@ -125,6 +125,9 @@ def _finding_from_card(index: int, card: dict[str, Any], plan: dict[str, Any]) -
                 "add_schema_validation",
                 "batch_model_calls",
                 "route_to_smaller_model",
+                "split_large_step",
+                "runaway_loop",
+                "tool_oscillation",
             },
         },
         validation={
@@ -178,6 +181,8 @@ def _savings_formula(finding_type: str) -> str:
         "batch_model_calls": "sum(repeated model durations) * 35%",
         "route_to_smaller_model": "model step duration * 25%",
         "split_large_step": "large step duration * 20%",
+        "runaway_loop": "repeated loop duration * 30%",
+        "tool_oscillation": "alternating tool duration * 40%",
     }
     return formulas.get(finding_type, "optimizer estimate")
 
@@ -190,5 +195,7 @@ def _acceptance_criteria(finding_type: str) -> str:
         "batch_model_calls": "runtime decreases and item-level outputs remain equivalent",
         "route_to_smaller_model": "cost decreases while configured quality scorer passes",
         "split_large_step": "context size decreases while final answer quality scorer passes",
+        "runaway_loop": "iteration count is bounded and replay passes quality and budget gates",
+        "tool_oscillation": "tool-call count decreases without losing required state transitions",
     }
     return criteria.get(finding_type, "before/after replay passes configured quality and budget gates")

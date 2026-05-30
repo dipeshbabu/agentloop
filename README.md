@@ -1,10 +1,12 @@
 # AgentLoop
 
-AgentLoop is a profiler and optimization layer for AI agent execution graphs. It traces model calls, tool calls, retries, token usage, repeated context, and latency bottlenecks, then turns the trace into concrete workflow rewrite recommendations.
+AgentLoop is a profiler and optimization layer for AI agent execution graphs. It traces model calls, tool calls, retries, token usage, repeated context, and latency bottlenecks, then turns the trace into concrete workflow rewrite recommendations, patch plans, and replay proof.
 
 AgentLoop is not memory for agents. It is performance engineering for agent loops.
 
-The product thesis is simple: agents do not execute like single prompt-response apps. They loop, call tools, retry, branch, summarize, and carry context. AgentLoop measures that loop and recommends how to restructure it.
+The product thesis is simple: agents do not execute like single prompt-response apps. They loop, call tools, retry, branch, summarize, and carry context. AgentLoop measures that loop, proposes targeted rewrites, and proves whether the rewrite paid off.
+
+Trace in. Rewrite plan out. Replay proof in the PR.
 
 ## Install
 
@@ -58,6 +60,9 @@ trace.export_json("runs/openai_agent.json")
 ```bash
 agentloop demo-all
 agentloop compare
+agentloop demo --kind proof
+agentloop diagnose --path runs/agentloop_proof_baseline.json --out runs/diagnosis.md --json-out runs/diagnosis.json
+agentloop patch --path runs/agentloop_proof_baseline.json --repo . --out runs/patch_plan.md --json-out runs/patch_plan.json
 agentloop replay --baseline runs/research_agent_baseline.json --candidate runs/research_agent_optimized.json --out runs/replay_report.md --json-out runs/replay_report.json
 agentloop audit --out runs/audit.md
 agentloop optimize --out runs/optimization_plan.md --json-out runs/optimization_plan.json
@@ -74,6 +79,9 @@ The dashboard now works as a local-first SaaS control panel backed by the same p
 - stored traces
 - trace event timelines
 - graph-aware optimization plans
+- machine-actionable diagnosis findings
+- trace-to-patch dry-run plans
+- before/after replay proof and PR comment previews
 - buyer-facing value and pricing reports
 - API key creation
 - trace ingest and upload flow
@@ -85,6 +93,7 @@ You can still run individual demos:
 agentloop demo --kind baseline
 agentloop demo --kind optimized
 agentloop demo --kind langgraph
+agentloop demo --kind proof
 python examples/langgraph_auto_instrumentation_demo.py
 ```
 
@@ -172,8 +181,9 @@ stable finding IDs, affected spans, evidence rows, savings formulas, patchabilit
 replay acceptance criteria. `export-otel` and `import-otel` let AgentLoop sit above
 OpenTelemetry GenAI-style spans instead of requiring a proprietary trace source.
 `agentloop patch --dry-run` turns supported findings into framework-aware patch
-plans for parallel tool execution, context caching, and structured-output repair
-without modifying source files.
+plans for parallel tool execution, context caching, structured-output repair,
+batching, model routing, split/compress rewrites, runaway-loop guardrails, and
+tool-oscillation guards without modifying source files.
 
 ## CI and PR performance gates
 
@@ -217,6 +227,9 @@ Dashboard pages:
 - `Overview`: usage, run count, runtime, cost, token volume, model/tool calls, retry count, recent runs, runtime chart
 - `Traces`: stored trace table, event timeline, trace JSON download
 - `Optimization`: optimization cards, bottlenecks, parallelizable groups, value estimate, plan JSON download
+- `Diagnosis`: evidence-backed findings with severity, affected spans, savings, and validation criteria
+- `Patch Plan`: framework-aware dry-run rewrite plans tied to likely files and replay gates
+- `Replay Proof`: before/after metrics, quality/schema gates, and PR comment preview
 - `Value & Pricing`: buyer-facing ROI, reliability risk, pricing recommendation, value report JSON download
 - `API Keys`: project-scoped API key creation
 - `Ingest`: generate demo traces, upload trace JSON, store traces under a project
@@ -239,6 +252,7 @@ Endpoints:
 - `GET /traces`
 - `GET /traces/{run_id}/report`
 - `GET /traces/{run_id}/optimize`
+- `GET /traces/{run_id}/diagnose`
 - `GET /traces/{run_id}/value`
 - `GET /usage`
 

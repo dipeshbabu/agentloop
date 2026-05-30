@@ -11,6 +11,8 @@ class ReplayGates:
     min_latency_improvement_pct: float = 0.0
     min_cost_improvement_pct: float = 0.0
     require_retry_non_increase: bool = True
+    require_schema_valid: bool = False
+    min_quality_score: float | None = None
 
 
 def build_replay_report(
@@ -20,15 +22,17 @@ def build_replay_report(
     gates: ReplayGates | None = None,
 ) -> dict[str, Any]:
     gates = gates or ReplayGates()
-    baseline = baseline_trace.report()
-    candidate = candidate_trace.report()
+    baseline_report = baseline_trace.report()
+    candidate_report = candidate_trace.report()
+    baseline = _trace_summary(baseline_trace, baseline_report)
+    candidate = _trace_summary(candidate_trace, candidate_report)
     deltas = _deltas(baseline, candidate)
     gate_results = _gate_results(deltas, baseline, candidate, gates)
     passed = all(item["passed"] for item in gate_results)
 
     return {
-        "baseline": _trace_summary(baseline_trace, baseline),
-        "candidate": _trace_summary(candidate_trace, candidate),
+        "baseline": baseline,
+        "candidate": candidate,
         "deltas": deltas,
         "gates": {
             "passed": passed,
@@ -38,6 +42,8 @@ def build_replay_report(
                 "min_latency_improvement_pct": gates.min_latency_improvement_pct,
                 "min_cost_improvement_pct": gates.min_cost_improvement_pct,
                 "require_retry_non_increase": gates.require_retry_non_increase,
+                "require_schema_valid": gates.require_schema_valid,
+                "min_quality_score": gates.min_quality_score,
             },
             "results": gate_results,
         },
@@ -70,12 +76,38 @@ def replay_report_to_markdown(report: dict[str, Any]) -> str:
         _metric_row("Retries", baseline["retry_count"], candidate["retry_count"], deltas["retry_count_delta"], deltas["retry_improvement_pct"], "count"),
         _metric_row("Tool calls", baseline["tool_call_count"], candidate["tool_call_count"], deltas["tool_call_count_delta"], deltas["tool_call_improvement_pct"], "count"),
         _metric_row("Model calls", baseline["model_call_count"], candidate["model_call_count"], deltas["model_call_count_delta"], deltas["model_call_improvement_pct"], "count"),
-        "",
-        "## Gates",
-        "",
-        "| Gate | Status | Detail |",
-        "|---|---|---|",
     ]
+    if baseline.get("schema_validity_pct") is not None or candidate.get("schema_validity_pct") is not None:
+        lines.append(
+            _metric_row(
+                "Schema validity",
+                baseline.get("schema_validity_pct") or 0.0,
+                candidate.get("schema_validity_pct") or 0.0,
+                deltas["schema_validity_delta_pct"],
+                deltas["schema_validity_improvement_pct"],
+                "pct",
+            )
+        )
+    if baseline.get("quality_score") is not None or candidate.get("quality_score") is not None:
+        lines.append(
+            _metric_row(
+                "Quality score",
+                baseline.get("quality_score") or 0.0,
+                candidate.get("quality_score") or 0.0,
+                deltas["quality_score_delta"],
+                deltas["quality_score_improvement_pct"],
+                "score",
+            )
+        )
+    lines.extend(
+        [
+            "",
+            "## Gates",
+            "",
+            "| Gate | Status | Detail |",
+            "|---|---|---|",
+        ]
+    )
     for item in gates["results"]:
         gate_status = "pass" if item["passed"] else "fail"
         lines.append(f"| {item['name']} | {gate_status} | {item['detail']} |")
@@ -83,6 +115,7 @@ def replay_report_to_markdown(report: dict[str, Any]) -> str:
 
 
 def _trace_summary(trace: Any, report: dict[str, Any]) -> dict[str, Any]:
+    metadata = getattr(trace, "metadata", {}) or {}
     return {
         "run_id": trace.run_id,
         "name": trace.name,
@@ -93,12 +126,23 @@ def _trace_summary(trace: Any, report: dict[str, Any]) -> dict[str, Any]:
         "retry_count": int(report.get("retry_count", 0) or 0),
         "tool_call_count": int(report.get("tool_call_count", 0) or 0),
         "model_call_count": int(report.get("model_call_count", 0) or 0),
+        "schema_validity_pct": _optional_float(
+            report.get("schema_validity_pct")
+            if report.get("schema_validity_pct") is not None
+            else metadata.get("schema_validity_pct")
+        ),
+        "schema_valid": _optional_bool(
+            report.get("schema_valid") if report.get("schema_valid") is not None else metadata.get("schema_valid")
+        ),
+        "quality_score": _optional_float(
+            report.get("quality_score") if report.get("quality_score") is not None else metadata.get("quality_score")
+        ),
     }
 
 
 def _deltas(baseline: dict[str, Any], candidate: dict[str, Any]) -> dict[str, Any]:
-    base_runtime = float(baseline.get("total_runtime_ms", 0.0) or 0.0)
-    cand_runtime = float(candidate.get("total_runtime_ms", 0.0) or 0.0)
+    base_runtime = float(baseline.get("runtime_ms", baseline.get("total_runtime_ms", 0.0)) or 0.0)
+    cand_runtime = float(candidate.get("runtime_ms", candidate.get("total_runtime_ms", 0.0)) or 0.0)
     base_cost = float(baseline.get("estimated_cost_usd", 0.0) or 0.0)
     cand_cost = float(candidate.get("estimated_cost_usd", 0.0) or 0.0)
     base_input = int(baseline.get("input_tokens", 0) or 0)
@@ -111,6 +155,14 @@ def _deltas(baseline: dict[str, Any], candidate: dict[str, Any]) -> dict[str, An
     cand_tools = int(candidate.get("tool_call_count", 0) or 0)
     base_models = int(baseline.get("model_call_count", 0) or 0)
     cand_models = int(candidate.get("model_call_count", 0) or 0)
+    base_schema = _optional_float(baseline.get("schema_validity_pct"))
+    if base_schema is None:
+        base_schema = _schema_validity_from_bool(baseline.get("schema_valid"))
+    cand_schema = _optional_float(candidate.get("schema_validity_pct"))
+    if cand_schema is None:
+        cand_schema = _schema_validity_from_bool(candidate.get("schema_valid"))
+    base_quality = _optional_float(baseline.get("quality_score"))
+    cand_quality = _optional_float(candidate.get("quality_score"))
 
     return {
         "runtime_ms_delta": round(cand_runtime - base_runtime, 3),
@@ -129,6 +181,10 @@ def _deltas(baseline: dict[str, Any], candidate: dict[str, Any]) -> dict[str, An
         "tool_call_improvement_pct": _improvement_pct(base_tools, cand_tools),
         "model_call_count_delta": cand_models - base_models,
         "model_call_improvement_pct": _improvement_pct(base_models, cand_models),
+        "schema_validity_delta_pct": round((cand_schema or 0.0) - (base_schema or 0.0), 3),
+        "schema_validity_improvement_pct": _relative_gain_pct(base_schema, cand_schema),
+        "quality_score_delta": round((cand_quality or 0.0) - (base_quality or 0.0), 4),
+        "quality_score_improvement_pct": _relative_gain_pct(base_quality, cand_quality),
     }
 
 
@@ -170,6 +226,24 @@ def _gate_results(
                 f"{cand_retries} candidate retries <= {base_retries} baseline retries",
             )
         )
+    if gates.require_schema_valid:
+        schema_valid = _candidate_schema_valid(candidate)
+        results.append(
+            _gate(
+                "schema_valid",
+                schema_valid,
+                "candidate schema validity passed" if schema_valid else "candidate schema validity missing or failed",
+            )
+        )
+    if gates.min_quality_score is not None:
+        quality_score = _optional_float(candidate.get("quality_score"))
+        passed = quality_score is not None and quality_score >= gates.min_quality_score
+        detail = (
+            f"{quality_score:.4f} candidate quality >= {gates.min_quality_score:.4f} required"
+            if quality_score is not None
+            else f"candidate quality score missing; {gates.min_quality_score:.4f} required"
+        )
+        results.append(_gate("quality_score", passed, detail))
     return results
 
 
@@ -192,6 +266,14 @@ def _improvement_pct(baseline: float, candidate: float) -> float:
     return round(((baseline - candidate) / baseline) * 100, 2)
 
 
+def _relative_gain_pct(baseline: float | None, candidate: float | None) -> float:
+    if baseline is None:
+        return 0.0 if candidate is None else 100.0
+    if baseline == 0:
+        return 0.0 if not candidate else 100.0
+    return round((((candidate or 0.0) - baseline) / baseline) * 100, 2)
+
+
 def _regression_pct(baseline: float, candidate: float) -> float:
     if baseline == 0:
         return 0.0 if candidate == 0 else 100.0
@@ -210,4 +292,39 @@ def _format_metric(value: float, kind: str) -> str:
         return f"${value:.6f}"
     if kind == "ms":
         return f"{value:.3f}ms"
+    if kind == "pct":
+        return f"{value:.3f}%"
+    if kind == "score":
+        return f"{value:.4f}"
     return str(int(value))
+
+
+def _optional_float(value: Any) -> float | None:
+    if value is None or value == "":
+        return None
+    return float(value)
+
+
+def _optional_bool(value: Any) -> bool | None:
+    if value is None or value == "":
+        return None
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "pass", "passed", "valid"}
+    return bool(value)
+
+
+def _schema_validity_from_bool(value: Any) -> float | None:
+    parsed = _optional_bool(value)
+    if parsed is None:
+        return None
+    return 100.0 if parsed else 0.0
+
+
+def _candidate_schema_valid(candidate: dict[str, Any]) -> bool:
+    schema_valid = _optional_bool(candidate.get("schema_valid"))
+    if schema_valid is not None:
+        return schema_valid
+    validity_pct = _optional_float(candidate.get("schema_validity_pct"))
+    return validity_pct is not None and validity_pct >= 100.0

@@ -15,6 +15,8 @@ class RecommendationType(str, Enum):
     REMOVE_RETRY_LOOP = "remove_retry_loop"
     ADD_SCHEMA_VALIDATION = "add_schema_validation"
     SPLIT_LARGE_STEP = "split_large_step"
+    RUNAWAY_LOOP = "runaway_loop"
+    TOOL_OSCILLATION = "tool_oscillation"
 
 
 @dataclass
@@ -51,6 +53,8 @@ def build_optimization_plan(trace: Any, report: dict[str, Any] | None = None) ->
     cards.extend(_batch_model_cards(graph))
     cards.extend(_routing_cards(graph))
     cards.extend(_split_large_step_cards(graph))
+    cards.extend(_runaway_loop_cards(graph))
+    cards.extend(_tool_oscillation_cards(graph))
 
     total_latency_savings = sum(card.estimated_latency_savings_ms for card in cards)
     total_cost_savings = sum(card.estimated_cost_savings_usd for card in cards)
@@ -195,3 +199,67 @@ def _split_large_step_cards(graph: ExecutionGraph) -> list[OptimizationCard]:
                 )
             )
     return cards
+
+
+def _runaway_loop_cards(graph: ExecutionGraph) -> list[OptimizationCard]:
+    cards = []
+    groups: dict[tuple[str, str], list[Any]] = {}
+    for node in graph.nodes:
+        groups.setdefault((node.event_type, node.name), []).append(node)
+
+    for (event_type, name), nodes in groups.items():
+        if len(nodes) < 8:
+            continue
+        duration = sum(node.duration_ms for node in nodes)
+        cards.append(
+            OptimizationCard(
+                type=RecommendationType.RUNAWAY_LOOP,
+                title=f"Add a loop guardrail around `{name}`",
+                why=f"`{name}` ran {len(nodes)} times in one trace, which suggests an unbounded or weakly bounded agent loop.",
+                rewrite_hint="Add max-iteration, max-cost, and unchanged-state guards before the workflow can keep looping.",
+                confidence="high" if len(nodes) >= 12 else "medium",
+                estimated_latency_savings_ms=duration * 0.30,
+                affected_nodes=[node.node_id for node in nodes],
+            )
+        )
+    return cards[:3]
+
+
+def _tool_oscillation_cards(graph: ExecutionGraph) -> list[OptimizationCard]:
+    tool_nodes = [node for node in graph.nodes if node.event_type == "tool_call"]
+    if len(tool_nodes) < 4:
+        return []
+
+    cards = []
+    index = 0
+    while index <= len(tool_nodes) - 4:
+        first = tool_nodes[index].name
+        second = tool_nodes[index + 1].name
+        if first == second:
+            index += 1
+            continue
+
+        window = tool_nodes[index : index + 4]
+        if [node.name for node in window] != [first, second, first, second]:
+            index += 1
+            continue
+
+        end = index + 4
+        while end < len(tool_nodes) and tool_nodes[end].name == (first if (end - index) % 2 == 0 else second):
+            end += 1
+        oscillating = tool_nodes[index:end]
+        duration = sum(node.duration_ms for node in oscillating)
+        cards.append(
+            OptimizationCard(
+                type=RecommendationType.TOOL_OSCILLATION,
+                title=f"Stop `{first}`/`{second}` tool oscillation",
+                why=f"Observed {len(oscillating)} alternating `{first}` and `{second}` tool calls.",
+                rewrite_hint="Add a state-change check or decision memo so the agent does not repeat equivalent tool transitions.",
+                confidence="medium",
+                estimated_latency_savings_ms=duration * 0.40,
+                affected_nodes=[node.node_id for node in oscillating],
+            )
+        )
+        index = end
+
+    return sorted(cards, key=lambda card: card.estimated_latency_savings_ms, reverse=True)[:3]

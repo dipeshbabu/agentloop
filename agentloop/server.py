@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from agentloop.config import get_admin_api_key, get_api_key, get_cors_origins, require_api_key
+from agentloop.findings import build_diagnosis
 from agentloop.optimizer import build_optimization_plan
 from agentloop.store import TraceStore, get_store
 from agentloop.tracer import AgentTrace
@@ -144,6 +145,15 @@ def optimize_trace(
     db: TraceStore = Depends(store),
 ) -> dict[str, Any]:
     return build_optimization_plan(_load_trace_or_404(db, run_id, project_id))
+
+
+@app.get("/traces/{run_id}/diagnose")
+def diagnose_trace(
+    run_id: str,
+    project_id: str = Depends(resolve_project),
+    db: TraceStore = Depends(store),
+) -> dict[str, Any]:
+    return build_diagnosis(_load_trace_or_404(db, run_id, project_id))
 
 
 @app.get("/traces/{run_id}/value")

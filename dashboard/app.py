@@ -6,8 +6,12 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from agentloop.demo import run_baseline, run_langgraph_style, run_optimized
+from agentloop.ci import build_ci_report, ci_report_to_markdown
+from agentloop.demo import run_baseline, run_langgraph_style, run_optimized, run_proof_pair
+from agentloop.findings import build_diagnosis
 from agentloop.optimizer import build_optimization_plan
+from agentloop.patches import build_patch_plan
+from agentloop.replay import ReplayGates, build_replay_report
 from agentloop.store import get_store
 from agentloop.tracer import AgentTrace
 from agentloop.value import build_value_report
@@ -48,6 +52,28 @@ def select_trace(traces: list[dict], label: str = "Choose trace") -> AgentTrace 
     return load_trace_for_project(labels[selected_label], project_id)
 
 
+def trace_options(traces: list[dict]) -> dict[str, str]:
+    return {f"{t['name']} - {t['run_id']}": t["run_id"] for t in traces}
+
+
+def selected_trace_from_options(traces: list[dict], label: str) -> AgentTrace | None:
+    options = trace_options(traces)
+    selected = st.selectbox(label, list(options.keys()))
+    return load_trace_for_project(options[selected], project_id)
+
+
+def render_gate_table(results: list[dict]) -> None:
+    rows = [
+        {
+            "gate": item["name"],
+            "status": "pass" if item["passed"] else "fail",
+            "detail": item["detail"],
+        }
+        for item in results
+    ]
+    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+
+
 st.sidebar.title("AgentLoop Cloud")
 st.sidebar.caption("Hosted control panel for agent-loop performance")
 
@@ -56,7 +82,18 @@ st.session_state["project_id"] = project_id
 
 page = st.sidebar.radio(
     "Navigate",
-    ["Overview", "Traces", "Optimization", "Value & Pricing", "API Keys", "Ingest", "Setup"],
+    [
+        "Overview",
+        "Traces",
+        "Optimization",
+        "Diagnosis",
+        "Patch Plan",
+        "Replay Proof",
+        "Value & Pricing",
+        "API Keys",
+        "Ingest",
+        "Setup",
+    ],
 )
 
 store = load_store()
@@ -83,7 +120,7 @@ if page == "Overview":
     st.subheader("Recent runs")
     if traces:
         df = pd.DataFrame(traces)
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(df, width="stretch")
 
         chart_df = df[["name", "total_runtime_ms", "estimated_cost_usd"]].copy()
         chart_df["runtime_s"] = chart_df["total_runtime_ms"] / 1000
@@ -99,7 +136,7 @@ elif page == "Traces":
         st.info("No traces stored for this project yet.")
     else:
         df = pd.DataFrame(traces)
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(df, width="stretch")
         selected_run = st.selectbox("Open run", df["run_id"].tolist())
         trace = load_trace_for_project(selected_run, project_id)
         if trace is not None:
@@ -118,7 +155,7 @@ elif page == "Traces":
                 for col in cols:
                     if col not in events.columns:
                         events[col] = None
-                st.dataframe(events[cols], use_container_width=True)
+                st.dataframe(events[cols], width="stretch")
 
             st.download_button(
                 "Download trace JSON",
@@ -170,20 +207,172 @@ elif page == "Optimization":
             st.subheader("Execution graph")
             graph = plan["graph"]
             st.write("Bottlenecks")
-            st.dataframe(pd.DataFrame(graph["bottlenecks"]), use_container_width=True)
+            st.dataframe(pd.DataFrame(graph["bottlenecks"]), width="stretch")
             st.write("Parallelizable groups")
             if graph["parallelizable_groups"]:
-                st.dataframe(pd.DataFrame(graph["parallelizable_groups"]), use_container_width=True)
+                st.dataframe(pd.DataFrame(graph["parallelizable_groups"]), width="stretch")
             else:
                 st.info("No obvious repeated independent tool-call groups found yet.")
             st.write("Edges")
-            st.dataframe(pd.DataFrame(graph["edges"]), use_container_width=True)
+            st.dataframe(pd.DataFrame(graph["edges"]), width="stretch")
 
             st.download_button(
                 "Download optimization plan JSON",
                 data=json.dumps(plan, indent=2),
                 file_name="agentloop_optimization_plan.json",
                 mime="application/json",
+            )
+
+elif page == "Diagnosis":
+    traces = store.list_traces(project_id=project_id)
+    st.subheader("Machine-actionable diagnosis")
+    if not traces:
+        st.info("No traces stored for this project yet.")
+    else:
+        trace = selected_trace_from_options(traces, "Choose trace for diagnosis")
+        if trace is not None:
+            diagnosis = build_diagnosis(trace)
+            summary = diagnosis["summary"]
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Findings", summary["finding_count"])
+            c2.metric("High severity", summary["high_severity_count"])
+            c3.metric("Patchable", summary["patchable_count"])
+            c4.metric("Latency reduction", f"{summary['estimated_latency_reduction_pct']:.1f}%")
+
+            findings = diagnosis.get("findings", [])
+            if not findings:
+                st.info("No machine-actionable findings detected for this trace.")
+            for finding in findings:
+                label = f"{finding['severity'].upper()} - {finding['title']} ({finding['type']})"
+                with st.expander(label, expanded=finding["severity"] == "high"):
+                    st.write(finding["metadata"].get("why", ""))
+                    st.write(f"Finding ID: `{finding['finding_id']}`")
+                    st.write(f"Confidence: `{finding['confidence']}`")
+                    st.write(f"Affected spans: `{', '.join(finding['affected_spans'])}`")
+                    st.write(f"Rewrite: {finding['rewrite']['hint']}")
+                    st.write(f"Validation: {finding['validation']['acceptance_criteria']}")
+                    st.write(
+                        "Estimated savings: "
+                        f"{seconds(finding['savings']['estimated_latency_savings_ms'])}, "
+                        f"{money(finding['savings']['estimated_cost_savings_usd'])}"
+                    )
+                    if finding["evidence"]:
+                        st.dataframe(pd.DataFrame(finding["evidence"]), width="stretch", hide_index=True)
+
+            st.download_button(
+                "Download diagnosis JSON",
+                data=json.dumps(diagnosis, indent=2),
+                file_name="agentloop_diagnosis.json",
+                mime="application/json",
+            )
+
+elif page == "Patch Plan":
+    traces = store.list_traces(project_id=project_id)
+    st.subheader("Trace-to-patch planning")
+    if not traces:
+        st.info("No traces stored for this project yet.")
+    else:
+        trace = selected_trace_from_options(traces, "Choose trace for patch planning")
+        repo_path = st.text_input("Repository path", value=str(Path.cwd()))
+        if trace is not None:
+            plan = build_patch_plan(trace, repo_path=repo_path)
+            summary = plan["summary"]
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Patch plans", summary["patch_count"])
+            c2.metric("Unsupported", summary["unsupported_finding_count"])
+            c3.metric("Frameworks", ", ".join(summary["frameworks_detected"]) or "none")
+
+            for item in plan.get("patch_plans", []):
+                with st.expander(f"{item['patch_id']} - {item['title']}", expanded=True):
+                    st.write(f"Type: `{item['type']}`")
+                    st.write(f"Risk: `{item['risk']}`")
+                    st.write(f"Framework: `{item['framework']}`")
+                    st.write(f"Finding: `{item['finding_id']}`")
+                    st.write(f"Before pattern: {item['before_pattern']}")
+                    st.write(f"Proposed rewrite: {item['proposed_rewrite']}")
+                    st.code(item["suggested_diff"], language="text")
+                    st.write(f"Validation command: `{item['validation_command']}`")
+                    st.write(f"Acceptance: {item['acceptance_criteria']}")
+                    if item["files"]:
+                        st.dataframe(pd.DataFrame(item["files"]), width="stretch", hide_index=True)
+                    if item["notes"]:
+                        for note in item["notes"]:
+                            st.write(f"- {note}")
+
+            if plan.get("unsupported_findings"):
+                st.subheader("Unsupported findings")
+                st.dataframe(pd.DataFrame(plan["unsupported_findings"]), width="stretch", hide_index=True)
+
+            st.download_button(
+                "Download patch plan JSON",
+                data=json.dumps(plan, indent=2),
+                file_name="agentloop_patch_plan.json",
+                mime="application/json",
+            )
+
+elif page == "Replay Proof":
+    traces = store.list_traces(project_id=project_id)
+    st.subheader("Before/after replay proof")
+    if len(traces) < 2:
+        st.info("Store at least two traces to compare a baseline and candidate.")
+    else:
+        options = trace_options(traces)
+        labels = list(options.keys())
+        baseline_label = st.selectbox("Baseline trace", labels, index=0)
+        candidate_label = st.selectbox("Candidate trace", labels, index=1 if len(labels) > 1 else 0)
+        baseline = load_trace_for_project(options[baseline_label], project_id)
+        candidate = load_trace_for_project(options[candidate_label], project_id)
+
+        st.markdown("#### Gates")
+        g1, g2, g3, g4 = st.columns(4)
+        min_latency = g1.number_input("Min latency improvement %", min_value=0.0, value=20.0)
+        min_cost = g2.number_input("Min cost improvement %", min_value=0.0, value=5.0)
+        require_schema = g3.checkbox("Require schema valid", value=False)
+        min_quality = g4.number_input("Min quality score", min_value=0.0, max_value=1.0, value=0.0)
+        quality_threshold = min_quality if min_quality > 0 else None
+
+        if baseline is not None and candidate is not None:
+            gates = ReplayGates(
+                min_latency_improvement_pct=min_latency,
+                min_cost_improvement_pct=min_cost,
+                require_schema_valid=require_schema,
+                min_quality_score=quality_threshold,
+            )
+            replay = build_replay_report(baseline, candidate, gates=gates)
+            ci_report = build_ci_report(baseline, candidate, gates=gates)
+            status = "passed" if replay["gates"]["passed"] else "failed"
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Status", status)
+            c2.metric("Latency improvement", f"{replay['deltas']['latency_improvement_pct']:.1f}%")
+            c3.metric("Cost improvement", f"{replay['deltas']['cost_improvement_pct']:.1f}%")
+            c4.metric("Retry delta", replay["deltas"]["retry_count_delta"])
+
+            st.subheader("Gate results")
+            render_gate_table(replay["gates"]["results"])
+
+            st.subheader("Metric deltas")
+            metric_rows = [
+                {"metric": key, "value": value}
+                for key, value in replay["deltas"].items()
+                if key.endswith("_delta") or key.endswith("_pct")
+            ]
+            st.dataframe(pd.DataFrame(metric_rows), width="stretch", hide_index=True)
+
+            st.subheader("PR comment preview")
+            st.code("Trace in. Rewrite plan out. Replay proof in the PR.\n\n" + ci_report_to_markdown(ci_report))
+
+            col_json, col_md = st.columns(2)
+            col_json.download_button(
+                "Download replay JSON",
+                data=json.dumps(replay, indent=2),
+                file_name="agentloop_replay_report.json",
+                mime="application/json",
+            )
+            col_md.download_button(
+                "Download PR Markdown",
+                data=ci_report_to_markdown(ci_report),
+                file_name="agentloop_ci.md",
+                mime="text/markdown",
             )
 
 elif page == "Value & Pricing":
@@ -240,9 +429,22 @@ elif page == "Ingest":
     if col_c.button("Generate LangGraph-style"):
         generated_path = run_langgraph_style(runs_dir)
     if col_d.button("Generate all"):
-        for path in [run_baseline(runs_dir), run_optimized(runs_dir), run_langgraph_style(runs_dir)]:
+        proof_baseline, proof_candidate = run_proof_pair(runs_dir)
+        for path in [
+            run_baseline(runs_dir),
+            run_optimized(runs_dir),
+            run_langgraph_style(runs_dir),
+            proof_baseline,
+            proof_candidate,
+        ]:
             store.save_trace(AgentTrace.from_json(path), project_id=project_id)
         st.success(f"Generated and stored all demo traces under project `{project_id}`")
+
+    if st.button("Generate proof demo pair"):
+        proof_baseline, proof_candidate = run_proof_pair(runs_dir)
+        for path in [proof_baseline, proof_candidate]:
+            store.save_trace(AgentTrace.from_json(path), project_id=project_id)
+        st.success(f"Generated and stored proof demo traces under project `{project_id}`")
 
     if generated_path is not None:
         trace = AgentTrace.from_json(generated_path)
@@ -259,7 +461,7 @@ elif page == "Ingest":
     st.subheader("CLI ingest")
     st.code(
         "agentloop demo-all\n"
-        f"agentloop store-trace runs/research_agent_baseline.json --project-id {project_id}\n"
+        f"agentloop store-trace --path runs/research_agent_baseline.json --project-id {project_id}\n"
         f"agentloop list-stored-traces --project-id {project_id}",
         language="bash",
     )
@@ -270,7 +472,7 @@ elif page == "Setup":
         "pip install -e \".[all,dev]\"\n"
         "agentloop init-store\n"
         "agentloop demo-all\n"
-        f"agentloop store-trace runs/research_agent_baseline.json --project-id {project_id}\n"
+        f"agentloop store-trace --path runs/research_agent_baseline.json --project-id {project_id}\n"
         "streamlit run dashboard/app.py",
         language="bash",
     )
