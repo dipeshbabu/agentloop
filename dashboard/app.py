@@ -9,6 +9,7 @@ import streamlit as st
 from agentloop.ci import build_ci_report, ci_report_to_markdown
 from agentloop.demo import run_baseline, run_langgraph_style, run_optimized, run_proof_pair
 from agentloop.findings import build_diagnosis
+from agentloop.issues import build_issue_drafts, issue_drafts_to_markdown
 from agentloop.optimizer import build_optimization_plan
 from agentloop.patches import build_patch_plan
 from agentloop.replay import ReplayGates, build_replay_report
@@ -85,6 +86,7 @@ page = st.sidebar.radio(
     [
         "Overview",
         "Traces",
+        "Optimization Queue",
         "Optimization",
         "Diagnosis",
         "Patch Plan",
@@ -162,6 +164,83 @@ elif page == "Traces":
                 data=json.dumps(trace.to_dict(), indent=2),
                 file_name=f"{trace.run_id}.json",
                 mime="application/json",
+            )
+
+elif page == "Optimization Queue":
+    st.subheader("Optimization queue")
+    queue = store.optimization_queue(project_id=project_id)
+    findings = store.list_findings(project_id=project_id)
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Open opportunities", len(queue))
+    c2.metric("Persisted findings", len(findings))
+    c3.metric("Patchable findings", sum(1 for finding in findings if finding["patchable"]))
+    c4.metric(
+        "Estimated latency savings",
+        seconds(sum(item["estimated_latency_savings_ms"] for item in queue)),
+    )
+
+    if not queue:
+        st.info("No optimization opportunities have been persisted yet. Store traces or run diagnosis first.")
+    else:
+        queue_df = pd.DataFrame(queue)
+        visible_cols = [
+            "priority_score",
+            "severity",
+            "type",
+            "title",
+            "occurrence_count",
+            "run_count",
+            "patchable_count",
+            "estimated_latency_savings_ms",
+            "estimated_cost_savings_usd",
+        ]
+        st.dataframe(queue_df[visible_cols], width="stretch", hide_index=True)
+
+        selected_title = st.selectbox("Open queue item", queue_df["title"].tolist())
+        item = next(row for row in queue if row["title"] == selected_title)
+        st.markdown(f"### {item['title']}")
+        c5, c6, c7, c8 = st.columns(4)
+        c5.metric("Priority", item["priority_score"])
+        c6.metric("Severity", item["severity"])
+        c7.metric("Affected runs", item["run_count"])
+        c8.metric("Patchable", item["patchable_count"])
+        st.write(f"Type: `{item['type']}`")
+        st.write(f"Status: `{item['status']}`")
+        st.write(f"Estimated savings: {seconds(item['estimated_latency_savings_ms'])} / {money(item['estimated_cost_savings_usd'])}")
+        st.write("Affected runs")
+        st.code("\n".join(item["affected_runs"]), language="text")
+
+        item_findings = [
+            finding
+            for finding in findings
+            if finding["type"] == item["type"] and finding["title"] == item["title"]
+        ]
+        if item_findings:
+            st.subheader("Finding instances")
+            st.dataframe(pd.DataFrame(item_findings), width="stretch", hide_index=True)
+
+        st.download_button(
+            "Download optimization queue JSON",
+            data=json.dumps({"project_id": project_id, "queue": queue}, indent=2),
+            file_name="agentloop_optimization_queue.json",
+            mime="application/json",
+        )
+
+        st.subheader("GitHub issue drafts")
+        drafts = build_issue_drafts(queue)
+        if not drafts:
+            st.info("No patchable queue items available for issue drafts.")
+        else:
+            selected_issue = st.selectbox("Preview issue draft", [draft["title"] for draft in drafts])
+            draft = next(item for item in drafts if item["title"] == selected_issue)
+            st.write(f"Labels: `{', '.join(draft['labels'])}`")
+            st.code(draft["body"], language="markdown")
+            st.download_button(
+                "Download issue drafts Markdown",
+                data=issue_drafts_to_markdown(drafts),
+                file_name="agentloop_issue_drafts.md",
+                mime="text/markdown",
             )
 
 elif page == "Optimization":

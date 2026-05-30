@@ -16,6 +16,7 @@ from agentloop.demo import run_baseline, run_langgraph_style, run_optimized, run
 from agentloop.doctor import run_doctor, run_production_check
 from agentloop.exporters import export_report_markdown
 from agentloop.findings import build_diagnosis, diagnosis_to_markdown
+from agentloop.issues import build_issue_drafts, issue_drafts_to_markdown
 from agentloop.optimizer import build_optimization_plan
 from agentloop.otel import trace_from_otel, trace_to_otel
 from agentloop.patches import build_patch_plan, patch_plan_to_markdown
@@ -466,6 +467,77 @@ def list_stored_traces(project_id: str | None = None) -> None:
     console.print(table)
 
 
+@app.command("list-findings")
+def list_findings(project_id: str | None = None, status: str | None = None) -> None:
+    db = get_store()
+    findings = db.list_findings(project_id=project_id, status=status)
+    table = Table(title="AgentLoop Findings")
+    table.add_column("Severity")
+    table.add_column("Type")
+    table.add_column("Title")
+    table.add_column("Run")
+    table.add_column("Status")
+    table.add_column("Patchable")
+    table.add_column("Savings")
+    for finding in findings:
+        table.add_row(
+            str(finding["severity"]),
+            str(finding["type"]),
+            str(finding["title"]),
+            str(finding["run_id"]),
+            str(finding["status"]),
+            "yes" if finding["patchable"] else "no",
+            f"{finding['estimated_latency_savings_ms'] / 1000:.2f}s / ${finding['estimated_cost_savings_usd']:.4f}",
+        )
+    console.print(table)
+
+
+@app.command("optimization-queue")
+def optimization_queue(project_id: str | None = None, json_out: Path | None = typer.Option(None)) -> None:
+    db = get_store()
+    queue = db.optimization_queue(project_id=project_id)
+    payload = {"project_id": project_id, "queue": queue}
+    if json_out is not None:
+        _write_json(json_out, payload)
+        console.print(f"Wrote optimization queue JSON to {json_out}")
+    table = Table(title="AgentLoop Optimization Queue")
+    table.add_column("Priority")
+    table.add_column("Severity")
+    table.add_column("Type")
+    table.add_column("Title")
+    table.add_column("Runs")
+    table.add_column("Patchable")
+    table.add_column("Savings")
+    for item in queue:
+        table.add_row(
+            f"{item['priority_score']:.1f}",
+            str(item["severity"]),
+            str(item["type"]),
+            str(item["title"]),
+            str(item["run_count"]),
+            str(item["patchable_count"]),
+            f"{item['estimated_latency_savings_ms'] / 1000:.2f}s / ${item['estimated_cost_savings_usd']:.4f}",
+        )
+    console.print(table)
+
+
+@app.command("github-issue-drafts")
+def github_issue_drafts(
+    project_id: str | None = None,
+    out: Path = Path("runs/agentloop_issue_drafts.md"),
+    json_out: Path | None = typer.Option(None),
+    limit: int = typer.Option(5, min=1, max=20),
+) -> None:
+    db = get_store()
+    drafts = build_issue_drafts(db.optimization_queue(project_id=project_id), limit=limit)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(issue_drafts_to_markdown(drafts), encoding="utf-8")
+    if json_out is not None:
+        _write_json(json_out, {"project_id": project_id, "issue_drafts": drafts})
+        console.print(f"Wrote GitHub issue draft JSON to {json_out}")
+    console.print(f"Wrote GitHub issue drafts to {out}")
+
+
 @app.command("usage-summary")
 def usage_summary(project_id: str | None = None) -> None:
     db = get_store()
@@ -517,6 +589,47 @@ def remote_diagnose(
     diagnosis = client.get_diagnosis(run_id)
     _write_json(out, diagnosis)
     console.print(f"Wrote remote diagnosis to {out}")
+
+
+@app.command("remote-findings")
+def remote_findings(
+    api_url: str = typer.Option("http://127.0.0.1:8000", help="AgentLoop API base URL."),
+    api_key: str | None = typer.Option(None, help="Optional API key. Defaults to AGENTLOOP_API_KEY."),
+    project_id: str | None = typer.Option(None),
+    status: str | None = typer.Option(None),
+    out: Path = Path("runs/remote_findings.json"),
+) -> None:
+    client = AgentLoopClient(base_url=api_url, api_key=api_key)
+    findings = client.list_findings(project_id=project_id, status=status)
+    _write_json(out, findings)
+    console.print(f"Wrote remote findings to {out}")
+
+
+@app.command("remote-optimization-queue")
+def remote_optimization_queue(
+    api_url: str = typer.Option("http://127.0.0.1:8000", help="AgentLoop API base URL."),
+    api_key: str | None = typer.Option(None, help="Optional API key. Defaults to AGENTLOOP_API_KEY."),
+    project_id: str | None = typer.Option(None),
+    out: Path = Path("runs/remote_optimization_queue.json"),
+) -> None:
+    client = AgentLoopClient(base_url=api_url, api_key=api_key)
+    queue = client.optimization_queue(project_id=project_id)
+    _write_json(out, queue)
+    console.print(f"Wrote remote optimization queue to {out}")
+
+
+@app.command("remote-github-issue-drafts")
+def remote_github_issue_drafts(
+    api_url: str = typer.Option("http://127.0.0.1:8000", help="AgentLoop API base URL."),
+    api_key: str | None = typer.Option(None, help="Optional API key. Defaults to AGENTLOOP_API_KEY."),
+    project_id: str | None = typer.Option(None),
+    limit: int = typer.Option(5, min=1, max=20),
+    out: Path = Path("runs/remote_agentloop_issue_drafts.json"),
+) -> None:
+    client = AgentLoopClient(base_url=api_url, api_key=api_key)
+    drafts = client.github_issue_drafts(project_id=project_id, limit=limit)
+    _write_json(out, drafts)
+    console.print(f"Wrote remote GitHub issue drafts to {out}")
 
 
 @app.command("remote-value-report")

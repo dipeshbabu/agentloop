@@ -70,6 +70,29 @@ class AgentLoopClient:
     def get_diagnosis(self, run_id: str) -> dict[str, Any]:
         return self._request("GET", f"/traces/{run_id}/diagnose")
 
+    def list_findings(self, project_id: str | None = None, status: str | None = None) -> dict[str, Any]:
+        params: dict[str, Any] = {}
+        if project_id:
+            params["project_id"] = project_id
+        if status:
+            params["status"] = status
+        route = "/findings"
+        if params:
+            route += "?" + urllib.parse.urlencode(params)
+        return self._request("GET", route)
+
+    def optimization_queue(self, project_id: str | None = None) -> dict[str, Any]:
+        route = "/optimization-queue"
+        if project_id:
+            route += "?" + urllib.parse.urlencode({"project_id": project_id})
+        return self._request("GET", route)
+
+    def github_issue_drafts(self, project_id: str | None = None, limit: int = 5) -> dict[str, Any]:
+        params: dict[str, Any] = {"limit": limit}
+        if project_id:
+            params["project_id"] = project_id
+        return self._request("GET", "/optimization-queue/github-issues?" + urllib.parse.urlencode(params))
+
     def get_value_report(
         self,
         run_id: str,

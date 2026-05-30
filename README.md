@@ -80,6 +80,7 @@ The dashboard now works as a local-first SaaS control panel backed by the same p
 - trace event timelines
 - graph-aware optimization plans
 - machine-actionable diagnosis findings
+- persistent optimization queue across stored traces
 - trace-to-patch dry-run plans
 - before/after replay proof and PR comment previews
 - buyer-facing value and pricing reports
@@ -171,6 +172,9 @@ Each card includes a reason, affected nodes, confidence, rewrite hint, and estim
 ```bash
 agentloop diagnose --path runs/research_agent_baseline.json --out runs/diagnosis.md --json-out runs/diagnosis.json
 agentloop patch --path runs/research_agent_baseline.json --repo . --out runs/patch_plan.md --json-out runs/patch_plan.json
+agentloop list-findings --project-id demo
+agentloop optimization-queue --project-id demo --json-out runs/optimization_queue.json
+agentloop github-issue-drafts --project-id demo --out runs/agentloop_issue_drafts.md
 agentloop export-otel runs/research_agent_baseline.json runs/research_agent_baseline.otel.json
 agentloop import-otel runs/research_agent_baseline.otel.json runs/imported_trace.json --name imported_agent
 agentloop diagnose --path runs/research_agent_baseline.otel.json --otel --out runs/otel_diagnosis.md
@@ -184,6 +188,11 @@ OpenTelemetry GenAI-style spans instead of requiring a proprietary trace source.
 plans for parallel tool execution, context caching, structured-output repair,
 batching, model routing, split/compress rewrites, runaway-loop guardrails, and
 tool-oscillation guards without modifying source files.
+When traces are stored through the local or hosted API, AgentLoop persists the
+diagnosis findings and clusters them into an optimization queue ranked by
+severity, frequency, patchability, and estimated savings.
+`agentloop github-issue-drafts` turns the top patchable queue items into
+GitHub-ready issue titles, labels, bodies, and acceptance criteria.
 
 ## CI and PR performance gates
 
@@ -226,6 +235,7 @@ Dashboard pages:
 
 - `Overview`: usage, run count, runtime, cost, token volume, model/tool calls, retry count, recent runs, runtime chart
 - `Traces`: stored trace table, event timeline, trace JSON download
+- `Optimization Queue`: ranked recurring findings across stored traces
 - `Optimization`: optimization cards, bottlenecks, parallelizable groups, value estimate, plan JSON download
 - `Diagnosis`: evidence-backed findings with severity, affected spans, savings, and validation criteria
 - `Patch Plan`: framework-aware dry-run rewrite plans tied to likely files and replay gates
@@ -253,6 +263,9 @@ Endpoints:
 - `GET /traces/{run_id}/report`
 - `GET /traces/{run_id}/optimize`
 - `GET /traces/{run_id}/diagnose`
+- `GET /findings`
+- `GET /optimization-queue`
+- `GET /optimization-queue/github-issues`
 - `GET /traces/{run_id}/value`
 - `GET /usage`
 

@@ -97,6 +97,28 @@ def test_diagnose_trace_endpoint() -> None:
     assert "findings" in body
 
 
+def test_findings_and_optimization_queue_endpoints() -> None:
+    client = TestClient(app)
+    with trace_agent("server-queue-test") as trace:
+        repeated = "stable context " * 100
+        for _ in range(2):
+            with trace_model_call("summarize", input_text=repeated, output_tokens=10):
+                pass
+    response = client.post("/traces", json=trace.to_dict())
+    assert response.status_code == 200
+
+    findings = client.get("/findings")
+    queue = client.get("/optimization-queue")
+    issues = client.get("/optimization-queue/github-issues")
+
+    assert findings.status_code == 200
+    assert queue.status_code == 200
+    assert issues.status_code == 200
+    assert findings.json()["findings"]
+    assert queue.json()["queue"]
+    assert issues.json()["issue_drafts"]
+
+
 def test_value_report_endpoint() -> None:
     client = TestClient(app)
     with trace_agent("server-value-test") as trace:

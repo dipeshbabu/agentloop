@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 
 from agentloop.config import get_admin_api_key, get_api_key, get_cors_origins, require_api_key
 from agentloop.findings import build_diagnosis
+from agentloop.issues import build_issue_drafts
 from agentloop.optimizer import build_optimization_plan
 from agentloop.store import TraceStore, get_store
 from agentloop.tracer import AgentTrace
@@ -153,7 +154,51 @@ def diagnose_trace(
     project_id: str = Depends(resolve_project),
     db: TraceStore = Depends(store),
 ) -> dict[str, Any]:
-    return build_diagnosis(_load_trace_or_404(db, run_id, project_id))
+    diagnosis = build_diagnosis(_load_trace_or_404(db, run_id, project_id))
+    db.save_diagnosis(diagnosis, project_id=project_id)
+    return diagnosis
+
+
+@app.get("/findings")
+def list_findings(
+    status: str | None = Query(default=None),
+    project_id_filter: str | None = Query(default=None, alias="project_id"),
+    project_id: str = Depends(resolve_project),
+    db: TraceStore = Depends(store),
+) -> dict[str, Any]:
+    selected_project = project_id_filter or project_id
+    return {
+        "project_id": selected_project,
+        "findings": db.list_findings(project_id=selected_project, status=status),
+    }
+
+
+@app.get("/optimization-queue")
+def optimization_queue(
+    project_id_filter: str | None = Query(default=None, alias="project_id"),
+    project_id: str = Depends(resolve_project),
+    db: TraceStore = Depends(store),
+) -> dict[str, Any]:
+    selected_project = project_id_filter or project_id
+    return {
+        "project_id": selected_project,
+        "queue": db.optimization_queue(project_id=selected_project),
+    }
+
+
+@app.get("/optimization-queue/github-issues")
+def github_issue_drafts(
+    limit: int = Query(default=5, ge=1, le=20),
+    project_id_filter: str | None = Query(default=None, alias="project_id"),
+    project_id: str = Depends(resolve_project),
+    db: TraceStore = Depends(store),
+) -> dict[str, Any]:
+    selected_project = project_id_filter or project_id
+    queue = db.optimization_queue(project_id=selected_project)
+    return {
+        "project_id": selected_project,
+        "issue_drafts": build_issue_drafts(queue, limit=limit),
+    }
 
 
 @app.get("/traces/{run_id}/value")

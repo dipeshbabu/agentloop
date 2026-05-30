@@ -51,3 +51,26 @@ def test_sqlite_usage_summary(tmp_path):
     assert summary["run_count"] == 1
     assert summary["model_call_count"] == 1
     assert summary["tool_call_count"] == 1
+
+
+def test_sqlite_persists_findings_and_optimization_queue(tmp_path):
+    store = SQLiteTraceStore(path=str(tmp_path / "agentloop.db"))
+    with trace_agent("queue-test") as trace:
+        repeated = "stable context " * 100
+        for _ in range(2):
+            with trace_model_call("summarize", input_text=repeated, output_tokens=10):
+                pass
+        for _ in range(3):
+            with trace_tool_call("search"):
+                pass
+
+    store.save_trace(trace, project_id="proj_a")
+
+    findings = store.list_findings(project_id="proj_a")
+    queue = store.optimization_queue(project_id="proj_a")
+
+    assert findings
+    assert any(finding["type"] == "cache_context" for finding in findings)
+    assert queue
+    assert queue[0]["priority_score"] > 0
+    assert queue[0]["run_count"] == 1
