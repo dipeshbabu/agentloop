@@ -109,6 +109,32 @@ def test_replay_report_checks_schema_and_quality_gates() -> None:
     assert "Quality score" in markdown
 
 
+def test_replay_report_uses_fixture_quality_report() -> None:
+    baseline = _trace("baseline", model_duration_ms=800, tool_duration_ms=200, input_tokens=1000, output_tokens=200)
+    candidate = _trace("candidate", model_duration_ms=400, tool_duration_ms=100, input_tokens=500, output_tokens=100)
+    quality = {
+        "case_count": 1,
+        "passed": True,
+        "baseline_score": 0.8,
+        "candidate_score": 0.95,
+        "quality_delta": 0.15,
+        "failed_case_count": 0,
+        "failed_cases": [],
+        "cases": [],
+    }
+
+    report = build_replay_report(
+        baseline,
+        candidate,
+        gates=ReplayGates(min_quality_score=0.9),
+        quality_report=quality,
+    )
+
+    assert report["gates"]["passed"] is True
+    assert report["candidate"]["quality_score"] == 0.95
+    assert report["quality"]["candidate_score"] == 0.95
+
+
 def test_replay_markdown_contains_gate_table() -> None:
     baseline = _trace("baseline", model_duration_ms=500, tool_duration_ms=100, input_tokens=200, output_tokens=50)
     candidate = _trace("candidate", model_duration_ms=400, tool_duration_ms=100, input_tokens=100, output_tokens=50)

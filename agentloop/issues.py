@@ -48,6 +48,9 @@ def _issue_for_queue_item(item: dict[str, Any]) -> dict[str, Any]:
             f"- Occurrences: {item['occurrence_count']}",
             f"- Affected runs: {item['run_count']}",
             f"- Patchable findings: {item['patchable_count']}",
+            f"- Quality risk: `{item.get('quality_risk', 'unknown')}`",
+            f"- Requires scorer: {item.get('requires_scorer', True)}",
+            f"- Safe to auto-patch: {item.get('safe_to_auto_patch', False)}",
             f"- Estimated latency savings: {item['estimated_latency_savings_ms'] / 1000:.2f}s",
             f"- Estimated cost savings: ${item['estimated_cost_savings_usd']:.4f}",
             f"- Priority score: {item['priority_score']:.1f}",
@@ -61,6 +64,7 @@ def _issue_for_queue_item(item: dict[str, Any]) -> dict[str, Any]:
             "- Generate or inspect the AgentLoop patch plan for one affected run.",
             "- Apply a constrained workflow rewrite.",
             "- Run `agentloop replay` against baseline and candidate traces.",
+            "- Attach a quality fixture or scorer when quality risk is medium or high.",
             "- Run `agentloop ci` and confirm cost, latency, retry, schema, and quality gates pass.",
         ]
     )

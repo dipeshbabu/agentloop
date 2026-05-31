@@ -11,9 +11,10 @@ def build_ci_report(
     candidate_trace: Any,
     *,
     gates: ReplayGates | None = None,
+    quality_report: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the PR-facing AgentLoop performance report."""
-    replay = build_replay_report(baseline_trace, candidate_trace, gates=gates)
+    replay = build_replay_report(baseline_trace, candidate_trace, gates=gates, quality_report=quality_report)
     diagnosis = build_diagnosis(candidate_trace)
     summary = _summary(replay, diagnosis)
     return {

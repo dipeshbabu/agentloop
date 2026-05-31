@@ -12,6 +12,7 @@ from agentloop.findings import build_diagnosis
 from agentloop.issues import build_issue_drafts, issue_drafts_to_markdown
 from agentloop.optimizer import build_optimization_plan
 from agentloop.patches import build_patch_plan
+from agentloop.quality import build_quality_report, quality_report_to_markdown
 from agentloop.replay import ReplayGates, build_replay_report
 from agentloop.store import get_store
 from agentloop.tracer import AgentTrace
@@ -91,6 +92,7 @@ page = st.sidebar.radio(
         "Diagnosis",
         "Patch Plan",
         "Replay Proof",
+        "Quality Gates",
         "Value & Pricing",
         "API Keys",
         "Ingest",
@@ -192,6 +194,9 @@ elif page == "Optimization Queue":
             "occurrence_count",
             "run_count",
             "patchable_count",
+            "quality_risk",
+            "requires_scorer",
+            "safe_to_auto_patch",
             "estimated_latency_savings_ms",
             "estimated_cost_savings_usd",
         ]
@@ -207,6 +212,9 @@ elif page == "Optimization Queue":
         c8.metric("Patchable", item["patchable_count"])
         st.write(f"Type: `{item['type']}`")
         st.write(f"Status: `{item['status']}`")
+        st.write(f"Quality risk: `{item['quality_risk']}`")
+        st.write(f"Requires scorer: `{item['requires_scorer']}`")
+        st.write(f"Safe to auto-patch: `{item['safe_to_auto_patch']}`")
         st.write(f"Estimated savings: {seconds(item['estimated_latency_savings_ms'])} / {money(item['estimated_cost_savings_usd'])}")
         st.write("Affected runs")
         st.code("\n".join(item["affected_runs"]), language="text")
@@ -451,6 +459,68 @@ elif page == "Replay Proof":
                 "Download PR Markdown",
                 data=ci_report_to_markdown(ci_report),
                 file_name="agentloop_ci.md",
+                mime="text/markdown",
+            )
+
+elif page == "Quality Gates":
+    traces = store.list_traces(project_id=project_id)
+    st.subheader("Quality gates")
+    st.caption("Score production-derived fixtures so replay proof can show faster, cheaper, and still correct.")
+    if len(traces) < 2:
+        st.info("Store at least two traces to score baseline and candidate quality.")
+    else:
+        options = trace_options(traces)
+        labels = list(options.keys())
+        baseline_label = st.selectbox("Baseline trace", labels, index=0, key="quality_baseline")
+        candidate_label = st.selectbox("Candidate trace", labels, index=1 if len(labels) > 1 else 0, key="quality_candidate")
+        baseline = load_trace_for_project(options[baseline_label], project_id)
+        candidate = load_trace_for_project(options[candidate_label], project_id)
+        min_score = st.number_input("Minimum candidate quality score", min_value=0.0, max_value=1.0, value=0.9)
+        uploaded = st.file_uploader("Upload quality fixture JSON", type=["json"], key="quality_fixture_upload")
+        default_fixture = [
+            {
+                "id": "required_summary_fields",
+                "input": "Summarize one source.",
+                "candidate_output": {"summary": "AgentLoop proves rewrites.", "sources": ["source-a"]},
+                "baseline_output": {"summary": "AgentLoop proves rewrites.", "sources": ["source-a"]},
+                "scorer": {"type": "required_fields", "required": ["summary", "sources"]},
+            }
+        ]
+        fixtures_text = st.text_area(
+            "Fixture JSON",
+            value=json.dumps({"fixtures": default_fixture}, indent=2),
+            height=260,
+        )
+        if uploaded is not None:
+            fixtures_payload = json.loads(uploaded.read().decode("utf-8"))
+        else:
+            fixtures_payload = json.loads(fixtures_text)
+        fixtures = fixtures_payload if isinstance(fixtures_payload, list) else fixtures_payload.get("fixtures", [])
+
+        if baseline is not None and candidate is not None:
+            quality = build_quality_report(
+                fixtures,
+                baseline_trace=baseline,
+                candidate_trace=candidate,
+                min_score=min_score,
+            )
+            status = "passed" if quality["passed"] else "failed"
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Status", status)
+            c2.metric("Candidate score", f"{quality['candidate_score']:.4f}")
+            c3.metric("Quality delta", f"{quality['quality_delta']:.4f}")
+            c4.metric("Failed cases", quality["failed_case_count"])
+            st.dataframe(pd.DataFrame(quality["cases"]), width="stretch", hide_index=True)
+            st.download_button(
+                "Download quality report JSON",
+                data=json.dumps(quality, indent=2),
+                file_name="agentloop_quality_report.json",
+                mime="application/json",
+            )
+            st.download_button(
+                "Download quality report Markdown",
+                data=quality_report_to_markdown(quality),
+                file_name="agentloop_quality_report.md",
                 mime="text/markdown",
             )
 

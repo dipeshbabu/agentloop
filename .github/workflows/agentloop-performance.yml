@@ -25,6 +25,14 @@ on:
         description: Minimum required cost improvement percentage.
         required: false
         default: "5"
+      quality_fixtures:
+        description: Optional quality fixture JSON path.
+        required: false
+        default: ""
+      min_quality_score:
+        description: Optional minimum candidate quality score.
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -40,6 +48,8 @@ jobs:
       AGENTLOOP_GENERATE_DEMO_TRACES: ${{ github.event.inputs.generate_demo_traces || 'true' }}
       AGENTLOOP_MIN_LATENCY_IMPROVEMENT_PCT: ${{ github.event.inputs.min_latency_improvement_pct || '20' }}
       AGENTLOOP_MIN_COST_IMPROVEMENT_PCT: ${{ github.event.inputs.min_cost_improvement_pct || '5' }}
+      AGENTLOOP_QUALITY_FIXTURES: ${{ github.event.inputs.quality_fixtures || '' }}
+      AGENTLOOP_MIN_QUALITY_SCORE: ${{ github.event.inputs.min_quality_score || '' }}
 
     steps:
       - name: Checkout
@@ -67,6 +77,14 @@ jobs:
 
       - name: Run AgentLoop CI gates
         run: |
+          QUALITY_ARGS=()
+          if [ -n "$AGENTLOOP_QUALITY_FIXTURES" ]; then
+            test -f "$AGENTLOOP_QUALITY_FIXTURES"
+            QUALITY_ARGS+=(--quality-fixtures "$AGENTLOOP_QUALITY_FIXTURES")
+          fi
+          if [ -n "$AGENTLOOP_MIN_QUALITY_SCORE" ]; then
+            QUALITY_ARGS+=(--min-quality-score "$AGENTLOOP_MIN_QUALITY_SCORE")
+          fi
           agentloop ci \
             --baseline "$AGENTLOOP_BASELINE_TRACE" \
             --candidate "$AGENTLOOP_CANDIDATE_TRACE" \
@@ -76,7 +94,8 @@ jobs:
             --min-cost-improvement-pct "$AGENTLOOP_MIN_COST_IMPROVEMENT_PCT" \
             --max-latency-regression-pct 0 \
             --max-cost-regression-pct 0 \
-            --github-step-summary
+            --github-step-summary \
+            "${QUALITY_ARGS[@]}"
 
       - name: Comment on pull request
         uses: actions/github-script@v8

@@ -119,6 +119,27 @@ def test_findings_and_optimization_queue_endpoints() -> None:
     assert issues.json()["issue_drafts"]
 
 
+def test_quality_report_endpoint() -> None:
+    client = TestClient(app)
+    response = client.post(
+        "/quality-report",
+        json={
+            "fixtures": [
+                {
+                    "id": "fields",
+                    "candidate_output": {"summary": "ok", "sources": ["a"]},
+                    "baseline_output": {"summary": "ok", "sources": ["a"]},
+                    "scorer": {"type": "required_fields", "required": ["summary", "sources"]},
+                }
+            ],
+            "min_score": 1.0,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["passed"] is True
+
+
 def test_value_report_endpoint() -> None:
     client = TestClient(app)
     with trace_agent("server-value-test") as trace:

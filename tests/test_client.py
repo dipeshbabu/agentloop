@@ -24,6 +24,8 @@ def test_client_upload_and_optimize(tmp_path, monkeypatch) -> None:
                 return test_client.get(route).json()
             if method == "GET" and route.startswith("/optimization-queue/github-issues"):
                 return test_client.get(route).json()
+            if method == "POST" and route == "/quality-report":
+                return test_client.post(route, json=payload).json()
             raise AssertionError(f"unexpected request {method} {route}")
 
     client = LocalAgentLoopClient()
@@ -35,3 +37,16 @@ def test_client_upload_and_optimize(tmp_path, monkeypatch) -> None:
     assert client.list_findings()["findings"]
     assert client.optimization_queue()["queue"]
     assert client.github_issue_drafts()["issue_drafts"]
+    quality = client.build_quality_report(
+        [
+            {
+                "id": "exact",
+                "candidate_output": "ok",
+                "baseline_output": "ok",
+                "expected": "ok",
+                "scorer": {"type": "exact_match"},
+            }
+        ],
+        min_score=1.0,
+    )
+    assert quality["passed"] is True

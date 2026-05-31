@@ -1,0 +1,30 @@
+{
+  "fixtures": [
+    {
+      "id": "required_summary_fields",
+      "input": "Summarize one source and preserve citations.",
+      "baseline_output": {
+        "summary": "AgentLoop identifies workflow waste and proves improvements.",
+        "sources": ["source-a"]
+      },
+      "candidate_output": {
+        "summary": "AgentLoop identifies workflow waste and proves improvements.",
+        "sources": ["source-a"]
+      },
+      "scorer": {
+        "type": "required_fields",
+        "required": ["summary", "sources"]
+      }
+    },
+    {
+      "id": "mentions_replay_proof",
+      "input": "Explain the merge gate.",
+      "baseline_output": "Replay proof checks cost, latency, retries, and quality.",
+      "candidate_output": "Replay proof checks cost, latency, retries, and quality.",
+      "scorer": {
+        "type": "contains",
+        "text": "quality"
+      }
+    }
+  ]
+}

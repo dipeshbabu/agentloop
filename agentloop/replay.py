@@ -20,14 +20,18 @@ def build_replay_report(
     candidate_trace: Any,
     *,
     gates: ReplayGates | None = None,
+    quality_report: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     gates = gates or ReplayGates()
     baseline_report = baseline_trace.report()
     candidate_report = candidate_trace.report()
     baseline = _trace_summary(baseline_trace, baseline_report)
     candidate = _trace_summary(candidate_trace, candidate_report)
+    if quality_report is not None:
+        baseline["quality_score"] = float(quality_report.get("baseline_score", 0.0))
+        candidate["quality_score"] = float(quality_report.get("candidate_score", 0.0))
     deltas = _deltas(baseline, candidate)
-    gate_results = _gate_results(deltas, baseline, candidate, gates)
+    gate_results = _gate_results(deltas, baseline, candidate, gates, quality_report=quality_report)
     passed = all(item["passed"] for item in gate_results)
 
     return {
@@ -47,6 +51,7 @@ def build_replay_report(
             },
             "results": gate_results,
         },
+        "quality": quality_report,
         "summary": _summary(deltas, passed),
     }
 
@@ -98,6 +103,19 @@ def replay_report_to_markdown(report: dict[str, Any]) -> str:
                 deltas["quality_score_improvement_pct"],
                 "score",
             )
+        )
+    if report.get("quality"):
+        quality = report["quality"]
+        lines.extend(
+            [
+                "",
+                "## Quality",
+                "",
+                f"- Cases: {quality['case_count']}",
+                f"- Candidate score: {quality['candidate_score']:.4f}",
+                f"- Quality delta: {quality['quality_delta']:.4f}",
+                f"- Failed cases: {quality['failed_case_count']}",
+            ]
         )
     lines.extend(
         [
@@ -193,6 +211,8 @@ def _gate_results(
     baseline: dict[str, Any],
     candidate: dict[str, Any],
     gates: ReplayGates,
+    *,
+    quality_report: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     results = [
         _gate(
@@ -237,12 +257,15 @@ def _gate_results(
         )
     if gates.min_quality_score is not None:
         quality_score = _optional_float(candidate.get("quality_score"))
-        passed = quality_score is not None and quality_score >= gates.min_quality_score
+        fixture_passed = quality_report is None or bool(quality_report.get("passed"))
+        passed = quality_score is not None and quality_score >= gates.min_quality_score and fixture_passed
         detail = (
             f"{quality_score:.4f} candidate quality >= {gates.min_quality_score:.4f} required"
             if quality_score is not None
             else f"candidate quality score missing; {gates.min_quality_score:.4f} required"
         )
+        if quality_report is not None and not fixture_passed:
+            detail += f"; {quality_report.get('failed_case_count', 0)} fixture case(s) failed"
         results.append(_gate("quality_score", passed, detail))
     return results
 

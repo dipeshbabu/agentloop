@@ -69,6 +69,14 @@ def _priority_score(item: dict[str, Any]) -> float:
     return round(severity_weight + patch_weight + latency_weight + cost_weight + occurrence_weight, 3)
 
 
+def _quality_risk(finding_type: str) -> str:
+    if finding_type in {"route_to_smaller_model", "split_large_step", "batch_model_calls"}:
+        return "high"
+    if finding_type in {"cache_context", "add_schema_validation", "runaway_loop", "tool_oscillation"}:
+        return "medium"
+    return "low"
+
+
 @dataclass
 class SQLiteTraceStore:
     path: str = "runs/agentloop.db"
@@ -327,6 +335,9 @@ class SQLiteTraceStore:
                     "estimated_cost_savings_usd": 0.0,
                     "latest_created_at": finding["created_at"],
                     "project_id": project_id,
+                    "quality_risk": _quality_risk(finding["type"]),
+                    "requires_scorer": _quality_risk(finding["type"]) in {"high", "medium"},
+                    "safe_to_auto_patch": False,
                 },
             )
             cluster["occurrence_count"] += 1
@@ -343,6 +354,7 @@ class SQLiteTraceStore:
         for item in queue:
             item["estimated_latency_savings_ms"] = round(item["estimated_latency_savings_ms"], 3)
             item["estimated_cost_savings_usd"] = round(item["estimated_cost_savings_usd"], 6)
+            item["safe_to_auto_patch"] = item["patchable_count"] > 0 and item["quality_risk"] == "low"
             item["priority_score"] = _priority_score(item)
         return sorted(queue, key=lambda item: item["priority_score"], reverse=True)
 
@@ -580,6 +592,9 @@ class PostgresTraceStore:
                     "estimated_cost_savings_usd": 0.0,
                     "latest_created_at": finding["created_at"],
                     "project_id": project_id,
+                    "quality_risk": _quality_risk(finding["type"]),
+                    "requires_scorer": _quality_risk(finding["type"]) in {"high", "medium"},
+                    "safe_to_auto_patch": False,
                 },
             )
             cluster["occurrence_count"] += 1
@@ -595,6 +610,7 @@ class PostgresTraceStore:
         for item in queue:
             item["estimated_latency_savings_ms"] = round(item["estimated_latency_savings_ms"], 3)
             item["estimated_cost_savings_usd"] = round(item["estimated_cost_savings_usd"], 6)
+            item["safe_to_auto_patch"] = item["patchable_count"] > 0 and item["quality_risk"] == "low"
             item["priority_score"] = _priority_score(item)
         return sorted(queue, key=lambda item: item["priority_score"], reverse=True)
 

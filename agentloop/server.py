@@ -10,6 +10,7 @@ from agentloop.config import get_admin_api_key, get_api_key, get_cors_origins, r
 from agentloop.findings import build_diagnosis
 from agentloop.issues import build_issue_drafts
 from agentloop.optimizer import build_optimization_plan
+from agentloop.quality import build_quality_report
 from agentloop.store import TraceStore, get_store
 from agentloop.tracer import AgentTrace
 from agentloop.value import build_value_report
@@ -39,6 +40,13 @@ class TracePayload(BaseModel):
 class CreateApiKeyPayload(BaseModel):
     project_id: str = "default"
     name: str = "default"
+
+
+class QualityReportPayload(BaseModel):
+    fixtures: list[dict[str, Any]] = Field(default_factory=list)
+    baseline_run_id: str | None = None
+    candidate_run_id: str | None = None
+    min_score: float | None = Field(default=None, ge=0)
 
 
 def store() -> TraceStore:
@@ -199,6 +207,26 @@ def github_issue_drafts(
         "project_id": selected_project,
         "issue_drafts": build_issue_drafts(queue, limit=limit),
     }
+
+
+@app.post("/quality-report")
+def quality_report_endpoint(
+    payload: QualityReportPayload,
+    project_id: str = Depends(resolve_project),
+    db: TraceStore = Depends(store),
+) -> dict[str, Any]:
+    baseline_trace = (
+        _load_trace_or_404(db, payload.baseline_run_id, project_id) if payload.baseline_run_id else None
+    )
+    candidate_trace = (
+        _load_trace_or_404(db, payload.candidate_run_id, project_id) if payload.candidate_run_id else None
+    )
+    return build_quality_report(
+        payload.fixtures,
+        baseline_trace=baseline_trace,
+        candidate_trace=candidate_trace,
+        min_score=payload.min_score,
+    )
 
 
 @app.get("/traces/{run_id}/value")

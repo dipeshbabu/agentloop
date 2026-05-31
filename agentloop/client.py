@@ -93,6 +93,25 @@ class AgentLoopClient:
             params["project_id"] = project_id
         return self._request("GET", "/optimization-queue/github-issues?" + urllib.parse.urlencode(params))
 
+    def build_quality_report(
+        self,
+        fixtures: list[dict[str, Any]],
+        *,
+        baseline_run_id: str | None = None,
+        candidate_run_id: str | None = None,
+        min_score: float | None = None,
+    ) -> dict[str, Any]:
+        return self._request(
+            "POST",
+            "/quality-report",
+            {
+                "fixtures": fixtures,
+                "baseline_run_id": baseline_run_id,
+                "candidate_run_id": candidate_run_id,
+                "min_score": min_score,
+            },
+        )
+
     def get_value_report(
         self,
         run_id: str,

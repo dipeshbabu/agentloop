@@ -21,6 +21,7 @@ from agentloop.optimizer import build_optimization_plan
 from agentloop.otel import trace_from_otel, trace_to_otel
 from agentloop.patches import build_patch_plan, patch_plan_to_markdown
 from agentloop.plan_export import export_optimization_json, export_optimization_markdown
+from agentloop.quality import build_quality_report, load_quality_fixtures, quality_report_to_markdown
 from agentloop.replay import ReplayGates, build_replay_report, replay_report_to_markdown
 from agentloop.store import get_store
 from agentloop.tracer import AgentTrace
@@ -143,6 +144,7 @@ def replay_command(
     require_retry_non_increase: bool = typer.Option(True),
     require_schema_valid: bool = typer.Option(False, help="Require candidate trace metadata/report to mark schema output as valid."),
     min_quality_score: float | None = typer.Option(None, min=0.0, help="Optional minimum candidate quality score."),
+    quality_fixtures: Path | None = typer.Option(None, help="Optional quality fixture JSON file."),
     fail_on_gate: bool = typer.Option(True, help="Exit non-zero when replay gates fail."),
     autogen: bool = typer.Option(True, help="Generate missing demo traces first."),
 ) -> None:
@@ -151,6 +153,16 @@ def replay_command(
         candidate = _ensure_trace(candidate, "optimized")
     baseline_trace = AgentTrace.from_json(baseline)
     candidate_trace = AgentTrace.from_json(candidate)
+    quality = (
+        build_quality_report(
+            load_quality_fixtures(quality_fixtures),
+            baseline_trace=baseline_trace,
+            candidate_trace=candidate_trace,
+            min_score=min_quality_score,
+        )
+        if quality_fixtures is not None
+        else None
+    )
     report_data = build_replay_report(
         baseline_trace,
         candidate_trace,
@@ -163,6 +175,7 @@ def replay_command(
             require_schema_valid=require_schema_valid,
             min_quality_score=min_quality_score,
         ),
+        quality_report=quality,
     )
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(replay_report_to_markdown(report_data), encoding="utf-8")
@@ -173,6 +186,33 @@ def replay_command(
         console.print(f"Wrote replay JSON to {json_out}")
     console.print(report_data["summary"])
     if fail_on_gate and not report_data["gates"]["passed"]:
+        raise typer.Exit(1)
+
+
+@app.command("quality-report")
+def quality_report_command(
+    fixtures: Path,
+    baseline: Path | None = typer.Option(None, help="Optional baseline trace JSON."),
+    candidate: Path | None = typer.Option(None, help="Optional candidate trace JSON."),
+    out: Path = Path("runs/quality_report.md"),
+    json_out: Path | None = typer.Option(None, help="Optional machine-readable quality report output."),
+    min_score: float | None = typer.Option(None, min=0.0),
+) -> None:
+    baseline_trace = AgentTrace.from_json(baseline) if baseline is not None else None
+    candidate_trace = AgentTrace.from_json(candidate) if candidate is not None else None
+    report_data = build_quality_report(
+        load_quality_fixtures(fixtures),
+        baseline_trace=baseline_trace,
+        candidate_trace=candidate_trace,
+        min_score=min_score,
+    )
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(quality_report_to_markdown(report_data), encoding="utf-8")
+    if json_out is not None:
+        _write_json(json_out, report_data)
+        console.print(f"Wrote quality JSON to {json_out}")
+    console.print(f"Wrote quality report to {out}")
+    if not report_data["passed"]:
         raise typer.Exit(1)
 
 
@@ -189,6 +229,7 @@ def ci_command(
     require_retry_non_increase: bool = typer.Option(True),
     require_schema_valid: bool = typer.Option(False, help="Require candidate trace metadata/report to mark schema output as valid."),
     min_quality_score: float | None = typer.Option(None, min=0.0, help="Optional minimum candidate quality score."),
+    quality_fixtures: Path | None = typer.Option(None, help="Optional quality fixture JSON file."),
     github_step_summary: bool = typer.Option(False, help="Append report Markdown to GITHUB_STEP_SUMMARY."),
     fail_on_gate: bool = typer.Option(True, help="Exit non-zero when CI gates fail."),
     autogen: bool = typer.Option(True, help="Generate missing demo traces first."),
@@ -196,9 +237,21 @@ def ci_command(
     if autogen:
         baseline = _ensure_trace(baseline, "baseline")
         candidate = _ensure_trace(candidate, "optimized")
+    baseline_trace = AgentTrace.from_json(baseline)
+    candidate_trace = AgentTrace.from_json(candidate)
+    quality = (
+        build_quality_report(
+            load_quality_fixtures(quality_fixtures),
+            baseline_trace=baseline_trace,
+            candidate_trace=candidate_trace,
+            min_score=min_quality_score,
+        )
+        if quality_fixtures is not None
+        else None
+    )
     report_data = build_ci_report(
-        AgentTrace.from_json(baseline),
-        AgentTrace.from_json(candidate),
+        baseline_trace,
+        candidate_trace,
         gates=ReplayGates(
             max_cost_regression_pct=max_cost_regression_pct,
             max_latency_regression_pct=max_latency_regression_pct,
@@ -208,6 +261,7 @@ def ci_command(
             require_schema_valid=require_schema_valid,
             min_quality_score=min_quality_score,
         ),
+        quality_report=quality,
     )
     markdown = ci_report_to_markdown(report_data)
     out.parent.mkdir(parents=True, exist_ok=True)

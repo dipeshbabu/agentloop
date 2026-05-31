@@ -64,6 +64,7 @@ agentloop demo --kind proof
 agentloop diagnose --path runs/agentloop_proof_baseline.json --out runs/diagnosis.md --json-out runs/diagnosis.json
 agentloop patch --path runs/agentloop_proof_baseline.json --repo . --out runs/patch_plan.md --json-out runs/patch_plan.json
 agentloop replay --baseline runs/research_agent_baseline.json --candidate runs/research_agent_optimized.json --out runs/replay_report.md --json-out runs/replay_report.json
+agentloop quality-report examples/quality_fixtures.json --out runs/quality_report.md --json-out runs/quality_report.json --min-score 0.9
 agentloop audit --out runs/audit.md
 agentloop optimize --out runs/optimization_plan.md --json-out runs/optimization_plan.json
 agentloop ci --out runs/agentloop_ci.md --json-out runs/agentloop_ci.json
@@ -112,13 +113,44 @@ agentloop replay \
   --min-cost-improvement-pct 5 \
   --max-latency-regression-pct 0 \
   --max-cost-regression-pct 0 \
-  --require-retry-non-increase
+  --require-retry-non-increase \
+  --quality-fixtures examples/quality_fixtures.json \
+  --min-quality-score 0.9
 ```
 
 `agentloop replay` compares a baseline trace with a candidate trace and turns the
 result into pass/fail gates for CI and PR comments. It reports latency, cost,
-token, retry, tool-call, and model-call deltas, then exits non-zero when gates
-fail unless `--no-fail-on-gate` is used.
+token, retry, tool-call, model-call, schema, and quality deltas, then exits
+non-zero when gates fail unless `--no-fail-on-gate` is used.
+
+## Quality gates
+
+```json
+{
+  "fixtures": [
+    {
+      "id": "required_summary_fields",
+      "input": "Summarize one source.",
+      "baseline_output": {"summary": "AgentLoop proves rewrites.", "sources": ["source-a"]},
+      "candidate_output": {"summary": "AgentLoop proves rewrites.", "sources": ["source-a"]},
+      "scorer": {"type": "required_fields", "required": ["summary", "sources"]}
+    }
+  ]
+}
+```
+
+Quality fixtures support dependency-free scorers:
+
+- `exact_match`
+- `contains`
+- `regex`
+- `required_fields` / `json_schema`
+- `json_subset`
+- `custom` with `module:function`
+
+Use fixtures with `agentloop quality-report`, `agentloop replay --quality-fixtures`,
+or `agentloop ci --quality-fixtures`. This makes the PR proof show whether the
+candidate is faster, cheaper, and still correct.
 
 ## Value reports
 
@@ -205,7 +237,9 @@ agentloop ci \
   --min-latency-improvement-pct 20 \
   --min-cost-improvement-pct 5 \
   --max-latency-regression-pct 0 \
-  --max-cost-regression-pct 0
+  --max-cost-regression-pct 0 \
+  --quality-fixtures examples/quality_fixtures.json \
+  --min-quality-score 0.9
 ```
 
 `agentloop ci` combines replay gates with candidate diagnosis findings. It emits
@@ -240,6 +274,7 @@ Dashboard pages:
 - `Diagnosis`: evidence-backed findings with severity, affected spans, savings, and validation criteria
 - `Patch Plan`: framework-aware dry-run rewrite plans tied to likely files and replay gates
 - `Replay Proof`: before/after metrics, quality/schema gates, and PR comment preview
+- `Quality Gates`: fixture scoring for exact match, regex, JSON fields, JSON subset, and custom scorers
 - `Value & Pricing`: buyer-facing ROI, reliability risk, pricing recommendation, value report JSON download
 - `API Keys`: project-scoped API key creation
 - `Ingest`: generate demo traces, upload trace JSON, store traces under a project
@@ -266,6 +301,7 @@ Endpoints:
 - `GET /findings`
 - `GET /optimization-queue`
 - `GET /optimization-queue/github-issues`
+- `POST /quality-report`
 - `GET /traces/{run_id}/value`
 - `GET /usage`
 

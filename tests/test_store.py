@@ -74,3 +74,5 @@ def test_sqlite_persists_findings_and_optimization_queue(tmp_path):
     assert queue
     assert queue[0]["priority_score"] > 0
     assert queue[0]["run_count"] == 1
+    assert "quality_risk" in queue[0]
+    assert "requires_scorer" in queue[0]
