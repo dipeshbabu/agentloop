@@ -32,6 +32,9 @@ Project history from before the first public release remains available in Git.
   `estimated_customer_value_usd`, and `packaging_notes` to `value_summary`,
   `estimated_monthly_value_usd`, and `scenario_notes` before the first official
   distribution release.
+- Replaced caller-supplied regular-expression quality scorers with bounded glob
+  scorers. Raw `regex` scorers are now rejected; use `glob`, `contains`, or
+  `exact_match`.
 
 ### Fixed
 
@@ -48,5 +51,9 @@ Project history from before the first public release remains available in Git.
 - Rejected executable custom Python scorers at the hosted API boundary and
   safely encoded trace identifiers in client request paths.
 - Switched static and administrator API-key comparisons to constant-time checks.
+- Store newly issued API keys with uniquely salted scrypt hashes instead of
+  unsalted SHA-256. Keys issued by earlier pre-release builds must be rotated.
+- Constrained patch-plan source discovery to a normalized allowed root and
+  excluded source and directory symlinks from scans.
 
 [Unreleased]: https://github.com/dipeshbabu/agentloop/commits/main

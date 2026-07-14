@@ -161,6 +161,27 @@ def test_quality_report_endpoint_rejects_custom_python_scorers() -> None:
     assert response.json()["detail"] == "custom Python scorers are not accepted by the HTTP API"
 
 
+def test_quality_report_endpoint_rejects_raw_regex_scorers() -> None:
+    client = TestClient(app)
+    response = client.post(
+        "/quality-report",
+        json={
+            "fixtures": [
+                {
+                    "id": "unsafe-regex",
+                    "candidate_output": "a" * 10_000 + "!",
+                    "scorer": {"type": "regex", "pattern": "(a+)+$"},
+                }
+            ]
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == (
+        "raw regex scorers are not accepted; use glob, contains, or exact_match"
+    )
+
+
 def test_value_report_endpoint() -> None:
     client = TestClient(app)
     with trace_agent("server-value-test") as trace:

@@ -168,7 +168,7 @@ Quality fixtures support dependency-free scorers:
 
 - `exact_match`
 - `contains`
-- `regex`
+- `glob` with a maximum 256-character pattern
 - `required_fields` / `json_schema`
 - `json_subset`
 - `custom` with `module:function`
@@ -179,6 +179,9 @@ candidate is faster, cheaper, and still correct.
 
 Custom scorers import and execute Python code. Use them only with trusted local
 fixture files; the HTTP `/quality-report` endpoint rejects custom scorers.
+Raw regular-expression scorers are also rejected because caller-controlled
+patterns can cause regular-expression denial of service. Use `glob` or
+`contains` for untrusted pattern matching.
 
 ## Value reports
 
@@ -312,7 +315,7 @@ Dashboard pages:
 - `Diagnosis`: evidence-backed findings with severity, affected spans, savings, and validation criteria
 - `Patch Plan`: framework-aware dry-run rewrite plans tied to likely files and replay gates
 - `Replay Proof`: before/after metrics, quality/schema gates, and PR comment preview
-- `Quality Gates`: fixture scoring for exact match, regex, JSON fields, JSON subset, and custom scorers
+- `Quality Gates`: fixture scoring for exact match, bounded glob matching, JSON fields, JSON subset, and custom scorers
 - `Value & Pricing`: operational ROI, reliability risk, pricing scenarios, and value report JSON download
 - `API Keys`: project-scoped API key creation
 - `Ingest`: generate demo traces, upload trace JSON, store traces under a project

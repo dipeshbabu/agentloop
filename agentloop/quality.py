@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import fnmatch
 import importlib
 import json
-import re
 from pathlib import Path
 from typing import Any
+
+_MAX_GLOB_PATTERN_LENGTH = 256
+_MAX_GLOB_TEXT_LENGTH = 1_000_000
 
 
 def load_quality_fixtures(path: str | Path) -> list[dict[str, Any]]:
@@ -72,10 +75,20 @@ def score_output(output: Any, fixture: dict[str, Any], scorer: dict[str, Any]) -
         return _result(
             passed, "required text present" if passed else f"missing required text: {expected}"
         )
-    if scorer_type == "regex":
+    if scorer_type == "glob":
         pattern = str(scorer.get("pattern") or fixture.get("expected") or "")
-        passed = bool(re.search(pattern, str(output or ""), flags=re.DOTALL))
-        return _result(passed, "regex matched" if passed else f"regex did not match: {pattern}")
+        text = str(output or "")
+        if len(pattern) > _MAX_GLOB_PATTERN_LENGTH:
+            return _result(False, "glob pattern exceeds the 256-character safety limit")
+        if len(text) > _MAX_GLOB_TEXT_LENGTH:
+            return _result(False, "output exceeds the 1,000,000-character glob safety limit")
+        passed = fnmatch.fnmatchcase(text, pattern)
+        return _result(passed, "glob matched" if passed else "glob did not match")
+    if scorer_type == "regex":
+        return _result(
+            False,
+            "raw regular-expression scorers are disabled; use glob, contains, or exact_match",
+        )
     if scorer_type in {"required_fields", "json_schema"}:
         return _score_required_fields(output, scorer)
     if scorer_type == "json_subset":

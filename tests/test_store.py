@@ -1,4 +1,6 @@
-from agentloop.store import SQLiteTraceStore
+import sqlite3
+
+from agentloop.store import SQLiteTraceStore, hash_api_key, verify_api_key_hash
 from agentloop.tracer import trace_agent, trace_model_call, trace_tool_call
 
 
@@ -29,7 +31,8 @@ def test_sqlite_store_roundtrip(tmp_path):
 
 
 def test_sqlite_api_key_verification(tmp_path):
-    store = SQLiteTraceStore(path=str(tmp_path / "agentloop.db"))
+    database_path = tmp_path / "agentloop.db"
+    store = SQLiteTraceStore(path=str(database_path))
     created = store.create_api_key(project_id="proj_a", name="ci")
 
     verified = store.verify_api_key(created["api_key"])
@@ -38,6 +41,21 @@ def test_sqlite_api_key_verification(tmp_path):
     assert verified["project_id"] == "proj_a"
     assert verified["name"] == "ci"
     assert store.verify_api_key("wrong") is None
+    with sqlite3.connect(database_path) as connection:
+        stored_hash = connection.execute("SELECT key_hash FROM api_keys").fetchone()[0]
+    assert stored_hash.startswith("scrypt$v1$")
+    assert created["api_key"] not in stored_hash
+
+
+def test_api_key_hash_uses_unique_salts_and_rejects_malformed_hashes():
+    api_key = "al_test-key-with-enough-random-looking-material"
+    first_hash = hash_api_key(api_key)
+    second_hash = hash_api_key(api_key)
+
+    assert first_hash != second_hash
+    assert verify_api_key_hash(api_key, first_hash) is True
+    assert verify_api_key_hash("al_wrong-key", first_hash) is False
+    assert verify_api_key_hash(api_key, "not-a-supported-hash") is False
 
 
 def test_sqlite_usage_summary(tmp_path):

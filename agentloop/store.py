@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import base64
+import binascii
 import hashlib
+import hmac
 import json
 import os
 import secrets
@@ -11,6 +14,13 @@ from typing import Any, Protocol
 
 from agentloop.findings import build_diagnosis
 from agentloop.tracer import AgentTrace
+
+_API_KEY_PREFIX_LENGTH = 10
+_API_KEY_SALT_BYTES = 16
+_API_KEY_HASH_BYTES = 32
+_API_KEY_SCRYPT_N = 2**14
+_API_KEY_SCRYPT_R = 8
+_API_KEY_SCRYPT_P = 1
 
 
 class TraceProjectConflictError(ValueError):
@@ -44,7 +54,52 @@ class TraceStore(Protocol):
 
 
 def hash_api_key(api_key: str) -> str:
-    return hashlib.sha256(api_key.encode("utf-8")).hexdigest()
+    salt = secrets.token_bytes(_API_KEY_SALT_BYTES)
+    digest = hashlib.scrypt(
+        api_key.encode("utf-8"),
+        salt=salt,
+        n=_API_KEY_SCRYPT_N,
+        r=_API_KEY_SCRYPT_R,
+        p=_API_KEY_SCRYPT_P,
+        dklen=_API_KEY_HASH_BYTES,
+    )
+    return "scrypt$v1${salt}${digest}".format(
+        salt=_encode_hash_bytes(salt),
+        digest=_encode_hash_bytes(digest),
+    )
+
+
+def verify_api_key_hash(api_key: str, encoded_hash: str) -> bool:
+    if not api_key.startswith("al_") or len(api_key) > 512:
+        return False
+    parts = encoded_hash.split("$")
+    if len(parts) != 4 or parts[:2] != ["scrypt", "v1"]:
+        return False
+    try:
+        salt = _decode_hash_bytes(parts[2])
+        expected = _decode_hash_bytes(parts[3])
+    except (binascii.Error, UnicodeEncodeError, ValueError):
+        return False
+    if len(salt) != _API_KEY_SALT_BYTES or len(expected) != _API_KEY_HASH_BYTES:
+        return False
+    actual = hashlib.scrypt(
+        api_key.encode("utf-8"),
+        salt=salt,
+        n=_API_KEY_SCRYPT_N,
+        r=_API_KEY_SCRYPT_R,
+        p=_API_KEY_SCRYPT_P,
+        dklen=_API_KEY_HASH_BYTES,
+    )
+    return hmac.compare_digest(actual, expected)
+
+
+def _encode_hash_bytes(value: bytes) -> str:
+    return base64.urlsafe_b64encode(value).decode("ascii").rstrip("=")
+
+
+def _decode_hash_bytes(value: str) -> bytes:
+    padded = value + "=" * (-len(value) % 4)
+    return base64.b64decode(padded.encode("ascii"), altchars=b"-_", validate=True)
 
 
 def new_api_key() -> str:
@@ -170,28 +225,38 @@ class SQLiteTraceStore:
     def create_api_key(self, project_id: str, name: str) -> dict[str, Any]:
         self.init()
         api_key = new_api_key()
+        prefix = api_key[:_API_KEY_PREFIX_LENGTH]
         with self._connect() as conn:
             conn.execute("INSERT OR IGNORE INTO projects(project_id) VALUES (?)", (project_id,))
             conn.execute(
                 "INSERT INTO api_keys(key_hash, project_id, name, prefix) VALUES (?, ?, ?, ?)",
-                (hash_api_key(api_key), project_id, name, api_key[:10]),
+                (hash_api_key(api_key), project_id, name, prefix),
             )
-        return {"api_key": api_key, "project_id": project_id, "name": name, "prefix": api_key[:10]}
+        return {"api_key": api_key, "project_id": project_id, "name": name, "prefix": prefix}
 
     def verify_api_key(self, api_key: str) -> dict[str, Any] | None:
         self.init()
+        prefix = api_key[:_API_KEY_PREFIX_LENGTH]
         with self._connect() as conn:
-            row = conn.execute(
-                "SELECT project_id, name, prefix FROM api_keys WHERE key_hash = ?",
-                (hash_api_key(api_key),),
-            ).fetchone()
+            rows = conn.execute(
+                "SELECT key_hash, project_id, name, prefix FROM api_keys WHERE prefix = ?",
+                (prefix,),
+            ).fetchall()
+            row = next(
+                (
+                    candidate
+                    for candidate in rows
+                    if verify_api_key_hash(api_key, candidate["key_hash"])
+                ),
+                None,
+            )
             if row is None:
                 return None
             conn.execute(
                 "UPDATE api_keys SET last_used_at = CURRENT_TIMESTAMP WHERE key_hash = ?",
-                (hash_api_key(api_key),),
+                (row["key_hash"],),
             )
-            return dict(row)
+            return {key: row[key] for key in ("project_id", "name", "prefix")}
 
     def save_trace(self, trace: AgentTrace, project_id: str = "default") -> None:
         self.init()
@@ -470,30 +535,36 @@ class PostgresTraceStore:
     def create_api_key(self, project_id: str, name: str) -> dict[str, Any]:
         self.init()
         api_key = new_api_key()
+        prefix = api_key[:_API_KEY_PREFIX_LENGTH]
         with self._connect() as conn:
             conn.execute(
                 "INSERT INTO projects(project_id) VALUES (%s) ON CONFLICT DO NOTHING", (project_id,)
             )
             conn.execute(
                 "INSERT INTO api_keys(key_hash, project_id, name, prefix) VALUES (%s, %s, %s, %s)",
-                (hash_api_key(api_key), project_id, name, api_key[:10]),
+                (hash_api_key(api_key), project_id, name, prefix),
             )
-        return {"api_key": api_key, "project_id": project_id, "name": name, "prefix": api_key[:10]}
+        return {"api_key": api_key, "project_id": project_id, "name": name, "prefix": prefix}
 
     def verify_api_key(self, api_key: str) -> dict[str, Any] | None:
         self.init()
+        prefix = api_key[:_API_KEY_PREFIX_LENGTH]
         with self._connect() as conn:
-            row = conn.execute(
-                "SELECT project_id, name, prefix FROM api_keys WHERE key_hash = %s",
-                (hash_api_key(api_key),),
-            ).fetchone()
+            rows = conn.execute(
+                "SELECT key_hash, project_id, name, prefix FROM api_keys WHERE prefix = %s",
+                (prefix,),
+            ).fetchall()
+            row = next(
+                (candidate for candidate in rows if verify_api_key_hash(api_key, candidate[0])),
+                None,
+            )
             if row is None:
                 return None
             conn.execute(
                 "UPDATE api_keys SET last_used_at = now() WHERE key_hash = %s",
-                (hash_api_key(api_key),),
+                (row[0],),
             )
-            return {"project_id": row[0], "name": row[1], "prefix": row[2]}
+            return {"project_id": row[1], "name": row[2], "prefix": row[3]}
 
     def save_trace(self, trace: AgentTrace, project_id: str = "default") -> None:
         self.init()
