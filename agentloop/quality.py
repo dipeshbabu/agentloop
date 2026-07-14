@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from agentloop.markdown import markdown_table_cell
+
 _MAX_GLOB_PATTERN_LENGTH = 256
 _MAX_GLOB_TEXT_LENGTH = 1_000_000
 
@@ -160,11 +162,11 @@ def quality_report_to_markdown(report: dict[str, Any]) -> str:
         status = "pass" if case["passed"] else "fail"
         lines.append(
             "| "
-            f"{case['case_id']} | "
+            f"{markdown_table_cell(case['case_id'])} | "
             f"{status} | "
             f"{case['baseline']['score']:.4f} | "
             f"{case['candidate']['score']:.4f} | "
-            f"{_cell(case['candidate']['detail'])} |"
+            f"{markdown_table_cell(case['candidate']['detail'])} |"
         )
     return "\n".join(lines).rstrip() + "\n"
 
@@ -214,10 +216,6 @@ def _average(values: Any) -> float:
 
 def _result(passed: bool, detail: str) -> dict[str, Any]:
     return {"score": 1.0 if passed else 0.0, "passed": passed, "detail": detail}
-
-
-def _cell(value: Any) -> str:
-    return str(value).replace("|", "\\|").replace("\n", " ")
 
 
 def _is_empty(value: Any) -> bool:
