@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from agentloop.markdown import code_span, escape_inline
 from agentloop.optimizer import build_optimization_plan
 
 
@@ -58,9 +59,9 @@ def diagnosis_to_markdown(diagnosis: dict[str, Any]) -> str:
     current = diagnosis["current"]
     after = diagnosis["estimated_after"]
     lines = [
-        f"# AgentLoop Diagnosis: {diagnosis['name']}",
+        f"# AgentLoop Diagnosis: {escape_inline(diagnosis['name'])}",
         "",
-        f"- Run ID: `{diagnosis['run_id']}`",
+        f"- Run ID: {code_span(diagnosis['run_id'])}",
         f"- Current runtime: {current['runtime_ms'] / 1000:.2f}s",
         f"- Estimated runtime after fixes: {after['runtime_ms'] / 1000:.2f}s",
         f"- Estimated latency reduction: {after['latency_reduction_pct']:.2f}%",
@@ -80,16 +81,17 @@ def diagnosis_to_markdown(diagnosis: dict[str, Any]) -> str:
         validation = finding["validation"]
         lines.extend(
             [
-                f"### {finding['finding_id']}: {finding['title']}",
+                f"### {escape_inline(finding['finding_id'])}: {escape_inline(finding['title'])}",
                 "",
-                f"- Severity: {finding['severity']}",
-                f"- Type: `{finding['type']}`",
-                f"- Confidence: {finding['confidence']}",
-                f"- Affected spans: {', '.join(finding['affected_spans']) or 'none'}",
+                f"- Severity: {escape_inline(finding['severity'])}",
+                f"- Type: {code_span(finding['type'])}",
+                f"- Confidence: {escape_inline(finding['confidence'])}",
+                f"- Affected spans: "
+                f"{', '.join(escape_inline(span) for span in finding['affected_spans']) or 'none'}",
                 f"- Estimated latency savings: {savings['estimated_latency_savings_ms'] / 1000:.2f}s",
                 f"- Estimated cost savings: ${savings['estimated_cost_savings_usd']:.4f}",
-                f"- Rewrite: {rewrite['hint']}",
-                f"- Validation: {validation['acceptance_criteria']}",
+                f"- Rewrite: {escape_inline(rewrite['hint'])}",
+                f"- Validation: {escape_inline(validation['acceptance_criteria'])}",
                 "",
             ]
         )

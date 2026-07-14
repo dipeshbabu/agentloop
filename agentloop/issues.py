@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from agentloop.markdown import code_span, escape_inline
+
 
 def build_issue_drafts(queue: list[dict[str, Any]], *, limit: int = 5) -> list[dict[str, Any]]:
     drafts = []
@@ -23,9 +25,9 @@ def issue_drafts_to_markdown(drafts: list[dict[str, Any]]) -> str:
     for draft in drafts:
         lines.extend(
             [
-                f"## {draft['title']}",
+                f"## {escape_inline(draft['title'])}",
                 "",
-                f"- Labels: {', '.join(draft['labels'])}",
+                f"- Labels: {', '.join(escape_inline(label) for label in draft['labels'])}",
                 "",
                 draft["body"],
                 "",
@@ -43,12 +45,12 @@ def _issue_for_queue_item(item: dict[str, Any]) -> dict[str, Any]:
             "",
             "## Finding",
             "",
-            f"- Type: `{item['type']}`",
-            f"- Severity: `{item['severity']}`",
+            f"- Type: {code_span(item['type'])}",
+            f"- Severity: {code_span(item['severity'])}",
             f"- Occurrences: {item['occurrence_count']}",
             f"- Affected runs: {item['run_count']}",
             f"- Patchable findings: {item['patchable_count']}",
-            f"- Quality risk: `{item.get('quality_risk', 'unknown')}`",
+            f"- Quality risk: {code_span(item.get('quality_risk', 'unknown'))}",
             f"- Requires scorer: {item.get('requires_scorer', True)}",
             f"- Safe to auto-patch: {item.get('safe_to_auto_patch', False)}",
             f"- Estimated latency savings: {item['estimated_latency_savings_ms'] / 1000:.2f}s",
@@ -57,7 +59,7 @@ def _issue_for_queue_item(item: dict[str, Any]) -> dict[str, Any]:
             "",
             "## Affected Runs",
             "",
-            "\n".join(f"- `{run_id}`" for run_id in item.get("affected_runs", [])[:20]),
+            "\n".join(f"- {code_span(run_id)}" for run_id in item.get("affected_runs", [])[:20]),
             "",
             "## Acceptance Criteria",
             "",
