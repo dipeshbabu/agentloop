@@ -222,25 +222,21 @@ def _resolve_repository_path(
     allowed_root: str | Path | None,
 ) -> Path:
     root_input = Path.cwd() if allowed_root is None else allowed_root
-    root = os.path.realpath(os.fspath(root_input))
-    candidate = os.path.realpath(os.path.join(root, os.fspath(repo_path)))
-    if not _path_is_within_root(candidate, root):
+    root = os.path.normcase(os.path.realpath(os.fspath(root_input)))
+    root_prefix = root.rstrip(os.sep) + os.sep
+    candidate = os.path.normcase(os.path.realpath(os.path.join(root, os.fspath(repo_path))))
+    candidate_with_separator = candidate.rstrip(os.sep) + os.sep
+    if not candidate_with_separator.startswith(root_prefix):
         raise ValueError("repository path must remain within the allowed root")
-    if not os.path.isdir(candidate):
+    if not os.path.isdir(candidate_with_separator):
         raise ValueError("repository path must identify an existing directory")
-    return Path(candidate)
-
-
-def _path_is_within_root(candidate: str, root: str) -> bool:
-    normalized_candidate = os.path.normcase(candidate)
-    normalized_root = os.path.normcase(root)
-    root_prefix = normalized_root.rstrip(os.sep) + os.sep
-    return normalized_candidate == normalized_root or normalized_candidate.startswith(root_prefix)
+    return Path(candidate_with_separator)
 
 
 def _index_source_files(repo: Path) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
-    root = os.path.realpath(os.fspath(repo))
+    root = os.path.normcase(os.path.realpath(os.fspath(repo)))
+    root_prefix = root.rstrip(os.sep) + os.sep
     for directory, directory_names, filenames in os.walk(root, followlinks=False):
         directory_names[:] = [
             name
@@ -254,13 +250,15 @@ def _index_source_files(repo: Path) -> list[dict[str, Any]]:
             joined_path = os.path.join(directory, filename)
             if os.path.islink(joined_path):
                 continue
-            source_path = os.path.realpath(joined_path)
-            if not _path_is_within_root(source_path, root) or not os.path.isfile(source_path):
+            source_path = os.path.normcase(os.path.realpath(joined_path))
+            if not source_path.startswith(root_prefix):
+                continue
+            if not os.path.isfile(source_path):
                 continue
             try:
                 with open(source_path, encoding="utf-8") as source_file:
                     text = source_file.read()
-            except UnicodeDecodeError:
+            except (OSError, UnicodeDecodeError):
                 continue
             relative_path = Path(os.path.relpath(source_path, root)).as_posix()
             out.append(

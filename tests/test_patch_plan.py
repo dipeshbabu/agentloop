@@ -64,6 +64,19 @@ def test_build_patch_plan_rejects_repo_outside_allowed_root(tmp_path) -> None:
         build_patch_plan(trace, repo_path=outside_repo, allowed_root=allowed_root)
 
 
+def test_build_patch_plan_rejects_sibling_with_shared_root_prefix(tmp_path) -> None:
+    allowed_root = tmp_path / "repo"
+    prefix_sibling = tmp_path / "repo-untrusted"
+    allowed_root.mkdir()
+    prefix_sibling.mkdir()
+
+    with trace_agent("path-prefix-boundary") as trace:
+        pass
+
+    with pytest.raises(ValueError, match="within the allowed root"):
+        build_patch_plan(trace, repo_path=prefix_sibling, allowed_root=allowed_root)
+
+
 def test_build_patch_plan_skips_source_symlinks(tmp_path) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
