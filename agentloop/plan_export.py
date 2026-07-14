@@ -4,6 +4,13 @@ import json
 from pathlib import Path
 from typing import Any
 
+from agentloop.markdown import (
+    markdown_code_span,
+    markdown_heading,
+    markdown_table_cell,
+    markdown_text,
+)
+
 
 def export_optimization_json(plan: dict[str, Any], path: str | Path) -> Path:
     out = Path(path)
@@ -18,9 +25,9 @@ def export_optimization_markdown(plan: dict[str, Any], path: str | Path) -> Path
     current = plan["current"]
     after = plan["estimated_after"]
     lines = [
-        f"# AgentLoop Optimization Plan: {plan['name']}",
+        f"# AgentLoop Optimization Plan: {markdown_heading(plan['name'])}",
         "",
-        f"- Run ID: `{plan['run_id']}`",
+        f"- Run ID: {markdown_code_span(plan['run_id'])}",
         f"- Current runtime: {current['runtime_ms'] / 1000:.2f}s",
         f"- Estimated optimized runtime: {after['runtime_ms'] / 1000:.2f}s",
         f"- Estimated latency reduction: {after['latency_reduction_pct']:.2f}%",
@@ -41,12 +48,12 @@ def export_optimization_markdown(plan: dict[str, Any], path: str | Path) -> Path
     for index, card in enumerate(cards, start=1):
         lines.extend(
             [
-                f"### {index}. {card['title']}",
+                f"### {index}. {markdown_heading(card['title'])}",
                 "",
-                f"- Type: `{card['type']}`",
-                f"- Confidence: {card['confidence']}",
-                f"- Why: {card['why']}",
-                f"- Rewrite hint: {card['rewrite_hint']}",
+                f"- Type: {markdown_code_span(card['type'])}",
+                f"- Confidence: {markdown_text(card['confidence'])}",
+                f"- Why: {markdown_text(card['why'])}",
+                f"- Rewrite hint: {markdown_text(card['rewrite_hint'])}",
                 f"- Estimated latency savings: {card['estimated_latency_savings_ms'] / 1000:.2f}s",
                 f"- Estimated cost savings: ${card['estimated_cost_savings_usd']:.4f}",
                 "",
@@ -57,7 +64,9 @@ def export_optimization_markdown(plan: dict[str, Any], path: str | Path) -> Path
     )
     for item in plan.get("graph", {}).get("bottlenecks", []):
         lines.append(
-            f"| {item['name']} | {item['event_type']} | {item['duration_ms'] / 1000:.2f}s | {item['runtime_share']:.1%} |"
+            f"| {markdown_table_cell(item['name'])} | "
+            f"{markdown_table_cell(item['event_type'])} | "
+            f"{item['duration_ms'] / 1000:.2f}s | {item['runtime_share']:.1%} |"
         )
     out.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return out

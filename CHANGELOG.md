@@ -47,6 +47,8 @@ Project history from before the first public release remains available in Git.
   deployment guides.
 - Made OpenTelemetry exports report the package version instead of a hard-coded
   version string.
+- Escaped trace-derived content in every Markdown exporter with context-specific
+  handling for headings, tables, inline code, fenced code, and raw HTML.
 
 ### Security
 

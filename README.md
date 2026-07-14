@@ -63,6 +63,19 @@ or are nested. Native trace JSON stores `ended_at` and the monotonic-clock
 Legacy traces without trustworthy end-time metadata fall back to their cumulative
 event duration for compatibility.
 
+### Markdown export safety
+
+AgentLoop treats trace-derived values as untrusted in every Markdown exporter.
+Names, findings, recommendations, statuses, paths, and other captured strings are
+rendered as escaped single-line text in headings and prose, and table values cannot
+add rows or columns. Inline and fenced code use delimiters longer than any backtick
+run in their content. Raw HTML is escaped in prose and tables and remains literal
+inside code spans and fences. Exporters do not turn trace values into Markdown links.
+
+Keep the Markdown renderer's normal safe mode or HTML sanitizer enabled when reports
+are converted to HTML. These guarantees protect AgentLoop's generated structure;
+they do not make separately appended Markdown or renderer extensions trusted.
+
 ## Framework integrations
 
 AgentLoop now includes dependency-free wrappers for the agent frameworks and SDKs teams are already using:
