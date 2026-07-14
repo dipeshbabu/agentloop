@@ -56,10 +56,11 @@ def build_optimization_plan(trace: Any, report: dict[str, Any] | None = None) ->
     cards.extend(_runaway_loop_cards(graph))
     cards.extend(_tool_oscillation_cards(graph))
 
-    total_latency_savings = sum(card.estimated_latency_savings_ms for card in cards)
-    total_cost_savings = sum(card.estimated_cost_savings_usd for card in cards)
     current_runtime = report.get("total_runtime_ms", graph.total_runtime_ms())
     current_cost = report.get("estimated_cost_usd", 0.0)
+    aggregate = _aggregate_savings(cards, current_runtime, current_cost)
+    total_latency_savings = aggregate["latency_savings_ms"]
+    total_cost_savings = aggregate["cost_savings_usd"]
 
     return {
         "run_id": trace.run_id,
@@ -82,9 +83,79 @@ def build_optimization_plan(trace: Any, report: dict[str, Any] | None = None) ->
             if current_cost
             else 0.0,
         },
+        "savings_aggregation": aggregate["explanation"],
         "graph": graph.to_dict(),
         "optimization_cards": [card.to_dict() for card in cards],
     }
+
+
+def _aggregate_savings(
+    cards: list[OptimizationCard], current_runtime: float, current_cost: float
+) -> dict[str, Any]:
+    """Combine per-card savings without double-counting overlapping spans.
+
+    Cards that share any affected span target the same work, so their estimates
+    are mutually exclusive **alternatives**, not additive — within such a group
+    we take the single best (max) estimate. Disjoint groups are summed. The
+    aggregate is finally capped at the current runtime/cost, because no plan can
+    save more wall-clock time (or money) than the run actually spent. This keeps
+    ``latency_reduction_pct`` at or below 100% and internally consistent with
+    ``runtime_ms``, while per-card estimates stay untouched and explainable.
+    """
+    groups = _group_cards_by_shared_span(cards)
+    latency = sum(max((c.estimated_latency_savings_ms for c in g), default=0.0) for g in groups)
+    cost = sum(max((c.estimated_cost_savings_usd for c in g), default=0.0) for g in groups)
+    capped_latency = min(latency, current_runtime) if current_runtime else min(latency, 0.0)
+    capped_cost = min(cost, current_cost) if current_cost else min(cost, 0.0)
+    raw_latency = sum(c.estimated_latency_savings_ms for c in cards)
+    raw_cost = sum(c.estimated_cost_savings_usd for c in cards)
+    overlapping = sum(1 for g in groups if len(g) > 1)
+    return {
+        "latency_savings_ms": capped_latency,
+        "cost_savings_usd": capped_cost,
+        "explanation": {
+            "rule": (
+                "cards sharing affected spans are mutually exclusive alternatives "
+                "(max per group); disjoint groups are summed; total capped at current "
+                "runtime/cost"
+            ),
+            "card_count": len(cards),
+            "independent_group_count": len(groups),
+            "overlapping_group_count": overlapping,
+            "raw_latency_savings_ms": round(raw_latency, 3),
+            "effective_latency_savings_ms": round(capped_latency, 3),
+            "raw_cost_savings_usd": round(raw_cost, 6),
+            "effective_cost_savings_usd": round(capped_cost, 6),
+        },
+    }
+
+
+def _group_cards_by_shared_span(cards: list[OptimizationCard]) -> list[list[OptimizationCard]]:
+    """Union cards that share at least one affected span. Cards with no affected
+    spans each form their own group (nothing to overlap with)."""
+    parent = list(range(len(cards)))
+
+    def find(i: int) -> int:
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+
+    def union(i: int, j: int) -> None:
+        parent[find(i)] = find(j)
+
+    seen: dict[str, int] = {}
+    for idx, card in enumerate(cards):
+        for node in card.affected_nodes or []:
+            if node in seen:
+                union(idx, seen[node])
+            else:
+                seen[node] = idx
+
+    grouped: dict[int, list[OptimizationCard]] = {}
+    for idx, card in enumerate(cards):
+        grouped.setdefault(find(idx), []).append(card)
+    return list(grouped.values())
 
 
 def _parallelization_cards(graph: ExecutionGraph) -> list[OptimizationCard]:
