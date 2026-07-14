@@ -38,6 +38,8 @@ Project history from before the first public release remains available in Git.
 
 ### Fixed
 
+- Remote CLI commands now honor environment-based user and administrator API
+  keys while keeping administrator credentials out of ordinary requests.
 - Corrected uv and CLI path examples across the README, dashboard, and
   deployment guides.
 - Made OpenTelemetry exports report the package version instead of a hard-coded

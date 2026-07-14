@@ -35,6 +35,18 @@ app = typer.Typer(help="AgentLoop profiler CLI")
 console = Console()
 
 
+def _remote_client(api_url: str, api_key: str | None) -> AgentLoopClient:
+    resolved_api_key = api_key if api_key is not None else os.getenv("AGENTLOOP_API_KEY")
+    return AgentLoopClient(base_url=api_url, api_key=resolved_api_key)
+
+
+def _remote_admin_client(api_url: str, admin_api_key: str | None) -> AgentLoopClient:
+    resolved_admin_key = (
+        admin_api_key if admin_api_key is not None else os.getenv("AGENTLOOP_ADMIN_API_KEY")
+    )
+    return AgentLoopClient(base_url=api_url, admin_api_key=resolved_admin_key)
+
+
 def _ensure_trace(path: Path, kind: str = "baseline") -> Path:
     if path.exists():
         return path
@@ -666,7 +678,7 @@ def upload(
 ) -> None:
     if autogen:
         path = _ensure_trace(path)
-    client = AgentLoopClient(base_url=api_url, api_key=api_key)
+    client = _remote_client(api_url, api_key)
     response = client.upload_trace(path)
     console.print(f"Uploaded trace {response['run_id']} to {api_url}")
     console.print(f"Project: {response.get('project_id', 'default')}")
@@ -681,7 +693,7 @@ def remote_optimize(
     ),
     out: Path = Path("runs/remote_optimization_plan.json"),
 ) -> None:
-    client = AgentLoopClient(base_url=api_url, api_key=api_key)
+    client = _remote_client(api_url, api_key)
     plan = client.get_optimization_plan(run_id)
     export_optimization_json(plan, out)
     console.print(f"Wrote remote optimization plan to {out}")
@@ -696,7 +708,7 @@ def remote_diagnose(
     ),
     out: Path = Path("runs/remote_diagnosis.json"),
 ) -> None:
-    client = AgentLoopClient(base_url=api_url, api_key=api_key)
+    client = _remote_client(api_url, api_key)
     diagnosis = client.get_diagnosis(run_id)
     _write_json(out, diagnosis)
     console.print(f"Wrote remote diagnosis to {out}")
@@ -712,7 +724,7 @@ def remote_findings(
     status: str | None = typer.Option(None),
     out: Path = Path("runs/remote_findings.json"),
 ) -> None:
-    client = AgentLoopClient(base_url=api_url, api_key=api_key)
+    client = _remote_client(api_url, api_key)
     findings = client.list_findings(project_id=project_id, status=status)
     _write_json(out, findings)
     console.print(f"Wrote remote findings to {out}")
@@ -727,7 +739,7 @@ def remote_optimization_queue(
     project_id: str | None = typer.Option(None),
     out: Path = Path("runs/remote_optimization_queue.json"),
 ) -> None:
-    client = AgentLoopClient(base_url=api_url, api_key=api_key)
+    client = _remote_client(api_url, api_key)
     queue = client.optimization_queue(project_id=project_id)
     _write_json(out, queue)
     console.print(f"Wrote remote optimization queue to {out}")
@@ -743,7 +755,7 @@ def remote_github_issue_drafts(
     limit: int = typer.Option(5, min=1, max=20),
     out: Path = Path("runs/remote_agentloop_issue_drafts.json"),
 ) -> None:
-    client = AgentLoopClient(base_url=api_url, api_key=api_key)
+    client = _remote_client(api_url, api_key)
     drafts = client.github_issue_drafts(project_id=project_id, limit=limit)
     _write_json(out, drafts)
     console.print(f"Wrote remote GitHub issue drafts to {out}")
@@ -761,7 +773,7 @@ def remote_value_report(
     engineer_hourly_rate_usd: float = typer.Option(150.0, min=0),
     incident_cost_usd: float = typer.Option(500.0, min=0),
 ) -> None:
-    client = AgentLoopClient(base_url=api_url, api_key=api_key)
+    client = _remote_client(api_url, api_key)
     value = client.get_value_report(
         run_id,
         runs_per_month=runs_per_month,
@@ -780,7 +792,7 @@ def remote_usage(
         None, help="Optional API key. Defaults to AGENTLOOP_API_KEY."
     ),
 ) -> None:
-    client = AgentLoopClient(base_url=api_url, api_key=api_key)
+    client = _remote_client(api_url, api_key)
     console.print_json(data=client.usage_summary())
 
 
@@ -793,7 +805,7 @@ def remote_create_api_key(
         None, help="Admin API key. Defaults to AGENTLOOP_ADMIN_API_KEY."
     ),
 ) -> None:
-    client = AgentLoopClient(base_url=api_url, admin_api_key=admin_api_key)
+    client = _remote_admin_client(api_url, admin_api_key)
     key = client.create_api_key(project_id=project_id, name=name)
     console.print("Created remote API key. Save it now; it will not be shown again.")
     console.print(key["api_key"])
