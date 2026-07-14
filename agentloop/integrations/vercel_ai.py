@@ -46,6 +46,7 @@ def trace_from_vercel_ai_events(
                 started_at=str(_get(item, "started_at", utc_now_iso())),
                 ended_at=str(_get(item, "ended_at", utc_now_iso())),
                 duration_ms=float(_get(item, "duration_ms", 0.0) or 0.0),
+                parent_id=_get(item, "parent_id"),
                 model=_get(item, "model"),
                 input_tokens=int(_get(item, "input_tokens", _get(item, "prompt_tokens", 0)) or 0),
                 output_tokens=int(

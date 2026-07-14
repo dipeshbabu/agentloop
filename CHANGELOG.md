@@ -38,6 +38,9 @@ Project history from before the first public release remains available in Git.
 
 ### Fixed
 
+- Measure trace runtime as end-to-end elapsed time, retain cumulative span work
+  separately, and calculate execution order and critical paths from timestamps
+  and parent relationships.
 - Remote CLI commands now honor environment-based user and administrator API
   keys while keeping administrator credentials out of ordinary requests.
 - Corrected uv and CLI path examples across the README, dashboard, and

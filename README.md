@@ -53,6 +53,16 @@ trace.print_report()
 trace.export_json("runs/research_agent.json")
 ```
 
+### Timing semantics
+
+`total_runtime_ms` is the end-to-end elapsed duration of a trace, including work
+that was not wrapped in an event. `cumulative_span_time_ms` is the sum of all
+instrumented event durations, so it can exceed elapsed runtime when spans overlap
+or are nested. Native trace JSON stores `ended_at` and the monotonic-clock
+`elapsed_ms`. Timestamped imports use the earliest span start and latest span end.
+Legacy traces without trustworthy end-time metadata fall back to their cumulative
+event duration for compatibility.
+
 ## Framework integrations
 
 AgentLoop now includes dependency-free wrappers for the agent frameworks and SDKs teams are already using:
