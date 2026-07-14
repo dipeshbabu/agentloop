@@ -4,6 +4,7 @@ from collections import Counter, defaultdict
 from typing import Any
 
 from agentloop.costs import estimate_cost_usd
+from agentloop.timing import cumulative_span_time_ms, elapsed_runtime_ms
 
 
 def build_report(trace: Any) -> dict[str, Any]:
@@ -14,6 +15,7 @@ def build_report(trace: Any) -> dict[str, Any]:
 
     repeated = repeated_context_stats(model_events)
     parallel = parallelism_opportunities(tool_events)
+    cumulative_time = cumulative_span_time_ms(events)
 
     return {
         "run_id": trace.run_id,
@@ -22,7 +24,8 @@ def build_report(trace: Any) -> dict[str, Any]:
         "model_call_count": len(model_events),
         "tool_call_count": len(tool_events),
         "retry_count": len(retry_events),
-        "total_runtime_ms": round(sum(e.duration_ms for e in events), 3),
+        "total_runtime_ms": round(elapsed_runtime_ms(trace), 3),
+        "cumulative_span_time_ms": round(cumulative_time, 3),
         "model_time_ms": round(sum(e.duration_ms for e in model_events), 3),
         "tool_time_ms": round(sum(e.duration_ms for e in tool_events), 3),
         "retry_time_ms": round(sum(e.duration_ms for e in retry_events), 3),

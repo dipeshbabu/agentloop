@@ -5,7 +5,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from agentloop.server import app
-from agentloop.tracer import trace_agent, trace_model_call
+from agentloop.tracer import AgentTrace, trace_agent, trace_model_call
 
 
 def test_health() -> None:
@@ -64,6 +64,22 @@ def test_ingest_trace() -> None:
     body = response.json()
     assert body["ok"] is True
     assert body["report"]["model_call_count"] == 1
+
+
+def test_ingest_trace_preserves_explicit_elapsed_runtime() -> None:
+    client = TestClient(app)
+    trace = AgentTrace(
+        "server-elapsed-test",
+        started_at="2026-01-01T00:00:00+00:00",
+        ended_at="2026-01-01T00:00:00.125000+00:00",
+        elapsed_ms=125,
+    )
+
+    response = client.post("/traces", json=trace.to_dict())
+
+    assert response.status_code == 200
+    assert response.json()["report"]["total_runtime_ms"] == 125
+    assert response.json()["report"]["cumulative_span_time_ms"] == 0
 
 
 def test_optimize_trace_endpoint() -> None:
