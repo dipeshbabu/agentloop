@@ -229,14 +229,20 @@ def quality_report_endpoint(
     project_id: str = Depends(resolve_project),
     db: TraceStore = Depends(store),
 ) -> dict[str, Any]:
-    if any(
-        isinstance(fixture.get("scorer"), dict)
-        and str(fixture["scorer"].get("type", "")).lower() == "custom"
+    scorer_types = {
+        str(fixture["scorer"].get("type", "")).lower()
         for fixture in payload.fixtures
-    ):
+        if isinstance(fixture.get("scorer"), dict)
+    }
+    if "custom" in scorer_types:
         raise HTTPException(
             status_code=400,
             detail="custom Python scorers are not accepted by the HTTP API",
+        )
+    if "regex" in scorer_types:
+        raise HTTPException(
+            status_code=400,
+            detail="raw regex scorers are not accepted; use glob, contains, or exact_match",
         )
     baseline_trace = (
         _load_trace_or_404(db, payload.baseline_run_id, project_id)

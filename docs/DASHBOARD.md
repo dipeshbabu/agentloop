@@ -76,4 +76,5 @@ it behind an authenticated reverse proxy and follow
 retention, backups, and database access controls.
 
 Custom quality scorers import Python code and must be used only with trusted
-local fixtures. The HTTP API rejects custom scorers.
+local fixtures. The HTTP API rejects custom scorers and raw regular-expression
+scorers; use bounded `glob` or `contains` matching for untrusted input.
