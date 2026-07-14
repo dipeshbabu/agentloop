@@ -75,8 +75,12 @@ def build_optimization_plan(trace: Any, report: dict[str, Any] | None = None) ->
         "estimated_after": {
             "runtime_ms": round(max(0.0, current_runtime - total_latency_savings), 3),
             "estimated_cost_usd": round(max(0.0, current_cost - total_cost_savings), 6),
-            "latency_reduction_pct": round((total_latency_savings / current_runtime) * 100, 2) if current_runtime else 0.0,
-            "cost_reduction_pct": round((total_cost_savings / current_cost) * 100, 2) if current_cost else 0.0,
+            "latency_reduction_pct": round((total_latency_savings / current_runtime) * 100, 2)
+            if current_runtime
+            else 0.0,
+            "cost_reduction_pct": round((total_cost_savings / current_cost) * 100, 2)
+            if current_cost
+            else 0.0,
         },
         "graph": graph.to_dict(),
         "optimization_cards": [card.to_dict() for card in cards],
@@ -245,7 +249,9 @@ def _tool_oscillation_cards(graph: ExecutionGraph) -> list[OptimizationCard]:
             continue
 
         end = index + 4
-        while end < len(tool_nodes) and tool_nodes[end].name == (first if (end - index) % 2 == 0 else second):
+        while end < len(tool_nodes) and tool_nodes[end].name == (
+            first if (end - index) % 2 == 0 else second
+        ):
             end += 1
         oscillating = tool_nodes[index:end]
         duration = sum(node.duration_ms for node in oscillating)

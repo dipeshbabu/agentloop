@@ -51,7 +51,9 @@ def test_production_check_rejects_unsafe_defaults(monkeypatch) -> None:
 
 def test_production_check_accepts_safe_env(monkeypatch) -> None:
     monkeypatch.setenv("AGENTLOOP_STORE_BACKEND", "postgres")
-    monkeypatch.setenv("AGENTLOOP_DATABASE_URL", "postgresql://agentloop:secret@example.com:5432/agentloop")
+    monkeypatch.setenv(
+        "AGENTLOOP_DATABASE_URL", "postgresql://agentloop:secret@example.com:5432/agentloop"
+    )
     monkeypatch.setenv("AGENTLOOP_REQUIRE_API_KEY", "true")
     monkeypatch.setenv("AGENTLOOP_ADMIN_API_KEY", "x" * 40)
     monkeypatch.setenv("AGENTLOOP_CORS_ORIGINS", "https://dashboard.example.com")

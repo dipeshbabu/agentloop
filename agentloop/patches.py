@@ -85,8 +85,14 @@ def build_patch_plan(trace: Any, repo_path: str | Path = ".") -> dict[str, Any]:
 
     for finding in diagnosis.get("findings", []):
         finding_type = str(finding.get("type", ""))
-        if finding_type not in SUPPORTED_PATCH_TYPES or not finding.get("rewrite", {}).get("patchable"):
-            unsupported.append(_unsupported_finding(finding, "finding type is not supported by dry-run patch planning yet"))
+        if finding_type not in SUPPORTED_PATCH_TYPES or not finding.get("rewrite", {}).get(
+            "patchable"
+        ):
+            unsupported.append(
+                _unsupported_finding(
+                    finding, "finding type is not supported by dry-run patch planning yet"
+                )
+            )
             continue
         plans.append(_plan_for_finding(finding, source_index, frameworks, len(plans) + 1))
 
@@ -239,7 +245,9 @@ def _python_symbols(text: str) -> list[dict[str, Any]]:
     symbols: list[dict[str, Any]] = []
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef):
-            symbols.append({"name": node.name, "line": node.lineno, "kind": node.__class__.__name__})
+            symbols.append(
+                {"name": node.name, "line": node.lineno, "kind": node.__class__.__name__}
+            )
     return symbols
 
 
@@ -264,20 +272,27 @@ def _detect_frameworks(source_index: list[dict[str, Any]]) -> list[str]:
     return sorted(frameworks)
 
 
-def _candidate_files(source_index: list[dict[str, Any]], evidence_names: list[str]) -> list[FileCandidate]:
+def _candidate_files(
+    source_index: list[dict[str, Any]], evidence_names: list[str]
+) -> list[FileCandidate]:
     candidates: list[FileCandidate] = []
     for item in source_index:
         symbol_hits = [
             symbol
             for symbol in item["symbols"]
-            if symbol["name"] in evidence_names or any(symbol["name"].endswith(f"_{name}") for name in evidence_names)
+            if symbol["name"] in evidence_names
+            or any(symbol["name"].endswith(f"_{name}") for name in evidence_names)
         ]
         text_hits = [name for name in evidence_names if name and name in item["text"]]
         if not symbol_hits and not text_hits:
             continue
         confidence = "high" if symbol_hits else "medium"
         symbols = sorted({symbol["name"] for symbol in symbol_hits} or set(text_hits))
-        reason = "matched Python function/class names from trace evidence" if symbol_hits else "matched trace span names in source text"
+        reason = (
+            "matched Python function/class names from trace evidence"
+            if symbol_hits
+            else "matched trace span names in source text"
+        )
         locations = [
             {"symbol": symbol["name"], "line": symbol["line"], "kind": symbol["kind"]}
             for symbol in symbol_hits
@@ -295,7 +310,9 @@ def _candidate_files(source_index: list[dict[str, Any]], evidence_names: list[st
 
 
 def _select_framework(frameworks: list[str], files: list[FileCandidate]) -> str:
-    if "langgraph" in frameworks and any("langgraph" in file.path.lower() or "graph" in file.path.lower() for file in files):
+    if "langgraph" in frameworks and any(
+        "langgraph" in file.path.lower() or "graph" in file.path.lower() for file in files
+    ):
         return "langgraph"
     if "openai_agents" in frameworks:
         return "openai_agents"
@@ -467,7 +484,8 @@ def _format_locations(locations: list[dict[str, Any]]) -> str:
     if not locations:
         return ""
     formatted = ", ".join(
-        f"{location.get('symbol', 'symbol')}:{location.get('line', '?')}" for location in locations[:3]
+        f"{location.get('symbol', 'symbol')}:{location.get('line', '?')}"
+        for location in locations[:3]
     )
     return f" lines {formatted}"
 
@@ -475,23 +493,37 @@ def _format_locations(locations: list[dict[str, Any]]) -> str:
 def _notes(finding_type: str, files: list[FileCandidate]) -> list[str]:
     notes = ["Dry-run only: no files were modified."]
     if not files:
-        notes.append("Add explicit span names that match source function names to improve file targeting.")
+        notes.append(
+            "Add explicit span names that match source function names to improve file targeting."
+        )
     if finding_type == "parallelize_tools":
-        notes.append("Only parallelize calls that do not mutate shared state and do not depend on each other's outputs.")
+        notes.append(
+            "Only parallelize calls that do not mutate shared state and do not depend on each other's outputs."
+        )
     if finding_type == "cache_context":
-        notes.append("Confirm cached context has the same invalidation boundary as the original prompt.")
+        notes.append(
+            "Confirm cached context has the same invalidation boundary as the original prompt."
+        )
     if finding_type == "add_schema_validation":
         notes.append("Keep the repair path cheaper than a full retry and cap repair attempts.")
     if finding_type == "batch_model_calls":
-        notes.append("Batch only items whose outputs can be validated independently after unpacking.")
+        notes.append(
+            "Batch only items whose outputs can be validated independently after unpacking."
+        )
     if finding_type == "route_to_smaller_model":
-        notes.append("Require a quality scorer or golden fixture before routing production traffic to the cheaper model.")
+        notes.append(
+            "Require a quality scorer or golden fixture before routing production traffic to the cheaper model."
+        )
     if finding_type == "split_large_step":
         notes.append("Preserve citations or source references across the compression boundary.")
     if finding_type == "runaway_loop":
-        notes.append("Record the stop reason in trace metadata so future runs can distinguish healthy exits from guardrail exits.")
+        notes.append(
+            "Record the stop reason in trace metadata so future runs can distinguish healthy exits from guardrail exits."
+        )
     if finding_type == "tool_oscillation":
-        notes.append("Make the state-change predicate domain-specific; generic duplicate suppression can hide real progress.")
+        notes.append(
+            "Make the state-change predicate domain-specific; generic duplicate suppression can hide real progress."
+        )
     return notes
 
 

@@ -38,7 +38,10 @@ class OptimizationFinding:
 
 def build_diagnosis(trace: Any) -> dict[str, Any]:
     plan = build_optimization_plan(trace)
-    findings = [_finding_from_card(index, card, plan) for index, card in enumerate(plan.get("optimization_cards", []), start=1)]
+    findings = [
+        _finding_from_card(index, card, plan)
+        for index, card in enumerate(plan.get("optimization_cards", []), start=1)
+    ]
     findings = [finding for finding in findings if finding is not None]
     return {
         "run_id": plan["run_id"],
@@ -93,14 +96,18 @@ def diagnosis_to_markdown(diagnosis: dict[str, Any]) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
-def _finding_from_card(index: int, card: dict[str, Any], plan: dict[str, Any]) -> OptimizationFinding | None:
+def _finding_from_card(
+    index: int, card: dict[str, Any], plan: dict[str, Any]
+) -> OptimizationFinding | None:
     affected_spans = list(card.get("affected_nodes", []))
     finding_type = str(card.get("type", "optimization"))
     latency_savings = float(card.get("estimated_latency_savings_ms", 0.0) or 0.0)
     cost_savings = float(card.get("estimated_cost_savings_usd", 0.0) or 0.0)
     severity = _severity(latency_savings, cost_savings, str(card.get("confidence", "low")), plan)
     node_lookup = {node["node_id"]: node for node in plan.get("graph", {}).get("nodes", [])}
-    evidence = [_evidence_row(node_lookup[node_id]) for node_id in affected_spans if node_id in node_lookup]
+    evidence = [
+        _evidence_row(node_lookup[node_id]) for node_id in affected_spans if node_id in node_lookup
+    ]
 
     return OptimizationFinding(
         finding_id=f"al_{finding_type}_{index:03d}",
@@ -148,7 +155,9 @@ def _summary(plan: dict[str, Any], findings: list[OptimizationFinding]) -> dict[
     }
 
 
-def _severity(latency_savings: float, cost_savings: float, confidence: str, plan: dict[str, Any]) -> str:
+def _severity(
+    latency_savings: float, cost_savings: float, confidence: str, plan: dict[str, Any]
+) -> str:
     runtime = float(plan.get("current", {}).get("runtime_ms", 0.0) or 0.0)
     cost = float(plan.get("current", {}).get("estimated_cost_usd", 0.0) or 0.0)
     latency_share = latency_savings / runtime if runtime else 0.0
@@ -198,4 +207,6 @@ def _acceptance_criteria(finding_type: str) -> str:
         "runaway_loop": "iteration count is bounded and replay passes quality and budget gates",
         "tool_oscillation": "tool-call count decreases without losing required state transitions",
     }
-    return criteria.get(finding_type, "before/after replay passes configured quality and budget gates")
+    return criteria.get(
+        finding_type, "before/after replay passes configured quality and budget gates"
+    )

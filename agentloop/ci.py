@@ -14,7 +14,9 @@ def build_ci_report(
     quality_report: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the PR-facing AgentLoop performance report."""
-    replay = build_replay_report(baseline_trace, candidate_trace, gates=gates, quality_report=quality_report)
+    replay = build_replay_report(
+        baseline_trace, candidate_trace, gates=gates, quality_report=quality_report
+    )
     diagnosis = build_diagnosis(candidate_trace)
     summary = _summary(replay, diagnosis)
     return {
@@ -107,7 +109,9 @@ def _summary(replay: dict[str, Any], diagnosis: dict[str, Any]) -> dict[str, Any
         "latency_improvement_pct": deltas["latency_improvement_pct"],
         "cost_improvement_pct": deltas["cost_improvement_pct"],
         "retry_count_delta": deltas["retry_count_delta"],
-        "candidate_schema_validity": _format_optional(candidate.get("schema_validity_pct"), suffix="%")
+        "candidate_schema_validity": _format_optional(
+            candidate.get("schema_validity_pct"), suffix="%"
+        )
         if candidate.get("schema_validity_pct") is not None
         else _format_optional(candidate.get("schema_valid")),
         "candidate_quality_score": _format_optional(candidate.get("quality_score")),

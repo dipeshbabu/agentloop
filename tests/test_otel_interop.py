@@ -8,6 +8,7 @@ from agentloop.cli import app
 from agentloop.findings import build_diagnosis
 from agentloop.otel import trace_from_otel, trace_to_otel
 from agentloop.tracer import trace_agent, trace_model_call, trace_tool_call
+from agentloop.version import __version__
 
 
 def test_trace_from_otel_imports_genai_spans() -> None:
@@ -24,10 +25,22 @@ def test_trace_from_otel_imports_genai_spans() -> None:
                                 "startTimeUnixNano": "1000000000",
                                 "endTimeUnixNano": "1400000000",
                                 "attributes": [
-                                    {"key": "gen_ai.operation.name", "value": {"stringValue": "chat"}},
-                                    {"key": "gen_ai.request.model", "value": {"stringValue": "gpt-test"}},
-                                    {"key": "gen_ai.usage.input_tokens", "value": {"intValue": 100}},
-                                    {"key": "gen_ai.usage.output_tokens", "value": {"intValue": 20}},
+                                    {
+                                        "key": "gen_ai.operation.name",
+                                        "value": {"stringValue": "chat"},
+                                    },
+                                    {
+                                        "key": "gen_ai.request.model",
+                                        "value": {"stringValue": "gpt-test"},
+                                    },
+                                    {
+                                        "key": "gen_ai.usage.input_tokens",
+                                        "value": {"intValue": 100},
+                                    },
+                                    {
+                                        "key": "gen_ai.usage.output_tokens",
+                                        "value": {"intValue": 20},
+                                    },
                                 ],
                             },
                             {
@@ -38,8 +51,14 @@ def test_trace_from_otel_imports_genai_spans() -> None:
                                 "startTimeUnixNano": "1400000000",
                                 "endTimeUnixNano": "1700000000",
                                 "attributes": [
-                                    {"key": "gen_ai.operation.name", "value": {"stringValue": "execute_tool"}},
-                                    {"key": "gen_ai.tool.name", "value": {"stringValue": "search_web"}},
+                                    {
+                                        "key": "gen_ai.operation.name",
+                                        "value": {"stringValue": "execute_tool"},
+                                    },
+                                    {
+                                        "key": "gen_ai.tool.name",
+                                        "value": {"stringValue": "search_web"},
+                                    },
                                 ],
                             },
                         ]
@@ -69,6 +88,7 @@ def test_trace_to_otel_round_trips_native_trace() -> None:
             pass
 
     payload = trace_to_otel(trace)
+    assert payload["resourceSpans"][0]["scopeSpans"][0]["scope"]["version"] == __version__
     imported = trace_from_otel(payload)
 
     assert len(imported.events) == 2
@@ -105,7 +125,15 @@ def test_cli_diagnose_and_otel_commands(tmp_path) -> None:
     diagnosis_json = tmp_path / "diagnosis.json"
     result = runner.invoke(
         app,
-        ["diagnose", "--path", str(native), "--out", str(diagnosis_md), "--json-out", str(diagnosis_json)],
+        [
+            "diagnose",
+            "--path",
+            str(native),
+            "--out",
+            str(diagnosis_md),
+            "--json-out",
+            str(diagnosis_json),
+        ],
     )
     assert result.exit_code == 0
     assert diagnosis_md.exists()
@@ -117,6 +145,8 @@ def test_cli_diagnose_and_otel_commands(tmp_path) -> None:
     assert otel_path.exists()
 
     imported = tmp_path / "imported.json"
-    result = runner.invoke(app, ["import-otel", str(otel_path), str(imported), "--name", "imported"])
+    result = runner.invoke(
+        app, ["import-otel", str(otel_path), str(imported), "--name", "imported"]
+    )
     assert result.exit_code == 0
     assert json.loads(imported.read_text(encoding="utf-8"))["name"] == "imported"

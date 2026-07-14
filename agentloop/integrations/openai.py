@@ -48,7 +48,11 @@ def _metadata_from_call(args: tuple[Any, ...], kwargs: dict[str, Any]) -> dict[s
 
 
 def _model_from_call(kwargs: dict[str, Any], default_model: str | None = None) -> str | None:
-    return str(kwargs.get("model") or default_model) if (kwargs.get("model") or default_model) else None
+    return (
+        str(kwargs.get("model") or default_model)
+        if (kwargs.get("model") or default_model)
+        else None
+    )
 
 
 def instrument_callable(
@@ -149,6 +153,8 @@ def instrument_openai_client(client: Any) -> Any:
     chat = getattr(client, "chat", None)
     completions = getattr(chat, "completions", None) if chat is not None else None
     if completions is not None and callable(getattr(completions, "create", None)):
-        completions.create = instrument_callable(completions.create, name="openai.chat.completions.create")
+        completions.create = instrument_callable(
+            completions.create, name="openai.chat.completions.create"
+        )
 
     return client

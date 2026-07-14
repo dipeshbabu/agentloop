@@ -50,13 +50,16 @@ def traceable(
     ```python
     import agentloop
 
+
     @agentloop.traceable(root=True, agent_name="research_agent")
     def run_agent(question: str):
         return plan(question)
 
+
     @agentloop.traceable(kind="model", model="gpt-4.1-mini")
     def plan(question: str):
         return client.responses.create(...)
+
 
     @agentloop.traceable(kind="tool")
     def search_web(query: str):
@@ -73,7 +76,9 @@ def traceable(
         raise ValueError("kind must be 'tool' or 'model'")
 
     def decorator(func: F) -> F:
-        span_name = name or getattr(func, "__name__", getattr(func, "__qualname__", "agentloop.call"))
+        span_name = name or getattr(
+            func, "__name__", getattr(func, "__qualname__", "agentloop.call")
+        )
         run_name = agent_name or span_name
 
         if inspect.iscoroutinefunction(func):
@@ -82,7 +87,9 @@ def traceable(
             async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
                 if root and current_trace() is None:
                     with trace_agent(run_name, metadata={"entrypoint": span_name}):
-                        return await _run_async_span(func, span_name, normalized_kind, model, args, kwargs)
+                        return await _run_async_span(
+                            func, span_name, normalized_kind, model, args, kwargs
+                        )
                 return await _run_async_span(func, span_name, normalized_kind, model, args, kwargs)
 
             return async_wrapper  # type: ignore[return-value]
@@ -133,13 +140,21 @@ def _run_sync_span(
         return func(*args, **kwargs)
 
 
-def trace_model(*, name: str | None = None, model: str | None = None, root: bool = False, agent_name: str | None = None) -> Callable[[F], F]:
+def trace_model(
+    *,
+    name: str | None = None,
+    model: str | None = None,
+    root: bool = False,
+    agent_name: str | None = None,
+) -> Callable[[F], F]:
     """Convenience decorator for model-call-like functions."""
 
     return traceable(name=name, kind="model", model=model, root=root, agent_name=agent_name)
 
 
-def trace_tool(*, name: str | None = None, root: bool = False, agent_name: str | None = None) -> Callable[[F], F]:
+def trace_tool(
+    *, name: str | None = None, root: bool = False, agent_name: str | None = None
+) -> Callable[[F], F]:
     """Convenience decorator for tool-call-like functions."""
 
     return traceable(name=name, kind="tool", root=root, agent_name=agent_name)

@@ -21,7 +21,11 @@ from agentloop.optimizer import build_optimization_plan
 from agentloop.otel import trace_from_otel, trace_to_otel
 from agentloop.patches import build_patch_plan, patch_plan_to_markdown
 from agentloop.plan_export import export_optimization_json, export_optimization_markdown
-from agentloop.quality import build_quality_report, load_quality_fixtures, quality_report_to_markdown
+from agentloop.quality import (
+    build_quality_report,
+    load_quality_fixtures,
+    quality_report_to_markdown,
+)
 from agentloop.replay import ReplayGates, build_replay_report, replay_report_to_markdown
 from agentloop.store import get_store
 from agentloop.tracer import AgentTrace
@@ -68,11 +72,14 @@ def _print_value_summary(value: dict) -> None:
     table.add_row("Reliability risk score", f"{reliability['risk_score']}/100")
     if pricing:
         table.add_row("Suggested plan", str(pricing.get("suggested_plan", "")))
-        table.add_row("Suggested monthly price", f"${float(pricing.get('suggested_monthly_price_usd', 0)):,.0f}")
+        table.add_row(
+            "Suggested monthly price",
+            f"${float(pricing.get('suggested_monthly_price_usd', 0)):,.0f}",
+        )
         ratio = pricing.get("value_to_price_ratio")
         table.add_row("Value / price ratio", "n/a" if ratio is None else f"{ratio}x")
     console.print(table)
-    console.print(value["sales_summary"])
+    console.print(value["value_summary"])
 
 
 def _print_doctor(result: dict) -> None:
@@ -84,14 +91,19 @@ def _print_doctor(result: dict) -> None:
     for check in result["checks"]:
         status = check["status"]
         style = "green" if status == "ok" else "yellow" if status == "warn" else "red"
-        table.add_row(f"[{style}]{status}[/{style}]", check["name"], check["detail"], check.get("fix", ""))
+        table.add_row(
+            f"[{style}]{status}[/{style}]", check["name"], check["detail"], check.get("fix", "")
+        )
     console.print(table)
     if result["failed"]:
         raise typer.Exit(1)
 
 
 @app.command()
-def report(path: Path, autogen: bool = typer.Option(True, help="Generate a demo trace if the file is missing.")) -> None:
+def report(
+    path: Path,
+    autogen: bool = typer.Option(True, help="Generate a demo trace if the file is missing."),
+) -> None:
     if autogen:
         path = _ensure_trace(path)
     trace = AgentTrace.from_json(path)
@@ -136,14 +148,20 @@ def replay_command(
     baseline: Path = Path("runs/research_agent_baseline.json"),
     candidate: Path = Path("runs/research_agent_optimized.json"),
     out: Path = Path("runs/replay_report.md"),
-    json_out: Path | None = typer.Option(None, help="Optional machine-readable replay report output."),
+    json_out: Path | None = typer.Option(
+        None, help="Optional machine-readable replay report output."
+    ),
     max_cost_regression_pct: float = typer.Option(0.0, min=0.0),
     max_latency_regression_pct: float = typer.Option(0.0, min=0.0),
     min_latency_improvement_pct: float = typer.Option(0.0, min=0.0),
     min_cost_improvement_pct: float = typer.Option(0.0, min=0.0),
     require_retry_non_increase: bool = typer.Option(True),
-    require_schema_valid: bool = typer.Option(False, help="Require candidate trace metadata/report to mark schema output as valid."),
-    min_quality_score: float | None = typer.Option(None, min=0.0, help="Optional minimum candidate quality score."),
+    require_schema_valid: bool = typer.Option(
+        False, help="Require candidate trace metadata/report to mark schema output as valid."
+    ),
+    min_quality_score: float | None = typer.Option(
+        None, min=0.0, help="Optional minimum candidate quality score."
+    ),
     quality_fixtures: Path | None = typer.Option(None, help="Optional quality fixture JSON file."),
     fail_on_gate: bool = typer.Option(True, help="Exit non-zero when replay gates fail."),
     autogen: bool = typer.Option(True, help="Generate missing demo traces first."),
@@ -195,7 +213,9 @@ def quality_report_command(
     baseline: Path | None = typer.Option(None, help="Optional baseline trace JSON."),
     candidate: Path | None = typer.Option(None, help="Optional candidate trace JSON."),
     out: Path = Path("runs/quality_report.md"),
-    json_out: Path | None = typer.Option(None, help="Optional machine-readable quality report output."),
+    json_out: Path | None = typer.Option(
+        None, help="Optional machine-readable quality report output."
+    ),
     min_score: float | None = typer.Option(None, min=0.0),
 ) -> None:
     baseline_trace = AgentTrace.from_json(baseline) if baseline is not None else None
@@ -227,10 +247,16 @@ def ci_command(
     min_latency_improvement_pct: float = typer.Option(0.0, min=0.0),
     min_cost_improvement_pct: float = typer.Option(0.0, min=0.0),
     require_retry_non_increase: bool = typer.Option(True),
-    require_schema_valid: bool = typer.Option(False, help="Require candidate trace metadata/report to mark schema output as valid."),
-    min_quality_score: float | None = typer.Option(None, min=0.0, help="Optional minimum candidate quality score."),
+    require_schema_valid: bool = typer.Option(
+        False, help="Require candidate trace metadata/report to mark schema output as valid."
+    ),
+    min_quality_score: float | None = typer.Option(
+        None, min=0.0, help="Optional minimum candidate quality score."
+    ),
     quality_fixtures: Path | None = typer.Option(None, help="Optional quality fixture JSON file."),
-    github_step_summary: bool = typer.Option(False, help="Append report Markdown to GITHUB_STEP_SUMMARY."),
+    github_step_summary: bool = typer.Option(
+        False, help="Append report Markdown to GITHUB_STEP_SUMMARY."
+    ),
     fail_on_gate: bool = typer.Option(True, help="Exit non-zero when CI gates fail."),
     autogen: bool = typer.Option(True, help="Generate missing demo traces first."),
 ) -> None:
@@ -343,7 +369,9 @@ def diagnose(
     json_out: Path | None = typer.Option(None, help="Optional machine-readable diagnosis output."),
     otel: bool = typer.Option(False, help="Read the input path as OTLP/GenAI-style JSON."),
     name: str | None = typer.Option(None, help="Trace name to use when importing OTLP JSON."),
-    autogen: bool = typer.Option(True, help="Generate a demo trace if the native trace file is missing."),
+    autogen: bool = typer.Option(
+        True, help="Generate a demo trace if the native trace file is missing."
+    ),
 ) -> None:
     if autogen and not otel:
         path = _ensure_trace(path)
@@ -366,7 +394,11 @@ def diagnose(
 
 
 @app.command("import-otel")
-def import_otel(path: Path, out: Path, name: str | None = typer.Option(None, help="Optional imported trace name.")) -> None:
+def import_otel(
+    path: Path,
+    out: Path,
+    name: str | None = typer.Option(None, help="Optional imported trace name."),
+) -> None:
     trace = trace_from_otel(json.loads(path.read_text(encoding="utf-8")), name=name)
     trace.export_json(out)
     console.print(f"Imported OTLP trace {trace.run_id} to {out}")
@@ -389,11 +421,17 @@ def patch_command(
     json_out: Path | None = typer.Option(None, help="Optional machine-readable patch plan output."),
     otel: bool = typer.Option(False, help="Read the input path as OTLP/GenAI-style JSON."),
     name: str | None = typer.Option(None, help="Trace name to use when importing OTLP JSON."),
-    dry_run: bool = typer.Option(True, help="Only generate a patch plan. File edits are not supported yet."),
-    autogen: bool = typer.Option(True, help="Generate a demo trace if the native trace file is missing."),
+    dry_run: bool = typer.Option(
+        True, help="Only generate a patch plan. File edits are not supported yet."
+    ),
+    autogen: bool = typer.Option(
+        True, help="Generate a demo trace if the native trace file is missing."
+    ),
 ) -> None:
     if not dry_run:
-        raise typer.BadParameter("Only --dry-run is supported. Generate a patch plan first, then apply manually.")
+        raise typer.BadParameter(
+            "Only --dry-run is supported. Generate a patch plan first, then apply manually."
+        )
     if autogen and not otel:
         path = _ensure_trace(path)
     trace = _load_trace(path, otel=otel, name=name)
@@ -439,7 +477,9 @@ def value_report(
 @app.command("doctor")
 def doctor_command(
     check_api: bool = typer.Option(True, help="Also call the configured /health endpoint."),
-    json_out: Path | None = typer.Option(None, help="Optional path for machine-readable doctor output."),
+    json_out: Path | None = typer.Option(
+        None, help="Optional path for machine-readable doctor output."
+    ),
 ) -> None:
     result = run_doctor(check_api=check_api)
     if json_out:
@@ -452,10 +492,16 @@ def doctor_command(
 def production_check_command(
     check_api: bool = typer.Option(True, help="Call the configured /health and /readyz endpoints."),
     check_store: bool = typer.Option(True, help="Initialize and query the configured store."),
-    allow_http: bool = typer.Option(False, help="Allow non-HTTPS AGENTLOOP_API_URL for local staging."),
-    json_out: Path | None = typer.Option(None, help="Optional path for machine-readable check output."),
+    allow_http: bool = typer.Option(
+        False, help="Allow non-HTTPS AGENTLOOP_API_URL for local staging."
+    ),
+    json_out: Path | None = typer.Option(
+        None, help="Optional path for machine-readable check output."
+    ),
 ) -> None:
-    result = run_production_check(check_api=check_api, check_store=check_store, allow_http=allow_http)
+    result = run_production_check(
+        check_api=check_api, check_store=check_store, allow_http=allow_http
+    )
     if json_out:
         _write_json(json_out, result)
         console.print(f"Wrote production check output to {json_out}")
@@ -547,7 +593,9 @@ def list_findings(project_id: str | None = None, status: str | None = None) -> N
 
 
 @app.command("optimization-queue")
-def optimization_queue(project_id: str | None = None, json_out: Path | None = typer.Option(None)) -> None:
+def optimization_queue(
+    project_id: str | None = None, json_out: Path | None = typer.Option(None)
+) -> None:
     db = get_store()
     queue = db.optimization_queue(project_id=project_id)
     payload = {"project_id": project_id, "queue": queue}
@@ -608,7 +656,9 @@ def usage_summary(project_id: str | None = None) -> None:
 def upload(
     path: Path = Path("runs/research_agent_baseline.json"),
     api_url: str = typer.Option("http://127.0.0.1:8000", help="AgentLoop API base URL."),
-    api_key: str | None = typer.Option(None, help="Optional API key. Defaults to AGENTLOOP_API_KEY."),
+    api_key: str | None = typer.Option(
+        None, help="Optional API key. Defaults to AGENTLOOP_API_KEY."
+    ),
     autogen: bool = typer.Option(True, help="Generate a demo trace if the file is missing."),
 ) -> None:
     if autogen:
@@ -623,7 +673,9 @@ def upload(
 def remote_optimize(
     run_id: str,
     api_url: str = typer.Option("http://127.0.0.1:8000", help="AgentLoop API base URL."),
-    api_key: str | None = typer.Option(None, help="Optional API key. Defaults to AGENTLOOP_API_KEY."),
+    api_key: str | None = typer.Option(
+        None, help="Optional API key. Defaults to AGENTLOOP_API_KEY."
+    ),
     out: Path = Path("runs/remote_optimization_plan.json"),
 ) -> None:
     client = AgentLoopClient(base_url=api_url, api_key=api_key)
@@ -636,7 +688,9 @@ def remote_optimize(
 def remote_diagnose(
     run_id: str,
     api_url: str = typer.Option("http://127.0.0.1:8000", help="AgentLoop API base URL."),
-    api_key: str | None = typer.Option(None, help="Optional API key. Defaults to AGENTLOOP_API_KEY."),
+    api_key: str | None = typer.Option(
+        None, help="Optional API key. Defaults to AGENTLOOP_API_KEY."
+    ),
     out: Path = Path("runs/remote_diagnosis.json"),
 ) -> None:
     client = AgentLoopClient(base_url=api_url, api_key=api_key)
@@ -648,7 +702,9 @@ def remote_diagnose(
 @app.command("remote-findings")
 def remote_findings(
     api_url: str = typer.Option("http://127.0.0.1:8000", help="AgentLoop API base URL."),
-    api_key: str | None = typer.Option(None, help="Optional API key. Defaults to AGENTLOOP_API_KEY."),
+    api_key: str | None = typer.Option(
+        None, help="Optional API key. Defaults to AGENTLOOP_API_KEY."
+    ),
     project_id: str | None = typer.Option(None),
     status: str | None = typer.Option(None),
     out: Path = Path("runs/remote_findings.json"),
@@ -662,7 +718,9 @@ def remote_findings(
 @app.command("remote-optimization-queue")
 def remote_optimization_queue(
     api_url: str = typer.Option("http://127.0.0.1:8000", help="AgentLoop API base URL."),
-    api_key: str | None = typer.Option(None, help="Optional API key. Defaults to AGENTLOOP_API_KEY."),
+    api_key: str | None = typer.Option(
+        None, help="Optional API key. Defaults to AGENTLOOP_API_KEY."
+    ),
     project_id: str | None = typer.Option(None),
     out: Path = Path("runs/remote_optimization_queue.json"),
 ) -> None:
@@ -675,7 +733,9 @@ def remote_optimization_queue(
 @app.command("remote-github-issue-drafts")
 def remote_github_issue_drafts(
     api_url: str = typer.Option("http://127.0.0.1:8000", help="AgentLoop API base URL."),
-    api_key: str | None = typer.Option(None, help="Optional API key. Defaults to AGENTLOOP_API_KEY."),
+    api_key: str | None = typer.Option(
+        None, help="Optional API key. Defaults to AGENTLOOP_API_KEY."
+    ),
     project_id: str | None = typer.Option(None),
     limit: int = typer.Option(5, min=1, max=20),
     out: Path = Path("runs/remote_agentloop_issue_drafts.json"),
@@ -690,7 +750,9 @@ def remote_github_issue_drafts(
 def remote_value_report(
     run_id: str,
     api_url: str = typer.Option("http://127.0.0.1:8000", help="AgentLoop API base URL."),
-    api_key: str | None = typer.Option(None, help="Optional API key. Defaults to AGENTLOOP_API_KEY."),
+    api_key: str | None = typer.Option(
+        None, help="Optional API key. Defaults to AGENTLOOP_API_KEY."
+    ),
     out: Path = Path("runs/remote_value_report.json"),
     runs_per_month: int = typer.Option(1000, min=0),
     engineer_hourly_rate_usd: float = typer.Option(150.0, min=0),
@@ -711,7 +773,9 @@ def remote_value_report(
 @app.command("remote-usage")
 def remote_usage(
     api_url: str = typer.Option("http://127.0.0.1:8000", help="AgentLoop API base URL."),
-    api_key: str | None = typer.Option(None, help="Optional API key. Defaults to AGENTLOOP_API_KEY."),
+    api_key: str | None = typer.Option(
+        None, help="Optional API key. Defaults to AGENTLOOP_API_KEY."
+    ),
 ) -> None:
     client = AgentLoopClient(base_url=api_url, api_key=api_key)
     console.print_json(data=client.usage_summary())
@@ -722,16 +786,20 @@ def remote_create_api_key(
     project_id: str = "default",
     name: str = "default",
     api_url: str = typer.Option("http://127.0.0.1:8000", help="AgentLoop API base URL."),
-    admin_api_key: str | None = typer.Option(None, help="Admin API key. Defaults to AGENTLOOP_ADMIN_API_KEY."),
+    admin_api_key: str | None = typer.Option(
+        None, help="Admin API key. Defaults to AGENTLOOP_ADMIN_API_KEY."
+    ),
 ) -> None:
     client = AgentLoopClient(base_url=api_url, admin_api_key=admin_api_key)
     key = client.create_api_key(project_id=project_id, name=name)
-    console.print("Created hosted API key. Save it now; it will not be shown again.")
+    console.print("Created remote API key. Save it now; it will not be shown again.")
     console.print(key["api_key"])
 
 
 @app.command()
-def demo(kind: str = typer.Option("baseline", help="baseline, optimized, langgraph, or proof")) -> None:
+def demo(
+    kind: str = typer.Option("baseline", help="baseline, optimized, langgraph, or proof"),
+) -> None:
     if kind == "baseline":
         path = run_baseline()
     elif kind == "optimized":
@@ -766,7 +834,9 @@ def server(host: str = "127.0.0.1", port: int = 8000, reload: bool = False) -> N
     try:
         import uvicorn
     except ImportError as exc:
-        raise typer.BadParameter("Install server dependencies with: pip install -e '.[server]'") from exc
+        raise typer.BadParameter(
+            "Install server dependencies with: uv sync --locked --extra server"
+        ) from exc
     uvicorn.run("agentloop.server:app", host=host, port=port, reload=reload)
 
 

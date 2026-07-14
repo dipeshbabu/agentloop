@@ -129,11 +129,15 @@ def inspect(result):
 
     with trace_agent("next_gen") as trace:
         for _ in range(3):
-            with trace_model_call("summarize", model="gpt-4.1-mini", input_tokens=400, output_tokens=100):
+            with trace_model_call(
+                "summarize", model="gpt-4.1-mini", input_tokens=400, output_tokens=100
+            ):
                 pass
         with trace_model_call("classify", model="gpt-4.1", input_tokens=100, output_tokens=20):
             pass
-        with trace_model_call("final_answer", model="gpt-4.1", input_tokens=4500, output_tokens=300):
+        with trace_model_call(
+            "final_answer", model="gpt-4.1", input_tokens=4500, output_tokens=300
+        ):
             pass
         for _ in range(8):
             with trace_tool_call("plan_next"):
@@ -145,6 +149,16 @@ def inspect(result):
     plan = build_patch_plan(trace, repo_path=repo)
     patch_types = {item["type"] for item in plan["patch_plans"]}
 
-    assert {"batch_model_calls", "route_to_smaller_model", "split_large_step", "runaway_loop", "tool_oscillation"} <= patch_types
+    assert {
+        "batch_model_calls",
+        "route_to_smaller_model",
+        "split_large_step",
+        "runaway_loop",
+        "tool_oscillation",
+    } <= patch_types
     assert plan["summary"]["unsupported_finding_count"] == 0
-    assert any("guard" in item["proposed_rewrite"] for item in plan["patch_plans"] if item["type"] == "runaway_loop")
+    assert any(
+        "guard" in item["proposed_rewrite"]
+        for item in plan["patch_plans"]
+        if item["type"] == "runaway_loop"
+    )

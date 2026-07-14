@@ -1,14 +1,30 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "agentloop"
 version = "0.4.0"
-description = "Profiler and optimizer recommendations for AI agent workflows"
+description = "Profiler and optimization layer for AI agent execution graphs"
 readme = "README.md"
 requires-python = ">=3.10"
-authors = [{ name = "AgentLoop" }]
+license = "Apache-2.0"
+license-files = ["LICENSE", "THIRD_PARTY_LICENSES.md"]
+authors = [{ name = "Dipesh Babu" }]
+keywords = ["ai-agents", "observability", "optimization", "profiling", "tracing"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development :: Debuggers",
+  "Topic :: Software Development :: Testing",
+]
 dependencies = [
   "typer>=0.12.0",
   "rich>=13.0.0",
@@ -19,17 +35,43 @@ dashboard = ["streamlit>=1.34.0", "pandas>=2.0.0"]
 server = ["fastapi>=0.110.0", "uvicorn>=0.27.0"]
 postgres = ["psycopg[binary]>=3.1.0"]
 instrumentation = ["openai>=1.0.0"]
-dev = ["pytest>=8.0.0", "ruff>=0.5.0", "httpx>=0.27.0"]
 all = ["streamlit>=1.34.0", "pandas>=2.0.0", "fastapi>=0.110.0", "uvicorn>=0.27.0", "psycopg[binary]>=3.1.0", "openai>=1.0.0"]
+
+[dependency-groups]
+dev = [
+  "bandit>=1.9.4,<2",
+  "httpx2>=2.2.0",
+  "pre-commit>=4.6.0,<5",
+  "pytest>=8.0.0",
+  "ruff>=0.12.0,<1",
+  "tomli>=2.0.0; python_version < '3.11'",
+]
+
+[project.urls]
+Homepage = "https://github.com/dipeshbabu/agentloop"
+Documentation = "https://github.com/dipeshbabu/agentloop#readme"
+Repository = "https://github.com/dipeshbabu/agentloop.git"
+Issues = "https://github.com/dipeshbabu/agentloop/issues"
+Changelog = "https://github.com/dipeshbabu/agentloop/blob/main/CHANGELOG.md"
 
 [project.scripts]
 agentloop = "agentloop.cli:app"
 
 [tool.setuptools.packages.find]
-include = ["agentloop*"]
+include = ["agentloop*", "dashboard*"]
 
 [tool.ruff]
 line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]
+ignore = ["E501"] # Ruff's formatter owns line wrapping.
+
+[tool.ruff.format]
+docstring-code-format = true
+indent-style = "space"
+line-ending = "auto"
+quote-style = "double"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -41,3 +83,6 @@ norecursedirs = [
   "*.egg-info",
   "runs",
 ]
+
+[tool.uv]
+required-version = ">=0.11.21,<0.12"

@@ -1,0 +1,48 @@
+name: Feature request
+description: Propose an improvement to AgentLoop.
+title: "[Feature]: "
+labels: [enhancement, triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Start with the user problem and constraints. For a substantial change,
+        this issue is where we agree on direction before implementation begins.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: Who needs this, and what can they not do today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed outcome
+      description: Describe the behavior you would like. An implementation design is optional.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Note current workarounds or other approaches you considered.
+
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility and operational impact
+      description: Call out API, schema, storage, dependency, security, or performance implications you expect.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and pull requests for this request.
+          required: true
+        - label: I described the use case rather than only a preferred implementation.
+          required: true

@@ -1,6 +1,8 @@
 # AgentLoop Framework Integrations
 
-AgentLoop's product wedge is low-friction instrumentation. A team should be able to wrap an existing production agent and immediately see latency, token, retry, and tool-call waste.
+AgentLoop integrations are designed for low-friction instrumentation. A team
+should be able to wrap an existing agent and inspect latency, token, retry, and
+tool-call waste without changing its framework.
 
 This guide covers the dependency-free integration helpers currently shipped in `agentloop.integrations` and the generic decorator SDK for custom agents.
 
@@ -40,7 +42,8 @@ Available decorators:
 - `@agentloop.trace_tool(name="...")` records a tool/function span.
 - `@agentloop.trace_model(name="...", model="...")` records a model-call-like span.
 
-This is the easiest onboarding story for early customers: add three decorators, run the agent once, and get a trace.
+For a custom Python agent, add the three decorators, run the agent once, and
+inspect or export the resulting trace.
 
 ## OpenAI SDK
 
@@ -151,7 +154,7 @@ Event type mapping:
 - `text`, `generate`, `stream`, `model` -> `model_call`
 - `tool`, `tool-call`, `step` -> `tool_call`
 
-## Product usage pattern
+## Typical workflow
 
 1. Install AgentLoop.
 2. Instrument the framework already used by the team.
@@ -160,4 +163,5 @@ Event type mapping:
 5. Open the dashboard.
 6. Use optimization cards to reduce latency and token spend.
 
-This is the path from library to sellable product: framework integrations create distribution because developers do not want to rewrite their agents just to observe them.
+These adapters let developers add AgentLoop without rewriting an agent around a
+new framework or replacing its existing tracing stack.

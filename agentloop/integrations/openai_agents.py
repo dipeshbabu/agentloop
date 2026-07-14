@@ -48,7 +48,11 @@ class AgentLoopTracingProcessor:
     def _build_trace(self, trace: Any) -> AgentTrace:
         trace_id = str(_read(trace, "trace_id", "id") or "trace_unknown")
         name = str(_read(trace, "name", "workflow_name") or "openai_agents_trace")
-        spans = [_span_to_otel(span, trace_id) for span in self._spans if _span_trace_id(span) in {None, trace_id}]
+        spans = [
+            _span_to_otel(span, trace_id)
+            for span in self._spans
+            if _span_trace_id(span) in {None, trace_id}
+        ]
         return trace_from_otel({"spans": spans}, name=name)
 
 
@@ -65,9 +69,15 @@ def _span_to_otel(span: Any, trace_id: str) -> dict[str, Any]:
     ]
     if model:
         attrs.append(_attribute("gen_ai.request.model", str(model)))
-    input_tokens = _read(usage, "input_tokens", "prompt_tokens") or _read(span_data, "input_tokens", "prompt_tokens") or 0
+    input_tokens = (
+        _read(usage, "input_tokens", "prompt_tokens")
+        or _read(span_data, "input_tokens", "prompt_tokens")
+        or 0
+    )
     output_tokens = (
-        _read(usage, "output_tokens", "completion_tokens") or _read(span_data, "output_tokens", "completion_tokens") or 0
+        _read(usage, "output_tokens", "completion_tokens")
+        or _read(span_data, "output_tokens", "completion_tokens")
+        or 0
     )
     attrs.append(_attribute("gen_ai.usage.input_tokens", int(input_tokens or 0)))
     attrs.append(_attribute("gen_ai.usage.output_tokens", int(output_tokens or 0)))
@@ -138,7 +148,9 @@ def _time_ns(value: Any) -> int:
     try:
         from datetime import datetime
 
-        return int(datetime.fromisoformat(str(value).replace("Z", "+00:00")).timestamp() * 1_000_000_000)
+        return int(
+            datetime.fromisoformat(str(value).replace("Z", "+00:00")).timestamp() * 1_000_000_000
+        )
     except ValueError:
         return 0
 

@@ -1,0 +1,50 @@
+name: Usage question
+description: Ask a focused setup, integration, or behavior question.
+title: "[Question]: "
+labels: [question, triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check the README, integration guide, dashboard guide, production guide,
+        and existing issues first. Use synthetic examples and remove prompts,
+        credentials, trace data, and private URLs before posting.
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What are you trying to do, and where are you blocked?
+    validations:
+      required: true
+
+  - type: textarea
+    id: attempted
+    attributes:
+      label: What have you tried?
+      description: Include the relevant sanitized commands, code, and documentation you followed.
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include AgentLoop or commit, Python, uv, operating system, and relevant framework versions.
+      placeholder: |
+        AgentLoop commit: abc1234
+        Python: 3.13
+        uv: 0.11.28
+        OS: Ubuntu 24.04
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I checked the documentation and searched existing issues.
+          required: true
+        - label: I removed credentials, private prompts, trace data, and other sensitive information.
+          required: true
+        - label: This is not a security vulnerability.
+          required: true

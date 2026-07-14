@@ -9,7 +9,9 @@ from agentloop.tracer import trace_agent
 
 class FakeResponses:
     def create(self, **kwargs):
-        return SimpleNamespace(usage=SimpleNamespace(input_tokens=10, output_tokens=5), kwargs=kwargs)
+        return SimpleNamespace(
+            usage=SimpleNamespace(input_tokens=10, output_tokens=5), kwargs=kwargs
+        )
 
 
 class FakeCompletions:
@@ -38,7 +40,9 @@ def test_instrument_openai_client_records_responses_call() -> None:
 def test_instrument_openai_client_records_chat_call() -> None:
     client = instrument_openai_client(FakeClient())
     with trace_agent("chat_test") as trace:
-        client.chat.completions.create(model="gpt-chat", messages=[{"role": "user", "content": "hi"}])
+        client.chat.completions.create(
+            model="gpt-chat", messages=[{"role": "user", "content": "hi"}]
+        )
     assert len(trace.events) == 1
     assert trace.events[0].name == "openai.chat.completions.create"
     assert trace.events[0].metadata["message_count"] == 1

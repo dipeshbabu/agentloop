@@ -10,7 +10,9 @@ from typing import Any, Iterator
 from agentloop.events import AgentEvent, new_event_id, new_run_id, utc_now_iso
 from agentloop.metrics import build_report
 
-_current_trace: ContextVar["AgentTrace | None"] = ContextVar("agentloop_current_trace", default=None)
+_current_trace: ContextVar["AgentTrace | None"] = ContextVar(
+    "agentloop_current_trace", default=None
+)
 
 
 def _count_tokens(text: str | None) -> int:
@@ -20,7 +22,9 @@ def _count_tokens(text: str | None) -> int:
 
 
 class AgentTrace:
-    def __init__(self, name: str, run_id: str | None = None, metadata: dict[str, Any] | None = None):
+    def __init__(
+        self, name: str, run_id: str | None = None, metadata: dict[str, Any] | None = None
+    ):
         self.name = name
         self.run_id = run_id or new_run_id()
         self.metadata = metadata or {}
@@ -198,7 +202,9 @@ def trace_model_call(
             duration_ms=(time.perf_counter() - start) * 1000,
             model=model,
             input_tokens=input_tokens if input_tokens is not None else _count_tokens(input_text),
-            output_tokens=output_tokens if output_tokens is not None else _count_tokens(output_text),
+            output_tokens=output_tokens
+            if output_tokens is not None
+            else _count_tokens(output_text),
             input_text=input_text,
             output_text=output_text,
             status=status,

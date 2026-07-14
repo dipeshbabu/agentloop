@@ -17,7 +17,7 @@ def _streamlit() -> Any:
         import streamlit as st
     except ModuleNotFoundError as exc:
         raise ModuleNotFoundError(
-            "Install dashboard support with: pip install -e '.[dashboard]'"
+            "Install dashboard support with: uv sync --locked --extra dashboard"
         ) from exc
     return st
 
@@ -56,7 +56,7 @@ def render_value_report(value: dict, *, show_download: bool = True) -> None:
     pricing = value.get("pricing", {})
     reliability = value["reliability"]
 
-    st.subheader("Buyer-facing ROI")
+    st.subheader("Operational value")
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Monthly value", money(monthly["total_value_usd"]))
     c2.metric("Cost savings / month", money(monthly["direct_model_cost_savings_usd"]))
@@ -69,27 +69,27 @@ def render_value_report(value: dict, *, show_download: bool = True) -> None:
     c7.metric("Reliability risk", f"{reliability['risk_score']}/100")
     c8.metric("High confidence fixes", reliability["high_confidence_fixes"])
 
-    st.subheader("Pricing recommendation")
+    st.subheader("Pricing scenario")
     p1, p2, p3, p4 = st.columns(4)
-    p1.metric("Suggested plan", pricing.get("suggested_plan", "n/a"))
-    p2.metric("Suggested price", money(pricing.get("suggested_monthly_price_usd", 0), decimals=0))
+    p1.metric("Modeled tier", pricing.get("suggested_plan", "n/a"))
+    p2.metric("Modeled price", money(pricing.get("suggested_monthly_price_usd", 0), decimals=0))
     ratio = pricing.get("value_to_price_ratio")
     p3.metric("Value / price", "n/a" if ratio is None else f"{ratio}x")
-    p4.metric("Customer value", money(pricing.get("estimated_customer_value_usd", 0)))
+    p4.metric("Monthly value", money(pricing.get("estimated_monthly_value_usd", 0)))
 
     st.info(pricing.get("rationale", "No pricing rationale available."))
 
-    notes = pricing.get("packaging_notes", [])
+    notes = pricing.get("scenario_notes", [])
     if notes:
-        st.markdown("#### Package includes")
+        st.markdown("#### Scenario includes")
         st.write("\n".join(f"- {note}" for note in notes))
 
-    st.subheader("Sales summary")
-    st.write(value["sales_summary"])
+    st.subheader("Value summary")
+    st.write(value["value_summary"])
 
     risks = reliability.get("top_risks", [])
     if risks:
-        st.subheader("Top risks to discuss in pilot")
+        st.subheader("Top reliability risks")
         st.write("\n".join(f"- {risk}" for risk in risks))
 
     if show_download:

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from agentloop.client import AgentLoopClient
+import pytest
+from fastapi.testclient import TestClient
+
+from agentloop.client import AgentLoopClient, AgentLoopClientError
 from agentloop.demo import run_baseline
 from agentloop.server import app
-from fastapi.testclient import TestClient
 
 
 def test_client_upload_and_optimize(tmp_path, monkeypatch) -> None:
@@ -50,3 +52,32 @@ def test_client_upload_and_optimize(tmp_path, monkeypatch) -> None:
         min_score=1.0,
     )
     assert quality["passed"] is True
+
+
+def test_client_quotes_run_ids_in_request_paths() -> None:
+    routes: list[str] = []
+
+    class CapturingClient(AgentLoopClient):
+        def _request(self, method, route, payload=None):  # type: ignore[no-untyped-def]
+            routes.append(route)
+            return {}
+
+    client = CapturingClient()
+    client.get_report("team/run ?1")
+    client.get_optimization_plan("team/run ?1")
+    client.get_diagnosis("team/run ?1")
+    client.get_value_report("team/run ?1")
+
+    assert routes == [
+        "/traces/team%2Frun%20%3F1/report",
+        "/traces/team%2Frun%20%3F1/optimize",
+        "/traces/team%2Frun%20%3F1/diagnose",
+        "/traces/team%2Frun%20%3F1/value",
+    ]
+
+
+def test_client_rejects_non_http_api_urls() -> None:
+    client = AgentLoopClient(base_url="file:///tmp/agentloop")
+
+    with pytest.raises(AgentLoopClientError, match="must use http"):
+        client.health()

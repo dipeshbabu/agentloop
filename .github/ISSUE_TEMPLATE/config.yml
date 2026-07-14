@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/dipeshbabu/agentloop/blob/main/SECURITY.md
+    about: Follow the private reporting process; do not open a public issue.
+  - name: Support guidance
+    url: https://github.com/dipeshbabu/agentloop/blob/main/SUPPORT.md
+    about: Check what information to include and where to ask for help.

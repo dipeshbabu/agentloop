@@ -6,7 +6,6 @@ import time
 import agentloop
 from agentloop import trace_agent, trace_model_call, trace_tool_call
 
-
 agentloop.init(
     api_url=os.getenv("AGENTLOOP_API_URL", "http://127.0.0.1:8000"),
     api_key=os.getenv("AGENTLOOP_API_KEY"),

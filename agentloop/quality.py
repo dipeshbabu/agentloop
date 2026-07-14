@@ -69,7 +69,9 @@ def score_output(output: Any, fixture: dict[str, Any], scorer: dict[str, Any]) -
     if scorer_type == "contains":
         expected = str(fixture.get("expected", scorer.get("text", "")))
         passed = expected in str(output or "")
-        return _result(passed, "required text present" if passed else f"missing required text: {expected}")
+        return _result(
+            passed, "required text present" if passed else f"missing required text: {expected}"
+        )
     if scorer_type == "regex":
         pattern = str(scorer.get("pattern") or fixture.get("expected") or "")
         passed = bool(re.search(pattern, str(output or ""), flags=re.DOTALL))
@@ -89,7 +91,10 @@ def _score_required_fields(output: Any, scorer: dict[str, Any]) -> dict[str, Any
     if not isinstance(data, dict):
         return _result(False, "output is not a JSON object")
     missing = [field for field in required if field not in data or _is_empty(data[field])]
-    return _result(not missing, "required fields present" if not missing else f"missing fields: {', '.join(missing)}")
+    return _result(
+        not missing,
+        "required fields present" if not missing else f"missing fields: {', '.join(missing)}",
+    )
 
 
 def _score_json_subset(output: Any, expected: Any) -> dict[str, Any]:
@@ -98,7 +103,10 @@ def _score_json_subset(output: Any, expected: Any) -> dict[str, Any]:
     if not isinstance(data, dict) or not isinstance(expected_data, dict):
         return _result(False, "output and expected must be JSON objects")
     mismatches = [key for key, value in expected_data.items() if data.get(key) != value]
-    return _result(not mismatches, "JSON subset matched" if not mismatches else f"mismatched keys: {', '.join(mismatches)}")
+    return _result(
+        not mismatches,
+        "JSON subset matched" if not mismatches else f"mismatched keys: {', '.join(mismatches)}",
+    )
 
 
 def _score_custom(output: Any, fixture: dict[str, Any], scorer: dict[str, Any]) -> dict[str, Any]:

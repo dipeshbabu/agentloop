@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi.testclient import TestClient
 
 from agentloop.server import app
@@ -140,6 +142,25 @@ def test_quality_report_endpoint() -> None:
     assert response.json()["passed"] is True
 
 
+def test_quality_report_endpoint_rejects_custom_python_scorers() -> None:
+    client = TestClient(app)
+    response = client.post(
+        "/quality-report",
+        json={
+            "fixtures": [
+                {
+                    "id": "unsafe",
+                    "candidate_output": "ok",
+                    "scorer": {"type": "custom", "callable": "example:score"},
+                }
+            ]
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "custom Python scorers are not accepted by the HTTP API"
+
+
 def test_value_report_endpoint() -> None:
     client = TestClient(app)
     with trace_agent("server-value-test") as trace:
@@ -154,7 +175,7 @@ def test_value_report_endpoint() -> None:
     body = value.json()
     assert body["assumptions"]["runs_per_month"] == 2500
     assert body["monthly_value"]["total_value_usd"] >= 0
-    assert "sales_summary" in body
+    assert "value_summary" in body
 
 
 def test_api_key_auth(monkeypatch) -> None:
@@ -166,5 +187,66 @@ def test_api_key_auth(monkeypatch) -> None:
             pass
     unauthorized = client.post("/traces", json=trace.to_dict())
     assert unauthorized.status_code == 401
-    authorized = client.post("/traces", json=trace.to_dict(), headers={"X-AgentLoop-Key": "test-token"})
+    authorized = client.post(
+        "/traces", json=trace.to_dict(), headers={"X-AgentLoop-Key": "test-token"}
+    )
     assert authorized.status_code == 200
+
+
+def _create_project_key(client: TestClient, project_id: str) -> str:
+    response = client.post(
+        "/api-keys",
+        json={"project_id": project_id, "name": "test"},
+        headers={"X-AgentLoop-Admin-Key": "admin-secret"},
+    )
+    assert response.status_code == 200
+    return str(response.json()["api_key"])
+
+
+def test_project_key_cannot_override_project_filter(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("AGENTLOOP_SQLITE_PATH", str(tmp_path / "auth.db"))
+    monkeypatch.setenv("AGENTLOOP_REQUIRE_API_KEY", "true")
+    monkeypatch.setenv("AGENTLOOP_ADMIN_API_KEY", "admin-secret")
+    client = TestClient(app)
+    alpha_key = _create_project_key(client, "alpha")
+
+    for path in (
+        "/traces",
+        "/findings",
+        "/optimization-queue",
+        "/optimization-queue/github-issues",
+        "/usage",
+    ):
+        response = client.get(
+            f"{path}?project_id=beta",
+            headers={"X-AgentLoop-Key": alpha_key},
+        )
+        assert response.status_code == 403, path
+
+
+def test_run_id_cannot_move_between_projects(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("AGENTLOOP_SQLITE_PATH", str(tmp_path / "ownership.db"))
+    monkeypatch.setenv("AGENTLOOP_REQUIRE_API_KEY", "true")
+    monkeypatch.setenv("AGENTLOOP_ADMIN_API_KEY", "admin-secret")
+    client = TestClient(app)
+    alpha_key = _create_project_key(client, "alpha")
+    beta_key = _create_project_key(client, "beta")
+
+    with trace_agent("project-ownership-test") as trace:
+        with trace_model_call("call", input_tokens=4, output_tokens=2):
+            pass
+
+    created = client.post(
+        "/traces",
+        json=trace.to_dict(),
+        headers={"X-AgentLoop-Key": alpha_key},
+    )
+    conflict = client.post(
+        "/traces",
+        json=trace.to_dict(),
+        headers={"X-AgentLoop-Key": beta_key},
+    )
+
+    assert created.status_code == 200
+    assert conflict.status_code == 409
+    assert "already belongs to another project" in conflict.json()["detail"]

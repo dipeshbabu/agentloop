@@ -6,9 +6,9 @@ AgentLoop has three production surfaces:
 - API service: receive traces, enforce API keys, store runs, and serve reports.
 - Dashboard: inspect traces, usage, optimization plans, and value reports.
 
-## Required Secrets
+## Required configuration
 
-Set these outside source control:
+Set secrets outside source control and configure the public origins explicitly:
 
 ```bash
 AGENTLOOP_STORE_BACKEND=postgres
@@ -16,6 +16,7 @@ AGENTLOOP_DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/agentloop
 AGENTLOOP_REQUIRE_API_KEY=true
 AGENTLOOP_ADMIN_API_KEY=<long random admin secret>
 AGENTLOOP_CORS_ORIGINS=https://dashboard.example.com
+AGENTLOOP_API_URL=https://api.example.com
 ```
 
 `AGENTLOOP_ADMIN_API_KEY` protects hosted API-key creation. When API auth is enabled,
@@ -24,13 +25,13 @@ AGENTLOOP_CORS_ORIGINS=https://dashboard.example.com
 Before deploying or promoting an environment, run:
 
 ```bash
-agentloop production-check --no-check-api --no-check-store
+uv run agentloop production-check --no-check-api --no-check-store
 ```
 
 After the API is deployed and the database is reachable, run the full gate:
 
 ```bash
-agentloop production-check
+uv run agentloop production-check
 ```
 
 The production check fails unless Postgres, API-key auth, a strong admin key,
@@ -41,8 +42,7 @@ explicit CORS origins, and an HTTPS API URL are configured.
 For a local production-like stack:
 
 ```bash
-copy .env.example .env
-# Edit .env and replace every placeholder secret.
+# Copy .env.example to .env, then replace every placeholder secret.
 docker compose up --build
 ```
 
@@ -55,7 +55,7 @@ Services:
 Create a project API key:
 
 ```bash
-agentloop remote-create-api-key acme prod \
+uv run agentloop remote-create-api-key --project-id acme --name prod \
   --api-url http://localhost:8000 \
   --admin-api-key "$AGENTLOOP_ADMIN_API_KEY"
 ```
@@ -63,7 +63,7 @@ agentloop remote-create-api-key acme prod \
 Upload a trace:
 
 ```bash
-agentloop upload runs/research_agent_baseline.json \
+uv run agentloop upload --path runs/research_agent_baseline.json \
   --api-url http://localhost:8000 \
   --api-key al_xxx
 ```
@@ -73,17 +73,17 @@ Run the production smoke check:
 ```bash
 AGENTLOOP_API_URL=http://localhost:8000 \
 AGENTLOOP_ADMIN_API_KEY="$AGENTLOOP_ADMIN_API_KEY" \
-python scripts/smoke_api.py
+uv run python scripts/smoke_api.py
 ```
 
-Use `agentloop production-check --allow-http` only for local staging URLs such as
+Use `uv run agentloop production-check --allow-http` only for local staging URLs such as
 `http://localhost:8000`; public production traffic should use HTTPS.
 
 ## Health Checks
 
 Use these probes in hosting platforms:
 
-```bash
+```text
 GET /health
 GET /readyz
 ```
@@ -104,3 +104,20 @@ configured.
 - Set `AGENTLOOP_REQUIRE_API_KEY=true` for internet-facing APIs.
 - Set `AGENTLOOP_CORS_ORIGINS` to the exact dashboard origin.
 - Rotate `AGENTLOOP_ADMIN_API_KEY` like any other production secret.
+- The Streamlit dashboard does not provide end-user authentication. Treat it as
+  an operator console: keep it on a private network or place it behind an
+  authenticated reverse proxy. Do not expose it directly to the internet.
+- Terminate TLS at a trusted proxy or load balancer and forward only the API and
+  authenticated dashboard routes that users need.
+- Apply request-body limits, rate limits, timeouts, and access logging at the
+  proxy. Trace payloads can be large and may contain sensitive prompts or tool
+  data.
+- Restrict database network access to the API and dashboard workloads, require
+  encrypted database connections in hosted environments, and test backups and
+  restores.
+- Retain traces only as long as needed. Establish a deletion and redaction policy
+  before ingesting production or customer data.
+
+The Compose ports bind to `127.0.0.1` by default to keep the local stack off the
+LAN. Use an explicit production deployment configuration instead of weakening
+those bindings in the checked-in development file.

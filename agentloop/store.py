@@ -13,6 +13,10 @@ from agentloop.findings import build_diagnosis
 from agentloop.tracer import AgentTrace
 
 
+class TraceProjectConflictError(ValueError):
+    """Raised when a run ID is already owned by a different project."""
+
+
 class TraceStore(Protocol):
     def init(self) -> None: ...
 
@@ -28,7 +32,9 @@ class TraceStore(Protocol):
 
     def save_diagnosis(self, diagnosis: dict[str, Any], project_id: str = "default") -> None: ...
 
-    def list_findings(self, project_id: str | None = None, status: str | None = None) -> list[dict[str, Any]]: ...
+    def list_findings(
+        self, project_id: str | None = None, status: str | None = None
+    ) -> list[dict[str, Any]]: ...
 
     def optimization_queue(self, project_id: str | None = None) -> list[dict[str, Any]]: ...
 
@@ -66,13 +72,20 @@ def _priority_score(item: dict[str, Any]) -> float:
     latency_weight = float(item["estimated_latency_savings_ms"]) / 100.0
     cost_weight = float(item["estimated_cost_savings_usd"]) * 1000.0
     occurrence_weight = float(item["occurrence_count"]) * 25.0
-    return round(severity_weight + patch_weight + latency_weight + cost_weight + occurrence_weight, 3)
+    return round(
+        severity_weight + patch_weight + latency_weight + cost_weight + occurrence_weight, 3
+    )
 
 
 def _quality_risk(finding_type: str) -> str:
     if finding_type in {"route_to_smaller_model", "split_large_step", "batch_model_calls"}:
         return "high"
-    if finding_type in {"cache_context", "add_schema_validation", "runaway_loop", "tool_oscillation"}:
+    if finding_type in {
+        "cache_context",
+        "add_schema_validation",
+        "runaway_loop",
+        "tool_oscillation",
+    }:
         return "medium"
     return "low"
 
@@ -169,11 +182,15 @@ class SQLiteTraceStore:
         self.init()
         with self._connect() as conn:
             row = conn.execute(
-                "SELECT project_id, name, prefix FROM api_keys WHERE key_hash = ?", (hash_api_key(api_key),)
+                "SELECT project_id, name, prefix FROM api_keys WHERE key_hash = ?",
+                (hash_api_key(api_key),),
             ).fetchone()
             if row is None:
                 return None
-            conn.execute("UPDATE api_keys SET last_used_at = CURRENT_TIMESTAMP WHERE key_hash = ?", (hash_api_key(api_key),))
+            conn.execute(
+                "UPDATE api_keys SET last_used_at = CURRENT_TIMESTAMP WHERE key_hash = ?",
+                (hash_api_key(api_key),),
+            )
             return dict(row)
 
     def save_trace(self, trace: AgentTrace, project_id: str = "default") -> None:
@@ -181,7 +198,7 @@ class SQLiteTraceStore:
         report = trace.report()
         with self._connect() as conn:
             conn.execute("INSERT OR IGNORE INTO projects(project_id) VALUES (?)", (project_id,))
-            conn.execute(
+            cursor = conn.execute(
                 """
                 INSERT INTO traces(
                     run_id, project_id, name, started_at, payload_json, total_runtime_ms,
@@ -197,6 +214,7 @@ class SQLiteTraceStore:
                     model_call_count=excluded.model_call_count,
                     tool_call_count=excluded.tool_call_count,
                     retry_count=excluded.retry_count
+                WHERE traces.project_id = excluded.project_id
                 """,
                 (
                     trace.run_id,
@@ -211,6 +229,10 @@ class SQLiteTraceStore:
                     report.get("retry_count", 0),
                 ),
             )
+            if cursor.rowcount == 0:
+                raise TraceProjectConflictError(
+                    f"run_id {trace.run_id!r} already belongs to another project"
+                )
         self.record_usage(project_id, trace.run_id, report)
         self.save_diagnosis(build_diagnosis(trace), project_id=project_id)
 
@@ -233,10 +255,13 @@ class SQLiteTraceStore:
         with self._connect() as conn:
             if project_id:
                 row = conn.execute(
-                    "SELECT payload_json FROM traces WHERE run_id = ? AND project_id = ?", (run_id, project_id)
+                    "SELECT payload_json FROM traces WHERE run_id = ? AND project_id = ?",
+                    (run_id, project_id),
                 ).fetchone()
             else:
-                row = conn.execute("SELECT payload_json FROM traces WHERE run_id = ?", (run_id,)).fetchone()
+                row = conn.execute(
+                    "SELECT payload_json FROM traces WHERE run_id = ?", (run_id,)
+                ).fetchone()
         if row is None:
             return None
         return AgentTrace.from_dict(json.loads(row["payload_json"]))
@@ -285,44 +310,43 @@ class SQLiteTraceStore:
                     ),
                 )
 
-    def list_findings(self, project_id: str | None = None, status: str | None = None) -> list[dict[str, Any]]:
+    def list_findings(
+        self, project_id: str | None = None, status: str | None = None
+    ) -> list[dict[str, Any]]:
         self.init()
-        clauses = []
-        args: list[Any] = []
-        if project_id:
-            clauses.append("project_id = ?")
-            args.append(project_id)
-        if status:
-            clauses.append("status = ?")
-            args.append(status)
-        where = "WHERE " + " AND ".join(clauses) if clauses else ""
         with self._connect() as conn:
             rows = conn.execute(
-                f"""
+                """
                 SELECT project_id, run_id, finding_id, type, severity, title, confidence,
                     patchable, status, estimated_latency_savings_ms, estimated_cost_savings_usd,
                     payload_json, created_at, updated_at
                 FROM trace_findings
-                {where}
+                WHERE project_id = COALESCE(?, project_id)
+                  AND status = COALESCE(?, status)
                 ORDER BY
                     CASE severity WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,
                     estimated_cost_savings_usd DESC,
                     estimated_latency_savings_ms DESC,
                     updated_at DESC
                 """,
-                tuple(args),
+                (project_id or None, status or None),
             ).fetchall()
         return [_finding_row(dict(row)) for row in rows]
 
     def optimization_queue(self, project_id: str | None = None) -> list[dict[str, Any]]:
-        findings = [finding for finding in self.list_findings(project_id=project_id) if finding["status"] != "resolved"]
+        findings = [
+            finding
+            for finding in self.list_findings(project_id=project_id)
+            if finding["status"] != "resolved"
+        ]
         clusters: dict[tuple[str, str], dict[str, Any]] = {}
         for finding in findings:
             key = (finding["type"], finding["title"])
             cluster = clusters.setdefault(
                 key,
                 {
-                    "queue_id": "queue_" + hashlib.sha1("|".join(key).encode("utf-8")).hexdigest()[:12],
+                    "queue_id": "queue_"
+                    + hashlib.sha256("|".join(key).encode("utf-8")).hexdigest()[:12],
                     "type": finding["type"],
                     "title": finding["title"],
                     "status": "detected",
@@ -348,13 +372,17 @@ class SQLiteTraceStore:
             cluster["estimated_latency_savings_ms"] += finding["estimated_latency_savings_ms"]
             cluster["estimated_cost_savings_usd"] += finding["estimated_cost_savings_usd"]
             cluster["severity"] = _max_severity(cluster["severity"], finding["severity"])
-            cluster["latest_created_at"] = max(str(cluster["latest_created_at"]), str(finding["created_at"]))
+            cluster["latest_created_at"] = max(
+                str(cluster["latest_created_at"]), str(finding["created_at"])
+            )
 
         queue = list(clusters.values())
         for item in queue:
             item["estimated_latency_savings_ms"] = round(item["estimated_latency_savings_ms"], 3)
             item["estimated_cost_savings_usd"] = round(item["estimated_cost_savings_usd"], 6)
-            item["safe_to_auto_patch"] = item["patchable_count"] > 0 and item["quality_risk"] == "low"
+            item["safe_to_auto_patch"] = (
+                item["patchable_count"] > 0 and item["quality_risk"] == "low"
+            )
             item["priority_score"] = _priority_score(item)
         return sorted(queue, key=lambda item: item["priority_score"], reverse=True)
 
@@ -382,11 +410,9 @@ class SQLiteTraceStore:
 
     def usage_summary(self, project_id: str | None = None) -> dict[str, Any]:
         self.init()
-        where = "WHERE project_id = ?" if project_id else ""
-        args = (project_id,) if project_id else ()
         with self._connect() as conn:
             row = conn.execute(
-                f"""
+                """
                 SELECT
                     COUNT(*) AS run_count,
                     COALESCE(SUM(total_runtime_ms), 0) AS total_runtime_ms,
@@ -396,9 +422,10 @@ class SQLiteTraceStore:
                     COALESCE(SUM(model_call_count), 0) AS model_call_count,
                     COALESCE(SUM(tool_call_count), 0) AS tool_call_count,
                     COALESCE(SUM(retry_count), 0) AS retry_count
-                FROM usage_events {where}
+                FROM usage_events
+                WHERE project_id = COALESCE(?, project_id)
                 """,
-                args,
+                (project_id or None,),
             ).fetchone()
         result = dict(row)
         if project_id:
@@ -414,23 +441,39 @@ class PostgresTraceStore:
         try:
             import psycopg
         except ImportError as exc:
-            raise RuntimeError("Install postgres support with: pip install -e '.[postgres]'") from exc
+            raise RuntimeError(
+                "Install postgres support with: uv sync --locked --extra postgres"
+            ) from exc
         return psycopg.connect(self.dsn)
 
     def init(self) -> None:
         with self._connect() as conn:
-            conn.execute("CREATE TABLE IF NOT EXISTS projects (project_id TEXT PRIMARY KEY, created_at TIMESTAMPTZ DEFAULT now())")
-            conn.execute("CREATE TABLE IF NOT EXISTS api_keys (key_hash TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(project_id), name TEXT NOT NULL, prefix TEXT NOT NULL, created_at TIMESTAMPTZ DEFAULT now(), last_used_at TIMESTAMPTZ)")
-            conn.execute("CREATE TABLE IF NOT EXISTS traces (run_id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(project_id), name TEXT NOT NULL, started_at TEXT, payload_json JSONB NOT NULL, total_runtime_ms DOUBLE PRECISION DEFAULT 0, estimated_cost_usd DOUBLE PRECISION DEFAULT 0, model_call_count INTEGER DEFAULT 0, tool_call_count INTEGER DEFAULT 0, retry_count INTEGER DEFAULT 0, created_at TIMESTAMPTZ DEFAULT now())")
-            conn.execute("CREATE TABLE IF NOT EXISTS usage_events (id BIGSERIAL PRIMARY KEY, project_id TEXT NOT NULL, run_id TEXT NOT NULL, total_runtime_ms DOUBLE PRECISION DEFAULT 0, estimated_cost_usd DOUBLE PRECISION DEFAULT 0, input_tokens INTEGER DEFAULT 0, output_tokens INTEGER DEFAULT 0, model_call_count INTEGER DEFAULT 0, tool_call_count INTEGER DEFAULT 0, retry_count INTEGER DEFAULT 0, created_at TIMESTAMPTZ DEFAULT now())")
-            conn.execute("CREATE TABLE IF NOT EXISTS trace_findings (project_id TEXT NOT NULL REFERENCES projects(project_id), run_id TEXT NOT NULL REFERENCES traces(run_id), finding_id TEXT NOT NULL, type TEXT NOT NULL, severity TEXT NOT NULL, title TEXT NOT NULL, confidence TEXT NOT NULL, patchable BOOLEAN DEFAULT false, status TEXT DEFAULT 'detected', estimated_latency_savings_ms DOUBLE PRECISION DEFAULT 0, estimated_cost_savings_usd DOUBLE PRECISION DEFAULT 0, payload_json JSONB NOT NULL, created_at TIMESTAMPTZ DEFAULT now(), updated_at TIMESTAMPTZ DEFAULT now(), PRIMARY KEY(project_id, run_id, finding_id))")
-            conn.execute("INSERT INTO projects(project_id) VALUES (%s) ON CONFLICT DO NOTHING", ("default",))
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS projects (project_id TEXT PRIMARY KEY, created_at TIMESTAMPTZ DEFAULT now())"
+            )
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS api_keys (key_hash TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(project_id), name TEXT NOT NULL, prefix TEXT NOT NULL, created_at TIMESTAMPTZ DEFAULT now(), last_used_at TIMESTAMPTZ)"
+            )
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS traces (run_id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(project_id), name TEXT NOT NULL, started_at TEXT, payload_json JSONB NOT NULL, total_runtime_ms DOUBLE PRECISION DEFAULT 0, estimated_cost_usd DOUBLE PRECISION DEFAULT 0, model_call_count INTEGER DEFAULT 0, tool_call_count INTEGER DEFAULT 0, retry_count INTEGER DEFAULT 0, created_at TIMESTAMPTZ DEFAULT now())"
+            )
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS usage_events (id BIGSERIAL PRIMARY KEY, project_id TEXT NOT NULL, run_id TEXT NOT NULL, total_runtime_ms DOUBLE PRECISION DEFAULT 0, estimated_cost_usd DOUBLE PRECISION DEFAULT 0, input_tokens INTEGER DEFAULT 0, output_tokens INTEGER DEFAULT 0, model_call_count INTEGER DEFAULT 0, tool_call_count INTEGER DEFAULT 0, retry_count INTEGER DEFAULT 0, created_at TIMESTAMPTZ DEFAULT now())"
+            )
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS trace_findings (project_id TEXT NOT NULL REFERENCES projects(project_id), run_id TEXT NOT NULL REFERENCES traces(run_id), finding_id TEXT NOT NULL, type TEXT NOT NULL, severity TEXT NOT NULL, title TEXT NOT NULL, confidence TEXT NOT NULL, patchable BOOLEAN DEFAULT false, status TEXT DEFAULT 'detected', estimated_latency_savings_ms DOUBLE PRECISION DEFAULT 0, estimated_cost_savings_usd DOUBLE PRECISION DEFAULT 0, payload_json JSONB NOT NULL, created_at TIMESTAMPTZ DEFAULT now(), updated_at TIMESTAMPTZ DEFAULT now(), PRIMARY KEY(project_id, run_id, finding_id))"
+            )
+            conn.execute(
+                "INSERT INTO projects(project_id) VALUES (%s) ON CONFLICT DO NOTHING", ("default",)
+            )
 
     def create_api_key(self, project_id: str, name: str) -> dict[str, Any]:
         self.init()
         api_key = new_api_key()
         with self._connect() as conn:
-            conn.execute("INSERT INTO projects(project_id) VALUES (%s) ON CONFLICT DO NOTHING", (project_id,))
+            conn.execute(
+                "INSERT INTO projects(project_id) VALUES (%s) ON CONFLICT DO NOTHING", (project_id,)
+            )
             conn.execute(
                 "INSERT INTO api_keys(key_hash, project_id, name, prefix) VALUES (%s, %s, %s, %s)",
                 (hash_api_key(api_key), project_id, name, api_key[:10]),
@@ -441,28 +484,50 @@ class PostgresTraceStore:
         self.init()
         with self._connect() as conn:
             row = conn.execute(
-                "SELECT project_id, name, prefix FROM api_keys WHERE key_hash = %s", (hash_api_key(api_key),)
+                "SELECT project_id, name, prefix FROM api_keys WHERE key_hash = %s",
+                (hash_api_key(api_key),),
             ).fetchone()
             if row is None:
                 return None
-            conn.execute("UPDATE api_keys SET last_used_at = now() WHERE key_hash = %s", (hash_api_key(api_key),))
+            conn.execute(
+                "UPDATE api_keys SET last_used_at = now() WHERE key_hash = %s",
+                (hash_api_key(api_key),),
+            )
             return {"project_id": row[0], "name": row[1], "prefix": row[2]}
 
     def save_trace(self, trace: AgentTrace, project_id: str = "default") -> None:
         self.init()
         report = trace.report()
         with self._connect() as conn:
-            conn.execute("INSERT INTO projects(project_id) VALUES (%s) ON CONFLICT DO NOTHING", (project_id,))
             conn.execute(
+                "INSERT INTO projects(project_id) VALUES (%s) ON CONFLICT DO NOTHING", (project_id,)
+            )
+            cursor = conn.execute(
                 """
                 INSERT INTO traces(run_id, project_id, name, started_at, payload_json, total_runtime_ms, estimated_cost_usd, model_call_count, tool_call_count, retry_count)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT(run_id) DO UPDATE SET project_id=excluded.project_id, name=excluded.name, started_at=excluded.started_at,
                 payload_json=excluded.payload_json, total_runtime_ms=excluded.total_runtime_ms, estimated_cost_usd=excluded.estimated_cost_usd,
                 model_call_count=excluded.model_call_count, tool_call_count=excluded.tool_call_count, retry_count=excluded.retry_count
+                WHERE traces.project_id = excluded.project_id
                 """,
-                (trace.run_id, project_id, trace.name, trace.started_at, json.dumps(trace.to_dict()), report.get("total_runtime_ms", 0), report.get("estimated_cost_usd", 0), report.get("model_call_count", 0), report.get("tool_call_count", 0), report.get("retry_count", 0)),
+                (
+                    trace.run_id,
+                    project_id,
+                    trace.name,
+                    trace.started_at,
+                    json.dumps(trace.to_dict()),
+                    report.get("total_runtime_ms", 0),
+                    report.get("estimated_cost_usd", 0),
+                    report.get("model_call_count", 0),
+                    report.get("tool_call_count", 0),
+                    report.get("retry_count", 0),
+                ),
             )
+            if cursor.rowcount == 0:
+                raise TraceProjectConflictError(
+                    f"run_id {trace.run_id!r} already belongs to another project"
+                )
         self.record_usage(project_id, trace.run_id, report)
         self.save_diagnosis(build_diagnosis(trace), project_id=project_id)
 
@@ -470,19 +535,37 @@ class PostgresTraceStore:
         self.init()
         with self._connect() as conn:
             if project_id:
-                rows = conn.execute("SELECT run_id, project_id, name, started_at, total_runtime_ms, estimated_cost_usd, created_at::text FROM traces WHERE project_id = %s ORDER BY created_at DESC", (project_id,)).fetchall()
+                rows = conn.execute(
+                    "SELECT run_id, project_id, name, started_at, total_runtime_ms, estimated_cost_usd, created_at::text FROM traces WHERE project_id = %s ORDER BY created_at DESC",
+                    (project_id,),
+                ).fetchall()
             else:
-                rows = conn.execute("SELECT run_id, project_id, name, started_at, total_runtime_ms, estimated_cost_usd, created_at::text FROM traces ORDER BY created_at DESC").fetchall()
-        keys = ["run_id", "project_id", "name", "started_at", "total_runtime_ms", "estimated_cost_usd", "created_at"]
+                rows = conn.execute(
+                    "SELECT run_id, project_id, name, started_at, total_runtime_ms, estimated_cost_usd, created_at::text FROM traces ORDER BY created_at DESC"
+                ).fetchall()
+        keys = [
+            "run_id",
+            "project_id",
+            "name",
+            "started_at",
+            "total_runtime_ms",
+            "estimated_cost_usd",
+            "created_at",
+        ]
         return [dict(zip(keys, row)) for row in rows]
 
     def get_trace(self, run_id: str, project_id: str | None = None) -> AgentTrace | None:
         self.init()
         with self._connect() as conn:
             if project_id:
-                row = conn.execute("SELECT payload_json FROM traces WHERE run_id = %s AND project_id = %s", (run_id, project_id)).fetchone()
+                row = conn.execute(
+                    "SELECT payload_json FROM traces WHERE run_id = %s AND project_id = %s",
+                    (run_id, project_id),
+                ).fetchone()
             else:
-                row = conn.execute("SELECT payload_json FROM traces WHERE run_id = %s", (run_id,)).fetchone()
+                row = conn.execute(
+                    "SELECT payload_json FROM traces WHERE run_id = %s", (run_id,)
+                ).fetchone()
         if row is None:
             return None
         payload = row[0]
@@ -493,7 +576,9 @@ class PostgresTraceStore:
     def save_diagnosis(self, diagnosis: dict[str, Any], project_id: str = "default") -> None:
         self.init()
         with self._connect() as conn:
-            conn.execute("INSERT INTO projects(project_id) VALUES (%s) ON CONFLICT DO NOTHING", (project_id,))
+            conn.execute(
+                "INSERT INTO projects(project_id) VALUES (%s) ON CONFLICT DO NOTHING", (project_id,)
+            )
             conn.execute(
                 "DELETE FROM trace_findings WHERE project_id = %s AND run_id = %s",
                 (project_id, diagnosis["run_id"]),
@@ -526,32 +611,26 @@ class PostgresTraceStore:
                     ),
                 )
 
-    def list_findings(self, project_id: str | None = None, status: str | None = None) -> list[dict[str, Any]]:
+    def list_findings(
+        self, project_id: str | None = None, status: str | None = None
+    ) -> list[dict[str, Any]]:
         self.init()
-        clauses = []
-        args: list[Any] = []
-        if project_id:
-            clauses.append("project_id = %s")
-            args.append(project_id)
-        if status:
-            clauses.append("status = %s")
-            args.append(status)
-        where = "WHERE " + " AND ".join(clauses) if clauses else ""
         with self._connect() as conn:
             rows = conn.execute(
-                f"""
+                """
                 SELECT project_id, run_id, finding_id, type, severity, title, confidence,
                     patchable, status, estimated_latency_savings_ms, estimated_cost_savings_usd,
                     payload_json, created_at::text, updated_at::text
                 FROM trace_findings
-                {where}
+                WHERE project_id = COALESCE(%s, project_id)
+                  AND status = COALESCE(%s, status)
                 ORDER BY
                     CASE severity WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,
                     estimated_cost_savings_usd DESC,
                     estimated_latency_savings_ms DESC,
                     updated_at DESC
                 """,
-                tuple(args),
+                (project_id or None, status or None),
             ).fetchall()
         keys = [
             "project_id",
@@ -572,14 +651,19 @@ class PostgresTraceStore:
         return [_finding_row(dict(zip(keys, row))) for row in rows]
 
     def optimization_queue(self, project_id: str | None = None) -> list[dict[str, Any]]:
-        findings = [finding for finding in self.list_findings(project_id=project_id) if finding["status"] != "resolved"]
+        findings = [
+            finding
+            for finding in self.list_findings(project_id=project_id)
+            if finding["status"] != "resolved"
+        ]
         clusters: dict[tuple[str, str], dict[str, Any]] = {}
         for finding in findings:
             key = (finding["type"], finding["title"])
             cluster = clusters.setdefault(
                 key,
                 {
-                    "queue_id": "queue_" + hashlib.sha1("|".join(key).encode("utf-8")).hexdigest()[:12],
+                    "queue_id": "queue_"
+                    + hashlib.sha256("|".join(key).encode("utf-8")).hexdigest()[:12],
                     "type": finding["type"],
                     "title": finding["title"],
                     "status": "detected",
@@ -605,12 +689,16 @@ class PostgresTraceStore:
             cluster["estimated_latency_savings_ms"] += finding["estimated_latency_savings_ms"]
             cluster["estimated_cost_savings_usd"] += finding["estimated_cost_savings_usd"]
             cluster["severity"] = _max_severity(cluster["severity"], finding["severity"])
-            cluster["latest_created_at"] = max(str(cluster["latest_created_at"]), str(finding["created_at"]))
+            cluster["latest_created_at"] = max(
+                str(cluster["latest_created_at"]), str(finding["created_at"])
+            )
         queue = list(clusters.values())
         for item in queue:
             item["estimated_latency_savings_ms"] = round(item["estimated_latency_savings_ms"], 3)
             item["estimated_cost_savings_usd"] = round(item["estimated_cost_savings_usd"], 6)
-            item["safe_to_auto_patch"] = item["patchable_count"] > 0 and item["quality_risk"] == "low"
+            item["safe_to_auto_patch"] = (
+                item["patchable_count"] > 0 and item["quality_risk"] == "low"
+            )
             item["priority_score"] = _priority_score(item)
         return sorted(queue, key=lambda item: item["priority_score"], reverse=True)
 
@@ -618,17 +706,41 @@ class PostgresTraceStore:
         with self._connect() as conn:
             conn.execute(
                 "INSERT INTO usage_events(project_id, run_id, total_runtime_ms, estimated_cost_usd, input_tokens, output_tokens, model_call_count, tool_call_count, retry_count) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                (project_id, run_id, report.get("total_runtime_ms", 0), report.get("estimated_cost_usd", 0), report.get("input_tokens", 0), report.get("output_tokens", 0), report.get("model_call_count", 0), report.get("tool_call_count", 0), report.get("retry_count", 0)),
+                (
+                    project_id,
+                    run_id,
+                    report.get("total_runtime_ms", 0),
+                    report.get("estimated_cost_usd", 0),
+                    report.get("input_tokens", 0),
+                    report.get("output_tokens", 0),
+                    report.get("model_call_count", 0),
+                    report.get("tool_call_count", 0),
+                    report.get("retry_count", 0),
+                ),
             )
 
     def usage_summary(self, project_id: str | None = None) -> dict[str, Any]:
         self.init()
         with self._connect() as conn:
             if project_id:
-                row = conn.execute("SELECT COUNT(*), COALESCE(SUM(total_runtime_ms),0), COALESCE(SUM(estimated_cost_usd),0), COALESCE(SUM(input_tokens),0), COALESCE(SUM(output_tokens),0), COALESCE(SUM(model_call_count),0), COALESCE(SUM(tool_call_count),0), COALESCE(SUM(retry_count),0) FROM usage_events WHERE project_id = %s", (project_id,)).fetchone()
+                row = conn.execute(
+                    "SELECT COUNT(*), COALESCE(SUM(total_runtime_ms),0), COALESCE(SUM(estimated_cost_usd),0), COALESCE(SUM(input_tokens),0), COALESCE(SUM(output_tokens),0), COALESCE(SUM(model_call_count),0), COALESCE(SUM(tool_call_count),0), COALESCE(SUM(retry_count),0) FROM usage_events WHERE project_id = %s",
+                    (project_id,),
+                ).fetchone()
             else:
-                row = conn.execute("SELECT COUNT(*), COALESCE(SUM(total_runtime_ms),0), COALESCE(SUM(estimated_cost_usd),0), COALESCE(SUM(input_tokens),0), COALESCE(SUM(output_tokens),0), COALESCE(SUM(model_call_count),0), COALESCE(SUM(tool_call_count),0), COALESCE(SUM(retry_count),0) FROM usage_events").fetchone()
-        keys = ["run_count", "total_runtime_ms", "estimated_cost_usd", "input_tokens", "output_tokens", "model_call_count", "tool_call_count", "retry_count"]
+                row = conn.execute(
+                    "SELECT COUNT(*), COALESCE(SUM(total_runtime_ms),0), COALESCE(SUM(estimated_cost_usd),0), COALESCE(SUM(input_tokens),0), COALESCE(SUM(output_tokens),0), COALESCE(SUM(model_call_count),0), COALESCE(SUM(tool_call_count),0), COALESCE(SUM(retry_count),0) FROM usage_events"
+                ).fetchone()
+        keys = [
+            "run_count",
+            "total_runtime_ms",
+            "estimated_cost_usd",
+            "input_tokens",
+            "output_tokens",
+            "model_call_count",
+            "tool_call_count",
+            "retry_count",
+        ]
         result = dict(zip(keys, row))
         if project_id:
             result["project_id"] = project_id
@@ -640,6 +752,8 @@ def get_store() -> TraceStore:
     if backend == "postgres":
         dsn = os.getenv("AGENTLOOP_DATABASE_URL") or os.getenv("DATABASE_URL")
         if not dsn:
-            raise RuntimeError("AGENTLOOP_STORE_BACKEND=postgres requires AGENTLOOP_DATABASE_URL or DATABASE_URL")
+            raise RuntimeError(
+                "AGENTLOOP_STORE_BACKEND=postgres requires AGENTLOOP_DATABASE_URL or DATABASE_URL"
+            )
         return PostgresTraceStore(dsn=dsn)
     return SQLiteTraceStore(path=os.getenv("AGENTLOOP_SQLITE_PATH", "runs/agentloop.db"))

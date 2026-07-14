@@ -23,7 +23,7 @@ try:
 except ModuleNotFoundError:
     from value_view import assumption_inputs, render_value_report
 
-st.set_page_config(page_title="AgentLoop Cloud", layout="wide")
+st.set_page_config(page_title="AgentLoop Dashboard", layout="wide")
 
 runs_dir = Path("runs")
 runs_dir.mkdir(parents=True, exist_ok=True)
@@ -76,8 +76,8 @@ def render_gate_table(results: list[dict]) -> None:
     st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
 
 
-st.sidebar.title("AgentLoop Cloud")
-st.sidebar.caption("Hosted control panel for agent-loop performance")
+st.sidebar.title("AgentLoop")
+st.sidebar.caption("Agent-loop performance control panel")
 
 project_id = st.sidebar.text_input("Project", value=st.session_state.get("project_id", "default"))
 st.session_state["project_id"] = project_id
@@ -102,7 +102,7 @@ page = st.sidebar.radio(
 
 store = load_store()
 
-st.title("AgentLoop Cloud")
+st.title("AgentLoop Dashboard")
 st.caption("Cost, latency, and execution-graph optimization for production AI agents")
 
 if page == "Overview":
@@ -131,7 +131,10 @@ if page == "Overview":
         st.subheader("Runtime by run")
         st.bar_chart(chart_df, x="name", y="runtime_s")
     else:
-        st.info("No stored traces yet. Use the Ingest page or run `agentloop store-trace`.")
+        st.info(
+            "No stored traces yet. Use the Ingest page or run "
+            "`uv run agentloop store-trace --path TRACE.json`."
+        )
 
 elif page == "Traces":
     st.subheader("Stored traces")
@@ -155,7 +158,15 @@ elif page == "Traces":
             events = pd.DataFrame(report["events"])
             st.subheader("Event timeline")
             if not events.empty:
-                cols = ["event_type", "name", "duration_ms", "model", "input_tokens", "output_tokens", "status"]
+                cols = [
+                    "event_type",
+                    "name",
+                    "duration_ms",
+                    "model",
+                    "input_tokens",
+                    "output_tokens",
+                    "status",
+                ]
                 for col in cols:
                     if col not in events.columns:
                         events[col] = None
@@ -183,7 +194,9 @@ elif page == "Optimization Queue":
     )
 
     if not queue:
-        st.info("No optimization opportunities have been persisted yet. Store traces or run diagnosis first.")
+        st.info(
+            "No optimization opportunities have been persisted yet. Store traces or run diagnosis first."
+        )
     else:
         queue_df = pd.DataFrame(queue)
         visible_cols = [
@@ -215,7 +228,9 @@ elif page == "Optimization Queue":
         st.write(f"Quality risk: `{item['quality_risk']}`")
         st.write(f"Requires scorer: `{item['requires_scorer']}`")
         st.write(f"Safe to auto-patch: `{item['safe_to_auto_patch']}`")
-        st.write(f"Estimated savings: {seconds(item['estimated_latency_savings_ms'])} / {money(item['estimated_cost_savings_usd'])}")
+        st.write(
+            f"Estimated savings: {seconds(item['estimated_latency_savings_ms'])} / {money(item['estimated_cost_savings_usd'])}"
+        )
         st.write("Affected runs")
         st.code("\n".join(item["affected_runs"]), language="text")
 
@@ -240,7 +255,9 @@ elif page == "Optimization Queue":
         if not drafts:
             st.info("No patchable queue items available for issue drafts.")
         else:
-            selected_issue = st.selectbox("Preview issue draft", [draft["title"] for draft in drafts])
+            selected_issue = st.selectbox(
+                "Preview issue draft", [draft["title"] for draft in drafts]
+            )
             draft = next(item for item in drafts if item["title"] == selected_issue)
             st.write(f"Labels: `{', '.join(draft['labels'])}`")
             st.code(draft["body"], language="markdown")
@@ -285,10 +302,14 @@ elif page == "Optimization":
             if not cards:
                 st.info("No major optimization cards detected yet.")
             for card in cards:
-                with st.expander(f"{card['title']} · confidence: {card['confidence']}", expanded=True):
+                with st.expander(
+                    f"{card['title']} · confidence: {card['confidence']}", expanded=True
+                ):
                     st.write(card["why"])
                     st.code(card["rewrite_hint"])
-                    st.write(f"Estimated latency savings: {seconds(card['estimated_latency_savings_ms'])}")
+                    st.write(
+                        f"Estimated latency savings: {seconds(card['estimated_latency_savings_ms'])}"
+                    )
                     st.write(f"Estimated cost savings: {money(card['estimated_cost_savings_usd'])}")
 
             st.subheader("Execution graph")
@@ -344,7 +365,9 @@ elif page == "Diagnosis":
                         f"{money(finding['savings']['estimated_cost_savings_usd'])}"
                     )
                     if finding["evidence"]:
-                        st.dataframe(pd.DataFrame(finding["evidence"]), width="stretch", hide_index=True)
+                        st.dataframe(
+                            pd.DataFrame(finding["evidence"]), width="stretch", hide_index=True
+                        )
 
             st.download_button(
                 "Download diagnosis JSON",
@@ -388,7 +411,9 @@ elif page == "Patch Plan":
 
             if plan.get("unsupported_findings"):
                 st.subheader("Unsupported findings")
-                st.dataframe(pd.DataFrame(plan["unsupported_findings"]), width="stretch", hide_index=True)
+                st.dataframe(
+                    pd.DataFrame(plan["unsupported_findings"]), width="stretch", hide_index=True
+                )
 
             st.download_button(
                 "Download patch plan JSON",
@@ -446,7 +471,10 @@ elif page == "Replay Proof":
             st.dataframe(pd.DataFrame(metric_rows), width="stretch", hide_index=True)
 
             st.subheader("PR comment preview")
-            st.code("Trace in. Rewrite plan out. Replay proof in the PR.\n\n" + ci_report_to_markdown(ci_report))
+            st.code(
+                "Trace in. Rewrite plan out. Replay proof in the PR.\n\n"
+                + ci_report_to_markdown(ci_report)
+            )
 
             col_json, col_md = st.columns(2)
             col_json.download_button(
@@ -465,24 +493,38 @@ elif page == "Replay Proof":
 elif page == "Quality Gates":
     traces = store.list_traces(project_id=project_id)
     st.subheader("Quality gates")
-    st.caption("Score production-derived fixtures so replay proof can show faster, cheaper, and still correct.")
+    st.caption(
+        "Score production-derived fixtures so replay proof can show faster, cheaper, and still correct."
+    )
     if len(traces) < 2:
         st.info("Store at least two traces to score baseline and candidate quality.")
     else:
         options = trace_options(traces)
         labels = list(options.keys())
         baseline_label = st.selectbox("Baseline trace", labels, index=0, key="quality_baseline")
-        candidate_label = st.selectbox("Candidate trace", labels, index=1 if len(labels) > 1 else 0, key="quality_candidate")
+        candidate_label = st.selectbox(
+            "Candidate trace", labels, index=1 if len(labels) > 1 else 0, key="quality_candidate"
+        )
         baseline = load_trace_for_project(options[baseline_label], project_id)
         candidate = load_trace_for_project(options[candidate_label], project_id)
-        min_score = st.number_input("Minimum candidate quality score", min_value=0.0, max_value=1.0, value=0.9)
-        uploaded = st.file_uploader("Upload quality fixture JSON", type=["json"], key="quality_fixture_upload")
+        min_score = st.number_input(
+            "Minimum candidate quality score", min_value=0.0, max_value=1.0, value=0.9
+        )
+        uploaded = st.file_uploader(
+            "Upload quality fixture JSON", type=["json"], key="quality_fixture_upload"
+        )
         default_fixture = [
             {
                 "id": "required_summary_fields",
                 "input": "Summarize one source.",
-                "candidate_output": {"summary": "AgentLoop proves rewrites.", "sources": ["source-a"]},
-                "baseline_output": {"summary": "AgentLoop proves rewrites.", "sources": ["source-a"]},
+                "candidate_output": {
+                    "summary": "AgentLoop proves rewrites.",
+                    "sources": ["source-a"],
+                },
+                "baseline_output": {
+                    "summary": "AgentLoop proves rewrites.",
+                    "sources": ["source-a"],
+                },
                 "scorer": {"type": "required_fields", "required": ["summary", "sources"]},
             }
         ]
@@ -495,7 +537,11 @@ elif page == "Quality Gates":
             fixtures_payload = json.loads(uploaded.read().decode("utf-8"))
         else:
             fixtures_payload = json.loads(fixtures_text)
-        fixtures = fixtures_payload if isinstance(fixtures_payload, list) else fixtures_payload.get("fixtures", [])
+        fixtures = (
+            fixtures_payload
+            if isinstance(fixtures_payload, list)
+            else fixtures_payload.get("fixtures", [])
+        )
 
         if baseline is not None and candidate is not None:
             quality = build_quality_report(
@@ -526,10 +572,14 @@ elif page == "Quality Gates":
 
 elif page == "Value & Pricing":
     traces = store.list_traces(project_id=project_id)
-    st.subheader("Value report and pricing recommendation")
-    st.caption("Turn an agent trace into buyer-facing ROI, reliability risk, and a conservative SaaS packaging recommendation.")
+    st.subheader("Value report and pricing scenario")
+    st.caption(
+        "Turn an agent trace into operational value, reliability risk, and a configurable pricing scenario."
+    )
     if not traces:
-        st.info("No traces stored for this project yet. Generate demo traces from the Ingest page first.")
+        st.info(
+            "No traces stored for this project yet. Generate demo traces from the Ingest page first."
+        )
     else:
         trace = select_trace(traces, label="Choose trace for value report")
         if trace is not None:
@@ -542,9 +592,9 @@ elif page == "Value & Pricing":
                 incident_cost_usd=incident_cost,
             )
             render_value_report(value)
-            st.subheader("Pilot command")
+            st.subheader("CLI command")
             st.code(
-                "agentloop value-report runs/research_agent_baseline.json "
+                "uv run agentloop value-report --path runs/research_agent_baseline.json "
                 f"--runs-per-month {rpm} "
                 f"--engineer-hourly-rate-usd {rate} "
                 f"--incident-cost-usd {incident_cost} "
@@ -563,7 +613,8 @@ elif page == "API Keys":
 
     st.subheader("Use this key")
     st.code(
-        "agentloop upload runs/research_agent_baseline.json --api-url http://127.0.0.1:8000 --api-key YOUR_KEY",
+        "uv run agentloop upload --path runs/research_agent_baseline.json "
+        "--api-url http://127.0.0.1:8000 --api-key YOUR_KEY",
         language="bash",
     )
 
@@ -609,37 +660,39 @@ elif page == "Ingest":
 
     st.subheader("CLI ingest")
     st.code(
-        "agentloop demo-all\n"
-        f"agentloop store-trace --path runs/research_agent_baseline.json --project-id {project_id}\n"
-        f"agentloop list-stored-traces --project-id {project_id}",
+        "uv run agentloop demo-all\n"
+        f"uv run agentloop store-trace --path runs/research_agent_baseline.json --project-id {project_id}\n"
+        f"uv run agentloop list-stored-traces --project-id {project_id}",
         language="bash",
     )
 
 elif page == "Setup":
     st.subheader("Local development")
     st.code(
-        "pip install -e \".[all,dev]\"\n"
-        "agentloop init-store\n"
-        "agentloop demo-all\n"
-        f"agentloop store-trace --path runs/research_agent_baseline.json --project-id {project_id}\n"
-        "streamlit run dashboard/app.py",
+        "uv sync --locked --all-extras --dev\n"
+        "uv run agentloop init-store\n"
+        "uv run agentloop demo-all\n"
+        f"uv run agentloop store-trace --path runs/research_agent_baseline.json --project-id {project_id}\n"
+        "uv run streamlit run dashboard/app.py",
         language="bash",
     )
 
     st.subheader("Hosted API")
     st.code(
-        "agentloop create-api-key --project-id acme --name local-dev\n"
-        "agentloop server --host 127.0.0.1 --port 8000\n"
-        "agentloop upload runs/research_agent_baseline.json --api-url http://127.0.0.1:8000 --api-key al_xxx\n"
-        "agentloop remote-usage --api-url http://127.0.0.1:8000 --api-key al_xxx",
+        "uv run agentloop create-api-key --project-id acme --name local-dev\n"
+        "uv run agentloop server --host 127.0.0.1 --port 8000\n"
+        "uv run agentloop upload --path runs/research_agent_baseline.json "
+        "--api-url http://127.0.0.1:8000 --api-key al_xxx\n"
+        "uv run agentloop remote-usage --api-url http://127.0.0.1:8000 --api-key al_xxx",
         language="bash",
     )
 
     st.subheader("Postgres deployment")
     st.code(
+        "uv sync --locked --extra server --extra postgres --no-dev\n"
         "export AGENTLOOP_STORE_BACKEND=postgres\n"
         "export AGENTLOOP_DATABASE_URL=postgresql://agentloop:agentloop@localhost:5432/agentloop\n"
-        "agentloop init-store\n"
-        "agentloop server --host 0.0.0.0 --port 8000",
+        "uv run agentloop init-store\n"
+        "uv run agentloop server --host 0.0.0.0 --port 8000",
         language="bash",
     )

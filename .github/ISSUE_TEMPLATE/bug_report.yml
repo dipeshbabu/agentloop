@@ -1,0 +1,77 @@
+name: Bug report
+description: Report a reproducible problem in AgentLoop.
+title: "[Bug]: "
+labels: [bug, triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a problem. Remove credentials,
+        prompts, customer data, and other sensitive information before posting.
+        Security vulnerabilities belong in the private process described in
+        SECURITY.md.
+
+  - type: input
+    id: version
+    attributes:
+      label: AgentLoop version or commit
+      description: Use `uv run python -c "import agentloop; print(agentloop.__version__)"` or provide the commit SHA.
+      placeholder: 0.4.0 or abc1234
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include Python, uv, operating system, and relevant framework or SDK versions.
+      placeholder: |
+        Python 3.13.5
+        uv 0.11.28
+        Windows 11
+        openai 2.x
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the observed behavior and its impact.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Provide the smallest code sample or command sequence that reproduces the problem using synthetic data.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: output
+    attributes:
+      label: Sanitized logs or trace output
+      description: Paste only the relevant output after removing secrets and private data.
+      render: text
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and pull requests for this problem.
+          required: true
+        - label: I removed credentials, private prompts, customer data, and other sensitive information.
+          required: true
+        - label: This is not a security vulnerability.
+          required: true

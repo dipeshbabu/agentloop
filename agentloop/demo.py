@@ -6,8 +6,13 @@ from pathlib import Path
 
 from agentloop import trace_agent, trace_model_call, trace_retry, trace_tool_call
 
-SYSTEM_LONG = "You are a careful research agent. Use evidence, verify claims, and write concise reports. " * 20
-SYSTEM_SHORT = "You are a careful research agent. Use evidence, verify claims, and write concise reports. " * 4
+SYSTEM_LONG = (
+    "You are a careful research agent. Use evidence, verify claims, and write concise reports. "
+    * 20
+)
+SYSTEM_SHORT = (
+    "You are a careful research agent. Use evidence, verify claims, and write concise reports. " * 4
+)
 
 
 def sleep_ms(ms: int) -> None:
@@ -89,7 +94,9 @@ def run_proof_pair(out_dir: str | Path = "runs") -> tuple[Path, Path]:
 def run_proof_baseline(out_dir: str | Path = "runs") -> Path:
     out_path = Path(out_dir) / "agentloop_proof_baseline.json"
     repeated_context = SYSTEM_LONG + "Classify and summarize every source independently. " * 20
-    with trace_agent("agentloop_proof_baseline", metadata={"schema_valid": False, "quality_score": 0.82}) as trace:
+    with trace_agent(
+        "agentloop_proof_baseline", metadata={"schema_valid": False, "quality_score": 0.82}
+    ) as trace:
         with trace_model_call(
             "classify_intent",
             model="gpt-4.1",
@@ -148,8 +155,12 @@ def run_proof_baseline(out_dir: str | Path = "runs") -> Path:
 
 def run_proof_candidate(out_dir: str | Path = "runs") -> Path:
     out_path = Path(out_dir) / "agentloop_proof_candidate.json"
-    compact_context = SYSTEM_SHORT + "Use cached instructions, batch summaries, and stop after convergence."
-    with trace_agent("agentloop_proof_candidate", metadata={"schema_valid": True, "quality_score": 0.94}) as trace:
+    compact_context = (
+        SYSTEM_SHORT + "Use cached instructions, batch summaries, and stop after convergence."
+    )
+    with trace_agent(
+        "agentloop_proof_candidate", metadata={"schema_valid": True, "quality_score": 0.94}
+    ) as trace:
         with trace_model_call(
             "classify_intent",
             model="gpt-4.1-mini",
@@ -173,7 +184,9 @@ def run_proof_candidate(out_dir: str | Path = "runs") -> Path:
         ):
             sleep_ms(170)
 
-        with trace_tool_call("plan_next", metadata={"iteration": 1, "stop_reason": "state_converged"}):
+        with trace_tool_call(
+            "plan_next", metadata={"iteration": 1, "stop_reason": "state_converged"}
+        ):
             sleep_ms(60)
 
         with trace_model_call(
@@ -247,11 +260,15 @@ def run_langgraph_style(out_dir: str | Path = "runs") -> Path:
     out_path = Path(out_dir) / "langgraph_style_demo.json"
     with trace_agent("langgraph_style_demo") as trace:
         state = {"question": "How should agent runtimes be profiled?"}
-        with trace_model_call("planner", model="gpt-4.1-mini", input_text=state["question"], output_tokens=120):
+        with trace_model_call(
+            "planner", model="gpt-4.1-mini", input_text=state["question"], output_tokens=120
+        ):
             sleep_ms(160)
         state = retrieve_sources(state)
         state = rank_sources(state)
-        with trace_model_call("final_answer", model="gpt-4.1-mini", input_text=str(state), output_tokens=300):
+        with trace_model_call(
+            "final_answer", model="gpt-4.1-mini", input_text=str(state), output_tokens=300
+        ):
             sleep_ms(240)
     trace.export_json(out_path)
     trace.print_report()

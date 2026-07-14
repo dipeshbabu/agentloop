@@ -10,7 +10,9 @@ from agentloop import trace_agent, trace_tool_call
 F = TypeVar("F", bound=Callable[..., Any])
 
 
-def _merge_metadata(metadata: dict[str, Any] | None, extra: dict[str, Any] | None = None) -> dict[str, Any]:
+def _merge_metadata(
+    metadata: dict[str, Any] | None, extra: dict[str, Any] | None = None
+) -> dict[str, Any]:
     merged = {"integration": "langgraph"}
     if metadata:
         merged.update(metadata)
@@ -72,7 +74,9 @@ def instrument_state_graph(graph: Any, metadata: dict[str, Any] | None = None) -
     def add_node(name: str, action: Any = None, *args: Any, **kwargs: Any) -> Any:
         wrapped_action = action
         if callable(action):
-            wrapped_action = trace_node(str(name), _merge_metadata(metadata, {"auto_instrumented": True}))(action)
+            wrapped_action = trace_node(
+                str(name), _merge_metadata(metadata, {"auto_instrumented": True})
+            )(action)
         return original_add_node(name, wrapped_action, *args, **kwargs)
 
     setattr(graph, "add_node", add_node)
@@ -87,7 +91,9 @@ class TracedRunnable:
     and `.astream(...)` while delegating every other attribute to the wrapped app.
     """
 
-    def __init__(self, app: Any, name: str = "langgraph_app", metadata: dict[str, Any] | None = None):
+    def __init__(
+        self, app: Any, name: str = "langgraph_app", metadata: dict[str, Any] | None = None
+    ):
         self.app = app
         self.name = name
         self.metadata = _merge_metadata(metadata, {"runnable": True})
@@ -126,7 +132,9 @@ class TracedRunnable:
         self.last_trace.export_json(path)
 
 
-def trace_runnable(app: Any, name: str = "langgraph_app", metadata: dict[str, Any] | None = None) -> TracedRunnable:
+def trace_runnable(
+    app: Any, name: str = "langgraph_app", metadata: dict[str, Any] | None = None
+) -> TracedRunnable:
     """Wrap a compiled LangGraph app/runnable with AgentLoop tracing."""
 
     return TracedRunnable(app=app, name=name, metadata=metadata)

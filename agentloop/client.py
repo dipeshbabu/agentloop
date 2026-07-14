@@ -62,15 +62,20 @@ class AgentLoopClient:
         return self._request("GET", route)
 
     def get_report(self, run_id: str) -> dict[str, Any]:
-        return self._request("GET", f"/traces/{run_id}/report")
+        encoded_run_id = urllib.parse.quote(run_id, safe="")
+        return self._request("GET", f"/traces/{encoded_run_id}/report")
 
     def get_optimization_plan(self, run_id: str) -> dict[str, Any]:
-        return self._request("GET", f"/traces/{run_id}/optimize")
+        encoded_run_id = urllib.parse.quote(run_id, safe="")
+        return self._request("GET", f"/traces/{encoded_run_id}/optimize")
 
     def get_diagnosis(self, run_id: str) -> dict[str, Any]:
-        return self._request("GET", f"/traces/{run_id}/diagnose")
+        encoded_run_id = urllib.parse.quote(run_id, safe="")
+        return self._request("GET", f"/traces/{encoded_run_id}/diagnose")
 
-    def list_findings(self, project_id: str | None = None, status: str | None = None) -> dict[str, Any]:
+    def list_findings(
+        self, project_id: str | None = None, status: str | None = None
+    ) -> dict[str, Any]:
         params: dict[str, Any] = {}
         if project_id:
             params["project_id"] = project_id
@@ -91,7 +96,9 @@ class AgentLoopClient:
         params: dict[str, Any] = {"limit": limit}
         if project_id:
             params["project_id"] = project_id
-        return self._request("GET", "/optimization-queue/github-issues?" + urllib.parse.urlencode(params))
+        return self._request(
+            "GET", "/optimization-queue/github-issues?" + urllib.parse.urlencode(params)
+        )
 
     def build_quality_report(
         self,
@@ -127,12 +134,18 @@ class AgentLoopClient:
             params["engineer_hourly_rate_usd"] = engineer_hourly_rate_usd
         if incident_cost_usd is not None:
             params["incident_cost_usd"] = incident_cost_usd
-        route = f"/traces/{run_id}/value"
+        encoded_run_id = urllib.parse.quote(run_id, safe="")
+        route = f"/traces/{encoded_run_id}/value"
         if params:
             route += "?" + urllib.parse.urlencode(params)
         return self._request("GET", route)
 
-    def _request(self, method: str, path: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    def _request(
+        self, method: str, path: str, payload: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
+        parsed_base_url = urllib.parse.urlsplit(self.base_url)
+        if parsed_base_url.scheme not in {"http", "https"} or not parsed_base_url.netloc:
+            raise AgentLoopClientError("AgentLoop API URL must use http:// or https://")
         url = self.base_url.rstrip("/") + path
         body = None if payload is None else json.dumps(payload).encode("utf-8")
         headers = {"Accept": "application/json"}
@@ -144,10 +157,14 @@ class AgentLoopClient:
             headers["X-AgentLoop-Admin-Key"] = self.admin_api_key
         req = urllib.request.Request(url=url, data=body, method=method, headers=headers)
         try:
-            with urllib.request.urlopen(req, timeout=self.timeout_s) as response:
+            with urllib.request.urlopen(  # nosec B310 - base URL scheme is validated above.
+                req, timeout=self.timeout_s
+            ) as response:
                 return json.loads(response.read().decode("utf-8"))
         except urllib.error.HTTPError as exc:
             detail = exc.read().decode("utf-8", errors="ignore")
             raise AgentLoopClientError(f"AgentLoop API returned {exc.code}: {detail}") from exc
         except urllib.error.URLError as exc:
-            raise AgentLoopClientError(f"Could not reach AgentLoop API at {url}: {exc.reason}") from exc
+            raise AgentLoopClientError(
+                f"Could not reach AgentLoop API at {url}: {exc.reason}"
+            ) from exc

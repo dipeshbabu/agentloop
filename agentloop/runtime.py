@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-
 _TRUE_VALUES = {"1", "true", "yes", "on"}
 
 
@@ -57,18 +56,33 @@ def init(
     - `AGENTLOOP_PROJECT_ID`
     - `AGENTLOOP_AUTO_UPLOAD`
     - `AGENTLOOP_AUTO_STORE`
+    - `AGENTLOOP_FAIL_SILENTLY`
     - `AGENTLOOP_EXPORT_DIR`
     """
 
     global _runtime
     _runtime = AgentLoopRuntimeConfig(
         api_url=api_url or os.getenv("AGENTLOOP_API_URL", _runtime.api_url),
-        api_key=api_key if api_key is not None else os.getenv("AGENTLOOP_API_KEY", _runtime.api_key),
+        api_key=api_key
+        if api_key is not None
+        else os.getenv("AGENTLOOP_API_KEY", _runtime.api_key),
         project_id=project_id or os.getenv("AGENTLOOP_PROJECT_ID", _runtime.project_id),
-        auto_upload=auto_upload if auto_upload is not None else _env_bool("AGENTLOOP_AUTO_UPLOAD", _runtime.auto_upload),
-        auto_store=auto_store if auto_store is not None else _env_bool("AGENTLOOP_AUTO_STORE", _runtime.auto_store),
-        fail_silently=fail_silently if fail_silently is not None else _env_bool("AGENTLOOP_FAIL_SILENTLY", _runtime.fail_silently),
-        export_dir=Path(export_dir) if export_dir is not None else (Path(os.getenv("AGENTLOOP_EXPORT_DIR")) if os.getenv("AGENTLOOP_EXPORT_DIR") else _runtime.export_dir),
+        auto_upload=auto_upload
+        if auto_upload is not None
+        else _env_bool("AGENTLOOP_AUTO_UPLOAD", _runtime.auto_upload),
+        auto_store=auto_store
+        if auto_store is not None
+        else _env_bool("AGENTLOOP_AUTO_STORE", _runtime.auto_store),
+        fail_silently=fail_silently
+        if fail_silently is not None
+        else _env_bool("AGENTLOOP_FAIL_SILENTLY", _runtime.fail_silently),
+        export_dir=Path(export_dir)
+        if export_dir is not None
+        else (
+            Path(os.getenv("AGENTLOOP_EXPORT_DIR"))
+            if os.getenv("AGENTLOOP_EXPORT_DIR")
+            else _runtime.export_dir
+        ),
     )
     return _runtime
 
@@ -99,12 +113,17 @@ def finalize_trace(trace: Any) -> dict[str, Any]:
     """Apply configured end-of-run side effects.
 
     Depending on runtime config, this can export a JSON file, save to the local
-    persistent store, and/or upload to the hosted API. Errors are captured and
+    persistent store, and/or upload to the configured API. Errors are captured and
     suppressed by default so instrumentation never breaks the user's agent.
     """
 
     global _last_error
-    result: dict[str, Any] = {"exported_path": None, "stored": False, "uploaded": False, "errors": []}
+    result: dict[str, Any] = {
+        "exported_path": None,
+        "stored": False,
+        "uploaded": False,
+        "errors": [],
+    }
 
     try:
         if _runtime.export_dir is not None:

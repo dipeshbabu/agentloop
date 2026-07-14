@@ -5,6 +5,7 @@ import os
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from typing import Any
 
@@ -18,6 +19,9 @@ def _request(
     api_key: str | None = None,
     admin_api_key: str | None = None,
 ) -> dict[str, Any]:
+    parsed_api_url = urllib.parse.urlsplit(api_url)
+    if parsed_api_url.scheme not in {"http", "https"} or not parsed_api_url.netloc:
+        raise RuntimeError("AGENTLOOP_API_URL must use http:// or https://")
     body = None if payload is None else json.dumps(payload).encode("utf-8")
     headers = {"Accept": "application/json"}
     if payload is not None:
@@ -33,7 +37,9 @@ def _request(
         headers=headers,
         method=method,
     )
-    with urllib.request.urlopen(request, timeout=10) as response:
+    with urllib.request.urlopen(  # nosec B310 - API URL scheme is validated above.
+        request, timeout=10
+    ) as response:
         return json.loads(response.read().decode("utf-8"))
 
 

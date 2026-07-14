@@ -35,7 +35,9 @@ def export_optimization_markdown(plan: dict[str, Any], path: str | Path) -> Path
     ]
     cards = plan.get("optimization_cards", [])
     if not cards:
-        lines.append("No major optimization opportunities detected yet. Collect more traces for stronger recommendations.")
+        lines.append(
+            "No major optimization opportunities detected yet. Collect more traces for stronger recommendations."
+        )
     for index, card in enumerate(cards, start=1):
         lines.extend(
             [
@@ -50,7 +52,9 @@ def export_optimization_markdown(plan: dict[str, Any], path: str | Path) -> Path
                 "",
             ]
         )
-    lines.extend(["## Bottlenecks", "", "| Name | Type | Duration | Runtime share |", "|---|---|---:|---:|"])
+    lines.extend(
+        ["## Bottlenecks", "", "| Name | Type | Duration | Runtime share |", "|---|---|---:|---:|"]
+    )
     for item in plan.get("graph", {}).get("bottlenecks", []):
         lines.append(
             f"| {item['name']} | {item['event_type']} | {item['duration_ms'] / 1000:.2f}s | {item['runtime_share']:.1%} |"

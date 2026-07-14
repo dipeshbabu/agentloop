@@ -12,12 +12,12 @@ def build_value_report(
     engineer_hourly_rate_usd: float = 150.0,
     incident_cost_usd: float = 500.0,
 ) -> dict[str, Any]:
-    """Translate an optimization plan into buyer-facing ROI and sales metrics.
+    """Translate an optimization plan into operational value metrics.
 
-    AgentLoop is easiest to sell when a team can see the monthly dollars, engineering
-    time, and reliability risk tied to a trace. This report deliberately keeps the math
-    transparent and conservative so it can be used in pilots, investor demos, and sales
-    calls without overstating impact.
+    The report connects a trace to modeled monthly cost, engineering time, latency,
+    and reliability impact. Its assumptions remain explicit so teams can use it for
+    capacity planning and optimization prioritization without treating estimates as
+    observed financial results.
     """
 
     if runs_per_month < 0:
@@ -56,7 +56,7 @@ def build_value_report(
     total_value_monthly = (
         direct_model_cost_savings_monthly + engineering_value_monthly + avoided_incident_value
     )
-    pricing = _pricing_recommendation(
+    pricing = _pricing_scenario(
         monthly_value=total_value_monthly,
         runs_per_month=runs_per_month,
         reliability_risk_score=reliability_risk_score,
@@ -94,7 +94,7 @@ def build_value_report(
             "high_confidence_fixes": sum(1 for card in cards if card.get("confidence") == "high"),
             "top_risks": _top_risks(cards),
         },
-        "sales_summary": _sales_summary(
+        "value_summary": _value_summary(
             monthly_value=total_value_monthly,
             latency_savings_ms_per_run=latency_savings_ms_per_run,
             cost_savings_per_run=cost_savings_per_run,
@@ -144,17 +144,17 @@ def _avoided_incident_value(
     return incident_cost_usd * monthly_failure_probability * volume_multiplier
 
 
-def _pricing_recommendation(
+def _pricing_scenario(
     *,
     monthly_value: float,
     runs_per_month: int,
     reliability_risk_score: int,
     cards: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    """Recommend a conservative SaaS plan from observed value.
+    """Build a conservative pricing scenario from modeled operational value.
 
-    This is not meant to be a billing system. It gives the sales/demo flow a concrete
-    anchor: a plan, a monthly price, and the buyer's modeled value-to-price ratio.
+    This is not a billing system or price quote. It provides a configurable tier,
+    monthly amount, and value-to-price ratio for planning comparisons.
     """
 
     if runs_per_month == 0 or monthly_value <= 0 or not cards:
@@ -164,19 +164,21 @@ def _pricing_recommendation(
     elif monthly_value < 750 and runs_per_month < 1000:
         suggested_plan = "pro"
         suggested_monthly_price_usd = 49
-        rationale = "Low-volume agent with enough waste to justify a solo developer plan."
+        rationale = "Low-volume workload with measurable optimization value."
     elif monthly_value < 5000 and reliability_risk_score < 60:
         suggested_plan = "team"
         suggested_monthly_price_usd = 499
-        rationale = "Team-level ROI with hosted tracing, reports, and optimization workflow."
+        rationale = "Mid-volume workload with shared tracing and optimization needs."
     elif monthly_value < 25000:
         suggested_plan = "growth"
         suggested_monthly_price_usd = 1500
-        rationale = "High-volume workflow where reliability and latency savings justify a larger plan."
+        rationale = "Higher-volume workload with material reliability and latency impact."
     else:
         suggested_plan = "enterprise"
         suggested_monthly_price_usd = 5000
-        rationale = "Large modeled value; price should move to annual contract, private deployment, or usage-based terms."
+        rationale = (
+            "Large modeled value; review deployment, retention, support, and usage requirements."
+        )
 
     value_to_price_ratio = None
     if suggested_monthly_price_usd > 0:
@@ -185,23 +187,28 @@ def _pricing_recommendation(
     return {
         "suggested_plan": suggested_plan,
         "suggested_monthly_price_usd": suggested_monthly_price_usd,
-        "estimated_customer_value_usd": round(monthly_value, 2),
+        "estimated_monthly_value_usd": round(monthly_value, 2),
         "value_to_price_ratio": value_to_price_ratio,
         "rationale": rationale,
-        "packaging_notes": _packaging_notes(suggested_plan),
+        "scenario_notes": _scenario_notes(suggested_plan),
     }
 
 
-def _packaging_notes(plan: str) -> list[str]:
+def _scenario_notes(plan: str) -> list[str]:
     if plan == "free":
         return ["Local traces", "CLI reports", "Manual optimization plan export"]
     if plan == "pro":
-        return ["Local + hosted trace upload", "Value reports", "Single project workspace"]
+        return ["Local + API trace upload", "Value reports", "Single project workspace"]
     if plan == "team":
-        return ["Hosted dashboard", "API keys", "Shared projects", "Optimization reports"]
+        return ["Shared dashboard", "API keys", "Shared projects", "Optimization reports"]
     if plan == "growth":
-        return ["Higher usage limits", "Postgres backend", "Priority onboarding", "Pilot ROI review"]
-    return ["Private deployment", "Custom retention", "Security review", "Annual contract"]
+        return [
+            "Higher usage limits",
+            "Postgres backend",
+            "Extended retention",
+            "Operational value review",
+        ]
+    return ["Private deployment", "Custom retention", "Security review", "Custom integrations"]
 
 
 def _top_risks(cards: list[dict[str, Any]]) -> list[str]:
@@ -213,7 +220,7 @@ def _top_risks(cards: list[dict[str, Any]]) -> list[str]:
     return risks
 
 
-def _sales_summary(
+def _value_summary(
     *,
     monthly_value: float,
     latency_savings_ms_per_run: float,
@@ -232,5 +239,5 @@ def _sales_summary(
         f"${monthly_value:,.0f}/month in modeled value, with "
         f"{latency_savings_ms_per_run / 1000:.2f}s latency saved and "
         f"${cost_savings_per_run:.4f} model cost saved per run. "
-        f"A conservative packaging recommendation is {price_line}."
+        f"A modeled pricing scenario is {price_line}."
     )

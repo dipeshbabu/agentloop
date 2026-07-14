@@ -27,7 +27,9 @@ def trace_from_vercel_ai_events(
     `output_tokens`, `status`, and `metadata`.
     """
 
-    trace = AgentTrace(name=name, run_id=run_id, metadata={"integration": "vercel_ai", **(metadata or {})})
+    trace = AgentTrace(
+        name=name, run_id=run_id, metadata={"integration": "vercel_ai", **(metadata or {})}
+    )
     for item in events:
         event_type = str(_get(item, "event_type", _get(item, "type", "model_call")))
         if event_type in {"text", "generate", "stream", "model"}:
@@ -46,7 +48,9 @@ def trace_from_vercel_ai_events(
                 duration_ms=float(_get(item, "duration_ms", 0.0) or 0.0),
                 model=_get(item, "model"),
                 input_tokens=int(_get(item, "input_tokens", _get(item, "prompt_tokens", 0)) or 0),
-                output_tokens=int(_get(item, "output_tokens", _get(item, "completion_tokens", 0)) or 0),
+                output_tokens=int(
+                    _get(item, "output_tokens", _get(item, "completion_tokens", 0)) or 0
+                ),
                 input_text=_get(item, "input_text"),
                 output_text=_get(item, "output_text"),
                 status=str(_get(item, "status", "ok")),
@@ -57,7 +61,7 @@ def trace_from_vercel_ai_events(
     return trace
 
 
-TYPESCRIPT_SNIPPET = r'''
+TYPESCRIPT_SNIPPET = r"""
 // Minimal Vercel AI SDK telemetry bridge for AgentLoop.
 // Push these events to your backend, then convert them with
 // agentloop.integrations.vercel_ai.trace_from_vercel_ai_events(...).
@@ -75,4 +79,4 @@ export function recordAgentLoopEvent(event: any) {
 export function getAgentLoopEvents() {
   return agentloopEvents;
 }
-'''
+"""

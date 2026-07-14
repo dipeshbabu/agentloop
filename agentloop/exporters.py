@@ -32,7 +32,15 @@ def export_report_markdown(report: dict[str, Any], path: str | Path) -> Path:
     ]
     for rec in report["recommendations"]:
         lines.append(f"- **{rec['title']}** — {rec['description']}")
-    lines.extend(["", "## Events", "", "| Type | Name | Duration ms | Model | Input | Output | Status |", "|---|---|---:|---|---:|---:|---|"])
+    lines.extend(
+        [
+            "",
+            "## Events",
+            "",
+            "| Type | Name | Duration ms | Model | Input | Output | Status |",
+            "|---|---|---:|---|---:|---:|---|",
+        ]
+    )
     for event in report["events"]:
         lines.append(
             f"| {event['event_type']} | {event['name']} | {event['duration_ms']:.2f} | "

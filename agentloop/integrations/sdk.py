@@ -47,7 +47,9 @@ def instrument(obj: Any, *, kind: str | None = None, name: str | None = None) ->
     if normalized == "langgraph_runnable" or _looks_like_runnable(obj):
         from agentloop.integrations.langgraph import trace_runnable
 
-        return trace_runnable(obj, name=name or getattr(obj, "name", None) or obj.__class__.__name__)
+        return trace_runnable(
+            obj, name=name or getattr(obj, "name", None) or obj.__class__.__name__
+        )
 
     raise ValueError(
         "Could not infer object type for AgentLoop instrumentation. "
@@ -61,8 +63,10 @@ def _looks_like_openai_client(obj: Any) -> bool:
     chat = getattr(obj, "chat", None)
     completions = getattr(chat, "completions", None) if chat is not None else None
     return bool(
-        responses is not None and callable(getattr(responses, "create", None))
-        or completions is not None and callable(getattr(completions, "create", None))
+        responses is not None
+        and callable(getattr(responses, "create", None))
+        or completions is not None
+        and callable(getattr(completions, "create", None))
     )
 
 

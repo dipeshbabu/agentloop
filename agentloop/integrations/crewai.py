@@ -82,7 +82,11 @@ def instrument_crew(crew: Any, *, name: str | None = None) -> Any:
     metadata = {"integration": "crewai", "crew_name": str(run_name)}
 
     kickoff = getattr(crew, "kickoff", None)
-    if kickoff is not None and callable(kickoff) and not getattr(kickoff, "_agentloop_wrapped", False):
+    if (
+        kickoff is not None
+        and callable(kickoff)
+        and not getattr(kickoff, "_agentloop_wrapped", False)
+    ):
 
         @wraps(kickoff)
         def kickoff_wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -93,7 +97,11 @@ def instrument_crew(crew: Any, *, name: str | None = None) -> Any:
         setattr(crew, "kickoff", kickoff_wrapper)
 
     kickoff_async = getattr(crew, "kickoff_async", None)
-    if kickoff_async is not None and callable(kickoff_async) and not getattr(kickoff_async, "_agentloop_wrapped", False):
+    if (
+        kickoff_async is not None
+        and callable(kickoff_async)
+        and not getattr(kickoff_async, "_agentloop_wrapped", False)
+    ):
 
         @wraps(kickoff_async)
         async def kickoff_async_wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -109,7 +117,12 @@ def instrument_crew(crew: Any, *, name: str | None = None) -> Any:
 def instrument_task(task: Any, *, name: str | None = None) -> Any:
     """Patch common CrewAI task execution methods as tool-call spans."""
 
-    task_name = name or getattr(task, "description", None) or getattr(task, "name", None) or task.__class__.__name__
+    task_name = (
+        name
+        or getattr(task, "description", None)
+        or getattr(task, "name", None)
+        or task.__class__.__name__
+    )
     metadata = {"integration": "crewai", "task_name": str(task_name)}
     for method_name in ("execute", "execute_sync", "execute_async", "run"):
         _patch_method(task, method_name, f"crewai.task.{method_name}", metadata)
@@ -119,7 +132,12 @@ def instrument_task(task: Any, *, name: str | None = None) -> Any:
 def instrument_agent(agent: Any, *, name: str | None = None) -> Any:
     """Patch common CrewAI agent execution methods as tool-call spans."""
 
-    agent_name = name or getattr(agent, "role", None) or getattr(agent, "name", None) or agent.__class__.__name__
+    agent_name = (
+        name
+        or getattr(agent, "role", None)
+        or getattr(agent, "name", None)
+        or agent.__class__.__name__
+    )
     metadata = {"integration": "crewai", "agent_name": str(agent_name)}
     for method_name in ("execute_task", "run", "invoke"):
         _patch_method(agent, method_name, f"crewai.agent.{method_name}", metadata)

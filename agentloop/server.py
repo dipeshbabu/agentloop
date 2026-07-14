@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hmac
 from typing import Any
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
@@ -11,7 +12,7 @@ from agentloop.findings import build_diagnosis
 from agentloop.issues import build_issue_drafts
 from agentloop.optimizer import build_optimization_plan
 from agentloop.quality import build_quality_report
-from agentloop.store import TraceStore, get_store
+from agentloop.store import TraceProjectConflictError, TraceStore, get_store
 from agentloop.tracer import AgentTrace
 from agentloop.value import build_value_report
 from agentloop.version import __version__
@@ -65,7 +66,7 @@ def resolve_project(
             return str(key_record["project_id"])
 
         expected = get_api_key()
-        if require_api_key() and expected and x_agentloop_key == expected:
+        if require_api_key() and expected and hmac.compare_digest(x_agentloop_key, expected):
             return "default"
 
         raise HTTPException(status_code=401, detail="invalid AgentLoop API key")
@@ -79,7 +80,7 @@ def resolve_project(
 def resolve_admin(x_agentloop_admin_key: str | None = Header(default=None)) -> None:
     admin_key = get_admin_api_key()
     if admin_key:
-        if x_agentloop_admin_key == admin_key:
+        if x_agentloop_admin_key and hmac.compare_digest(x_agentloop_admin_key, admin_key):
             return
         raise HTTPException(status_code=401, detail="invalid AgentLoop admin API key")
 
@@ -117,8 +118,21 @@ def ingest_trace(
     db: TraceStore = Depends(store),
 ) -> dict[str, Any]:
     trace = AgentTrace.from_dict(payload.model_dump())
-    db.save_trace(trace, project_id=project_id)
+    try:
+        db.save_trace(trace, project_id=project_id)
+    except TraceProjectConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from None
     return {"ok": True, "run_id": trace.run_id, "project_id": project_id, "report": trace.report()}
+
+
+def _selected_project(project_id_filter: str | None, authenticated_project: str) -> str:
+    if (
+        require_api_key()
+        and project_id_filter is not None
+        and project_id_filter != authenticated_project
+    ):
+        raise HTTPException(status_code=403, detail="project access denied")
+    return project_id_filter or authenticated_project
 
 
 @app.get("/traces")
@@ -127,7 +141,7 @@ def list_traces(
     project_id: str = Depends(resolve_project),
     db: TraceStore = Depends(store),
 ) -> dict[str, Any]:
-    selected_project = project_id_filter or project_id
+    selected_project = _selected_project(project_id_filter, project_id)
     return {"project_id": selected_project, "traces": db.list_traces(project_id=selected_project)}
 
 
@@ -174,7 +188,7 @@ def list_findings(
     project_id: str = Depends(resolve_project),
     db: TraceStore = Depends(store),
 ) -> dict[str, Any]:
-    selected_project = project_id_filter or project_id
+    selected_project = _selected_project(project_id_filter, project_id)
     return {
         "project_id": selected_project,
         "findings": db.list_findings(project_id=selected_project, status=status),
@@ -187,7 +201,7 @@ def optimization_queue(
     project_id: str = Depends(resolve_project),
     db: TraceStore = Depends(store),
 ) -> dict[str, Any]:
-    selected_project = project_id_filter or project_id
+    selected_project = _selected_project(project_id_filter, project_id)
     return {
         "project_id": selected_project,
         "queue": db.optimization_queue(project_id=selected_project),
@@ -201,7 +215,7 @@ def github_issue_drafts(
     project_id: str = Depends(resolve_project),
     db: TraceStore = Depends(store),
 ) -> dict[str, Any]:
-    selected_project = project_id_filter or project_id
+    selected_project = _selected_project(project_id_filter, project_id)
     queue = db.optimization_queue(project_id=selected_project)
     return {
         "project_id": selected_project,
@@ -215,11 +229,24 @@ def quality_report_endpoint(
     project_id: str = Depends(resolve_project),
     db: TraceStore = Depends(store),
 ) -> dict[str, Any]:
+    if any(
+        isinstance(fixture.get("scorer"), dict)
+        and str(fixture["scorer"].get("type", "")).lower() == "custom"
+        for fixture in payload.fixtures
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="custom Python scorers are not accepted by the HTTP API",
+        )
     baseline_trace = (
-        _load_trace_or_404(db, payload.baseline_run_id, project_id) if payload.baseline_run_id else None
+        _load_trace_or_404(db, payload.baseline_run_id, project_id)
+        if payload.baseline_run_id
+        else None
     )
     candidate_trace = (
-        _load_trace_or_404(db, payload.candidate_run_id, project_id) if payload.candidate_run_id else None
+        _load_trace_or_404(db, payload.candidate_run_id, project_id)
+        if payload.candidate_run_id
+        else None
     )
     return build_quality_report(
         payload.fixtures,
@@ -253,5 +280,5 @@ def usage_summary(
     project_id: str = Depends(resolve_project),
     db: TraceStore = Depends(store),
 ) -> dict[str, Any]:
-    selected_project = project_id_filter or project_id
+    selected_project = _selected_project(project_id_filter, project_id)
     return db.usage_summary(project_id=selected_project)

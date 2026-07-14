@@ -62,8 +62,22 @@ def _trace(
 
 
 def test_replay_report_passes_for_lower_cost_latency_and_retries() -> None:
-    baseline = _trace("baseline", model_duration_ms=800, tool_duration_ms=200, input_tokens=1000, output_tokens=200, retries=1)
-    candidate = _trace("candidate", model_duration_ms=400, tool_duration_ms=100, input_tokens=500, output_tokens=100, retries=0)
+    baseline = _trace(
+        "baseline",
+        model_duration_ms=800,
+        tool_duration_ms=200,
+        input_tokens=1000,
+        output_tokens=200,
+        retries=1,
+    )
+    candidate = _trace(
+        "candidate",
+        model_duration_ms=400,
+        tool_duration_ms=100,
+        input_tokens=500,
+        output_tokens=100,
+        retries=0,
+    )
 
     report = build_replay_report(
         baseline,
@@ -79,21 +93,43 @@ def test_replay_report_passes_for_lower_cost_latency_and_retries() -> None:
 
 
 def test_replay_report_fails_on_latency_regression() -> None:
-    baseline = _trace("baseline", model_duration_ms=500, tool_duration_ms=100, input_tokens=200, output_tokens=50)
-    candidate = _trace("candidate", model_duration_ms=800, tool_duration_ms=200, input_tokens=200, output_tokens=50)
+    baseline = _trace(
+        "baseline", model_duration_ms=500, tool_duration_ms=100, input_tokens=200, output_tokens=50
+    )
+    candidate = _trace(
+        "candidate", model_duration_ms=800, tool_duration_ms=200, input_tokens=200, output_tokens=50
+    )
 
-    report = build_replay_report(baseline, candidate, gates=ReplayGates(max_latency_regression_pct=10))
+    report = build_replay_report(
+        baseline, candidate, gates=ReplayGates(max_latency_regression_pct=10)
+    )
 
     assert report["gates"]["passed"] is False
-    latency_gate = next(item for item in report["gates"]["results"] if item["name"] == "latency_regression")
+    latency_gate = next(
+        item for item in report["gates"]["results"] if item["name"] == "latency_regression"
+    )
     assert latency_gate["passed"] is False
 
 
 def test_replay_report_checks_schema_and_quality_gates() -> None:
-    baseline = _trace("baseline", model_duration_ms=800, tool_duration_ms=200, input_tokens=1000, output_tokens=200)
-    candidate = _trace("candidate", model_duration_ms=400, tool_duration_ms=100, input_tokens=500, output_tokens=100)
+    baseline = _trace(
+        "baseline",
+        model_duration_ms=800,
+        tool_duration_ms=200,
+        input_tokens=1000,
+        output_tokens=200,
+    )
+    candidate = _trace(
+        "candidate",
+        model_duration_ms=400,
+        tool_duration_ms=100,
+        input_tokens=500,
+        output_tokens=100,
+    )
     baseline.metadata.update({"schema_validity_pct": 100.0, "quality_score": 0.91})
-    candidate.metadata.update({"schema_valid": True, "schema_validity_pct": 100.0, "quality_score": 0.94})
+    candidate.metadata.update(
+        {"schema_valid": True, "schema_validity_pct": 100.0, "quality_score": 0.94}
+    )
 
     report = build_replay_report(
         baseline,
@@ -110,8 +146,20 @@ def test_replay_report_checks_schema_and_quality_gates() -> None:
 
 
 def test_replay_report_uses_fixture_quality_report() -> None:
-    baseline = _trace("baseline", model_duration_ms=800, tool_duration_ms=200, input_tokens=1000, output_tokens=200)
-    candidate = _trace("candidate", model_duration_ms=400, tool_duration_ms=100, input_tokens=500, output_tokens=100)
+    baseline = _trace(
+        "baseline",
+        model_duration_ms=800,
+        tool_duration_ms=200,
+        input_tokens=1000,
+        output_tokens=200,
+    )
+    candidate = _trace(
+        "candidate",
+        model_duration_ms=400,
+        tool_duration_ms=100,
+        input_tokens=500,
+        output_tokens=100,
+    )
     quality = {
         "case_count": 1,
         "passed": True,
@@ -136,8 +184,12 @@ def test_replay_report_uses_fixture_quality_report() -> None:
 
 
 def test_replay_markdown_contains_gate_table() -> None:
-    baseline = _trace("baseline", model_duration_ms=500, tool_duration_ms=100, input_tokens=200, output_tokens=50)
-    candidate = _trace("candidate", model_duration_ms=400, tool_duration_ms=100, input_tokens=100, output_tokens=50)
+    baseline = _trace(
+        "baseline", model_duration_ms=500, tool_duration_ms=100, input_tokens=200, output_tokens=50
+    )
+    candidate = _trace(
+        "candidate", model_duration_ms=400, tool_duration_ms=100, input_tokens=100, output_tokens=50
+    )
 
     markdown = replay_report_to_markdown(build_replay_report(baseline, candidate))
 
@@ -147,8 +199,21 @@ def test_replay_markdown_contains_gate_table() -> None:
 
 
 def test_cli_replay_writes_markdown_and_json(tmp_path) -> None:
-    baseline = _trace("baseline", model_duration_ms=800, tool_duration_ms=200, input_tokens=1000, output_tokens=200, retries=1)
-    candidate = _trace("candidate", model_duration_ms=400, tool_duration_ms=100, input_tokens=500, output_tokens=100)
+    baseline = _trace(
+        "baseline",
+        model_duration_ms=800,
+        tool_duration_ms=200,
+        input_tokens=1000,
+        output_tokens=200,
+        retries=1,
+    )
+    candidate = _trace(
+        "candidate",
+        model_duration_ms=400,
+        tool_duration_ms=100,
+        input_tokens=500,
+        output_tokens=100,
+    )
     baseline_path = tmp_path / "baseline.json"
     candidate_path = tmp_path / "candidate.json"
     baseline.export_json(baseline_path)
@@ -183,8 +248,12 @@ def test_cli_replay_writes_markdown_and_json(tmp_path) -> None:
 
 
 def test_cli_replay_exits_nonzero_when_gate_fails(tmp_path) -> None:
-    baseline = _trace("baseline", model_duration_ms=500, tool_duration_ms=100, input_tokens=200, output_tokens=50)
-    candidate = _trace("candidate", model_duration_ms=800, tool_duration_ms=200, input_tokens=200, output_tokens=50)
+    baseline = _trace(
+        "baseline", model_duration_ms=500, tool_duration_ms=100, input_tokens=200, output_tokens=50
+    )
+    candidate = _trace(
+        "candidate", model_duration_ms=800, tool_duration_ms=200, input_tokens=200, output_tokens=50
+    )
     baseline_path = tmp_path / "baseline.json"
     candidate_path = tmp_path / "candidate.json"
     baseline.export_json(baseline_path)
@@ -192,7 +261,15 @@ def test_cli_replay_exits_nonzero_when_gate_fails(tmp_path) -> None:
 
     result = CliRunner().invoke(
         app,
-        ["replay", "--baseline", str(baseline_path), "--candidate", str(candidate_path), "--max-latency-regression-pct", "0"],
+        [
+            "replay",
+            "--baseline",
+            str(baseline_path),
+            "--candidate",
+            str(candidate_path),
+            "--max-latency-regression-pct",
+            "0",
+        ],
     )
 
     assert result.exit_code == 1

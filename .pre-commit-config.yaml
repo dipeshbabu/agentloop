@@ -1,0 +1,66 @@
+minimum_pre_commit_version: "4.6.0"
+default_install_hook_types: [pre-commit, pre-push]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-added-large-files
+        args: [--maxkb=1000]
+      - id: check-ast
+      - id: check-case-conflict
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-symlinks
+      - id: check-toml
+      - id: check-yaml
+      - id: debug-statements
+      - id: detect-private-key
+      - id: mixed-line-ending
+        args: [--fix=lf]
+
+  - repo: local
+    hooks:
+      - id: uv-lock
+        name: verify uv lockfile
+        entry: uv lock --check
+        language: system
+        pass_filenames: false
+        files: ^(pyproject\.toml|uv\.lock)$
+
+      - id: ruff
+        name: ruff lint
+        entry: uv run --frozen ruff check --fix
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
+
+      - id: ruff-format
+        name: ruff format
+        entry: uv run --frozen ruff format
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
+
+      - id: repository-policy
+        name: repository metadata and local links
+        entry: uv run --frozen python scripts/check_repo.py
+        language: system
+        pass_filenames: false
+        files: (^|/)(.*\.md|pyproject\.toml|agentloop/version\.py|scripts/check_repo\.py)$
+
+      - id: bandit
+        name: bandit security scan
+        entry: uv run --frozen bandit -q -r agentloop dashboard scripts
+        language: system
+        pass_filenames: false
+        files: ^(agentloop|dashboard|scripts)/.*\.py$
+
+      - id: pytest
+        name: pytest
+        entry: uv run --frozen --all-extras python -m pytest -q
+        language: system
+        pass_filenames: false
+        stages: [pre-push]

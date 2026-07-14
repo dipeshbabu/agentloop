@@ -5,7 +5,11 @@ import json
 from typer.testing import CliRunner
 
 from agentloop.cli import app
-from agentloop.quality import build_quality_report, load_quality_fixtures, quality_report_to_markdown
+from agentloop.quality import (
+    build_quality_report,
+    load_quality_fixtures,
+    quality_report_to_markdown,
+)
 
 
 def test_quality_report_scores_required_fields_and_regex(tmp_path) -> None:

@@ -5,11 +5,14 @@ from typing import Any
 
 from agentloop.events import AgentEvent
 from agentloop.tracer import AgentTrace
+from agentloop.version import __version__
 
 _NANOSECONDS_PER_MILLISECOND = 1_000_000
 
 
-def trace_from_otel(payload: dict[str, Any] | list[dict[str, Any]], name: str | None = None) -> AgentTrace:
+def trace_from_otel(
+    payload: dict[str, Any] | list[dict[str, Any]], name: str | None = None
+) -> AgentTrace:
     """Convert OTLP/GenAI-style JSON spans into an AgentLoop trace.
 
     This accepts the standard OTLP JSON shape (`resourceSpans -> scopeSpans -> spans`),
@@ -42,7 +45,7 @@ def trace_to_otel(trace: AgentTrace) -> dict[str, Any]:
                 },
                 "scopeSpans": [
                     {
-                        "scope": {"name": "agentloop", "version": "0.4.0"},
+                        "scope": {"name": "agentloop", "version": __version__},
                         "spans": spans,
                     }
                 ],
@@ -105,14 +108,23 @@ def _event_from_span(span: dict[str, Any], run_id: str) -> AgentEvent:
         event_id="span_" + span_id if span_id else "",
         run_id=run_id,
         event_type=event_type,
-        name=str(attrs.get("gen_ai.tool.name") or attrs.get("agentloop.name") or span.get("name") or event_type),
+        name=str(
+            attrs.get("gen_ai.tool.name")
+            or attrs.get("agentloop.name")
+            or span.get("name")
+            or event_type
+        ),
         started_at=_iso_from_ns(started_ns),
         ended_at=_iso_from_ns(ended_ns),
         duration_ms=duration_ms,
         parent_id="span_" + parent_id if parent_id else None,
         model=_first_string(attrs, "gen_ai.request.model", "gen_ai.response.model"),
-        input_tokens=int(attrs.get("gen_ai.usage.input_tokens") or attrs.get("llm.usage.prompt_tokens") or 0),
-        output_tokens=int(attrs.get("gen_ai.usage.output_tokens") or attrs.get("llm.usage.completion_tokens") or 0),
+        input_tokens=int(
+            attrs.get("gen_ai.usage.input_tokens") or attrs.get("llm.usage.prompt_tokens") or 0
+        ),
+        output_tokens=int(
+            attrs.get("gen_ai.usage.output_tokens") or attrs.get("llm.usage.completion_tokens") or 0
+        ),
         status=status,
         error=error,
         metadata=metadata,
@@ -147,7 +159,9 @@ def _span_from_event(trace: AgentTrace, event: AgentEvent) -> dict[str, Any]:
         "status": {"code": "STATUS_CODE_OK" if event.status == "ok" else "STATUS_CODE_ERROR"},
     }
     if event.parent_id:
-        span["parentSpanId"] = event.parent_id.replace("span_", "").replace("evt_", "").rjust(16, "0")[-16:]
+        span["parentSpanId"] = (
+            event.parent_id.replace("span_", "").replace("evt_", "").rjust(16, "0")[-16:]
+        )
     return span
 
 

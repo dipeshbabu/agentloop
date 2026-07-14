@@ -42,7 +42,13 @@ def test_proof_demo_exercises_closed_loop_findings(tmp_path) -> None:
         ),
     )
 
-    assert {"parallelize_tools", "cache_context", "add_schema_validation", "runaway_loop", "tool_oscillation"} <= finding_types
+    assert {
+        "parallelize_tools",
+        "cache_context",
+        "add_schema_validation",
+        "runaway_loop",
+        "tool_oscillation",
+    } <= finding_types
     assert replay["gates"]["passed"] is True
 
 

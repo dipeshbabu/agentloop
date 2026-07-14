@@ -28,7 +28,10 @@ def build_report(trace: Any) -> dict[str, Any]:
         "retry_time_ms": round(sum(e.duration_ms for e in retry_events), 3),
         "input_tokens": sum(e.input_tokens for e in model_events),
         "output_tokens": sum(e.output_tokens for e in model_events),
-        "estimated_cost_usd": round(sum(estimate_cost_usd(e.model, e.input_tokens, e.output_tokens) for e in model_events), 6),
+        "estimated_cost_usd": round(
+            sum(estimate_cost_usd(e.model, e.input_tokens, e.output_tokens) for e in model_events),
+            6,
+        ),
         "repeated_context_tokens": repeated["repeated_context_tokens"],
         "repeated_context_ratio": repeated["repeated_context_ratio"],
         "parallelism_opportunities": parallel,
@@ -60,26 +63,58 @@ def parallelism_opportunities(tool_events: list[Any]) -> list[dict[str, Any]]:
         if len(items) >= 3:
             sequential = sum(item.duration_ms for item in items)
             parallel = max(item.duration_ms for item in items)
-            out.append({
-                "tool_name": name,
-                "count": len(items),
-                "sequential_time_ms": round(sequential, 3),
-                "estimated_parallel_time_ms": round(parallel, 3),
-                "estimated_savings_ms": round(max(0.0, sequential - parallel), 3),
-            })
+            out.append(
+                {
+                    "tool_name": name,
+                    "count": len(items),
+                    "sequential_time_ms": round(sequential, 3),
+                    "estimated_parallel_time_ms": round(parallel, 3),
+                    "estimated_savings_ms": round(max(0.0, sequential - parallel), 3),
+                }
+            )
     return out
 
 
-def build_recommendations(model_events: list[Any], retry_events: list[Any], repeated: dict[str, Any], parallel: list[dict[str, Any]]) -> list[dict[str, str]]:
+def build_recommendations(
+    model_events: list[Any],
+    retry_events: list[Any],
+    repeated: dict[str, Any],
+    parallel: list[dict[str, Any]],
+) -> list[dict[str, str]]:
     recs = []
     if repeated["repeated_context_ratio"] >= 0.10:
-        recs.append({"title": "Cache repeated context", "description": "Stable instructions appear across multiple model calls. Use cached prefixes or reusable summaries."})
+        recs.append(
+            {
+                "title": "Cache repeated context",
+                "description": "Stable instructions appear across multiple model calls. Use cached prefixes or reusable summaries.",
+            }
+        )
     if parallel:
-        recs.append({"title": "Parallelize tool calls", "description": "Repeated tool calls appear independent. Run them concurrently to lower end-to-end latency."})
+        recs.append(
+            {
+                "title": "Parallelize tool calls",
+                "description": "Repeated tool calls appear independent. Run them concurrently to lower end-to-end latency.",
+            }
+        )
     if retry_events:
-        recs.append({"title": "Use structured outputs", "description": "Retries were recorded. Add schema validation or smaller repair prompts."})
+        recs.append(
+            {
+                "title": "Use structured outputs",
+                "description": "Retries were recorded. Add schema validation or smaller repair prompts.",
+            }
+        )
     if model_events:
         largest = max(model_events, key=lambda e: e.input_tokens + e.output_tokens)
         if largest.total_tokens >= 4000:
-            recs.append({"title": "Compress largest model step", "description": f"The {largest.name} step used {largest.total_tokens} tokens. Consider staged summarization."})
-    return recs or [{"title": "No major pattern detected", "description": "Collect more traces for stronger recommendations."}]
+            recs.append(
+                {
+                    "title": "Compress largest model step",
+                    "description": f"The {largest.name} step used {largest.total_tokens} tokens. Consider staged summarization.",
+                }
+            )
+    return recs or [
+        {
+            "title": "No major pattern detected",
+            "description": "Collect more traces for stronger recommendations.",
+        }
+    ]
