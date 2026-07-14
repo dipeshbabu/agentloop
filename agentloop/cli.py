@@ -435,7 +435,10 @@ def patch_command(
     if autogen and not otel:
         path = _ensure_trace(path)
     trace = _load_trace(path, otel=otel, name=name)
-    plan = build_patch_plan(trace, repo_path=repo)
+    try:
+        plan = build_patch_plan(trace, repo_path=repo)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc), param_hint="--repo") from exc
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(patch_plan_to_markdown(plan), encoding="utf-8")
     if json_out is not None:

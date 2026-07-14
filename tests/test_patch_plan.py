@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 
+import pytest
 from typer.testing import CliRunner
 
 from agentloop.cli import app
@@ -35,7 +36,7 @@ def plan():
         with trace_retry("repair_json"):
             pass
 
-    plan = build_patch_plan(trace, repo_path=repo)
+    plan = build_patch_plan(trace, repo_path=repo, allowed_root=tmp_path)
 
     assert plan["dry_run"] is True
     assert plan["summary"]["patch_count"] >= 3
@@ -50,13 +51,47 @@ def plan():
     assert "Dry-run only" in parallel["notes"][0]
 
 
+def test_build_patch_plan_rejects_repo_outside_allowed_root(tmp_path) -> None:
+    allowed_root = tmp_path / "allowed"
+    outside_repo = tmp_path / "outside"
+    allowed_root.mkdir()
+    outside_repo.mkdir()
+
+    with trace_agent("path-boundary") as trace:
+        pass
+
+    with pytest.raises(ValueError, match="within the allowed root"):
+        build_patch_plan(trace, repo_path=outside_repo, allowed_root=allowed_root)
+
+
+def test_build_patch_plan_skips_source_symlinks(tmp_path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    outside_source = tmp_path / "outside.py"
+    outside_source.write_text("def read_source():\n    return 'secret'\n", encoding="utf-8")
+    linked_source = repo / "linked.py"
+    try:
+        linked_source.symlink_to(outside_source)
+    except OSError:
+        pytest.skip("source symlinks are not available on this platform")
+
+    with trace_agent("symlink-boundary") as trace:
+        for _ in range(3):
+            with trace_tool_call("read_source"):
+                pass
+
+    plan = build_patch_plan(trace, repo_path=repo, allowed_root=repo)
+
+    assert plan["patch_plans"][0]["files"] == []
+
+
 def test_patch_plan_markdown_includes_validation(tmp_path) -> None:
     with trace_agent("patchable") as trace:
         for _ in range(3):
             with trace_tool_call("read_source"):
                 pass
 
-    plan = build_patch_plan(trace, repo_path=tmp_path)
+    plan = build_patch_plan(trace, repo_path=tmp_path, allowed_root=tmp_path)
     markdown = patch_plan_to_markdown(plan)
 
     assert "# AgentLoop Patch Plan" in markdown
@@ -65,7 +100,8 @@ def test_patch_plan_markdown_includes_validation(tmp_path) -> None:
     assert "Patch Plans" in markdown
 
 
-def test_cli_patch_dry_run_writes_markdown_and_json(tmp_path) -> None:
+def test_cli_patch_dry_run_writes_markdown_and_json(tmp_path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
     repo = tmp_path / "repo"
     repo.mkdir()
     (repo / "workflow.py").write_text("def read_source(url):\n    return url\n", encoding="utf-8")
@@ -146,7 +182,7 @@ def inspect(result):
             with trace_tool_call(name):
                 pass
 
-    plan = build_patch_plan(trace, repo_path=repo)
+    plan = build_patch_plan(trace, repo_path=repo, allowed_root=tmp_path)
     patch_types = {item["type"] for item in plan["patch_plans"]}
 
     assert {

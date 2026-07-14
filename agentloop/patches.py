@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -75,8 +76,13 @@ class PatchPlan:
         }
 
 
-def build_patch_plan(trace: Any, repo_path: str | Path = ".") -> dict[str, Any]:
-    repo = Path(repo_path).resolve()
+def build_patch_plan(
+    trace: Any,
+    repo_path: str | Path = ".",
+    *,
+    allowed_root: str | Path | None = None,
+) -> dict[str, Any]:
+    repo = _resolve_repository_path(repo_path, allowed_root=allowed_root)
     diagnosis = build_diagnosis(trace)
     source_index = _index_source_files(repo)
     frameworks = _detect_frameworks(source_index)
@@ -210,30 +216,62 @@ def _plan_for_finding(
     )
 
 
+def _resolve_repository_path(
+    repo_path: str | Path,
+    *,
+    allowed_root: str | Path | None,
+) -> Path:
+    root_input = Path.cwd() if allowed_root is None else allowed_root
+    root = os.path.realpath(os.fspath(root_input))
+    candidate = os.path.realpath(os.path.join(root, os.fspath(repo_path)))
+    if not _path_is_within_root(candidate, root):
+        raise ValueError("repository path must remain within the allowed root")
+    if not os.path.isdir(candidate):
+        raise ValueError("repository path must identify an existing directory")
+    return Path(candidate)
+
+
+def _path_is_within_root(candidate: str, root: str) -> bool:
+    normalized_candidate = os.path.normcase(candidate)
+    normalized_root = os.path.normcase(root)
+    root_prefix = normalized_root.rstrip(os.sep) + os.sep
+    return normalized_candidate == normalized_root or normalized_candidate.startswith(root_prefix)
+
+
 def _index_source_files(repo: Path) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
-    if not repo.exists():
-        return out
-    for path in repo.rglob("*"):
-        if not path.is_file() or path.suffix not in SOURCE_SUFFIXES:
-            continue
-        relative = path.relative_to(repo)
-        if any(part in SKIP_DIRS for part in relative.parts):
-            continue
-        try:
-            text = path.read_text(encoding="utf-8")
-        except UnicodeDecodeError:
-            continue
-        relative_path = relative.as_posix()
-        out.append(
-            {
-                "path": relative_path,
-                "suffix": path.suffix,
-                "text": text,
-                "symbols": _python_symbols(text) if path.suffix == ".py" else [],
-                "frameworks": _framework_markers(text),
-            }
-        )
+    root = os.path.realpath(os.fspath(repo))
+    for directory, directory_names, filenames in os.walk(root, followlinks=False):
+        directory_names[:] = [
+            name
+            for name in directory_names
+            if name not in SKIP_DIRS and not os.path.islink(os.path.join(directory, name))
+        ]
+        for filename in filenames:
+            suffix = Path(filename).suffix
+            if suffix not in SOURCE_SUFFIXES:
+                continue
+            joined_path = os.path.join(directory, filename)
+            if os.path.islink(joined_path):
+                continue
+            source_path = os.path.realpath(joined_path)
+            if not _path_is_within_root(source_path, root) or not os.path.isfile(source_path):
+                continue
+            try:
+                with open(source_path, encoding="utf-8") as source_file:
+                    text = source_file.read()
+            except UnicodeDecodeError:
+                continue
+            relative_path = Path(os.path.relpath(source_path, root)).as_posix()
+            out.append(
+                {
+                    "path": relative_path,
+                    "suffix": suffix,
+                    "text": text,
+                    "symbols": _python_symbols(text) if suffix == ".py" else [],
+                    "frameworks": _framework_markers(text),
+                }
+            )
     return out
 
 

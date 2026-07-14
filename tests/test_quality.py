@@ -12,7 +12,7 @@ from agentloop.quality import (
 )
 
 
-def test_quality_report_scores_required_fields_and_regex(tmp_path) -> None:
+def test_quality_report_scores_required_fields_and_glob(tmp_path) -> None:
     fixtures = [
         {
             "id": "fields",
@@ -21,10 +21,10 @@ def test_quality_report_scores_required_fields_and_regex(tmp_path) -> None:
             "scorer": {"type": "required_fields", "required": ["summary", "sources"]},
         },
         {
-            "id": "regex",
+            "id": "glob",
             "candidate_output": "answer: 42",
             "baseline_output": "answer: 42",
-            "scorer": {"type": "regex", "pattern": r"answer:\s+\d+"},
+            "scorer": {"type": "glob", "pattern": "answer: [0-9][0-9]"},
         },
     ]
 
@@ -34,6 +34,37 @@ def test_quality_report_scores_required_fields_and_regex(tmp_path) -> None:
     assert report["passed"] is True
     assert report["candidate_score"] == 1.0
     assert "AgentLoop Quality Report" in markdown
+
+
+def test_quality_report_rejects_raw_regex_scorers() -> None:
+    report = build_quality_report(
+        [
+            {
+                "id": "unsafe-regex",
+                "candidate_output": "a" * 10_000 + "!",
+                "baseline_output": "unused",
+                "scorer": {"type": "regex", "pattern": "(a+)+$"},
+            }
+        ]
+    )
+
+    assert report["passed"] is False
+    assert "disabled" in report["cases"][0]["candidate"]["detail"]
+
+
+def test_quality_report_bounds_glob_inputs() -> None:
+    report = build_quality_report(
+        [
+            {
+                "id": "oversized-glob",
+                "candidate_output": "ok",
+                "scorer": {"type": "glob", "pattern": "*" * 257},
+            }
+        ]
+    )
+
+    assert report["passed"] is False
+    assert "safety limit" in report["cases"][0]["candidate"]["detail"]
 
 
 def test_load_quality_fixtures_accepts_list_or_wrapped_object(tmp_path) -> None:
