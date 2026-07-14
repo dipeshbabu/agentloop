@@ -7,6 +7,7 @@ from typer.testing import CliRunner
 
 import agentloop.cli as cli_module
 from agentloop.cli import app
+from agentloop.tracer import AgentTrace
 
 
 def _capture_clients(monkeypatch) -> list[dict[str, Any]]:
@@ -90,7 +91,7 @@ def test_remote_commands_use_environment_api_key(command, tmp_path, monkeypatch)
     monkeypatch.setenv("AGENTLOOP_ADMIN_API_KEY", "admin-must-not-be-sent")
 
     trace_path = tmp_path / "trace.json"
-    trace_path.write_text("{}", encoding="utf-8")
+    AgentTrace(name="credential-test").export_json(trace_path)
     out_path = tmp_path / f"{command}.json"
     args_by_command = {
         "upload": ["upload", "--path", str(trace_path)],

@@ -147,7 +147,15 @@ uv run agentloop demo --kind proof
 uv run python examples/langgraph_auto_instrumentation_demo.py
 ```
 
-`agentloop compare`, `agentloop audit`, `agentloop optimize`, and `agentloop value-report` auto-generate missing demo traces by default, so missing `runs/research_agent_baseline.json` should not block the local workflow.
+Only `agentloop demo` and `agentloop demo-all` generate synthetic traces. Their
+output is labeled as synthetic in the terminal and carries
+`metadata.synthetic = true` with `metadata.source = "agentloop_demo"`.
+
+Commands that load a trace require the supplied path to be an existing,
+readable regular file containing a valid trace. Missing, unreadable, or malformed
+inputs produce a clear error and a non-zero exit code; they are never replaced
+with demo data. The former `--autogen` fallback has been removed. Run one of the
+demo commands explicitly before using the generated paths in the examples above.
 
 ## Replay gates
 
