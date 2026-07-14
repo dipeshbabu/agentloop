@@ -81,3 +81,33 @@ def test_client_rejects_non_http_api_urls() -> None:
 
     with pytest.raises(AgentLoopClientError, match="must use http"):
         client.health()
+
+
+def test_client_sends_only_configured_credential_headers(monkeypatch) -> None:
+    captured_headers: dict[str, str] = {}
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):  # type: ignore[no-untyped-def]
+            return None
+
+        def read(self) -> bytes:
+            return b"{}"
+
+    def fake_urlopen(request, timeout):  # type: ignore[no-untyped-def]
+        assert timeout == 10.0
+        captured_headers.update({name.lower(): value for name, value in request.header_items()})
+        return Response()
+
+    monkeypatch.setattr("agentloop.client.urllib.request.urlopen", fake_urlopen)
+
+    AgentLoopClient(api_key="user-secret").health()
+    assert captured_headers["x-agentloop-key"] == "user-secret"
+    assert "x-agentloop-admin-key" not in captured_headers
+
+    captured_headers.clear()
+    AgentLoopClient(admin_api_key="admin-secret").health()
+    assert captured_headers["x-agentloop-admin-key"] == "admin-secret"
+    assert "x-agentloop-key" not in captured_headers
