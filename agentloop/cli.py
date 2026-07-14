@@ -47,14 +47,38 @@ def _remote_admin_client(api_url: str, admin_api_key: str | None) -> AgentLoopCl
     return AgentLoopClient(base_url=api_url, admin_api_key=resolved_admin_key)
 
 
-def _ensure_trace(path: Path, kind: str = "baseline") -> Path:
-    if path.exists():
-        return path
-    console.print(f"[yellow]Trace file not found:[/yellow] {path}")
-    console.print("Generating demo trace first...")
-    if kind == "optimized" or "optimized" in path.name:
-        return run_optimized(path.parent)
-    return run_baseline(path.parent)
+def _read_json_input(path: Path, *, param_hint: str) -> object:
+    try:
+        exists = path.exists()
+        is_file = path.is_file() if exists else False
+    except OSError as exc:
+        raise typer.BadParameter(
+            f"Input file is not readable: {path} ({exc})", param_hint=param_hint
+        ) from exc
+
+    if not exists:
+        raise typer.BadParameter(
+            f"Input file does not exist: {path}. "
+            "Generate synthetic traces explicitly with `agentloop demo` or `agentloop demo-all`.",
+            param_hint=param_hint,
+        )
+    if not is_file:
+        raise typer.BadParameter(f"Input path is not a regular file: {path}", param_hint=param_hint)
+
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as exc:
+        raise typer.BadParameter(
+            f"Input file is not readable as UTF-8: {path} ({exc})", param_hint=param_hint
+        ) from exc
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise typer.BadParameter(
+            f"Input file is not valid JSON: {path} ({exc.msg} at line {exc.lineno}, "
+            f"column {exc.colno})",
+            param_hint=param_hint,
+        ) from exc
 
 
 def _write_json(out: Path, payload: dict) -> None:
@@ -62,10 +86,28 @@ def _write_json(out: Path, payload: dict) -> None:
     out.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
-def _load_trace(path: Path, *, otel: bool = False, name: str | None = None) -> AgentTrace:
-    if otel:
-        return trace_from_otel(json.loads(path.read_text(encoding="utf-8")), name=name)
-    return AgentTrace.from_json(path)
+def _load_trace(
+    path: Path,
+    *,
+    otel: bool = False,
+    name: str | None = None,
+    param_hint: str = "path",
+) -> AgentTrace:
+    payload = _read_json_input(path, param_hint=param_hint)
+    format_name = "OpenTelemetry" if otel else "AgentLoop"
+    try:
+        if otel:
+            if not isinstance(payload, (dict, list)):
+                raise ValueError("expected a JSON object or array")
+            return trace_from_otel(payload, name=name)
+        if not isinstance(payload, dict):
+            raise ValueError("expected a JSON object")
+        return AgentTrace.from_dict(payload)
+    except (AttributeError, KeyError, TypeError, ValueError) as exc:
+        raise typer.BadParameter(
+            f"Input file is not a valid {format_name} trace: {path} ({exc})",
+            param_hint=param_hint,
+        ) from exc
 
 
 def _print_value_summary(value: dict) -> None:
@@ -112,13 +154,8 @@ def _print_doctor(result: dict) -> None:
 
 
 @app.command()
-def report(
-    path: Path,
-    autogen: bool = typer.Option(True, help="Generate a demo trace if the file is missing."),
-) -> None:
-    if autogen:
-        path = _ensure_trace(path)
-    trace = AgentTrace.from_json(path)
+def report(path: Path) -> None:
+    trace = _load_trace(path)
     trace.print_report()
 
 
@@ -126,13 +163,9 @@ def report(
 def compare(
     baseline: Path = Path("runs/research_agent_baseline.json"),
     optimized: Path = Path("runs/research_agent_optimized.json"),
-    autogen: bool = typer.Option(True, help="Generate missing demo traces first."),
 ) -> None:
-    if autogen:
-        baseline = _ensure_trace(baseline, "baseline")
-        optimized = _ensure_trace(optimized, "optimized")
-    base = AgentTrace.from_json(baseline).report()
-    opt = AgentTrace.from_json(optimized).report()
+    base = _load_trace(baseline, param_hint="--baseline").report()
+    opt = _load_trace(optimized, param_hint="--optimized").report()
     table = Table(title="AgentLoop Comparison")
     table.add_column("Metric")
     table.add_column("Baseline")
@@ -176,13 +209,9 @@ def replay_command(
     ),
     quality_fixtures: Path | None = typer.Option(None, help="Optional quality fixture JSON file."),
     fail_on_gate: bool = typer.Option(True, help="Exit non-zero when replay gates fail."),
-    autogen: bool = typer.Option(True, help="Generate missing demo traces first."),
 ) -> None:
-    if autogen:
-        baseline = _ensure_trace(baseline, "baseline")
-        candidate = _ensure_trace(candidate, "optimized")
-    baseline_trace = AgentTrace.from_json(baseline)
-    candidate_trace = AgentTrace.from_json(candidate)
+    baseline_trace = _load_trace(baseline, param_hint="--baseline")
+    candidate_trace = _load_trace(candidate, param_hint="--candidate")
     quality = (
         build_quality_report(
             load_quality_fixtures(quality_fixtures),
@@ -230,8 +259,12 @@ def quality_report_command(
     ),
     min_score: float | None = typer.Option(None, min=0.0),
 ) -> None:
-    baseline_trace = AgentTrace.from_json(baseline) if baseline is not None else None
-    candidate_trace = AgentTrace.from_json(candidate) if candidate is not None else None
+    baseline_trace = (
+        _load_trace(baseline, param_hint="--baseline") if baseline is not None else None
+    )
+    candidate_trace = (
+        _load_trace(candidate, param_hint="--candidate") if candidate is not None else None
+    )
     report_data = build_quality_report(
         load_quality_fixtures(fixtures),
         baseline_trace=baseline_trace,
@@ -270,13 +303,9 @@ def ci_command(
         False, help="Append report Markdown to GITHUB_STEP_SUMMARY."
     ),
     fail_on_gate: bool = typer.Option(True, help="Exit non-zero when CI gates fail."),
-    autogen: bool = typer.Option(True, help="Generate missing demo traces first."),
 ) -> None:
-    if autogen:
-        baseline = _ensure_trace(baseline, "baseline")
-        candidate = _ensure_trace(candidate, "optimized")
-    baseline_trace = AgentTrace.from_json(baseline)
-    candidate_trace = AgentTrace.from_json(candidate)
+    baseline_trace = _load_trace(baseline, param_hint="--baseline")
+    candidate_trace = _load_trace(candidate, param_hint="--candidate")
     quality = (
         build_quality_report(
             load_quality_fixtures(quality_fixtures),
@@ -320,10 +349,8 @@ def ci_command(
 
 
 @app.command("dump-report")
-def dump_report(path: Path, out: Path, autogen: bool = typer.Option(True)) -> None:
-    if autogen:
-        path = _ensure_trace(path)
-    trace = AgentTrace.from_json(path)
+def dump_report(path: Path, out: Path) -> None:
+    trace = _load_trace(path)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(trace.report(), indent=2), encoding="utf-8")
     console.print(f"Wrote {out}")
@@ -333,11 +360,8 @@ def dump_report(path: Path, out: Path, autogen: bool = typer.Option(True)) -> No
 def audit(
     path: Path = Path("runs/research_agent_baseline.json"),
     out: Path = Path("runs/agentloop_audit.md"),
-    autogen: bool = typer.Option(True),
 ) -> None:
-    if autogen:
-        path = _ensure_trace(path)
-    trace = AgentTrace.from_json(path)
+    trace = _load_trace(path, param_hint="--path")
     report_data = trace.report()
     improvement = estimate_improvement(report_data)
     report_data["estimated_latency_savings_ms"] = improvement["estimated_latency_savings_ms"]
@@ -355,11 +379,8 @@ def optimize(
     path: Path = Path("runs/research_agent_baseline.json"),
     out: Path = Path("runs/optimization_plan.md"),
     json_out: Path | None = typer.Option(None, help="Optional JSON output path."),
-    autogen: bool = typer.Option(True, help="Generate a demo trace if the file is missing."),
 ) -> None:
-    if autogen:
-        path = _ensure_trace(path)
-    trace = AgentTrace.from_json(path)
+    trace = _load_trace(path, param_hint="--path")
     plan = build_optimization_plan(trace)
     export_optimization_markdown(plan, out)
     if json_out is not None:
@@ -381,13 +402,8 @@ def diagnose(
     json_out: Path | None = typer.Option(None, help="Optional machine-readable diagnosis output."),
     otel: bool = typer.Option(False, help="Read the input path as OTLP/GenAI-style JSON."),
     name: str | None = typer.Option(None, help="Trace name to use when importing OTLP JSON."),
-    autogen: bool = typer.Option(
-        True, help="Generate a demo trace if the native trace file is missing."
-    ),
 ) -> None:
-    if autogen and not otel:
-        path = _ensure_trace(path)
-    trace = _load_trace(path, otel=otel, name=name)
+    trace = _load_trace(path, otel=otel, name=name, param_hint="--path")
     diagnosis = build_diagnosis(trace)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(diagnosis_to_markdown(diagnosis), encoding="utf-8")
@@ -411,16 +427,14 @@ def import_otel(
     out: Path,
     name: str | None = typer.Option(None, help="Optional imported trace name."),
 ) -> None:
-    trace = trace_from_otel(json.loads(path.read_text(encoding="utf-8")), name=name)
+    trace = _load_trace(path, otel=True, name=name)
     trace.export_json(out)
     console.print(f"Imported OTLP trace {trace.run_id} to {out}")
 
 
 @app.command("export-otel")
-def export_otel(path: Path, out: Path, autogen: bool = typer.Option(True)) -> None:
-    if autogen:
-        path = _ensure_trace(path)
-    trace = AgentTrace.from_json(path)
+def export_otel(path: Path, out: Path) -> None:
+    trace = _load_trace(path)
     _write_json(out, trace_to_otel(trace))
     console.print(f"Exported OTLP-style trace to {out}")
 
@@ -436,17 +450,12 @@ def patch_command(
     dry_run: bool = typer.Option(
         True, help="Only generate a patch plan. File edits are not supported yet."
     ),
-    autogen: bool = typer.Option(
-        True, help="Generate a demo trace if the native trace file is missing."
-    ),
 ) -> None:
     if not dry_run:
         raise typer.BadParameter(
             "Only --dry-run is supported. Generate a patch plan first, then apply manually."
         )
-    if autogen and not otel:
-        path = _ensure_trace(path)
-    trace = _load_trace(path, otel=otel, name=name)
+    trace = _load_trace(path, otel=otel, name=name, param_hint="--path")
     try:
         plan = build_patch_plan(trace, repo_path=repo)
     except ValueError as exc:
@@ -473,11 +482,8 @@ def value_report(
     runs_per_month: int = typer.Option(1000, min=0),
     engineer_hourly_rate_usd: float = typer.Option(150.0, min=0),
     incident_cost_usd: float = typer.Option(500.0, min=0),
-    autogen: bool = typer.Option(True),
 ) -> None:
-    if autogen:
-        path = _ensure_trace(path)
-    trace = AgentTrace.from_json(path)
+    trace = _load_trace(path, param_hint="--path")
     value = build_value_report(
         trace,
         runs_per_month=runs_per_month,
@@ -551,11 +557,8 @@ def create_api_key(project_id: str = "default", name: str = "default") -> None:
 def store_trace(
     path: Path = Path("runs/research_agent_baseline.json"),
     project_id: str = "default",
-    autogen: bool = typer.Option(True),
 ) -> None:
-    if autogen:
-        path = _ensure_trace(path)
-    trace = AgentTrace.from_json(path)
+    trace = _load_trace(path, param_hint="--path")
     db = get_store()
     db.save_trace(trace, project_id=project_id)
     console.print(f"Stored trace {trace.run_id} under project {project_id}")
@@ -674,12 +677,10 @@ def upload(
     api_key: str | None = typer.Option(
         None, help="Optional API key. Defaults to AGENTLOOP_API_KEY."
     ),
-    autogen: bool = typer.Option(True, help="Generate a demo trace if the file is missing."),
 ) -> None:
-    if autogen:
-        path = _ensure_trace(path)
+    trace = _load_trace(path, param_hint="--path")
     client = _remote_client(api_url, api_key)
-    response = client.upload_trace(path)
+    response = client.upload_trace(trace)
     console.print(f"Uploaded trace {response['run_id']} to {api_url}")
     console.print(f"Project: {response.get('project_id', 'default')}")
 
@@ -823,12 +824,12 @@ def demo(
         path = run_langgraph_style()
     elif kind == "proof":
         baseline, candidate = run_proof_pair()
-        console.print(f"Wrote trace to {baseline}")
-        console.print(f"Wrote trace to {candidate}")
+        console.print(f"Wrote synthetic demo trace to {baseline}")
+        console.print(f"Wrote synthetic demo trace to {candidate}")
         return
     else:
         raise typer.BadParameter("kind must be 'baseline', 'optimized', 'langgraph', or 'proof'")
-    console.print(f"Wrote trace to {path}")
+    console.print(f"Wrote synthetic demo trace to {path}")
 
 
 @app.command("demo-all")
@@ -837,11 +838,11 @@ def demo_all() -> None:
     opt = run_optimized()
     lg = run_langgraph_style()
     proof_base, proof_candidate = run_proof_pair()
-    console.print(f"Wrote {base}")
-    console.print(f"Wrote {opt}")
-    console.print(f"Wrote {lg}")
-    console.print(f"Wrote {proof_base}")
-    console.print(f"Wrote {proof_candidate}")
+    console.print(f"Wrote synthetic demo trace to {base}")
+    console.print(f"Wrote synthetic demo trace to {opt}")
+    console.print(f"Wrote synthetic demo trace to {lg}")
+    console.print(f"Wrote synthetic demo trace to {proof_base}")
+    console.print(f"Wrote synthetic demo trace to {proof_candidate}")
 
 
 @app.command()

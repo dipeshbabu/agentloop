@@ -24,6 +24,10 @@ def test_packaged_demos_write_expected_files(tmp_path) -> None:
     assert graph.exists()
     assert proof_base.exists()
     assert proof_candidate.exists()
+    for path in (base, opt, graph, proof_base, proof_candidate):
+        metadata = AgentTrace.from_json(path).metadata
+        assert metadata["synthetic"] is True
+        assert metadata["source"] == "agentloop_demo"
 
 
 def test_proof_demo_exercises_closed_loop_findings(tmp_path) -> None:
@@ -52,13 +56,14 @@ def test_proof_demo_exercises_closed_loop_findings(tmp_path) -> None:
     assert replay["gates"]["passed"] is True
 
 
-def test_cli_compare_autogenerates_missing_runs(tmp_path, monkeypatch) -> None:
+def test_cli_compare_rejects_missing_runs(tmp_path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
     result = runner.invoke(app, ["compare"])
-    assert result.exit_code == 0
-    assert (tmp_path / "runs" / "research_agent_baseline.json").exists()
-    assert (tmp_path / "runs" / "research_agent_optimized.json").exists()
+    assert result.exit_code == 2
+    assert "Input file does not exist" in result.output
+    assert "agentloop demo" in result.output
+    assert not (tmp_path / "runs").exists()
 
 
 def test_cli_demo_all(tmp_path, monkeypatch) -> None:
@@ -66,6 +71,7 @@ def test_cli_demo_all(tmp_path, monkeypatch) -> None:
     runner = CliRunner()
     result = runner.invoke(app, ["demo-all"])
     assert result.exit_code == 0
+    assert "synthetic demo trace" in result.output
     assert (tmp_path / "runs" / "research_agent_baseline.json").exists()
     assert (tmp_path / "runs" / "agentloop_proof_baseline.json").exists()
     assert (tmp_path / "runs" / "agentloop_proof_candidate.json").exists()

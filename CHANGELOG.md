@@ -28,6 +28,10 @@ Project history from before the first public release remains available in Git.
 
 - Replaced internal sales-planning documentation with contributor-focused
   dashboard and roadmap guides.
+- Removed the trace-consuming CLI commands' implicit `--autogen` fallback.
+  Missing, unreadable, non-file, and malformed inputs now fail with a non-zero
+  exit code. Generate synthetic traces explicitly with `agentloop demo` or
+  `agentloop demo-all`; generated traces are labeled and marked as synthetic.
 - Renamed value-report response fields from `sales_summary`,
   `estimated_customer_value_usd`, and `packaging_notes` to `value_summary`,
   `estimated_monthly_value_usd`, and `scenario_notes` before the first official
