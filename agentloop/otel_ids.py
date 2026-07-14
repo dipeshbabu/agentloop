@@ -9,10 +9,13 @@ those verbatim produced invalid ids that conforming OTLP consumers reject.
 These helpers produce a valid, deterministic id for any native identifier while
 leaving an already-valid id untouched, so:
 
-- ids the tracer/API already emit as hex keep working;
-- a valid OTLP id imported into AgentLoop round-trips back out unchanged;
-- arbitrary Unicode/path-like/short/long/all-zero ids map deterministically and
-  distinct native ids do not collide (SHA-256 of the original string).
+- a valid OTLP id (correct width, non-zero lowercase hex) is preserved exactly,
+  including one imported into AgentLoop, so it round-trips back out unchanged;
+- every other id — non-hex, wrong width (including the tracer's 16-hex run id
+  that is too short for a 32-char trace id), empty, or all-zero — is hashed with
+  SHA-256, which keeps distinct native ids distinct. In particular short hex ids
+  are NOT left-zero-padded: padding would map ``"a"`` and ``"0a"`` to the same
+  value and break within-trace uniqueness / parent linkage.
 
 The exporters keep the original native id in span attributes so a remapped id
 stays diagnosable.
@@ -50,33 +53,25 @@ def to_span_id(native: str) -> str:
 
 
 def _is_valid(value: str, width: int) -> bool:
-    return (
-        len(value) == width
-        and _HEX_DIGITS.issuperset(value)
-        and set(value) != {"0"}
-    )
+    return len(value) == width and _HEX_DIGITS.issuperset(value) and set(value) != {"0"}
 
 
 def _to_otel_id(native: str, width: int, prefixes: tuple[str, ...]) -> str:
     stripped = _strip_prefix(str(native), prefixes).lower()
-    # Already a valid id (e.g. a real OTLP id, or one round-tripped through
-    # import) — preserve it exactly.
+    # An already-valid id (e.g. a real OTLP id, or one round-tripped through
+    # import) is preserved exactly. Everything else — non-hex, wrong width,
+    # empty, or all-zero — is hashed so distinct native ids stay distinct.
+    # Note: short hex ids are deliberately NOT zero-padded, because padding maps
+    # "a" and "0a" (and any leading-zero variants) to the same value.
     if _is_valid(stripped, width):
         return stripped
-    # A shorter non-zero hex id (the tracer emits uuid4().hex[:16]) is padded on
-    # the left, matching the historical, collision-free mapping for fixed-width
-    # native ids.
-    if 0 < len(stripped) <= width and _HEX_DIGITS.issuperset(stripped) and set(stripped) != {"0"}:
-        return stripped.rjust(width, "0")
-    # Anything else (non-hex, too long, empty, or all-zero) is hashed
-    # deterministically from the original string so distinct ids stay distinct.
     return _hash_id(native, width)
 
 
 def _strip_prefix(value: str, prefixes: tuple[str, ...]) -> str:
     for prefix in prefixes:
         if value.startswith(prefix):
-            return value[len(prefix):]
+            return value[len(prefix) :]
     return value
 
 

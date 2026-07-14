@@ -13,14 +13,14 @@ from agentloop.tracer import AgentTrace
 # --- validity of produced ids ------------------------------------------------
 
 CUSTOM_TRACE_IDS = [
-    "customer/run",           # path-like / non-hex
-    "run_customer/run",       # prefixed non-hex
-    "café-trace-ünïcode",     # unicode
-    "abc",                    # short
-    "z" * 40,                 # long, non-hex
-    "0" * 32,                 # all-zero (invalid per OTLP)
-    "",                       # empty
-    "run_" + "a" * 16,        # native-style (uuid4().hex[:16])
+    "customer/run",  # path-like / non-hex
+    "run_customer/run",  # prefixed non-hex
+    "café-trace-ünïcode",  # unicode
+    "abc",  # short
+    "z" * 40,  # long, non-hex
+    "0" * 32,  # all-zero (invalid per OTLP)
+    "",  # empty
+    "run_" + "a" * 16,  # native-style (uuid4().hex[:16])
 ]
 
 CUSTOM_SPAN_IDS = [
@@ -30,6 +30,8 @@ CUSTOM_SPAN_IDS = [
     "0" * 16,
     "",
     "λ-span",
+    "a",
+    "0a",  # must not collide with "a" via left-zero-padding
 ]
 
 
@@ -46,6 +48,7 @@ def test_to_span_id_is_always_valid() -> None:
 
 
 # --- already-valid ids are preserved ----------------------------------------
+
 
 def test_valid_trace_id_round_trips_unchanged() -> None:
     valid = "abcdef0123456789abcdef0123456789"
@@ -68,6 +71,7 @@ def test_uppercase_hex_is_normalized_not_hashed() -> None:
 
 # --- determinism and collision resistance -----------------------------------
 
+
 def test_mapping_is_deterministic() -> None:
     for native in CUSTOM_TRACE_IDS:
         assert to_trace_id(native) == to_trace_id(native)
@@ -85,7 +89,40 @@ def test_all_zero_is_remapped_to_nonzero() -> None:
     assert set(to_span_id("0" * 16)) != {"0"}
 
 
+def test_short_hex_ids_differing_only_by_leading_zero_do_not_collide() -> None:
+    # Regression: "a" and "0a" (and trace-level equivalents) must NOT map to the
+    # same padded value — that would break within-trace uniqueness.
+    assert to_span_id("a") != to_span_id("0a")
+    assert to_trace_id("a") != to_trace_id("0a")
+
+
+def test_end_to_end_two_leading_zero_variant_spans_stay_distinct() -> None:
+    # Two events whose native ids differ only by a leading zero must export to
+    # distinct spanIds within one trace so parent linkage can't cross wires.
+    trace = AgentTrace(name="collision", run_id="run_" + "a" * 16)
+    for eid in ("a", "0a"):
+        trace.add_event(
+            AgentEvent(
+                event_id=eid,
+                run_id=trace.run_id,
+                event_type="tool_call",
+                name=f"tool_{eid}",
+                started_at="2026-01-01T00:00:00+00:00",
+                ended_at="2026-01-01T00:00:01+00:00",
+                duration_ms=1000.0,
+            )
+        )
+
+    payload = trace_to_otel(trace)
+    spans = payload["resourceSpans"][0]["scopeSpans"][0]["spans"]
+    span_ids = [s["spanId"] for s in spans]
+    assert len(span_ids) == 2
+    assert span_ids[0] != span_ids[1]
+    assert all(is_valid_span_id(sid) for sid in span_ids)
+
+
 # --- export end-to-end -------------------------------------------------------
+
 
 def test_export_emits_valid_ids_for_custom_run_id() -> None:
     # A user-chosen, non-hex run id and event ids (as the API/local constructors
