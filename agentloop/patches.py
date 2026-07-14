@@ -7,6 +7,12 @@ from pathlib import Path
 from typing import Any
 
 from agentloop.findings import build_diagnosis
+from agentloop.markdown import (
+    markdown_code_span,
+    markdown_fenced_code,
+    markdown_heading,
+    markdown_text,
+)
 
 SUPPORTED_PATCH_TYPES = {
     "parallelize_tools",
@@ -121,14 +127,15 @@ def build_patch_plan(
 def patch_plan_to_markdown(plan: dict[str, Any]) -> str:
     summary = plan["summary"]
     lines = [
-        f"# AgentLoop Patch Plan: {plan['name']}",
+        f"# AgentLoop Patch Plan: {markdown_heading(plan['name'])}",
         "",
-        f"- Run ID: `{plan['run_id']}`",
+        f"- Run ID: {markdown_code_span(plan['run_id'])}",
         f"- Dry run: {plan['dry_run']}",
-        f"- Repo: `{plan['repo_path']}`",
+        f"- Repo: {markdown_code_span(plan['repo_path'])}",
         f"- Patch plans: {summary['patch_count']}",
         f"- Unsupported findings: {summary['unsupported_finding_count']}",
-        f"- Frameworks detected: {', '.join(summary['frameworks_detected']) or 'none'}",
+        "- Frameworks detected: "
+        f"{markdown_text(', '.join(map(str, summary['frameworks_detected'])) or 'none')}",
         "",
         "## Patch Plans",
         "",
@@ -139,23 +146,22 @@ def patch_plan_to_markdown(plan: dict[str, Any]) -> str:
     for item in patch_plans:
         lines.extend(
             [
-                f"### {item['patch_id']}: {item['title']}",
+                f"### {markdown_heading(item['patch_id'])}: {markdown_heading(item['title'])}",
                 "",
-                f"- Finding: `{item['finding_id']}`",
-                f"- Type: `{item['type']}`",
-                f"- Risk: {item['risk']}",
-                f"- Framework: {item['framework']}",
-                f"- Evidence spans: {', '.join(item['evidence_spans']) or 'none'}",
-                f"- Before pattern: {item['before_pattern']}",
-                f"- Proposed rewrite: {item['proposed_rewrite']}",
-                f"- Validation command: `{item['validation_command']}`",
-                f"- Acceptance criteria: {item['acceptance_criteria']}",
+                f"- Finding: {markdown_code_span(item['finding_id'])}",
+                f"- Type: {markdown_code_span(item['type'])}",
+                f"- Risk: {markdown_text(item['risk'])}",
+                f"- Framework: {markdown_text(item['framework'])}",
+                "- Evidence spans: "
+                f"{markdown_text(', '.join(map(str, item['evidence_spans'])) or 'none')}",
+                f"- Before pattern: {markdown_text(item['before_pattern'])}",
+                f"- Proposed rewrite: {markdown_text(item['proposed_rewrite'])}",
+                f"- Validation command: {markdown_code_span(item['validation_command'])}",
+                f"- Acceptance criteria: {markdown_text(item['acceptance_criteria'])}",
                 "",
                 "Suggested diff shape:",
                 "",
-                "```text",
-                item["suggested_diff"],
-                "```",
+                markdown_fenced_code(item["suggested_diff"], language="text"),
                 "",
                 "Likely files:",
                 "",
@@ -164,23 +170,27 @@ def patch_plan_to_markdown(plan: dict[str, Any]) -> str:
         if not item["files"]:
             lines.extend(["- No likely source file found from trace span names.", ""])
         for candidate in item["files"]:
-            symbols = ", ".join(candidate["symbols"]) or "unknown"
+            symbols = markdown_text(", ".join(map(str, candidate["symbols"])) or "unknown")
             location = _format_locations(candidate.get("locations", []))
             lines.append(
-                f"- `{candidate['path']}`{location} ({candidate['confidence']}): "
-                f"{symbols}. {candidate['reason']}"
+                f"- {markdown_code_span(candidate['path'])}{location} "
+                f"({markdown_text(candidate['confidence'])}): {symbols}. "
+                f"{markdown_text(candidate['reason'])}"
             )
         if item["notes"]:
             lines.extend(["", "Notes:", ""])
             for note in item["notes"]:
-                lines.append(f"- {note}")
+                lines.append(f"- {markdown_text(note)}")
         lines.append("")
 
     unsupported = plan.get("unsupported_findings", [])
     if unsupported:
         lines.extend(["## Unsupported Findings", ""])
         for item in unsupported:
-            lines.append(f"- `{item['finding_id']}` `{item['type']}`: {item['reason']}")
+            lines.append(
+                f"- {markdown_code_span(item['finding_id'])} "
+                f"{markdown_code_span(item['type'])}: {markdown_text(item['reason'])}"
+            )
     return "\n".join(lines).rstrip() + "\n"
 
 
@@ -520,7 +530,8 @@ def _format_locations(locations: list[dict[str, Any]]) -> str:
     if not locations:
         return ""
     formatted = ", ".join(
-        f"{location.get('symbol', 'symbol')}:{location.get('line', '?')}"
+        f"{markdown_text(location.get('symbol', 'symbol'))}:"
+        f"{markdown_text(location.get('line', '?'))}"
         for location in locations[:3]
     )
     return f" lines {formatted}"

@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from agentloop.markdown import markdown_code_span, markdown_table_cell
+
 
 @dataclass(frozen=True)
 class ReplayGates:
@@ -67,8 +69,10 @@ def replay_report_to_markdown(report: dict[str, Any]) -> str:
         "# AgentLoop Replay Report",
         "",
         f"- Status: {status}",
-        f"- Baseline: `{baseline['name']}` `{baseline['run_id']}`",
-        f"- Candidate: `{candidate['name']}` `{candidate['run_id']}`",
+        f"- Baseline: {markdown_code_span(baseline['name'])} "
+        f"{markdown_code_span(baseline['run_id'])}",
+        f"- Candidate: {markdown_code_span(candidate['name'])} "
+        f"{markdown_code_span(candidate['run_id'])}",
         "",
         "## Metric Deltas",
         "",
@@ -180,7 +184,10 @@ def replay_report_to_markdown(report: dict[str, Any]) -> str:
     )
     for item in gates["results"]:
         gate_status = "pass" if item["passed"] else "fail"
-        lines.append(f"| {item['name']} | {gate_status} | {item['detail']} |")
+        lines.append(
+            f"| {markdown_table_cell(item['name'])} | {gate_status} | "
+            f"{markdown_table_cell(item['detail'])} |"
+        )
     return "\n".join(lines).rstrip() + "\n"
 
 
