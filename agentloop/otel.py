@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from agentloop.events import AgentEvent
+from agentloop.otel_ids import to_span_id, to_trace_id
 from agentloop.tracer import AgentTrace
 from agentloop.version import __version__
 
@@ -71,7 +72,9 @@ def _run_id_from_spans(spans: list[dict[str, Any]]) -> str:
     for span in spans:
         trace_id = str(span.get("traceId") or span.get("trace_id") or "")
         if trace_id:
-            return "run_" + trace_id[-16:].lower()
+            # Preserve the full trace id (not just the last 16 chars) so a valid
+            # OTLP id round-trips back out unchanged via to_trace_id().
+            return "run_" + trace_id.lower()
     return "run_otel_import"
 
 
@@ -148,9 +151,15 @@ def _span_from_event(trace: AgentTrace, event: AgentEvent) -> dict[str, Any]:
         if isinstance(value, str | int | float | bool):
             attrs.append(_attribute(f"agentloop.metadata.{key}", value))
 
+    # Keep the original native ids in attributes so a remapped (non-hex/custom)
+    # id stays diagnosable; the run id is already carried as agentloop.run_id.
+    attrs.append(_attribute("agentloop.native_event_id", event.event_id))
+    if event.parent_id:
+        attrs.append(_attribute("agentloop.native_parent_id", event.parent_id))
+
     span = {
-        "traceId": trace.run_id.replace("run_", "").rjust(32, "0")[-32:],
-        "spanId": event.event_id.replace("span_", "").replace("evt_", "").rjust(16, "0")[-16:],
+        "traceId": to_trace_id(trace.run_id),
+        "spanId": to_span_id(event.event_id),
         "name": event.name,
         "kind": "SPAN_KIND_INTERNAL",
         "startTimeUnixNano": str(start_ns),
@@ -159,9 +168,7 @@ def _span_from_event(trace: AgentTrace, event: AgentEvent) -> dict[str, Any]:
         "status": {"code": "STATUS_CODE_OK" if event.status == "ok" else "STATUS_CODE_ERROR"},
     }
     if event.parent_id:
-        span["parentSpanId"] = (
-            event.parent_id.replace("span_", "").replace("evt_", "").rjust(16, "0")[-16:]
-        )
+        span["parentSpanId"] = to_span_id(event.parent_id)
     return span
 
 
