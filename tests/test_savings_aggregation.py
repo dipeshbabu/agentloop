@@ -10,7 +10,9 @@ from agentloop.optimizer import (
 from agentloop.tracer import AgentTrace
 
 
-def _card(rec: RecommendationType, latency: float, cost: float, nodes: list[str]) -> OptimizationCard:
+def _card(
+    rec: RecommendationType, latency: float, cost: float, nodes: list[str]
+) -> OptimizationCard:
     return OptimizationCard(
         type=rec,
         title=rec.value,
@@ -25,10 +27,11 @@ def _card(rec: RecommendationType, latency: float, cost: float, nodes: list[str]
 
 # --- aggregation rule --------------------------------------------------------
 
-def test_overlapping_cards_take_max_not_sum() -> None:
-    # Two parallelization cards + one oscillation card, all on the same spans:
-    # they are alternatives, so the aggregate is the best single estimate (300),
-    # not the naive sum (300 + 300 + 200 = 800).
+
+def test_overlapping_cards_take_best_alternative_not_sum() -> None:
+    # Two parallelization cards + one oscillation card, all pairwise
+    # overlapping: only one can apply, so the aggregate is the best single
+    # estimate (300), not the naive sum (300 + 300 + 200 = 800).
     cards = [
         _card(RecommendationType.PARALLELIZE_TOOLS, 300, 0.0, ["n1", "n2"]),
         _card(RecommendationType.PARALLELIZE_TOOLS, 300, 0.0, ["n2", "n3"]),
@@ -36,8 +39,46 @@ def test_overlapping_cards_take_max_not_sum() -> None:
     ]
     agg = _aggregate_savings(cards, current_runtime=800.0, current_cost=0.0)
     assert agg["latency_savings_ms"] == 300.0
-    assert agg["explanation"]["independent_group_count"] == 1
-    assert agg["explanation"]["overlapping_group_count"] == 1
+    assert len(agg["explanation"]["selected_card_indexes"]) == 1
+
+
+def test_chain_overlap_selects_compatible_disjoint_cards() -> None:
+    # A=[n1]/100 and C=[n2]/100 are compatible even though B=[n1, n2]/150
+    # overlaps both: the best realizable plan applies A+C for 200, not the
+    # single component maximum of 150.
+    cards = [
+        _card(RecommendationType.PARALLELIZE_TOOLS, 100, 0.0, ["n1"]),
+        _card(RecommendationType.PARALLELIZE_TOOLS, 150, 0.0, ["n1", "n2"]),
+        _card(RecommendationType.PARALLELIZE_TOOLS, 100, 0.0, ["n2"]),
+    ]
+    agg = _aggregate_savings(cards, current_runtime=1000.0, current_cost=0.0)
+    assert agg["latency_savings_ms"] == 200.0
+    assert agg["explanation"]["selected_card_indexes"] == [0, 2]
+
+
+def test_latency_and_cost_come_from_the_same_selection() -> None:
+    # Overlapping alternatives with 100 ms/$0 and 0 ms/$10: no single plan
+    # achieves both maxima, so the totals must come from one alternative —
+    # latency is the primary objective, so (100 ms, $0), never (100 ms, $10).
+    cards = [
+        _card(RecommendationType.PARALLELIZE_TOOLS, 100, 0.0, ["n1"]),
+        _card(RecommendationType.ROUTE_TO_SMALLER_MODEL, 0, 10.0, ["n1"]),
+    ]
+    agg = _aggregate_savings(cards, current_runtime=1000.0, current_cost=20.0)
+    assert agg["latency_savings_ms"] == 100.0
+    assert agg["cost_savings_usd"] == 0.0
+    assert agg["explanation"]["selected_card_indexes"] == [0]
+
+
+def test_equal_latency_ties_break_by_cost() -> None:
+    cards = [
+        _card(RecommendationType.PARALLELIZE_TOOLS, 100, 0.0, ["n1"]),
+        _card(RecommendationType.BATCH_MODEL_CALLS, 100, 5.0, ["n1"]),
+    ]
+    agg = _aggregate_savings(cards, current_runtime=1000.0, current_cost=20.0)
+    assert agg["latency_savings_ms"] == 100.0
+    assert agg["cost_savings_usd"] == 5.0
+    assert agg["explanation"]["selected_card_indexes"] == [1]
 
 
 def test_disjoint_cards_are_additive() -> None:
@@ -49,8 +90,7 @@ def test_disjoint_cards_are_additive() -> None:
     agg = _aggregate_savings(cards, current_runtime=1000.0, current_cost=1.0)
     assert agg["latency_savings_ms"] == 150.0
     assert agg["cost_savings_usd"] == 0.07
-    assert agg["explanation"]["independent_group_count"] == 2
-    assert agg["explanation"]["overlapping_group_count"] == 0
+    assert agg["explanation"]["selected_card_indexes"] == [0, 1]
 
 
 def test_repeated_same_span_loop_detectors_do_not_stack() -> None:
@@ -73,17 +113,18 @@ def test_aggregate_is_capped_at_current_runtime_and_cost() -> None:
     assert agg["cost_savings_usd"] == 0.5
 
 
-def test_cards_without_affected_spans_are_separate_groups() -> None:
+def test_cards_without_affected_spans_always_count() -> None:
     cards = [
         _card(RecommendationType.CACHE_CONTEXT, 100, 0.0, []),
         _card(RecommendationType.ADD_SCHEMA_VALIDATION, 50, 0.0, []),
     ]
     agg = _aggregate_savings(cards, current_runtime=1000.0, current_cost=0.0)
     assert agg["latency_savings_ms"] == 150.0
-    assert agg["explanation"]["independent_group_count"] == 2
+    assert agg["explanation"]["selected_card_indexes"] == [0, 1]
 
 
 # --- end-to-end reproduction from the issue ----------------------------------
+
 
 def _alternating_tool_trace() -> AgentTrace:
     """Eight alternating 100 ms tool events named 'a' and 'b' — reproduces the

@@ -5,6 +5,7 @@ from enum import Enum
 from typing import Any
 
 from agentloop.graph import ExecutionGraph
+from agentloop.savings import SavingsItem, select_compatible
 
 
 class RecommendationType(str, Enum):
@@ -94,68 +95,48 @@ def _aggregate_savings(
 ) -> dict[str, Any]:
     """Combine per-card savings without double-counting overlapping spans.
 
-    Cards that share any affected span target the same work, so their estimates
-    are mutually exclusive **alternatives**, not additive — within such a group
-    we take the single best (max) estimate. Disjoint groups are summed. The
-    aggregate is finally capped at the current runtime/cost, because no plan can
-    save more wall-clock time (or money) than the run actually spent. This keeps
-    ``latency_reduction_pct`` at or below 100% and internally consistent with
-    ``runtime_ms``, while per-card estimates stay untouched and explainable.
+    Cards that share any affected span compete for the same work, so their
+    estimates are mutually exclusive alternatives, not additive. The plan
+    totals come from the compatible (span-disjoint) subset of cards that
+    maximizes latency savings, breaking ties by cost savings — so the reported
+    latency and cost pair is achievable by one concrete set of changes, never a
+    mix of incompatible alternatives. The totals are finally capped at the
+    current runtime/cost, because no plan can save more wall-clock time (or
+    money) than the run actually spent. This keeps ``latency_reduction_pct`` at
+    or below 100% and internally consistent with ``runtime_ms``, while per-card
+    estimates stay untouched and explainable.
     """
-    groups = _group_cards_by_shared_span(cards)
-    latency = sum(max((c.estimated_latency_savings_ms for c in g), default=0.0) for g in groups)
-    cost = sum(max((c.estimated_cost_savings_usd for c in g), default=0.0) for g in groups)
-    capped_latency = min(latency, current_runtime) if current_runtime else min(latency, 0.0)
-    capped_cost = min(cost, current_cost) if current_cost else min(cost, 0.0)
-    raw_latency = sum(c.estimated_latency_savings_ms for c in cards)
-    raw_cost = sum(c.estimated_cost_savings_usd for c in cards)
-    overlapping = sum(1 for g in groups if len(g) > 1)
+    items = [
+        SavingsItem(
+            spans=frozenset(card.affected_nodes or []),
+            latency_ms=float(card.estimated_latency_savings_ms or 0.0),
+            cost_usd=float(card.estimated_cost_savings_usd or 0.0),
+        )
+        for card in cards
+    ]
+    selection = select_compatible(items)
+    capped_latency = min(selection.latency_ms, current_runtime) if current_runtime else 0.0
+    capped_cost = min(selection.cost_usd, current_cost) if current_cost else 0.0
+    raw_latency = sum(card.estimated_latency_savings_ms for card in cards)
+    raw_cost = sum(card.estimated_cost_savings_usd for card in cards)
     return {
         "latency_savings_ms": capped_latency,
         "cost_savings_usd": capped_cost,
         "explanation": {
             "rule": (
-                "cards sharing affected spans are mutually exclusive alternatives "
-                "(max per group); disjoint groups are summed; total capped at current "
-                "runtime/cost"
+                "cards sharing affected spans are mutually exclusive alternatives; "
+                "totals come from the compatible (span-disjoint) subset of cards "
+                "that maximizes latency savings, breaking ties by cost savings, "
+                "capped at current runtime/cost"
             ),
             "card_count": len(cards),
-            "independent_group_count": len(groups),
-            "overlapping_group_count": overlapping,
+            "selected_card_indexes": list(selection.indices),
             "raw_latency_savings_ms": round(raw_latency, 3),
             "effective_latency_savings_ms": round(capped_latency, 3),
             "raw_cost_savings_usd": round(raw_cost, 6),
             "effective_cost_savings_usd": round(capped_cost, 6),
         },
     }
-
-
-def _group_cards_by_shared_span(cards: list[OptimizationCard]) -> list[list[OptimizationCard]]:
-    """Union cards that share at least one affected span. Cards with no affected
-    spans each form their own group (nothing to overlap with)."""
-    parent = list(range(len(cards)))
-
-    def find(i: int) -> int:
-        while parent[i] != i:
-            parent[i] = parent[parent[i]]
-            i = parent[i]
-        return i
-
-    def union(i: int, j: int) -> None:
-        parent[find(i)] = find(j)
-
-    seen: dict[str, int] = {}
-    for idx, card in enumerate(cards):
-        for node in card.affected_nodes or []:
-            if node in seen:
-                union(idx, seen[node])
-            else:
-                seen[node] = idx
-
-    grouped: dict[int, list[OptimizationCard]] = {}
-    for idx, card in enumerate(cards):
-        grouped.setdefault(find(idx), []).append(card)
-    return list(grouped.values())
 
 
 def _parallelization_cards(graph: ExecutionGraph) -> list[OptimizationCard]:
