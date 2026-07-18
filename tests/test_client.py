@@ -67,13 +67,44 @@ def test_client_quotes_run_ids_in_request_paths() -> None:
     client.get_optimization_plan("team/run ?1")
     client.get_diagnosis("team/run ?1")
     client.get_value_report("team/run ?1")
+    client.update_finding_status("team/run ?1", "finding/1", "accepted")
 
     assert routes == [
         "/traces/team%2Frun%20%3F1/report",
         "/traces/team%2Frun%20%3F1/optimize",
         "/traces/team%2Frun%20%3F1/diagnose",
         "/traces/team%2Frun%20%3F1/value",
+        "/findings/team%2Frun%20%3F1/finding%2F1/status",
     ]
+
+
+def test_client_pagination_and_finding_status_roundtrip(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("AGENTLOOP_SQLITE_PATH", str(tmp_path / "client.db"))
+    test_client = TestClient(app)
+
+    class LocalAgentLoopClient(AgentLoopClient):
+        def _request(self, method, route, payload=None):  # type: ignore[no-untyped-def]
+            if method == "GET":
+                return test_client.get(route).json()
+            if method == "POST":
+                return test_client.post(route, json=payload).json()
+            raise AssertionError(f"unexpected request {method} {route}")
+
+    client = LocalAgentLoopClient()
+    path = run_baseline(tmp_path)
+    uploaded = client.upload_trace(path)
+    run_id = uploaded["run_id"]
+
+    default_page = client.list_traces()
+    assert default_page["next_cursor"] is None
+    assert default_page["traces"][0]["run_id"] == run_id
+
+    paged = client.list_traces(page_size=1)
+    assert len(paged["traces"]) == 1
+
+    finding = client.list_findings()["findings"][0]
+    updated = client.update_finding_status(finding["run_id"], finding["finding_id"], "accepted")
+    assert updated["status"] == "accepted"
 
 
 def test_client_rejects_non_http_api_urls() -> None:

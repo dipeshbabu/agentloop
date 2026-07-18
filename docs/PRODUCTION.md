@@ -119,6 +119,48 @@ GET /readyz
 `/health` confirms the API process is up and returns the package version. `/readyz`
 initializes and queries the configured store, so use it for readiness checks.
 
+## Database Schema Migrations
+
+`agentloop/migrations.py` holds a small, ordered list of migrations applied by both
+`SQLiteTraceStore` and `PostgresTraceStore` on every `init()` call (which every store
+method calls before touching data). Applied versions are tracked in a
+`schema_migrations` table. Migrations are idempotent (`IF NOT EXISTS` / `ON CONFLICT
+DO NOTHING`), so concurrent `init()` calls from multiple API/dashboard replicas
+starting at once are safe without extra locking, and re-running `init()` never
+re-applies or duplicates a migration.
+
+**Upgrade.** Deploy the new package version and restart the API/dashboard; the next
+`init()` call — which happens automatically on startup and on every request through
+the `store()` dependency — applies any pending migrations before serving traffic. A
+database that predates the migration system (no `schema_migrations` table) is
+recognized as already at the pre-#22 baseline schema (migration `0001`) because that
+migration's `CREATE TABLE IF NOT EXISTS` statements reproduce the exact schema `init()`
+used to create inline; only the migrations after it run.
+
+**Backup.** Before upgrading a production database, take a standard backup:
+
+```bash
+pg_dump --format=custom --file=agentloop-backup.dump "$AGENTLOOP_DATABASE_URL"
+```
+
+For SQLite, copy the database file while no process holds it open, or use
+`sqlite3 runs/agentloop.db ".backup agentloop-backup.db"`.
+
+**Rollback.** Migrations in this system are forward-only; there is no automated "down"
+migration. To roll back, restore the pre-upgrade backup and redeploy the previous
+package version. Because each migration is applied inside a single transaction (`init()`
+opens one connection per call and commits only after every pending migration in that
+call succeeds), a failed migration leaves the schema at its last successfully applied
+version — it never partially applies. The `MigrationError` raised on failure names the
+migration version and reports the underlying database error to guide recovery (e.g.
+free disk space, resolve a blocking lock) before retrying.
+
+**Compatibility.** Migration `0002` (issue #10) de-duplicates any `usage_events` rows
+that predate the per-run uniqueness constraint, keeping the most recent row per
+`(project_id, run_id)`, before adding the constraint — so upgrading a store that
+already has duplicate usage rows from retried saves is safe and does not fail.
+Migration `0003` (issue #19) only adds indexes and has no data impact.
+
 ## Package Release
 
 Tag releases as `vX.Y.Z`. The release workflow builds the Python package and can

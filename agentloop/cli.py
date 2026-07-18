@@ -27,7 +27,12 @@ from agentloop.quality import (
     quality_report_to_markdown,
 )
 from agentloop.replay import ReplayGates, build_replay_report, replay_report_to_markdown
-from agentloop.store import get_store
+from agentloop.store import (
+    DEFAULT_PAGE_SIZE,
+    FindingNotFoundError,
+    FindingTransitionError,
+    get_store,
+)
 from agentloop.tracer import AgentTrace
 from agentloop.value import build_value_report
 
@@ -581,9 +586,23 @@ def store_trace(
 
 
 @app.command("list-stored-traces")
-def list_stored_traces(project_id: str | None = None) -> None:
+def list_stored_traces(
+    project_id: str | None = None,
+    limit: int | None = typer.Option(None, help="Page size; omit to list every stored trace."),
+    cursor: str | None = typer.Option(
+        None, help="Continuation cursor from a previous --limit call's printed next-cursor."
+    ),
+) -> None:
     db = get_store()
-    traces = db.list_traces(project_id=project_id)
+    if limit is None and cursor is None:
+        traces = db.list_traces(project_id=project_id)
+        next_cursor = None
+    else:
+        page = db.list_traces_page(
+            project_id=project_id, limit=limit or DEFAULT_PAGE_SIZE, cursor=cursor
+        )
+        traces = page["items"]
+        next_cursor = page["next_cursor"]
     table = Table(title="Stored AgentLoop Traces")
     table.add_column("Project")
     table.add_column("Run ID")
@@ -599,12 +618,29 @@ def list_stored_traces(project_id: str | None = None) -> None:
             f"${float(item.get('estimated_cost_usd', 0)):.4f}",
         )
     console.print(table)
+    if next_cursor:
+        console.print(f"More results available. Next cursor: {next_cursor}")
 
 
 @app.command("list-findings")
-def list_findings(project_id: str | None = None, status: str | None = None) -> None:
+def list_findings(
+    project_id: str | None = None,
+    status: str | None = None,
+    limit: int | None = typer.Option(None, help="Page size; omit to list every matching finding."),
+    cursor: str | None = typer.Option(
+        None, help="Continuation cursor from a previous --limit call's printed next-cursor."
+    ),
+) -> None:
     db = get_store()
-    findings = db.list_findings(project_id=project_id, status=status)
+    if limit is None and cursor is None:
+        findings = db.list_findings(project_id=project_id, status=status)
+        next_cursor = None
+    else:
+        page = db.list_findings_page(
+            project_id=project_id, status=status, limit=limit or DEFAULT_PAGE_SIZE, cursor=cursor
+        )
+        findings = page["items"]
+        next_cursor = page["next_cursor"]
     table = Table(title="AgentLoop Findings")
     table.add_column("Severity")
     table.add_column("Type")
@@ -624,6 +660,41 @@ def list_findings(project_id: str | None = None, status: str | None = None) -> N
             f"{finding['estimated_latency_savings_ms'] / 1000:.2f}s / ${finding['estimated_cost_savings_usd']:.4f}",
         )
     console.print(table)
+    if next_cursor:
+        console.print(f"More results available. Next cursor: {next_cursor}")
+
+
+@app.command("update-finding-status")
+def update_finding_status_command(
+    run_id: str,
+    finding_id: str,
+    status: str,
+    project_id: str = "default",
+) -> None:
+    """Transition a stored finding's lifecycle status (detected/accepted/resolved/dismissed)."""
+    db = get_store()
+    try:
+        updated = db.update_finding_status(project_id, run_id, finding_id, status)
+    except FindingNotFoundError as exc:
+        raise typer.BadParameter(str(exc), param_hint="finding_id") from exc
+    except (FindingTransitionError, ValueError) as exc:
+        raise typer.BadParameter(str(exc), param_hint="status") from exc
+    console.print(f"Finding {finding_id} is now [bold]{updated['status']}[/bold]")
+
+
+@app.command("remote-update-finding-status")
+def remote_update_finding_status(
+    run_id: str,
+    finding_id: str,
+    status: str,
+    api_url: str = typer.Option("http://127.0.0.1:8000", help="AgentLoop API base URL."),
+    api_key: str | None = typer.Option(
+        None, help="Optional API key. Defaults to AGENTLOOP_API_KEY."
+    ),
+) -> None:
+    client = _remote_client(api_url, api_key)
+    updated = client.update_finding_status(run_id, finding_id, status)
+    console.print_json(data=updated)
 
 
 @app.command("optimization-queue")

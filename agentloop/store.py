@@ -18,6 +18,7 @@ from agentloop.config import (
     postgres_connection_source,
 )
 from agentloop.findings import build_diagnosis
+from agentloop.migrations import apply_postgres_migrations, apply_sqlite_migrations
 from agentloop.savings import SavingsItem, select_compatible
 from agentloop.tracer import AgentTrace
 
@@ -28,9 +29,56 @@ _API_KEY_SCRYPT_N = 2**14
 _API_KEY_SCRYPT_R = 8
 _API_KEY_SCRYPT_P = 1
 
+# Finding lifecycle. `detected` is the initial state for every newly diagnosed
+# finding. `superseded` is not reachable through update_finding_status(); it is
+# assigned automatically when a finding an operator hasn't triaged (detected /
+# accepted) disappears from a later diagnosis of the same run. Terminal human
+# decisions (resolved, dismissed) are never overwritten by re-diagnosis. Every
+# state can be `reopened` back to `detected`.
+FINDING_STATUSES = frozenset({"detected", "accepted", "resolved", "dismissed", "superseded"})
+_INACTIVE_FINDING_STATUSES = frozenset({"resolved", "dismissed", "superseded"})
+ALLOWED_FINDING_TRANSITIONS: dict[str, frozenset[str]] = {
+    "detected": frozenset({"accepted", "dismissed"}),
+    "accepted": frozenset({"resolved", "dismissed"}),
+    "resolved": frozenset({"detected"}),
+    "dismissed": frozenset({"detected"}),
+    "superseded": frozenset({"detected"}),
+}
+
+# Compatibility default for the unpaginated list_traces()/list_findings() calls:
+# generous enough that no real deployment notices it, but bounded so a single
+# call can't load an unbounded table into memory. Callers that need more than
+# this should use list_traces_page()/list_findings_page().
+_LEGACY_LIST_SAFETY_LIMIT = 10_000
+
+DEFAULT_PAGE_SIZE = 50
+MAX_PAGE_SIZE = 200
+
+# optimization_queue() clusters unresolved findings in Python; bound the window
+# to the most recently updated findings per project instead of loading a
+# project's entire finding history.
+_QUEUE_MAX_FINDINGS = 5000
+
 
 class TraceProjectConflictError(ValueError):
     """Raised when a run ID is already owned by a different project."""
+
+
+class FindingNotFoundError(LookupError):
+    """Raised when a finding does not exist within the given project."""
+
+
+class FindingTransitionError(ValueError):
+    """Raised when a status transition is not allowed from the finding's current status."""
+
+    def __init__(self, current_status: str, new_status: str):
+        self.current_status = current_status
+        self.new_status = new_status
+        super().__init__(f"cannot transition finding from {current_status!r} to {new_status!r}")
+
+
+class InvalidCursorError(ValueError):
+    """Raised when a pagination cursor cannot be decoded."""
 
 
 class TraceStore(Protocol):
@@ -44,6 +92,13 @@ class TraceStore(Protocol):
 
     def list_traces(self, project_id: str | None = None) -> list[dict[str, Any]]: ...
 
+    def list_traces_page(
+        self,
+        project_id: str | None = None,
+        limit: int = DEFAULT_PAGE_SIZE,
+        cursor: str | None = None,
+    ) -> dict[str, Any]: ...
+
     def get_trace(self, run_id: str, project_id: str | None = None) -> AgentTrace | None: ...
 
     def save_diagnosis(self, diagnosis: dict[str, Any], project_id: str = "default") -> None: ...
@@ -51,6 +106,18 @@ class TraceStore(Protocol):
     def list_findings(
         self, project_id: str | None = None, status: str | None = None
     ) -> list[dict[str, Any]]: ...
+
+    def list_findings_page(
+        self,
+        project_id: str | None = None,
+        status: str | None = None,
+        limit: int = DEFAULT_PAGE_SIZE,
+        cursor: str | None = None,
+    ) -> dict[str, Any]: ...
+
+    def update_finding_status(
+        self, project_id: str, run_id: str, finding_id: str, new_status: str
+    ) -> dict[str, Any]: ...
 
     def optimization_queue(self, project_id: str | None = None) -> list[dict[str, Any]]: ...
 
@@ -110,6 +177,54 @@ def _decode_hash_bytes(value: str) -> bytes:
 
 def new_api_key() -> str:
     return "al_" + secrets.token_urlsafe(32)
+
+
+def encode_cursor(parts: list[Any]) -> str:
+    raw = json.dumps(parts, separators=(",", ":")).encode("utf-8")
+    return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
+
+
+def decode_cursor(cursor: str) -> list[Any]:
+    try:
+        padded = cursor + "=" * (-len(cursor) % 4)
+        raw = base64.urlsafe_b64decode(padded.encode("ascii"))
+        parts = json.loads(raw)
+    except (binascii.Error, UnicodeDecodeError, ValueError, json.JSONDecodeError) as exc:
+        raise InvalidCursorError(f"invalid pagination cursor: {cursor!r}") from exc
+    if not isinstance(parts, list):
+        raise InvalidCursorError(f"invalid pagination cursor: {cursor!r}")
+    return parts
+
+
+def _validate_page_limit(limit: int) -> int:
+    if not isinstance(limit, int) or limit < 1 or limit > MAX_PAGE_SIZE:
+        raise ValueError(f"page limit must be between 1 and {MAX_PAGE_SIZE}, got {limit!r}")
+    return limit
+
+
+def _validate_new_status(new_status: str) -> str:
+    if new_status not in FINDING_STATUSES:
+        raise ValueError(
+            f"unknown finding status {new_status!r}; expected one of {sorted(FINDING_STATUSES)}"
+        )
+    return new_status
+
+
+def _sources_allowing(new_status: str) -> list[str]:
+    return [
+        source for source, targets in ALLOWED_FINDING_TRANSITIONS.items() if new_status in targets
+    ]
+
+
+# The widest source set any target status has (detected <- resolved/dismissed/superseded).
+# update_finding_status() pads its source list to this fixed width so the SQL text is
+# static regardless of new_status, rather than building a variable-length `IN (...)`.
+_MAX_TRANSITION_SOURCES = max(len(_sources_allowing(status)) for status in FINDING_STATUSES)
+
+
+def _padded_sources(new_status: str) -> list[str]:
+    sources = _sources_allowing(new_status)
+    return sources + [""] * (_MAX_TRANSITION_SOURCES - len(sources))
 
 
 def _finding_row(row: dict[str, Any]) -> dict[str, Any]:
@@ -229,76 +344,13 @@ class SQLiteTraceStore:
 
     def _connect(self) -> sqlite3.Connection:
         Path(self.path).parent.mkdir(parents=True, exist_ok=True)
-        conn = sqlite3.connect(self.path)
+        conn = sqlite3.connect(self.path, timeout=30)
         conn.row_factory = sqlite3.Row
         return conn
 
     def init(self) -> None:
         with self._connect() as conn:
-            conn.executescript(
-                """
-                CREATE TABLE IF NOT EXISTS projects (
-                    project_id TEXT PRIMARY KEY,
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP
-                );
-                CREATE TABLE IF NOT EXISTS api_keys (
-                    key_hash TEXT PRIMARY KEY,
-                    project_id TEXT NOT NULL,
-                    name TEXT NOT NULL,
-                    prefix TEXT NOT NULL,
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                    last_used_at TEXT,
-                    FOREIGN KEY(project_id) REFERENCES projects(project_id)
-                );
-                CREATE TABLE IF NOT EXISTS traces (
-                    run_id TEXT PRIMARY KEY,
-                    project_id TEXT NOT NULL,
-                    name TEXT NOT NULL,
-                    started_at TEXT,
-                    payload_json TEXT NOT NULL,
-                    total_runtime_ms REAL DEFAULT 0,
-                    estimated_cost_usd REAL DEFAULT 0,
-                    model_call_count INTEGER DEFAULT 0,
-                    tool_call_count INTEGER DEFAULT 0,
-                    retry_count INTEGER DEFAULT 0,
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY(project_id) REFERENCES projects(project_id)
-                );
-                CREATE TABLE IF NOT EXISTS usage_events (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    project_id TEXT NOT NULL,
-                    run_id TEXT NOT NULL,
-                    total_runtime_ms REAL DEFAULT 0,
-                    estimated_cost_usd REAL DEFAULT 0,
-                    input_tokens INTEGER DEFAULT 0,
-                    output_tokens INTEGER DEFAULT 0,
-                    model_call_count INTEGER DEFAULT 0,
-                    tool_call_count INTEGER DEFAULT 0,
-                    retry_count INTEGER DEFAULT 0,
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP
-                );
-                CREATE TABLE IF NOT EXISTS trace_findings (
-                    project_id TEXT NOT NULL,
-                    run_id TEXT NOT NULL,
-                    finding_id TEXT NOT NULL,
-                    type TEXT NOT NULL,
-                    severity TEXT NOT NULL,
-                    title TEXT NOT NULL,
-                    confidence TEXT NOT NULL,
-                    patchable INTEGER DEFAULT 0,
-                    status TEXT DEFAULT 'detected',
-                    estimated_latency_savings_ms REAL DEFAULT 0,
-                    estimated_cost_savings_usd REAL DEFAULT 0,
-                    payload_json TEXT NOT NULL,
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                    PRIMARY KEY(project_id, run_id, finding_id),
-                    FOREIGN KEY(project_id) REFERENCES projects(project_id),
-                    FOREIGN KEY(run_id) REFERENCES traces(run_id)
-                );
-                """
-            )
-            conn.execute("INSERT OR IGNORE INTO projects(project_id) VALUES (?)", ("default",))
+            apply_sqlite_migrations(conn)
 
     def create_api_key(self, project_id: str, name: str) -> dict[str, Any]:
         self.init()
@@ -336,62 +388,193 @@ class SQLiteTraceStore:
             )
             return {key: row[key] for key in ("project_id", "name", "prefix")}
 
-    def save_trace(self, trace: AgentTrace, project_id: str = "default") -> None:
-        self.init()
+    def _upsert_trace(
+        self, conn: sqlite3.Connection, trace: AgentTrace, project_id: str
+    ) -> dict[str, Any]:
         report = trace.report()
-        with self._connect() as conn:
-            conn.execute("INSERT OR IGNORE INTO projects(project_id) VALUES (?)", (project_id,))
-            cursor = conn.execute(
+        conn.execute("INSERT OR IGNORE INTO projects(project_id) VALUES (?)", (project_id,))
+        cursor = conn.execute(
+            """
+            INSERT INTO traces(
+                run_id, project_id, name, started_at, payload_json, total_runtime_ms,
+                estimated_cost_usd, model_call_count, tool_call_count, retry_count
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(run_id) DO UPDATE SET
+                project_id=excluded.project_id,
+                name=excluded.name,
+                started_at=excluded.started_at,
+                payload_json=excluded.payload_json,
+                total_runtime_ms=excluded.total_runtime_ms,
+                estimated_cost_usd=excluded.estimated_cost_usd,
+                model_call_count=excluded.model_call_count,
+                tool_call_count=excluded.tool_call_count,
+                retry_count=excluded.retry_count
+            WHERE traces.project_id = excluded.project_id
+            """,
+            (
+                trace.run_id,
+                project_id,
+                trace.name,
+                trace.started_at,
+                json.dumps(trace.to_dict()),
+                report.get("total_runtime_ms", 0),
+                report.get("estimated_cost_usd", 0),
+                report.get("model_call_count", 0),
+                report.get("tool_call_count", 0),
+                report.get("retry_count", 0),
+            ),
+        )
+        if cursor.rowcount == 0:
+            raise TraceProjectConflictError(
+                f"run_id {trace.run_id!r} already belongs to another project"
+            )
+        return report
+
+    def _upsert_usage(
+        self, conn: sqlite3.Connection, project_id: str, run_id: str, report: dict[str, Any]
+    ) -> None:
+        conn.execute(
+            """
+            INSERT INTO usage_events(
+                project_id, run_id, total_runtime_ms, estimated_cost_usd, input_tokens,
+                output_tokens, model_call_count, tool_call_count, retry_count
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(project_id, run_id) DO UPDATE SET
+                total_runtime_ms=excluded.total_runtime_ms,
+                estimated_cost_usd=excluded.estimated_cost_usd,
+                input_tokens=excluded.input_tokens,
+                output_tokens=excluded.output_tokens,
+                model_call_count=excluded.model_call_count,
+                tool_call_count=excluded.tool_call_count,
+                retry_count=excluded.retry_count,
+                created_at=CURRENT_TIMESTAMP
+            """,
+            (
+                project_id,
+                run_id,
+                report.get("total_runtime_ms", 0),
+                report.get("estimated_cost_usd", 0),
+                report.get("input_tokens", 0),
+                report.get("output_tokens", 0),
+                report.get("model_call_count", 0),
+                report.get("tool_call_count", 0),
+                report.get("retry_count", 0),
+            ),
+        )
+
+    def _upsert_findings(
+        self, conn: sqlite3.Connection, diagnosis: dict[str, Any], project_id: str
+    ) -> None:
+        conn.execute("INSERT OR IGNORE INTO projects(project_id) VALUES (?)", (project_id,))
+        run_id = diagnosis["run_id"]
+        new_finding_ids: list[str] = []
+        for finding in diagnosis.get("findings", []):
+            savings = finding.get("savings", {})
+            rewrite = finding.get("rewrite", {})
+            new_finding_ids.append(finding["finding_id"])
+            conn.execute(
                 """
-                INSERT INTO traces(
-                    run_id, project_id, name, started_at, payload_json, total_runtime_ms,
-                    estimated_cost_usd, model_call_count, tool_call_count, retry_count
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(run_id) DO UPDATE SET
-                    project_id=excluded.project_id,
-                    name=excluded.name,
-                    started_at=excluded.started_at,
+                INSERT INTO trace_findings(
+                    project_id, run_id, finding_id, type, severity, title, confidence,
+                    patchable, estimated_latency_savings_ms, estimated_cost_savings_usd,
+                    payload_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(project_id, run_id, finding_id) DO UPDATE SET
+                    type=excluded.type,
+                    severity=excluded.severity,
+                    title=excluded.title,
+                    confidence=excluded.confidence,
+                    patchable=excluded.patchable,
+                    estimated_latency_savings_ms=excluded.estimated_latency_savings_ms,
+                    estimated_cost_savings_usd=excluded.estimated_cost_savings_usd,
                     payload_json=excluded.payload_json,
-                    total_runtime_ms=excluded.total_runtime_ms,
-                    estimated_cost_usd=excluded.estimated_cost_usd,
-                    model_call_count=excluded.model_call_count,
-                    tool_call_count=excluded.tool_call_count,
-                    retry_count=excluded.retry_count
-                WHERE traces.project_id = excluded.project_id
+                    status=CASE WHEN trace_findings.status = 'superseded' THEN 'detected'
+                                ELSE trace_findings.status END,
+                    updated_at=CURRENT_TIMESTAMP
                 """,
                 (
-                    trace.run_id,
                     project_id,
-                    trace.name,
-                    trace.started_at,
-                    json.dumps(trace.to_dict()),
-                    report.get("total_runtime_ms", 0),
-                    report.get("estimated_cost_usd", 0),
-                    report.get("model_call_count", 0),
-                    report.get("tool_call_count", 0),
-                    report.get("retry_count", 0),
+                    run_id,
+                    finding["finding_id"],
+                    finding["type"],
+                    finding["severity"],
+                    finding["title"],
+                    finding["confidence"],
+                    1 if rewrite.get("patchable") else 0,
+                    savings.get("estimated_latency_savings_ms", 0),
+                    savings.get("estimated_cost_savings_usd", 0),
+                    json.dumps(finding),
                 ),
             )
-            if cursor.rowcount == 0:
-                raise TraceProjectConflictError(
-                    f"run_id {trace.run_id!r} already belongs to another project"
-                )
-        self.record_usage(project_id, trace.run_id, report)
-        self.save_diagnosis(build_diagnosis(trace), project_id=project_id)
+        # Findings from a prior diagnosis of this run that did not reappear are
+        # superseded rather than deleted, unless a human already made a
+        # terminal decision (resolved/dismissed) about them — that decision is
+        # preserved regardless of what the analyzer currently detects. The
+        # kept-finding-id set is arbitrary-length, so it is passed as a single
+        # bound JSON array (via json_each) instead of building a variable-width
+        # `IN (...)` clause, keeping the SQL text static.
+        conn.execute(
+            """
+            UPDATE trace_findings
+            SET status = 'superseded', updated_at = CURRENT_TIMESTAMP
+            WHERE project_id = ? AND run_id = ?
+              AND status NOT IN ('resolved', 'dismissed', 'superseded')
+              AND finding_id NOT IN (SELECT value FROM json_each(?))
+            """,
+            (project_id, run_id, json.dumps(new_finding_ids)),
+        )
+
+    def save_trace(self, trace: AgentTrace, project_id: str = "default") -> None:
+        self.init()
+        with self._connect() as conn:
+            report = self._upsert_trace(conn, trace, project_id)
+            self._upsert_usage(conn, project_id, trace.run_id, report)
+            self._upsert_findings(conn, build_diagnosis(trace), project_id)
 
     def list_traces(self, project_id: str | None = None) -> list[dict[str, Any]]:
         self.init()
         with self._connect() as conn:
             if project_id:
                 rows = conn.execute(
-                    "SELECT run_id, project_id, name, started_at, total_runtime_ms, estimated_cost_usd, created_at FROM traces WHERE project_id = ? ORDER BY created_at DESC",
-                    (project_id,),
+                    "SELECT run_id, project_id, name, started_at, total_runtime_ms, estimated_cost_usd, created_at "
+                    "FROM traces WHERE project_id = ? ORDER BY created_at DESC, run_id DESC LIMIT ?",
+                    (project_id, _LEGACY_LIST_SAFETY_LIMIT),
                 ).fetchall()
             else:
                 rows = conn.execute(
-                    "SELECT run_id, project_id, name, started_at, total_runtime_ms, estimated_cost_usd, created_at FROM traces ORDER BY created_at DESC"
+                    "SELECT run_id, project_id, name, started_at, total_runtime_ms, estimated_cost_usd, created_at "
+                    "FROM traces ORDER BY created_at DESC, run_id DESC LIMIT ?",
+                    (_LEGACY_LIST_SAFETY_LIMIT,),
                 ).fetchall()
         return [dict(row) for row in rows]
+
+    def list_traces_page(
+        self,
+        project_id: str | None = None,
+        limit: int = DEFAULT_PAGE_SIZE,
+        cursor: str | None = None,
+    ) -> dict[str, Any]:
+        limit = _validate_page_limit(limit)
+        after_created_at, after_run_id = decode_cursor(cursor) if cursor else (None, None)
+        self.init()
+        with self._connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT run_id, project_id, name, started_at, total_runtime_ms, estimated_cost_usd, created_at
+                FROM traces
+                WHERE project_id = COALESCE(?, project_id)
+                  AND (? = 0 OR (created_at, run_id) < (?, ?))
+                ORDER BY created_at DESC, run_id DESC
+                LIMIT ?
+                """,
+                (project_id, 1 if cursor else 0, after_created_at, after_run_id, limit + 1),
+            ).fetchall()
+        items = [dict(row) for row in rows[:limit]]
+        next_cursor = None
+        if len(rows) > limit:
+            last = items[-1]
+            next_cursor = encode_cursor([last["created_at"], last["run_id"]])
+        return {"items": items, "next_cursor": next_cursor}
 
     def get_trace(self, run_id: str, project_id: str | None = None) -> AgentTrace | None:
         self.init()
@@ -412,46 +595,7 @@ class SQLiteTraceStore:
     def save_diagnosis(self, diagnosis: dict[str, Any], project_id: str = "default") -> None:
         self.init()
         with self._connect() as conn:
-            conn.execute("INSERT OR IGNORE INTO projects(project_id) VALUES (?)", (project_id,))
-            conn.execute(
-                "DELETE FROM trace_findings WHERE project_id = ? AND run_id = ?",
-                (project_id, diagnosis["run_id"]),
-            )
-            for finding in diagnosis.get("findings", []):
-                savings = finding.get("savings", {})
-                rewrite = finding.get("rewrite", {})
-                conn.execute(
-                    """
-                    INSERT INTO trace_findings(
-                        project_id, run_id, finding_id, type, severity, title, confidence,
-                        patchable, estimated_latency_savings_ms, estimated_cost_savings_usd,
-                        payload_json
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(project_id, run_id, finding_id) DO UPDATE SET
-                        type=excluded.type,
-                        severity=excluded.severity,
-                        title=excluded.title,
-                        confidence=excluded.confidence,
-                        patchable=excluded.patchable,
-                        estimated_latency_savings_ms=excluded.estimated_latency_savings_ms,
-                        estimated_cost_savings_usd=excluded.estimated_cost_savings_usd,
-                        payload_json=excluded.payload_json,
-                        updated_at=CURRENT_TIMESTAMP
-                    """,
-                    (
-                        project_id,
-                        diagnosis["run_id"],
-                        finding["finding_id"],
-                        finding["type"],
-                        finding["severity"],
-                        finding["title"],
-                        finding["confidence"],
-                        1 if rewrite.get("patchable") else 0,
-                        savings.get("estimated_latency_savings_ms", 0),
-                        savings.get("estimated_cost_savings_usd", 0),
-                        json.dumps(finding),
-                    ),
-                )
+            self._upsert_findings(conn, diagnosis, project_id)
 
     def list_findings(
         self, project_id: str | None = None, status: str | None = None
@@ -471,40 +615,120 @@ class SQLiteTraceStore:
                     estimated_cost_savings_usd DESC,
                     estimated_latency_savings_ms DESC,
                     updated_at DESC
+                LIMIT ?
                 """,
-                (project_id or None, status or None),
+                (project_id or None, status or None, _LEGACY_LIST_SAFETY_LIMIT),
             ).fetchall()
         return [_finding_row(dict(row)) for row in rows]
 
+    def list_findings_page(
+        self,
+        project_id: str | None = None,
+        status: str | None = None,
+        limit: int = DEFAULT_PAGE_SIZE,
+        cursor: str | None = None,
+    ) -> dict[str, Any]:
+        """Recency-ordered, keyset-paginated finding listing.
+
+        Ordered by (updated_at, run_id, finding_id) DESC rather than the
+        priority order list_findings() uses — priority mixes several columns
+        with independent directions, which keyset pagination can't compare
+        against a single cursor tuple.
+        """
+        limit = _validate_page_limit(limit)
+        after_updated_at, after_run_id, after_finding_id = (
+            decode_cursor(cursor) if cursor else (None, None, None)
+        )
+        self.init()
+        with self._connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT project_id, run_id, finding_id, type, severity, title, confidence,
+                    patchable, status, estimated_latency_savings_ms, estimated_cost_savings_usd,
+                    payload_json, created_at, updated_at
+                FROM trace_findings
+                WHERE project_id = COALESCE(?, project_id)
+                  AND status = COALESCE(?, status)
+                  AND (? = 0 OR (updated_at, run_id, finding_id) < (?, ?, ?))
+                ORDER BY updated_at DESC, run_id DESC, finding_id DESC
+                LIMIT ?
+                """,
+                (
+                    project_id,
+                    status,
+                    1 if cursor else 0,
+                    after_updated_at,
+                    after_run_id,
+                    after_finding_id,
+                    limit + 1,
+                ),
+            ).fetchall()
+        items = [_finding_row(dict(row)) for row in rows[:limit]]
+        next_cursor = None
+        if len(rows) > limit:
+            last = items[-1]
+            next_cursor = encode_cursor([last["updated_at"], last["run_id"], last["finding_id"]])
+        return {"items": items, "next_cursor": next_cursor}
+
+    def update_finding_status(
+        self, project_id: str, run_id: str, finding_id: str, new_status: str
+    ) -> dict[str, Any]:
+        _validate_new_status(new_status)
+        sources = _padded_sources(new_status)
+        self.init()
+        with self._connect() as conn:
+            cursor = conn.execute(
+                """
+                UPDATE trace_findings
+                SET status = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE project_id = ? AND run_id = ? AND finding_id = ?
+                  AND status IN (?, ?, ?)
+                """,
+                (new_status, project_id, run_id, finding_id, *sources),
+            )
+            if cursor.rowcount == 0:
+                existing = conn.execute(
+                    "SELECT status FROM trace_findings WHERE project_id = ? AND run_id = ? AND finding_id = ?",
+                    (project_id, run_id, finding_id),
+                ).fetchone()
+                if existing is None:
+                    raise FindingNotFoundError(
+                        f"finding {finding_id!r} not found for run {run_id!r} in project {project_id!r}"
+                    )
+                raise FindingTransitionError(existing["status"], new_status)
+            row = conn.execute(
+                """
+                SELECT project_id, run_id, finding_id, type, severity, title, confidence,
+                    patchable, status, estimated_latency_savings_ms, estimated_cost_savings_usd,
+                    payload_json, created_at, updated_at
+                FROM trace_findings WHERE project_id = ? AND run_id = ? AND finding_id = ?
+                """,
+                (project_id, run_id, finding_id),
+            ).fetchone()
+        return _finding_row(dict(row))
+
     def optimization_queue(self, project_id: str | None = None) -> list[dict[str, Any]]:
-        findings = [
-            finding
-            for finding in self.list_findings(project_id=project_id)
-            if finding["status"] != "resolved"
-        ]
+        self.init()
+        with self._connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT project_id, run_id, finding_id, type, severity, title, confidence,
+                    patchable, status, estimated_latency_savings_ms, estimated_cost_savings_usd,
+                    payload_json, created_at, updated_at
+                FROM trace_findings
+                WHERE project_id = COALESCE(?, project_id)
+                  AND status NOT IN ('resolved', 'dismissed', 'superseded')
+                ORDER BY updated_at DESC
+                LIMIT ?
+                """,
+                (project_id or None, _QUEUE_MAX_FINDINGS),
+            ).fetchall()
+        findings = [_finding_row(dict(row)) for row in rows]
         return _build_optimization_queue(findings, project_id)
 
     def record_usage(self, project_id: str, run_id: str, report: dict[str, Any]) -> None:
         with self._connect() as conn:
-            conn.execute(
-                """
-                INSERT INTO usage_events(
-                    project_id, run_id, total_runtime_ms, estimated_cost_usd, input_tokens,
-                    output_tokens, model_call_count, tool_call_count, retry_count
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    project_id,
-                    run_id,
-                    report.get("total_runtime_ms", 0),
-                    report.get("estimated_cost_usd", 0),
-                    report.get("input_tokens", 0),
-                    report.get("output_tokens", 0),
-                    report.get("model_call_count", 0),
-                    report.get("tool_call_count", 0),
-                    report.get("retry_count", 0),
-                ),
-            )
+            self._upsert_usage(conn, project_id, run_id, report)
 
     def usage_summary(self, project_id: str | None = None) -> dict[str, Any]:
         self.init()
@@ -552,24 +776,7 @@ class PostgresTraceStore:
 
     def init(self) -> None:
         with self._connect() as conn:
-            conn.execute(
-                "CREATE TABLE IF NOT EXISTS projects (project_id TEXT PRIMARY KEY, created_at TIMESTAMPTZ DEFAULT now())"
-            )
-            conn.execute(
-                "CREATE TABLE IF NOT EXISTS api_keys (key_hash TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(project_id), name TEXT NOT NULL, prefix TEXT NOT NULL, created_at TIMESTAMPTZ DEFAULT now(), last_used_at TIMESTAMPTZ)"
-            )
-            conn.execute(
-                "CREATE TABLE IF NOT EXISTS traces (run_id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(project_id), name TEXT NOT NULL, started_at TEXT, payload_json JSONB NOT NULL, total_runtime_ms DOUBLE PRECISION DEFAULT 0, estimated_cost_usd DOUBLE PRECISION DEFAULT 0, model_call_count INTEGER DEFAULT 0, tool_call_count INTEGER DEFAULT 0, retry_count INTEGER DEFAULT 0, created_at TIMESTAMPTZ DEFAULT now())"
-            )
-            conn.execute(
-                "CREATE TABLE IF NOT EXISTS usage_events (id BIGSERIAL PRIMARY KEY, project_id TEXT NOT NULL, run_id TEXT NOT NULL, total_runtime_ms DOUBLE PRECISION DEFAULT 0, estimated_cost_usd DOUBLE PRECISION DEFAULT 0, input_tokens INTEGER DEFAULT 0, output_tokens INTEGER DEFAULT 0, model_call_count INTEGER DEFAULT 0, tool_call_count INTEGER DEFAULT 0, retry_count INTEGER DEFAULT 0, created_at TIMESTAMPTZ DEFAULT now())"
-            )
-            conn.execute(
-                "CREATE TABLE IF NOT EXISTS trace_findings (project_id TEXT NOT NULL REFERENCES projects(project_id), run_id TEXT NOT NULL REFERENCES traces(run_id), finding_id TEXT NOT NULL, type TEXT NOT NULL, severity TEXT NOT NULL, title TEXT NOT NULL, confidence TEXT NOT NULL, patchable BOOLEAN DEFAULT false, status TEXT DEFAULT 'detected', estimated_latency_savings_ms DOUBLE PRECISION DEFAULT 0, estimated_cost_savings_usd DOUBLE PRECISION DEFAULT 0, payload_json JSONB NOT NULL, created_at TIMESTAMPTZ DEFAULT now(), updated_at TIMESTAMPTZ DEFAULT now(), PRIMARY KEY(project_id, run_id, finding_id))"
-            )
-            conn.execute(
-                "INSERT INTO projects(project_id) VALUES (%s) ON CONFLICT DO NOTHING", ("default",)
-            )
+            apply_postgres_migrations(conn)
 
     def create_api_key(self, project_id: str, name: str) -> dict[str, Any]:
         self.init()
@@ -605,53 +812,132 @@ class PostgresTraceStore:
             )
             return {"project_id": row[1], "name": row[2], "prefix": row[3]}
 
-    def save_trace(self, trace: AgentTrace, project_id: str = "default") -> None:
-        self.init()
+    def _upsert_trace(self, conn, trace: AgentTrace, project_id: str) -> dict[str, Any]:
         report = trace.report()
-        with self._connect() as conn:
-            conn.execute(
-                "INSERT INTO projects(project_id) VALUES (%s) ON CONFLICT DO NOTHING", (project_id,)
+        conn.execute(
+            "INSERT INTO projects(project_id) VALUES (%s) ON CONFLICT DO NOTHING", (project_id,)
+        )
+        cursor = conn.execute(
+            """
+            INSERT INTO traces(run_id, project_id, name, started_at, payload_json, total_runtime_ms, estimated_cost_usd, model_call_count, tool_call_count, retry_count)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT(run_id) DO UPDATE SET project_id=excluded.project_id, name=excluded.name, started_at=excluded.started_at,
+            payload_json=excluded.payload_json, total_runtime_ms=excluded.total_runtime_ms, estimated_cost_usd=excluded.estimated_cost_usd,
+            model_call_count=excluded.model_call_count, tool_call_count=excluded.tool_call_count, retry_count=excluded.retry_count
+            WHERE traces.project_id = excluded.project_id
+            """,
+            (
+                trace.run_id,
+                project_id,
+                trace.name,
+                trace.started_at,
+                json.dumps(trace.to_dict()),
+                report.get("total_runtime_ms", 0),
+                report.get("estimated_cost_usd", 0),
+                report.get("model_call_count", 0),
+                report.get("tool_call_count", 0),
+                report.get("retry_count", 0),
+            ),
+        )
+        if cursor.rowcount == 0:
+            raise TraceProjectConflictError(
+                f"run_id {trace.run_id!r} already belongs to another project"
             )
-            cursor = conn.execute(
+        return report
+
+    def _upsert_usage(self, conn, project_id: str, run_id: str, report: dict[str, Any]) -> None:
+        conn.execute(
+            """
+            INSERT INTO usage_events(project_id, run_id, total_runtime_ms, estimated_cost_usd, input_tokens, output_tokens, model_call_count, tool_call_count, retry_count)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT(project_id, run_id) DO UPDATE SET
+                total_runtime_ms=excluded.total_runtime_ms,
+                estimated_cost_usd=excluded.estimated_cost_usd,
+                input_tokens=excluded.input_tokens,
+                output_tokens=excluded.output_tokens,
+                model_call_count=excluded.model_call_count,
+                tool_call_count=excluded.tool_call_count,
+                retry_count=excluded.retry_count,
+                created_at=now()
+            """,
+            (
+                project_id,
+                run_id,
+                report.get("total_runtime_ms", 0),
+                report.get("estimated_cost_usd", 0),
+                report.get("input_tokens", 0),
+                report.get("output_tokens", 0),
+                report.get("model_call_count", 0),
+                report.get("tool_call_count", 0),
+                report.get("retry_count", 0),
+            ),
+        )
+
+    def _upsert_findings(self, conn, diagnosis: dict[str, Any], project_id: str) -> None:
+        conn.execute(
+            "INSERT INTO projects(project_id) VALUES (%s) ON CONFLICT DO NOTHING", (project_id,)
+        )
+        run_id = diagnosis["run_id"]
+        new_finding_ids: list[str] = []
+        for finding in diagnosis.get("findings", []):
+            savings = finding.get("savings", {})
+            rewrite = finding.get("rewrite", {})
+            new_finding_ids.append(finding["finding_id"])
+            conn.execute(
                 """
-                INSERT INTO traces(run_id, project_id, name, started_at, payload_json, total_runtime_ms, estimated_cost_usd, model_call_count, tool_call_count, retry_count)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT(run_id) DO UPDATE SET project_id=excluded.project_id, name=excluded.name, started_at=excluded.started_at,
-                payload_json=excluded.payload_json, total_runtime_ms=excluded.total_runtime_ms, estimated_cost_usd=excluded.estimated_cost_usd,
-                model_call_count=excluded.model_call_count, tool_call_count=excluded.tool_call_count, retry_count=excluded.retry_count
-                WHERE traces.project_id = excluded.project_id
+                INSERT INTO trace_findings(project_id, run_id, finding_id, type, severity, title, confidence, patchable, estimated_latency_savings_ms, estimated_cost_savings_usd, payload_json)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT(project_id, run_id, finding_id) DO UPDATE SET
+                type=excluded.type, severity=excluded.severity, title=excluded.title, confidence=excluded.confidence,
+                patchable=excluded.patchable, estimated_latency_savings_ms=excluded.estimated_latency_savings_ms,
+                estimated_cost_savings_usd=excluded.estimated_cost_savings_usd, payload_json=excluded.payload_json,
+                status=CASE WHEN trace_findings.status = 'superseded' THEN 'detected' ELSE trace_findings.status END,
+                updated_at=now()
                 """,
                 (
-                    trace.run_id,
                     project_id,
-                    trace.name,
-                    trace.started_at,
-                    json.dumps(trace.to_dict()),
-                    report.get("total_runtime_ms", 0),
-                    report.get("estimated_cost_usd", 0),
-                    report.get("model_call_count", 0),
-                    report.get("tool_call_count", 0),
-                    report.get("retry_count", 0),
+                    run_id,
+                    finding["finding_id"],
+                    finding["type"],
+                    finding["severity"],
+                    finding["title"],
+                    finding["confidence"],
+                    bool(rewrite.get("patchable")),
+                    savings.get("estimated_latency_savings_ms", 0),
+                    savings.get("estimated_cost_savings_usd", 0),
+                    json.dumps(finding),
                 ),
             )
-            if cursor.rowcount == 0:
-                raise TraceProjectConflictError(
-                    f"run_id {trace.run_id!r} already belongs to another project"
-                )
-        self.record_usage(project_id, trace.run_id, report)
-        self.save_diagnosis(build_diagnosis(trace), project_id=project_id)
+        conn.execute(
+            """
+            UPDATE trace_findings
+            SET status = 'superseded', updated_at = now()
+            WHERE project_id = %s AND run_id = %s
+              AND status NOT IN ('resolved', 'dismissed', 'superseded')
+              AND finding_id != ALL(%s)
+            """,
+            (project_id, run_id, new_finding_ids),
+        )
+
+    def save_trace(self, trace: AgentTrace, project_id: str = "default") -> None:
+        self.init()
+        with self._connect() as conn:
+            report = self._upsert_trace(conn, trace, project_id)
+            self._upsert_usage(conn, project_id, trace.run_id, report)
+            self._upsert_findings(conn, build_diagnosis(trace), project_id)
 
     def list_traces(self, project_id: str | None = None) -> list[dict[str, Any]]:
         self.init()
         with self._connect() as conn:
             if project_id:
                 rows = conn.execute(
-                    "SELECT run_id, project_id, name, started_at, total_runtime_ms, estimated_cost_usd, created_at::text FROM traces WHERE project_id = %s ORDER BY created_at DESC",
-                    (project_id,),
+                    "SELECT run_id, project_id, name, started_at, total_runtime_ms, estimated_cost_usd, created_at::text FROM traces WHERE project_id = %s ORDER BY created_at DESC, run_id DESC LIMIT %s",
+                    (project_id, _LEGACY_LIST_SAFETY_LIMIT),
                 ).fetchall()
             else:
                 rows = conn.execute(
-                    "SELECT run_id, project_id, name, started_at, total_runtime_ms, estimated_cost_usd, created_at::text FROM traces ORDER BY created_at DESC"
+                    "SELECT run_id, project_id, name, started_at, total_runtime_ms, estimated_cost_usd, created_at::text FROM traces ORDER BY created_at DESC, run_id DESC LIMIT %s",
+                    (_LEGACY_LIST_SAFETY_LIMIT,),
                 ).fetchall()
         keys = [
             "run_id",
@@ -663,6 +949,43 @@ class PostgresTraceStore:
             "created_at",
         ]
         return [dict(zip(keys, row)) for row in rows]
+
+    def list_traces_page(
+        self,
+        project_id: str | None = None,
+        limit: int = DEFAULT_PAGE_SIZE,
+        cursor: str | None = None,
+    ) -> dict[str, Any]:
+        limit = _validate_page_limit(limit)
+        after_created_at, after_run_id = decode_cursor(cursor) if cursor else (None, None)
+        keys = [
+            "run_id",
+            "project_id",
+            "name",
+            "started_at",
+            "total_runtime_ms",
+            "estimated_cost_usd",
+            "created_at",
+        ]
+        self.init()
+        with self._connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT run_id, project_id, name, started_at, total_runtime_ms, estimated_cost_usd, created_at::text
+                FROM traces
+                WHERE project_id = COALESCE(%s, project_id)
+                  AND (%s = 0 OR (created_at, run_id) < (%s, %s))
+                ORDER BY created_at DESC, run_id DESC
+                LIMIT %s
+                """,
+                (project_id, 1 if cursor else 0, after_created_at, after_run_id, limit + 1),
+            ).fetchall()
+        items = [dict(zip(keys, row)) for row in rows[:limit]]
+        next_cursor = None
+        if len(rows) > limit:
+            last = items[-1]
+            next_cursor = encode_cursor([last["created_at"], last["run_id"]])
+        return {"items": items, "next_cursor": next_cursor}
 
     def get_trace(self, run_id: str, project_id: str | None = None) -> AgentTrace | None:
         self.init()
@@ -686,40 +1009,7 @@ class PostgresTraceStore:
     def save_diagnosis(self, diagnosis: dict[str, Any], project_id: str = "default") -> None:
         self.init()
         with self._connect() as conn:
-            conn.execute(
-                "INSERT INTO projects(project_id) VALUES (%s) ON CONFLICT DO NOTHING", (project_id,)
-            )
-            conn.execute(
-                "DELETE FROM trace_findings WHERE project_id = %s AND run_id = %s",
-                (project_id, diagnosis["run_id"]),
-            )
-            for finding in diagnosis.get("findings", []):
-                savings = finding.get("savings", {})
-                rewrite = finding.get("rewrite", {})
-                conn.execute(
-                    """
-                    INSERT INTO trace_findings(project_id, run_id, finding_id, type, severity, title, confidence, patchable, estimated_latency_savings_ms, estimated_cost_savings_usd, payload_json)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT(project_id, run_id, finding_id) DO UPDATE SET
-                    type=excluded.type, severity=excluded.severity, title=excluded.title, confidence=excluded.confidence,
-                    patchable=excluded.patchable, estimated_latency_savings_ms=excluded.estimated_latency_savings_ms,
-                    estimated_cost_savings_usd=excluded.estimated_cost_savings_usd, payload_json=excluded.payload_json,
-                    updated_at=now()
-                    """,
-                    (
-                        project_id,
-                        diagnosis["run_id"],
-                        finding["finding_id"],
-                        finding["type"],
-                        finding["severity"],
-                        finding["title"],
-                        finding["confidence"],
-                        bool(rewrite.get("patchable")),
-                        savings.get("estimated_latency_savings_ms", 0),
-                        savings.get("estimated_cost_savings_usd", 0),
-                        json.dumps(finding),
-                    ),
-                )
+            self._upsert_findings(conn, diagnosis, project_id)
 
     def list_findings(
         self, project_id: str | None = None, status: str | None = None
@@ -739,8 +1029,9 @@ class PostgresTraceStore:
                     estimated_cost_savings_usd DESC,
                     estimated_latency_savings_ms DESC,
                     updated_at DESC
+                LIMIT %s
                 """,
-                (project_id or None, status or None),
+                (project_id or None, status or None, _LEGACY_LIST_SAFETY_LIMIT),
             ).fetchall()
         keys = [
             "project_id",
@@ -760,30 +1051,155 @@ class PostgresTraceStore:
         ]
         return [_finding_row(dict(zip(keys, row))) for row in rows]
 
-    def optimization_queue(self, project_id: str | None = None) -> list[dict[str, Any]]:
-        findings = [
-            finding
-            for finding in self.list_findings(project_id=project_id)
-            if finding["status"] != "resolved"
+    def list_findings_page(
+        self,
+        project_id: str | None = None,
+        status: str | None = None,
+        limit: int = DEFAULT_PAGE_SIZE,
+        cursor: str | None = None,
+    ) -> dict[str, Any]:
+        limit = _validate_page_limit(limit)
+        after_updated_at, after_run_id, after_finding_id = (
+            decode_cursor(cursor) if cursor else (None, None, None)
+        )
+        keys = [
+            "project_id",
+            "run_id",
+            "finding_id",
+            "type",
+            "severity",
+            "title",
+            "confidence",
+            "patchable",
+            "status",
+            "estimated_latency_savings_ms",
+            "estimated_cost_savings_usd",
+            "payload_json",
+            "created_at",
+            "updated_at",
         ]
+        self.init()
+        with self._connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT project_id, run_id, finding_id, type, severity, title, confidence,
+                    patchable, status, estimated_latency_savings_ms, estimated_cost_savings_usd,
+                    payload_json, created_at::text, updated_at::text
+                FROM trace_findings
+                WHERE project_id = COALESCE(%s, project_id)
+                  AND status = COALESCE(%s, status)
+                  AND (%s = 0 OR (updated_at, run_id, finding_id) < (%s, %s, %s))
+                ORDER BY updated_at DESC, run_id DESC, finding_id DESC
+                LIMIT %s
+                """,
+                (
+                    project_id,
+                    status,
+                    1 if cursor else 0,
+                    after_updated_at,
+                    after_run_id,
+                    after_finding_id,
+                    limit + 1,
+                ),
+            ).fetchall()
+        items = [_finding_row(dict(zip(keys, row))) for row in rows[:limit]]
+        next_cursor = None
+        if len(rows) > limit:
+            last = items[-1]
+            next_cursor = encode_cursor([last["updated_at"], last["run_id"], last["finding_id"]])
+        return {"items": items, "next_cursor": next_cursor}
+
+    def update_finding_status(
+        self, project_id: str, run_id: str, finding_id: str, new_status: str
+    ) -> dict[str, Any]:
+        _validate_new_status(new_status)
+        allowed_sources = _sources_allowing(new_status)
+        keys = [
+            "project_id",
+            "run_id",
+            "finding_id",
+            "type",
+            "severity",
+            "title",
+            "confidence",
+            "patchable",
+            "status",
+            "estimated_latency_savings_ms",
+            "estimated_cost_savings_usd",
+            "payload_json",
+            "created_at",
+            "updated_at",
+        ]
+        self.init()
+        with self._connect() as conn:
+            cursor = conn.execute(
+                """
+                UPDATE trace_findings
+                SET status = %s, updated_at = now()
+                WHERE project_id = %s AND run_id = %s AND finding_id = %s
+                  AND status = ANY(%s)
+                """,
+                (new_status, project_id, run_id, finding_id, allowed_sources),
+            )
+            if cursor.rowcount == 0:
+                existing = conn.execute(
+                    "SELECT status FROM trace_findings WHERE project_id = %s AND run_id = %s AND finding_id = %s",
+                    (project_id, run_id, finding_id),
+                ).fetchone()
+                if existing is None:
+                    raise FindingNotFoundError(
+                        f"finding {finding_id!r} not found for run {run_id!r} in project {project_id!r}"
+                    )
+                raise FindingTransitionError(existing[0], new_status)
+            row = conn.execute(
+                """
+                SELECT project_id, run_id, finding_id, type, severity, title, confidence,
+                    patchable, status, estimated_latency_savings_ms, estimated_cost_savings_usd,
+                    payload_json, created_at::text, updated_at::text
+                FROM trace_findings WHERE project_id = %s AND run_id = %s AND finding_id = %s
+                """,
+                (project_id, run_id, finding_id),
+            ).fetchone()
+        return _finding_row(dict(zip(keys, row)))
+
+    def optimization_queue(self, project_id: str | None = None) -> list[dict[str, Any]]:
+        self.init()
+        with self._connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT project_id, run_id, finding_id, type, severity, title, confidence,
+                    patchable, status, estimated_latency_savings_ms, estimated_cost_savings_usd,
+                    payload_json, created_at::text, updated_at::text
+                FROM trace_findings
+                WHERE project_id = COALESCE(%s, project_id)
+                  AND status NOT IN ('resolved', 'dismissed', 'superseded')
+                ORDER BY updated_at DESC
+                LIMIT %s
+                """,
+                (project_id or None, _QUEUE_MAX_FINDINGS),
+            ).fetchall()
+        keys = [
+            "project_id",
+            "run_id",
+            "finding_id",
+            "type",
+            "severity",
+            "title",
+            "confidence",
+            "patchable",
+            "status",
+            "estimated_latency_savings_ms",
+            "estimated_cost_savings_usd",
+            "payload_json",
+            "created_at",
+            "updated_at",
+        ]
+        findings = [_finding_row(dict(zip(keys, row))) for row in rows]
         return _build_optimization_queue(findings, project_id)
 
     def record_usage(self, project_id: str, run_id: str, report: dict[str, Any]) -> None:
         with self._connect() as conn:
-            conn.execute(
-                "INSERT INTO usage_events(project_id, run_id, total_runtime_ms, estimated_cost_usd, input_tokens, output_tokens, model_call_count, tool_call_count, retry_count) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                (
-                    project_id,
-                    run_id,
-                    report.get("total_runtime_ms", 0),
-                    report.get("estimated_cost_usd", 0),
-                    report.get("input_tokens", 0),
-                    report.get("output_tokens", 0),
-                    report.get("model_call_count", 0),
-                    report.get("tool_call_count", 0),
-                    report.get("retry_count", 0),
-                ),
-            )
+            self._upsert_usage(conn, project_id, run_id, report)
 
     def usage_summary(self, project_id: str | None = None) -> dict[str, Any]:
         self.init()

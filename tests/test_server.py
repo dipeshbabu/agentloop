@@ -287,3 +287,107 @@ def test_run_id_cannot_move_between_projects(monkeypatch, tmp_path: Path) -> Non
     assert created.status_code == 200
     assert conflict.status_code == 409
     assert "already belongs to another project" in conflict.json()["detail"]
+
+
+def test_list_traces_without_page_size_is_backward_compatible(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("AGENTLOOP_SQLITE_PATH", str(tmp_path / "pagination.db"))
+    client = TestClient(app)
+    with trace_agent("compat-test") as trace:
+        with trace_model_call("call", input_tokens=1, output_tokens=1):
+            pass
+    client.post("/traces", json=trace.to_dict())
+
+    response = client.get("/traces")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["traces"][0]["run_id"] == trace.run_id
+    assert body["next_cursor"] is None
+
+
+def test_list_traces_page_size_paginates_and_walks_cursor(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("AGENTLOOP_SQLITE_PATH", str(tmp_path / "pagination.db"))
+    client = TestClient(app)
+    run_ids = set()
+    for index in range(5):
+        with trace_agent(f"page-test-{index}") as trace:
+            with trace_model_call("call", input_tokens=1, output_tokens=1):
+                pass
+        client.post("/traces", json=trace.to_dict())
+        run_ids.add(trace.run_id)
+
+    seen = []
+    cursor = None
+    for _ in range(10):
+        response = client.get(
+            "/traces", params={"page_size": 2, **({"cursor": cursor} if cursor else {})}
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert len(body["traces"]) <= 2
+        seen.extend(item["run_id"] for item in body["traces"])
+        cursor = body["next_cursor"]
+        if cursor is None:
+            break
+
+    assert set(seen) == run_ids
+    assert len(seen) == len(set(seen))
+
+
+def test_list_traces_rejects_invalid_cursor(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("AGENTLOOP_SQLITE_PATH", str(tmp_path / "pagination.db"))
+    client = TestClient(app)
+
+    response = client.get("/traces", params={"page_size": 5, "cursor": "not-a-real-cursor"})
+
+    assert response.status_code == 400
+
+
+def test_list_findings_page_size_and_default_compatibility(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("AGENTLOOP_SQLITE_PATH", str(tmp_path / "pagination.db"))
+    client = TestClient(app)
+    repeated = "stable context " * 100
+    for index in range(2):
+        with trace_agent(f"findings-page-test-{index}") as trace:
+            for _ in range(2):
+                with trace_model_call("summarize", input_text=repeated, output_tokens=10):
+                    pass
+        client.post("/traces", json=trace.to_dict())
+
+    default_response = client.get("/findings")
+    paged_response = client.get("/findings", params={"page_size": 1})
+
+    assert default_response.status_code == 200
+    assert default_response.json()["next_cursor"] is None
+    assert paged_response.status_code == 200
+    assert len(paged_response.json()["findings"]) == 1
+    assert paged_response.json()["next_cursor"] is not None
+
+
+def test_update_finding_status_transition_lifecycle(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("AGENTLOOP_SQLITE_PATH", str(tmp_path / "lifecycle.db"))
+    client = TestClient(app)
+    with trace_agent("lifecycle-test") as trace:
+        repeated = "stable context " * 100
+        for _ in range(2):
+            with trace_model_call("summarize", input_text=repeated, output_tokens=10):
+                pass
+    client.post("/traces", json=trace.to_dict())
+    finding = client.get("/findings").json()["findings"][0]
+    run_id, finding_id = finding["run_id"], finding["finding_id"]
+
+    accepted = client.post(f"/findings/{run_id}/{finding_id}/status", json={"status": "accepted"})
+    resolved = client.post(f"/findings/{run_id}/{finding_id}/status", json={"status": "resolved"})
+    conflict = client.post(f"/findings/{run_id}/{finding_id}/status", json={"status": "accepted"})
+    not_found = client.post(
+        f"/findings/{run_id}/does-not-exist/status", json={"status": "accepted"}
+    )
+    bad_status = client.post(f"/findings/{run_id}/{finding_id}/status", json={"status": "bogus"})
+
+    assert accepted.status_code == 200
+    assert accepted.json()["status"] == "accepted"
+    assert resolved.status_code == 200
+    assert resolved.json()["status"] == "resolved"
+    assert conflict.status_code == 409
+    assert not_found.status_code == 404
+    assert bad_status.status_code == 400
