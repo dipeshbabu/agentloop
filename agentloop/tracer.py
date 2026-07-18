@@ -125,6 +125,12 @@ def current_trace() -> AgentTrace | None:
     return _current_trace.get()
 
 
+def current_event_id() -> str | None:
+    """Return the event id currently being recorded under, if any."""
+
+    return _current_event_id.get()
+
+
 @contextmanager
 def trace_agent(name: str, metadata: dict[str, Any] | None = None) -> Iterator[AgentTrace]:
     trace = AgentTrace(name=name, metadata=metadata)
@@ -159,24 +165,36 @@ def record_model_call(
     metadata: dict[str, Any] | None = None,
     event_id: str | None = None,
     parent_id: str | None = None,
+    trace: AgentTrace | None = None,
 ) -> None:
-    """Record a completed model call into the active trace.
+    """Record a completed model call into a trace.
 
     Integrations use this when token counts are only known after a framework call
     returns. User code should usually prefer `trace_model_call(...)`.
+
+    By default the event is recorded into the trace active in the current context.
+    Pass ``trace`` to record into a specific trace instead — for example an
+    integration that captured trace ownership when a streaming call was invoked and
+    finalizes it later, possibly in a different context. When ``trace`` is given the
+    ambient event-id context is not used for the parent.
     """
 
-    trace = _require_trace()
-    trace.add_event(
+    target = trace if trace is not None else _require_trace()
+    resolved_parent = (
+        parent_id
+        if parent_id is not None
+        else (None if trace is not None else _current_event_id.get())
+    )
+    target.add_event(
         AgentEvent(
             event_id=event_id or new_event_id(),
-            run_id=trace.run_id,
+            run_id=target.run_id,
             event_type="model_call",
             name=name,
             started_at=started_at,
             ended_at=ended_at or utc_now_iso(),
             duration_ms=duration_ms,
-            parent_id=parent_id if parent_id is not None else _current_event_id.get(),
+            parent_id=resolved_parent,
             model=model,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
