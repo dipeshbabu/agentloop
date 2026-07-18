@@ -63,12 +63,77 @@ jobs:
         run: uv build
 
   docker:
-    name: Docker image
+    name: Docker image and deployment smoke
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - name: Build image
-        run: docker build .
+      - name: Configure synthetic smoke secrets
+        shell: bash
+        run: |
+          db_password="p@/s?s#1%2:$(openssl rand -hex 12)"
+          admin_key="ci-admin-$(openssl rand -hex 24)"
+          echo "::add-mask::$db_password"
+          echo "::add-mask::$admin_key"
+          echo "POSTGRES_PASSWORD=$db_password" >> "$GITHUB_ENV"
+          echo "AGENTLOOP_ADMIN_API_KEY=$admin_key" >> "$GITHUB_ENV"
+
+      - name: Build exact image used by Compose
+        run: docker build --tag agentloop:local .
+
+      - name: Validate Compose configuration without rendering secrets
+        run: docker compose config --quiet
+
+      - name: Start deployment stack
+        run: docker compose up --detach --no-build
+
+      - name: Wait for API and dashboard readiness
+        shell: bash
+        run: |
+          wait_for_url() {
+            local name="$1"
+            local url="$2"
+            for attempt in $(seq 1 60); do
+              if curl --fail --silent --show-error "$url" > /dev/null; then
+                return 0
+              fi
+              sleep 2
+            done
+            echo "$name did not become ready" >&2
+            return 1
+          }
+          wait_for_url "AgentLoop API" "http://127.0.0.1:8000/readyz"
+          wait_for_url "AgentLoop dashboard" "http://127.0.0.1:8501/_stcore/health"
+
+      - name: Verify Python version and runtime filesystem posture
+        shell: bash
+        run: |
+          docker compose exec -T api python -c \
+            "import sys; assert sys.version_info[:2] == (3, 13), sys.version"
+          docker compose exec -T api sh -c 'test "$(id -u)" -ne 0'
+          docker compose exec -T api sh -c \
+            "touch /data/container-write-check && rm /data/container-write-check"
+          if docker compose exec -T api sh -c "test -w /app"; then
+            echo "Runtime user must not be able to write to /app" >&2
+            exit 1
+          fi
+
+      - name: Verify API trace round-trip
+        env:
+          AGENTLOOP_API_URL: http://127.0.0.1:8000
+        run: python3 scripts/smoke_api.py
+
+      - name: Verify dashboard database connectivity
+        run: |
+          docker compose exec -T dashboard python -c \
+            "from agentloop.store import get_store; get_store().usage_summary(project_id='default')"
+
+      - name: Show container logs on failure
+        if: failure()
+        run: docker compose logs --no-color --tail=200
+
+      - name: Stop deployment stack
+        if: always()
+        run: docker compose down --volumes --remove-orphans

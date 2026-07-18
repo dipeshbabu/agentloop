@@ -30,7 +30,15 @@ def test_production_check_rejects_unsafe_defaults(monkeypatch) -> None:
     for name in [
         "AGENTLOOP_STORE_BACKEND",
         "AGENTLOOP_DATABASE_URL",
+        "AGENTLOOP_POSTGRES_PASSWORD_FILE",
         "DATABASE_URL",
+        "PGHOST",
+        "PGHOSTADDR",
+        "PGSERVICE",
+        "PGPORT",
+        "PGDATABASE",
+        "PGUSER",
+        "PGPASSWORD",
         "AGENTLOOP_REQUIRE_API_KEY",
         "AGENTLOOP_ADMIN_API_KEY",
         "AGENTLOOP_CORS_ORIGINS",
@@ -63,3 +71,24 @@ def test_production_check_accepts_safe_env(monkeypatch) -> None:
 
     assert result["ok"] is True
     assert result["failed"] == 0
+
+
+def test_production_check_accepts_libpq_environment(monkeypatch) -> None:
+    monkeypatch.setenv("AGENTLOOP_STORE_BACKEND", "postgres")
+    monkeypatch.delenv("AGENTLOOP_DATABASE_URL", raising=False)
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.setenv("PGHOST", "db")
+    monkeypatch.setenv("PGPORT", "5432")
+    monkeypatch.setenv("PGDATABASE", "agentloop")
+    monkeypatch.setenv("PGUSER", "agentloop")
+    monkeypatch.setenv("AGENTLOOP_POSTGRES_PASSWORD_FILE", "/run/secrets/postgres_password")
+    monkeypatch.setenv("AGENTLOOP_REQUIRE_API_KEY", "true")
+    monkeypatch.setenv("AGENTLOOP_ADMIN_API_KEY", "x" * 40)
+    monkeypatch.setenv("AGENTLOOP_CORS_ORIGINS", "https://dashboard.example.com")
+    monkeypatch.setenv("AGENTLOOP_API_URL", "https://api.example.com")
+
+    result = run_production_check(check_api=False, check_store=False)
+
+    assert result["ok"] is True
+    database_check = next(check for check in result["checks"] if check["name"] == "database_url")
+    assert database_check["detail"] == "configured via libpq environment"

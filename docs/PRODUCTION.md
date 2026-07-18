@@ -19,6 +19,23 @@ AGENTLOOP_CORS_ORIGINS=https://dashboard.example.com
 AGENTLOOP_API_URL=https://api.example.com
 ```
 
+`AGENTLOOP_DATABASE_URL` (or `DATABASE_URL`) remains the highest-priority Postgres
+connection setting. Percent-encode reserved username and password characters when they are
+embedded in a URL. Deployments that can provide separate libpq settings may avoid a
+secret-bearing URL entirely:
+
+```bash
+AGENTLOOP_STORE_BACKEND=postgres
+PGHOST=db.example.com
+PGPORT=5432
+PGDATABASE=agentloop
+PGUSER=agentloop
+PGPASSWORD=<database password>
+```
+
+For file-backed secrets, set `AGENTLOOP_POSTGRES_PASSWORD_FILE` instead of
+`PGPASSWORD`. The file is read only when no complete database URL is configured.
+
 `AGENTLOOP_ADMIN_API_KEY` protects hosted API-key creation. When API auth is enabled,
 `POST /api-keys` returns `503` unless the admin secret is configured.
 
@@ -45,6 +62,12 @@ For a local production-like stack:
 # Copy .env.example to .env, then replace every placeholder secret.
 docker compose up --build
 ```
+
+Compose passes `POSTGRES_PASSWORD` to the database, API, and dashboard through a
+Docker secret. It is never interpolated into a connection URL, so URI-reserved punctuation
+such as `/`, `?`, `#`, `%`, `@`, and `:` is supported without encoding. Validate
+configuration with `docker compose config --quiet`; avoid printing rendered production
+configuration because other environment values may still be sensitive.
 
 Services:
 
@@ -76,6 +99,11 @@ AGENTLOOP_ADMIN_API_KEY="$AGENTLOOP_ADMIN_API_KEY" \
 uv run python scripts/smoke_api.py
 ```
 
+The official image uses Python 3.13, matching `.python-version` and the highest Python
+version exercised by the package CI matrix. The image runs as the non-root `agentloop`
+user. Application files under `/app` are read-only to that user; `/data` is the intended
+writable path for SQLite deployments.
+
 Use `uv run agentloop production-check --allow-http` only for local staging URLs such as
 `http://localhost:8000`; public production traffic should use HTTPS.
 
@@ -104,6 +132,12 @@ configured.
 - Set `AGENTLOOP_REQUIRE_API_KEY=true` for internet-facing APIs.
 - Set `AGENTLOOP_CORS_ORIGINS` to the exact dashboard origin.
 - Rotate `AGENTLOOP_ADMIN_API_KEY` like any other production secret.
+- Rotate the Compose database password in both Postgres and the Docker secret, then recreate
+  the database, API, and dashboard containers and rerun readiness plus the smoke check.
+  `POSTGRES_PASSWORD` initializes only a new, empty Postgres data volume; changing the
+  `.env` value alone does not update an existing database role. Use an authenticated
+  Postgres password-change procedure before replacing the secret, and keep the old value only
+  until the recreated clients connect successfully.
 - The Streamlit dashboard does not provide end-user authentication. Treat it as
   an operator console: keep it on a private network or place it behind an
   authenticated reverse proxy. Do not expose it directly to the internet.

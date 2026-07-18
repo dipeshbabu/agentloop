@@ -81,6 +81,11 @@ def main() -> int:
     if "total_runtime_ms" not in report:
         raise RuntimeError(f"Unexpected report response: {report}")
 
+    stored = _request("GET", "/traces", api_url=api_url, api_key=api_key)
+    traces = stored.get("traces")
+    if not isinstance(traces, list) or not any(item.get("run_id") == run_id for item in traces):
+        raise RuntimeError("Uploaded smoke trace was not returned by the list API")
+
     print(f"AgentLoop API smoke check passed for {api_url}")
     return 0
 
