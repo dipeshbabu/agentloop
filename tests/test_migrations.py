@@ -12,8 +12,7 @@ import pytest
 
 from agentloop.migrations import _BASELINE_POSTGRES, _BASELINE_SQLITE, MigrationError
 from agentloop.store import PostgresTraceStore, SQLiteTraceStore
-
-from tests.test_store_contract import POSTGRES_TEST_DSN, _POSTGRES_AVAILABLE
+from tests.test_store_contract import _POSTGRES_AVAILABLE, POSTGRES_TEST_DSN
 
 _WHITESPACE = re.compile(r"\s+")
 
@@ -91,6 +90,7 @@ def test_postgres_fresh_install_and_upgraded_database_reach_equivalent_schema():
         PostgresTraceStore(dsn=_scoped_dsn(upgraded_schema)).init()
 
         with psycopg.connect(POSTGRES_TEST_DSN) as conn:
+
             def _signature(schema: str) -> tuple[set[str], set[str]]:
                 tables = {
                     row[0]

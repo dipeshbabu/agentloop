@@ -204,7 +204,9 @@ def test_injected_failure_mid_save_rolls_back_the_whole_transaction(store, monke
     def _boom(_trace):
         raise RuntimeError("simulated diagnosis failure")
 
-    monkeypatch.setattr(type(store), "_upsert_findings", lambda self, conn, diagnosis, pid: _boom(None))
+    monkeypatch.setattr(
+        type(store), "_upsert_findings", lambda self, conn, diagnosis, pid: _boom(None)
+    )
 
     with pytest.raises(RuntimeError):
         store.save_trace(trace, project_id="proj_a")
