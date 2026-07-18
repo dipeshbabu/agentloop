@@ -51,11 +51,21 @@ After the distribution name and PyPI trusted publisher are configured:
    git push origin vX.Y.Z
    ```
 
-3. Watch the `Release` workflow. It checks the tag, builds and validates both
-   distributions, and publishes through PyPI trusted publishing.
-4. Verify the installed artifact in a fresh environment using the final chosen
+3. Watch the `Release` workflow. Before publishing, it rejects a tag whose
+   version does not match the package or whose commit is not reachable from
+   `main`. It then calls the same CI workflow used for pull requests against the
+   exact tagged commit: supported-Python tests, lock/pre-commit/Bandit checks,
+   CLI smoke, package metadata and wheel-install smoke, and the production
+   container deployment smoke must all pass.
+4. The reusable CI package job builds the wheel and source archive once, checks
+   those files, and uploads them as the `python-package` artifact. The publish
+   job downloads those exact bytes; it never rebuilds a release artifact.
+5. Verify the installed artifact in a fresh environment using the final chosen
    distribution name.
-5. Publish GitHub release notes based on the changelog and link the workflow run.
+6. Publish GitHub release notes based on the changelog and link the workflow run.
+
+There is currently no side-branch tag exception. If the project later adopts a
+hotfix process, document and protect it before weakening the reachability gate.
 
 Never reuse or move a published version tag. If a release is broken, fix forward
 with a new patch version. Yank an artifact only when leaving it available would

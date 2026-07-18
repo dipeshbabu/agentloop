@@ -30,6 +30,9 @@ Project history from before the first public release remains available in Git.
 - Docker deployment CI that starts the exact built image with Postgres, waits for
   API and dashboard readiness, verifies a trace round-trip, and checks the
   non-root runtime filesystem posture.
+- A reusable release-validation gate that tests the exact tagged commit across
+  supported Python versions, package and CLI smoke, and the production container
+  before the already-validated distribution files can reach PyPI publishing.
 
 ### Changed
 
