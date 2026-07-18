@@ -62,6 +62,8 @@ Project history from before the first public release remains available in Git.
   `auto-instrument` command remain as deprecated aliases that emit a
   `DeprecationWarning`; `InstrumentationResult` remains as an alias of
   `DetectionResult`. Update code that read the `enabled`/`skipped` keys.
+- Aligned the official container with the tested Python 3.13 runtime and made
+  application files read-only to its non-root user; `/data` remains writable.
 
 ### Fixed
 
