@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from agentloop.findings import build_diagnosis
+from agentloop.savings import SavingsItem, select_compatible
 from agentloop.tracer import AgentTrace
 
 _API_KEY_PREFIX_LENGTH = 10
@@ -130,6 +131,78 @@ def _priority_score(item: dict[str, Any]) -> float:
     return round(
         severity_weight + patch_weight + latency_weight + cost_weight + occurrence_weight, 3
     )
+
+
+def _build_optimization_queue(
+    findings: list[dict[str, Any]], project_id: str | None
+) -> list[dict[str, Any]]:
+    """Cluster unresolved findings into a priority-ranked optimization queue.
+
+    Within one run, findings of the same type and title that share affected
+    spans are the same underlying problem reported per occurrence — summing
+    their savings would double-count. Each cluster's savings therefore come
+    from the compatible (span-disjoint) selection per run, summed across runs,
+    and ``priority_score`` consumes those deduplicated totals.
+    """
+    clusters: dict[tuple[str, str], dict[str, Any]] = {}
+    cluster_items: dict[tuple[str, str], dict[str, list[SavingsItem]]] = {}
+    for finding in findings:
+        key = (finding["type"], finding["title"])
+        cluster = clusters.setdefault(
+            key,
+            {
+                "queue_id": "queue_"
+                + hashlib.sha256("|".join(key).encode("utf-8")).hexdigest()[:12],
+                "type": finding["type"],
+                "title": finding["title"],
+                "status": "detected",
+                "severity": finding["severity"],
+                "occurrence_count": 0,
+                "run_count": 0,
+                "affected_runs": [],
+                "patchable_count": 0,
+                "estimated_latency_savings_ms": 0.0,
+                "estimated_cost_savings_usd": 0.0,
+                "latest_created_at": finding["created_at"],
+                "project_id": project_id,
+                "quality_risk": _quality_risk(finding["type"]),
+                "requires_scorer": _quality_risk(finding["type"]) in {"high", "medium"},
+                "safe_to_auto_patch": False,
+            },
+        )
+        cluster["occurrence_count"] += 1
+        if finding["run_id"] not in cluster["affected_runs"]:
+            cluster["affected_runs"].append(finding["run_id"])
+            cluster["run_count"] += 1
+        cluster["patchable_count"] += 1 if finding["patchable"] else 0
+        cluster["severity"] = _max_severity(cluster["severity"], finding["severity"])
+        cluster["latest_created_at"] = max(
+            str(cluster["latest_created_at"]), str(finding["created_at"])
+        )
+        payload = finding.get("finding") or {}
+        cluster_items.setdefault(key, {}).setdefault(finding["run_id"], []).append(
+            SavingsItem(
+                spans=frozenset(payload.get("affected_spans") or []),
+                latency_ms=float(finding["estimated_latency_savings_ms"] or 0.0),
+                cost_usd=float(finding["estimated_cost_savings_usd"] or 0.0),
+            )
+        )
+
+    for key, cluster in clusters.items():
+        latency = 0.0
+        cost = 0.0
+        for run_items in cluster_items[key].values():
+            selection = select_compatible(run_items)
+            latency += selection.latency_ms
+            cost += selection.cost_usd
+        cluster["estimated_latency_savings_ms"] = round(latency, 3)
+        cluster["estimated_cost_savings_usd"] = round(cost, 6)
+
+    queue = list(clusters.values())
+    for item in queue:
+        item["safe_to_auto_patch"] = item["patchable_count"] > 0 and item["quality_risk"] == "low"
+        item["priority_score"] = _priority_score(item)
+    return sorted(queue, key=lambda item: item["priority_score"], reverse=True)
 
 
 def _quality_risk(finding_type: str) -> str:
@@ -404,52 +477,7 @@ class SQLiteTraceStore:
             for finding in self.list_findings(project_id=project_id)
             if finding["status"] != "resolved"
         ]
-        clusters: dict[tuple[str, str], dict[str, Any]] = {}
-        for finding in findings:
-            key = (finding["type"], finding["title"])
-            cluster = clusters.setdefault(
-                key,
-                {
-                    "queue_id": "queue_"
-                    + hashlib.sha256("|".join(key).encode("utf-8")).hexdigest()[:12],
-                    "type": finding["type"],
-                    "title": finding["title"],
-                    "status": "detected",
-                    "severity": finding["severity"],
-                    "occurrence_count": 0,
-                    "run_count": 0,
-                    "affected_runs": [],
-                    "patchable_count": 0,
-                    "estimated_latency_savings_ms": 0.0,
-                    "estimated_cost_savings_usd": 0.0,
-                    "latest_created_at": finding["created_at"],
-                    "project_id": project_id,
-                    "quality_risk": _quality_risk(finding["type"]),
-                    "requires_scorer": _quality_risk(finding["type"]) in {"high", "medium"},
-                    "safe_to_auto_patch": False,
-                },
-            )
-            cluster["occurrence_count"] += 1
-            if finding["run_id"] not in cluster["affected_runs"]:
-                cluster["affected_runs"].append(finding["run_id"])
-                cluster["run_count"] += 1
-            cluster["patchable_count"] += 1 if finding["patchable"] else 0
-            cluster["estimated_latency_savings_ms"] += finding["estimated_latency_savings_ms"]
-            cluster["estimated_cost_savings_usd"] += finding["estimated_cost_savings_usd"]
-            cluster["severity"] = _max_severity(cluster["severity"], finding["severity"])
-            cluster["latest_created_at"] = max(
-                str(cluster["latest_created_at"]), str(finding["created_at"])
-            )
-
-        queue = list(clusters.values())
-        for item in queue:
-            item["estimated_latency_savings_ms"] = round(item["estimated_latency_savings_ms"], 3)
-            item["estimated_cost_savings_usd"] = round(item["estimated_cost_savings_usd"], 6)
-            item["safe_to_auto_patch"] = (
-                item["patchable_count"] > 0 and item["quality_risk"] == "low"
-            )
-            item["priority_score"] = _priority_score(item)
-        return sorted(queue, key=lambda item: item["priority_score"], reverse=True)
+        return _build_optimization_queue(findings, project_id)
 
     def record_usage(self, project_id: str, run_id: str, report: dict[str, Any]) -> None:
         with self._connect() as conn:
@@ -727,51 +755,7 @@ class PostgresTraceStore:
             for finding in self.list_findings(project_id=project_id)
             if finding["status"] != "resolved"
         ]
-        clusters: dict[tuple[str, str], dict[str, Any]] = {}
-        for finding in findings:
-            key = (finding["type"], finding["title"])
-            cluster = clusters.setdefault(
-                key,
-                {
-                    "queue_id": "queue_"
-                    + hashlib.sha256("|".join(key).encode("utf-8")).hexdigest()[:12],
-                    "type": finding["type"],
-                    "title": finding["title"],
-                    "status": "detected",
-                    "severity": finding["severity"],
-                    "occurrence_count": 0,
-                    "run_count": 0,
-                    "affected_runs": [],
-                    "patchable_count": 0,
-                    "estimated_latency_savings_ms": 0.0,
-                    "estimated_cost_savings_usd": 0.0,
-                    "latest_created_at": finding["created_at"],
-                    "project_id": project_id,
-                    "quality_risk": _quality_risk(finding["type"]),
-                    "requires_scorer": _quality_risk(finding["type"]) in {"high", "medium"},
-                    "safe_to_auto_patch": False,
-                },
-            )
-            cluster["occurrence_count"] += 1
-            if finding["run_id"] not in cluster["affected_runs"]:
-                cluster["affected_runs"].append(finding["run_id"])
-                cluster["run_count"] += 1
-            cluster["patchable_count"] += 1 if finding["patchable"] else 0
-            cluster["estimated_latency_savings_ms"] += finding["estimated_latency_savings_ms"]
-            cluster["estimated_cost_savings_usd"] += finding["estimated_cost_savings_usd"]
-            cluster["severity"] = _max_severity(cluster["severity"], finding["severity"])
-            cluster["latest_created_at"] = max(
-                str(cluster["latest_created_at"]), str(finding["created_at"])
-            )
-        queue = list(clusters.values())
-        for item in queue:
-            item["estimated_latency_savings_ms"] = round(item["estimated_latency_savings_ms"], 3)
-            item["estimated_cost_savings_usd"] = round(item["estimated_cost_savings_usd"], 6)
-            item["safe_to_auto_patch"] = (
-                item["patchable_count"] > 0 and item["quality_risk"] == "low"
-            )
-            item["priority_score"] = _priority_score(item)
-        return sorted(queue, key=lambda item: item["priority_score"], reverse=True)
+        return _build_optimization_queue(findings, project_id)
 
     def record_usage(self, project_id: str, run_id: str, report: dict[str, Any]) -> None:
         with self._connect() as conn:

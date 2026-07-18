@@ -271,6 +271,14 @@ AgentLoop reconstructs an execution graph, identifies bottlenecks, and emits opt
 
 Each card includes a reason, affected nodes, confidence, rewrite hint, and estimated latency or cost savings.
 
+Cards that touch the same spans compete for the same work, so their estimates are
+alternatives rather than additive. The plan's projected totals come from the
+compatible (span-disjoint) subset of cards that maximizes latency savings, with
+ties broken by cost savings, capped at the run's actual runtime and cost — so the
+reported latency/cost pair is always achievable by one concrete set of changes.
+The plan's `savings_aggregation` block records the rule, the selected card
+indexes, and the raw versus effective totals.
+
 ## Diagnosis and OpenTelemetry interop
 
 ```bash
@@ -294,7 +302,11 @@ batching, model routing, split/compress rewrites, runaway-loop guardrails, and
 tool-oscillation guards without modifying source files.
 When traces are stored through the local or deployed API, AgentLoop persists the
 diagnosis findings and clusters them into an optimization queue ranked by
-severity, frequency, patchability, and estimated savings.
+severity, frequency, patchability, and estimated savings. Queue savings use the
+same overlap rule as optimization plans: within one run, findings of the same
+type and title that share affected spans count once (the best compatible
+selection), so repeated detections of the same problem do not inflate
+`priority_score`.
 `agentloop github-issue-drafts` turns the top patchable queue items into
 GitHub-ready issue titles, labels, bodies, and acceptance criteria.
 
