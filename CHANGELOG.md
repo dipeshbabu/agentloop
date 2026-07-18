@@ -62,6 +62,14 @@ Project history from before the first public release remains available in Git.
 
 ### Fixed
 
+- **OpenAI instrumentation is now idempotent and stream-aware.** Wrapping the
+  same client or callable more than once is a no-op, so one request records one
+  event instead of doubling metrics. Streaming responses (`stream=True`) are
+  finalized when the stream is consumed, closed, fails, or is cancelled — not when
+  the iterator is created — so the recorded duration covers consumption and final
+  usage is captured when the SDK provides it; a mid-stream error is recorded once
+  and propagates unchanged. Calls made without an active trace are no longer
+  recorded and no longer raise, so they cannot break a successful application call.
 - **The OpenAI Agents tracing processor now isolates and releases state per
   trace.** Spans are grouped by their owning trace id and released when that trace
   ends, so interleaved traces export only their own spans and processor memory no
