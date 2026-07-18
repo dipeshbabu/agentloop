@@ -1,11 +1,25 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
 from typer.testing import CliRunner
 
 from agentloop.cli import app
+
+
+def _clean(output: str) -> str:
+    """Normalize CLI error output for substring matching.
+
+    Typer renders ``BadParameter`` inside a Rich bordered box and wraps the
+    message to the terminal width, inserting box-drawing borders and padding
+    between words. That can split a phrase (for example ``permission denied``)
+    across box lines, so strip the box characters and collapse whitespace before
+    asserting on message text.
+    """
+    return " ".join(re.sub(r"[│╭╮╰╯─]", " ", output).split())
+
 
 TRACE_COMMANDS = [
     pytest.param(["report", "{input}"], id="report"),
@@ -60,9 +74,10 @@ def test_trace_commands_reject_missing_inputs_without_side_effects(
 
     result = CliRunner().invoke(app, _render_args(template, input_path=missing, output_path=output))
 
+    clean = _clean(result.output)
     assert result.exit_code == 2
-    assert "Input file does not exist" in result.output
-    assert "agentloop demo" in result.output
+    assert "Input file does not exist" in clean
+    assert "agentloop demo" in clean
     assert not missing.exists()
     assert not output.exists()
 
@@ -71,7 +86,7 @@ def test_trace_command_rejects_directory_input(tmp_path: Path) -> None:
     result = CliRunner().invoke(app, ["report", str(tmp_path)])
 
     assert result.exit_code == 2
-    assert "Input path is not a regular file" in result.output
+    assert "Input path is not a regular file" in _clean(result.output)
 
 
 def test_trace_command_rejects_unreadable_input(tmp_path: Path, monkeypatch) -> None:
@@ -87,9 +102,10 @@ def test_trace_command_rejects_unreadable_input(tmp_path: Path, monkeypatch) -> 
     monkeypatch.setattr(Path, "read_text", deny_read)
     result = CliRunner().invoke(app, ["report", str(trace_path)])
 
+    clean = _clean(result.output)
     assert result.exit_code == 2
-    assert "Input file is not readable as UTF-8" in result.output
-    assert "permission denied" in result.output
+    assert "Input file is not readable as UTF-8" in clean
+    assert "permission denied" in clean
 
 
 def test_trace_command_rejects_malformed_json(tmp_path: Path) -> None:
@@ -99,7 +115,7 @@ def test_trace_command_rejects_malformed_json(tmp_path: Path) -> None:
     result = CliRunner().invoke(app, ["report", str(trace_path)])
 
     assert result.exit_code == 2
-    assert "Input file is not valid JSON" in result.output
+    assert "Input file is not valid JSON" in _clean(result.output)
 
 
 def test_trace_command_rejects_invalid_trace_schema(tmp_path: Path) -> None:
@@ -109,4 +125,4 @@ def test_trace_command_rejects_invalid_trace_schema(tmp_path: Path) -> None:
     result = CliRunner().invoke(app, ["report", str(trace_path)])
 
     assert result.exit_code == 2
-    assert "Input file is not a valid AgentLoop trace" in result.output
+    assert "Input file is not a valid AgentLoop trace" in _clean(result.output)
