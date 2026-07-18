@@ -93,10 +93,10 @@ release. Record the date and any approved exception in this section.
 
 ## Packaging and releases
 
-- [x] Confirm maintainer control of the existing `agentloop` PyPI project and use
-      `agentloop` consistently as the distribution, import package, and CLI name.
-- [ ] Configure the PyPI trusted publisher for owner `dipeshbabu`, repository
-      `agentloop`, workflow `release.yml`, and environment `pypi`.
+- [x] Select the unique `agentloop-profiler` distribution name while retaining
+      `agentloop` as the import package and CLI name.
+- [ ] Register the `agentloop-profiler` pending publisher for owner `dipeshbabu`,
+      repository `agentloop`, workflow `release.yml`, and environment `pypi`.
 - [x] Protect the GitHub `pypi` environment with maintainer approval and a custom
       `v*` tag deployment policy.
 - [ ] Set `PYPI_PUBLISH_ENABLED=true` only after the trusted publisher is ready.

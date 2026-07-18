@@ -1,7 +1,7 @@
 # AgentLoop
 
 [![CI](https://github.com/dipeshbabu/agentloop/actions/workflows/ci.yml/badge.svg)](https://github.com/dipeshbabu/agentloop/actions/workflows/ci.yml)
-[![PyPI](https://img.shields.io/pypi/v/agentloop.svg)](https://pypi.org/project/agentloop/)
+[![PyPI](https://img.shields.io/pypi/v/agentloop-profiler.svg)](https://pypi.org/project/agentloop-profiler/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB.svg)](https://www.python.org/downloads/)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
@@ -21,11 +21,11 @@ with user-facing changes recorded in the [changelog](CHANGELOG.md).
 
 ## Install
 
-The official PyPI distribution, Python import package, and command-line program
-are all named `agentloop`:
+The PyPI distribution is named `agentloop-profiler`. The Python import package
+and command-line program remain `agentloop`:
 
 ```bash
-python -m pip install agentloop
+python -m pip install agentloop-profiler
 agentloop --help
 ```
 

@@ -38,6 +38,9 @@ Project history from before the first public release remains available in Git.
 
 ### Changed
 
+- Selected `agentloop-profiler` as the installable distribution name while
+  retaining `agentloop` as the Python import package and command-line program.
+  Install published releases with `pip install agentloop-profiler`.
 - Issue forms and generated optimization drafts now use only labels that exist
   in the repository, and the launch checklist records the audited/target branch,
   tag, security, Dependabot, and Actions controls for periodic owner review.
