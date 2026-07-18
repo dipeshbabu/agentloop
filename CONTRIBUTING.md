@@ -198,6 +198,11 @@ Before 1.0, breaking changes are possible but should still be intentional,
 documented, and accompanied by a practical migration path. Deprecate a public
 surface before removing it when the maintenance cost and security impact allow.
 
+Contributors do not bump the package version or move `Unreleased` into a dated
+section themselves — leave `## [Unreleased]` accumulating entries across PRs.
+Cutting a release (version bump, changelog dating, tagging, and publishing) is
+a maintainer action; see [docs/RELEASING.md](docs/RELEASING.md).
+
 ## AI-assisted contributions
 
 AI tools are welcome as part of a contributor's workflow, but the contributor is
