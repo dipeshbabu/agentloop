@@ -158,6 +158,37 @@ def test_quality_report_endpoint() -> None:
     assert response.json()["passed"] is True
 
 
+def test_quality_report_endpoint_rejects_missing_or_empty_fixtures() -> None:
+    client = TestClient(app)
+
+    missing = client.post("/quality-report", json={})
+    empty = client.post("/quality-report", json={"fixtures": []})
+
+    assert missing.status_code == 422
+    assert empty.status_code == 422
+    assert "at least one case" in empty.json()["detail"]
+
+
+def test_quality_report_endpoint_rejects_vacuous_scorer_and_invalid_score() -> None:
+    client = TestClient(app)
+
+    scorer = client.post(
+        "/quality-report",
+        json={"fixtures": [{"candidate_output": "anything", "scorer": {"type": "contains"}}]},
+    )
+    score = client.post(
+        "/quality-report",
+        json={
+            "fixtures": [{"candidate_output": "ok", "expected": "ok"}],
+            "min_score": 1.01,
+        },
+    )
+
+    assert scorer.status_code == 422
+    assert "non-empty" in scorer.json()["detail"]
+    assert score.status_code == 422
+
+
 def test_quality_report_endpoint_rejects_custom_python_scorers() -> None:
     client = TestClient(app)
     response = client.post(

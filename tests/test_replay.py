@@ -183,6 +183,38 @@ def test_replay_report_uses_fixture_quality_report() -> None:
     assert report["quality"]["candidate_score"] == 0.95
 
 
+def test_replay_report_fails_supplied_fixture_report_without_score_threshold() -> None:
+    baseline = _trace(
+        "baseline",
+        model_duration_ms=800,
+        tool_duration_ms=200,
+        input_tokens=1000,
+        output_tokens=200,
+    )
+    candidate = _trace(
+        "candidate",
+        model_duration_ms=400,
+        tool_duration_ms=100,
+        input_tokens=500,
+        output_tokens=100,
+    )
+    quality = {
+        "passed": False,
+        "baseline_score": 1.0,
+        "candidate_score": 0.0,
+        "failed_case_count": 1,
+    }
+
+    report = build_replay_report(baseline, candidate, quality_report=quality)
+
+    fixture_gate = next(
+        item for item in report["gates"]["results"] if item["name"] == "quality_fixtures"
+    )
+    assert report["gates"]["passed"] is False
+    assert fixture_gate["passed"] is False
+    assert "1 supplied quality fixture case(s) failed" in fixture_gate["detail"]
+
+
 def test_replay_markdown_contains_gate_table() -> None:
     baseline = _trace(
         "baseline", model_duration_ms=500, tool_duration_ms=100, input_tokens=200, output_tokens=50
