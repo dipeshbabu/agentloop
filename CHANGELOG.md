@@ -62,6 +62,15 @@ Project history from before the first public release remains available in Git.
 
 ### Fixed
 
+- **The OpenAI Agents tracing processor now isolates and releases state per
+  trace.** Spans are grouped by their owning trace id and released when that trace
+  ends, so interleaved traces export only their own spans and processor memory no
+  longer grows with the number of completed traces. A span that arrives without a
+  readable trace id is attributed to the single most recently started open trace
+  (or dropped if none is open) instead of being copied into every trace that ends.
+  Duplicate `on_trace_end`, a missing `on_trace_start`, `shutdown`, and
+  `force_flush` now have defined behavior, and `AgentLoopTracingProcessor` gained a
+  `retain_exported` option to avoid holding completed `exported_traces` in memory.
 - **Trace finalization side effects now run independently.** Export, local
   storage, and upload each have their own error boundary and run in a
   deterministic order, so a failure in one no longer prevents the others when
