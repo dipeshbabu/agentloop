@@ -3,17 +3,19 @@
 This guide is for maintainers publishing official artifacts. Contributors do not
 need release credentials.
 
-## Current distribution-name blocker
+## Distribution ownership and trusted publishing
 
-The `agentloop` project name on PyPI is already owned by an unrelated package.
-Do not create a release tag or enable PyPI publishing until the project has
-chosen and reserved a unique distribution name, or has verified legitimate
-ownership of the existing name. The Python import package can remain `agentloop`
-even if the installable distribution uses a different name.
+The maintainer controls the existing `agentloop` project on PyPI and has selected
+it as this repository's official distribution. The distribution, Python import
+package, and command-line program therefore all remain `agentloop`.
+
+The GitHub `pypi` environment requires maintainer approval and accepts only `v*`
+tags. PyPI must trust owner `dipeshbabu`, repository `agentloop`, workflow
+`release.yml`, and environment `pypi` before the first tag is created.
 
 The release workflow requires the repository variable `PYPI_PUBLISH_ENABLED` to
-equal `true` before its publish job will run. Leave that variable unset while the
-name is unresolved.
+equal `true` before its publish job will run. Leave that variable unset until the
+trusted publisher is configured and verified.
 
 ## Prepare a release
 
@@ -41,7 +43,7 @@ name is unresolved.
 
 ## Publish
 
-After the distribution name and PyPI trusted publisher are configured:
+After the PyPI trusted publisher is configured:
 
 1. Set the repository variable `PYPI_PUBLISH_ENABLED` to `true`.
 2. Create an annotated tag that exactly matches the package version:
@@ -60,8 +62,13 @@ After the distribution name and PyPI trusted publisher are configured:
 4. The reusable CI package job builds the wheel and source archive once, checks
    those files, and uploads them as the `python-package` artifact. The publish
    job downloads those exact bytes; it never rebuilds a release artifact.
-5. Verify the installed artifact in a fresh environment using the final chosen
-   distribution name.
+5. Verify the installed artifact in a fresh environment:
+
+   ```bash
+   python -m pip install agentloop==X.Y.Z
+   python -m pip show agentloop
+   agentloop --help
+   ```
 6. Publish GitHub release notes based on the changelog and link the workflow run.
 
 There is currently no side-branch tag exception. If the project later adopts a

@@ -1,6 +1,7 @@
 # AgentLoop
 
 [![CI](https://github.com/dipeshbabu/agentloop/actions/workflows/ci.yml/badge.svg)](https://github.com/dipeshbabu/agentloop/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/agentloop.svg)](https://pypi.org/project/agentloop/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB.svg)](https://www.python.org/downloads/)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
@@ -18,11 +19,21 @@ Trace in. Rewrite plan out. Replay proof in the PR.
 AgentLoop is under active pre-1.0 development. Public interfaces may evolve,
 with user-facing changes recorded in the [changelog](CHANGELOG.md).
 
-## Install from source
+## Install
 
-The `agentloop` name on PyPI currently belongs to an unrelated project. Until an
-official distribution name is announced, do not use `pip install agentloop` for
-this repository. Install the source checkout with [`uv`](https://docs.astral.sh/uv/):
+The official PyPI distribution, Python import package, and command-line program
+are all named `agentloop`:
+
+```bash
+python -m pip install agentloop
+agentloop --help
+```
+
+```python
+import agentloop
+```
+
+For a source checkout, use [`uv`](https://docs.astral.sh/uv/):
 
 ```bash
 git clone https://github.com/dipeshbabu/agentloop.git

@@ -8,6 +8,8 @@ Project history from before the first public release remains available in Git.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-07-18
+
 ### Added
 
 - Apache-2.0 licensing and open-source project metadata.
@@ -157,4 +159,5 @@ Project history from before the first public release remains available in Git.
 - Constrained patch-plan source discovery to a normalized allowed root and
   excluded source and directory symlinks from scans.
 
-[Unreleased]: https://github.com/dipeshbabu/agentloop/commits/main
+[Unreleased]: https://github.com/dipeshbabu/agentloop/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/dipeshbabu/agentloop/releases/tag/v0.4.0
