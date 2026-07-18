@@ -8,6 +8,13 @@ Project history from before the first public release remains available in Git.
 
 ## [Unreleased]
 
+### Security
+
+- Enforced pull-request and required-check protection on `main`, protected
+  release tags from deletion or movement, enabled private vulnerability
+  reporting and Dependabot security updates, and required full-commit-SHA pins
+  for every external GitHub Action and reusable workflow.
+
 ## [0.4.0] - 2026-07-18
 
 ### Added
