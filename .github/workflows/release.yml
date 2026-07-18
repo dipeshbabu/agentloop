@@ -4,6 +4,14 @@ on:
   push:
     tags:
       - "v*.*.*"
+  # Lets tag-release.yml (which pushes tags with the default GITHUB_TOKEN, so
+  # the push above never fires for it — see the comment in tag-release.yml)
+  # start this workflow via `gh workflow run release.yml --ref <tag>`. Running
+  # with --ref set to a tag gives this run the same github.ref/GITHUB_REF_NAME
+  # a real tag push would, so the guard job below needs no special-casing for
+  # this trigger type. A manual dispatch against a branch (not a tag) still
+  # fails the "Check tag matches package version" step, same as it always has.
+  workflow_dispatch: {}
 
 permissions:
   contents: read
