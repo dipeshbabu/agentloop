@@ -26,13 +26,27 @@ General → Workflow permissions → "Allow GitHub Actions to create and approve
 pull requests"** to be enabled. Without it, the workflow's `gh pr create` step
 fails with a permissions error; use the manual alternative until it's turned on.
 
+## Versioning policy
+
+Default to a **patch** bump (`0.5.0` → `0.5.1` → `0.5.2` → ...). Reserve
+**minor** for a release whose reason to ship is a notable user-facing
+feature, and **major** for a breaking change (before 1.0, any deliberate
+breaking change). This is standard [SemVer](https://semver.org/) — and what
+Conventional Commits-driven tools apply automatically from
+`fix:`/`feat:`/`BREAKING CHANGE` — but here it's a judgment call the person
+running the release makes explicitly rather than something inferred from
+commit messages. Don't reach for `minor` just because a release happens to
+include a new feature among other changes; reserve it for when the feature
+itself is the reason to cut that release.
+
 ## Prepare a release
 
 ### Automated (recommended)
 
 1. From the **Actions** tab, run the **Bump version** workflow (or
-   `gh workflow run bump-version.yml -f bump_type=minor`). Choose `patch`,
-   `minor`, or `major`, or set an explicit `version` input instead.
+   `gh workflow run bump-version.yml -f bump_type=patch`). Pick the bump type
+   per the [versioning policy](#versioning-policy) above (the workflow
+   defaults to `patch`), or set an explicit `version` input instead.
 2. The workflow validates `main` (the same checks as CI — lint, tests on both
    supported Python versions against SQLite and Postgres, package build, Docker
    deployment smoke), then runs `scripts/bump_version.py`, which:
@@ -66,8 +80,9 @@ without dispatching the workflow:
 
 1. Update the version in both `pyproject.toml` and `agentloop/version.py`, or
    run `uv run --frozen python scripts/bump_version.py patch|minor|major` (or
-   `--set X.Y.Z`) locally — it does steps 1–2 below in one command, including
-   the `uv.lock` refresh.
+   `--set X.Y.Z`) locally, per the [versioning policy](#versioning-policy)
+   above — it does steps 1–2 below in one command, including the `uv.lock`
+   refresh.
 2. Move the relevant entries in `CHANGELOG.md` from `Unreleased` into a
    versioned section with the release date.
 3. Sync and run all checks from a clean worktree:

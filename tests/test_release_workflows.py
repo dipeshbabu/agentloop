@@ -48,12 +48,23 @@ def test_bump_version_workflow_validates_before_opening_a_release_pr() -> None:
 
     assert "workflow_dispatch:" in workflow
     assert "options: [patch, minor, major]" in workflow
+    assert "default: patch" in workflow
+    assert "patch (default) for routine changes" in workflow
     assert "uses: ./.github/workflows/ci.yml" in workflow
     assert "needs: validate" in workflow
     assert "scripts/bump_version.py" in workflow
     assert "pull-requests: write" in workflow
     assert "gh pr create" in workflow
     assert "--base main" in workflow
+
+
+def test_releasing_docs_state_the_patch_default_versioning_policy() -> None:
+    releasing = (ROOT / "docs" / "RELEASING.md").read_text(encoding="utf-8")
+
+    assert "## Versioning policy" in releasing
+    assert "Default to a **patch** bump" in releasing
+    assert "Reserve\n**minor** for a release whose reason to ship is a notable" in releasing
+    assert "Don't reach for `minor` just because a release happens to" in releasing
 
 
 def test_tag_release_workflow_is_idempotent_and_dispatches_release() -> None:
