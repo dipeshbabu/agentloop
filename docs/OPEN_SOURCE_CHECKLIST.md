@@ -46,33 +46,65 @@ safe again.
 
 - [ ] Add a concise repository description, homepage, and topics such as
       `ai-agents`, `observability`, `profiling`, and `python`.
-- [ ] Enable the dependency graph, Dependabot alerts, and Dependabot security
-      updates. The repository already configures uv, pre-commit, Actions, and
-      Docker version updates.
-- [ ] Enable code scanning so `.github/workflows/codeql.yml` can upload results.
+- [x] Enable the dependency graph and Dependabot alerts.
+- [ ] Enable Dependabot security updates. The repository already configures uv,
+      pre-commit, Actions, and Docker version updates.
+- [x] Enable code scanning so `.github/workflows/codeql.yml` can upload results.
 - [ ] Protect `main`: require a pull request, passing CI and security checks,
       resolved review conversations, and no force pushes.
 - [ ] Protect release tags matching `v*`.
 - [ ] Decide whether GitHub Discussions will be offered for usage questions and
       update `SUPPORT.md` if it is enabled.
-- [ ] Confirm that issue labels referenced by the forms and Dependabot exist, or
-      adjust the YAML files to match the chosen label set.
+- [x] Confirm that issue labels referenced by the forms, Dependabot, and generated
+      optimization drafts exist. Generated drafts use the stable `enhancement`
+      label and keep finding type/severity in the issue body instead of creating
+      dynamic labels.
 - [ ] Review Actions permissions and allow only the actions used by the checked-in
       workflows.
 
+### Repository settings target and review record
+
+The settings audit was repeated on 2026-07-18. Code scanning, secret scanning,
+push protection, the dependency graph, and Dependabot alerts are enabled. The
+repository still has no branch or tag ruleset; private vulnerability reporting
+and Dependabot security updates are disabled; Actions currently allows every
+source and does not require SHA pinning. These unchecked settings remain owner
+actions and must not be reported as complete until verified through GitHub.
+
+Configure a `main` ruleset with these properties:
+
+- require pull requests and resolution of review conversations;
+- block force pushes and deletion, with bypass limited to the repository owner
+  for documented emergencies;
+- require `Python 3.10`, `Python 3.13`, `Docker image and deployment smoke`,
+  `Replay and optimization gates`, `Analyze Python`, and
+  `Review dependency changes`; add `Package artifact and wheel smoke` when the
+  release-validation workflow from issue #25 lands; and
+- allow workflows for forked pull requests to run with read-only permissions and
+  synthetic credentials, without exposing repository or environment secrets.
+
+Add a second ruleset protecting tags matching `v*`. Restrict Actions to GitHub,
+verified creators, and the pinned actions used by this repository, or enable the
+repository SHA-pinning requirement. Enable private vulnerability reporting and
+verify the `SECURITY.md` advisory link while signed out or as a non-maintainer.
+
+The repository owner should review these controls quarterly and before every
+release. Record the date and any approved exception in this section.
+
 ## Packaging and releases
 
-- [ ] Resolve the PyPI name collision described in `docs/RELEASING.md`. Update the
-      distribution name in `pyproject.toml` without changing the `agentloop`
-      import package unless a broader rename is intentional.
-- [ ] Reserve the final distribution name and configure a PyPI trusted publisher
-      for this repository and its `pypi` environment.
-- [ ] Add environment protection rules for publishing, then set
-      `PYPI_PUBLISH_ENABLED=true` only when publishing is ready.
-- [ ] Build the wheel and source archive, inspect their contents, and install each
+- [x] Select the unique `agentloop-profiler` distribution name while retaining
+      `agentloop` as the import package and CLI name.
+- [ ] Register the `agentloop-profiler` pending publisher for owner `dipeshbabu`,
+      repository `agentloop`, workflow `release.yml`, and environment `pypi`.
+- [x] Protect the GitHub `pypi` environment with maintainer approval and a custom
+      `v*` tag deployment policy.
+- [ ] Set `PYPI_PUBLISH_ENABLED=true` only after the trusted publisher is ready.
+- [x] Build the wheel and source archive, inspect their contents, and install each
       in a clean environment.
-- [ ] Create the first versioned changelog entry and publish an immutable annotated
-      tag that matches the package version.
+- [x] Create the first versioned changelog entry.
+- [ ] Publish an immutable annotated tag that matches the package version only
+      after the trusted publisher and release checks are ready.
 
 ## Launch
 

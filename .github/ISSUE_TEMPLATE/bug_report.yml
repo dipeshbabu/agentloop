@@ -1,7 +1,7 @@
 name: Bug report
 description: Report a reproducible problem in AgentLoop.
 title: "[Bug]: "
-labels: [bug, triage]
+labels: [bug]
 body:
   - type: markdown
     attributes:

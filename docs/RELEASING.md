@@ -3,17 +3,20 @@
 This guide is for maintainers publishing official artifacts. Contributors do not
 need release credentials.
 
-## Current distribution-name blocker
+## Distribution name and trusted publishing
 
-The `agentloop` project name on PyPI is already owned by an unrelated package.
-Do not create a release tag or enable PyPI publishing until the project has
-chosen and reserved a unique distribution name, or has verified legitimate
-ownership of the existing name. The Python import package can remain `agentloop`
-even if the installable distribution uses a different name.
+The official PyPI distribution is `agentloop-profiler`. The Python import package
+and command-line program remain `agentloop`, so users install
+`agentloop-profiler` and write `import agentloop`.
+
+The GitHub `pypi` environment requires maintainer approval and accepts only `v*`
+tags. The PyPI pending publisher for project `agentloop-profiler` must trust owner
+`dipeshbabu`, repository `agentloop`, workflow `release.yml`, and environment
+`pypi` before the first tag is created.
 
 The release workflow requires the repository variable `PYPI_PUBLISH_ENABLED` to
-equal `true` before its publish job will run. Leave that variable unset while the
-name is unresolved.
+equal `true` before its publish job will run. Leave that variable unset until the
+trusted publisher is configured and verified.
 
 ## Prepare a release
 
@@ -41,7 +44,7 @@ name is unresolved.
 
 ## Publish
 
-After the distribution name and PyPI trusted publisher are configured:
+After the PyPI trusted publisher is configured:
 
 1. Set the repository variable `PYPI_PUBLISH_ENABLED` to `true`.
 2. Create an annotated tag that exactly matches the package version:
@@ -51,11 +54,26 @@ After the distribution name and PyPI trusted publisher are configured:
    git push origin vX.Y.Z
    ```
 
-3. Watch the `Release` workflow. It checks the tag, builds and validates both
-   distributions, and publishes through PyPI trusted publishing.
-4. Verify the installed artifact in a fresh environment using the final chosen
-   distribution name.
-5. Publish GitHub release notes based on the changelog and link the workflow run.
+3. Watch the `Release` workflow. Before publishing, it rejects a tag whose
+   version does not match the package or whose commit is not reachable from
+   `main`. It then calls the same CI workflow used for pull requests against the
+   exact tagged commit: supported-Python tests, lock/pre-commit/Bandit checks,
+   CLI smoke, package metadata and wheel-install smoke, and the production
+   container deployment smoke must all pass.
+4. The reusable CI package job builds the wheel and source archive once, checks
+   those files, and uploads them as the `python-package` artifact. The publish
+   job downloads those exact bytes; it never rebuilds a release artifact.
+5. Verify the installed artifact in a fresh environment:
+
+   ```bash
+   python -m pip install agentloop-profiler==X.Y.Z
+   python -m pip show agentloop-profiler
+   agentloop --help
+   ```
+6. Publish GitHub release notes based on the changelog and link the workflow run.
+
+There is currently no side-branch tag exception. If the project later adopts a
+hotfix process, document and protect it before weakening the reachability gate.
 
 Never reuse or move a published version tag. If a release is broken, fix forward
 with a new patch version. Yank an artifact only when leaving it available would
