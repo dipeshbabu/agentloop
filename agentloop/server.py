@@ -11,7 +11,7 @@ from agentloop.config import get_admin_api_key, get_api_key, get_cors_origins, r
 from agentloop.findings import build_diagnosis
 from agentloop.issues import build_issue_drafts
 from agentloop.optimizer import build_optimization_plan
-from agentloop.quality import build_quality_report
+from agentloop.quality import QualityValidationError, build_quality_report
 from agentloop.store import (
     DEFAULT_PAGE_SIZE,
     MAX_PAGE_SIZE,
@@ -55,10 +55,10 @@ class CreateApiKeyPayload(BaseModel):
 
 
 class QualityReportPayload(BaseModel):
-    fixtures: list[dict[str, Any]] = Field(default_factory=list)
+    fixtures: list[dict[str, Any]]
     baseline_run_id: str | None = None
     candidate_run_id: str | None = None
-    min_score: float | None = Field(default=None, ge=0)
+    min_score: float | None = Field(default=None, ge=0, le=1)
 
 
 def store() -> TraceStore:
@@ -335,12 +335,15 @@ def quality_report_endpoint(
         if payload.candidate_run_id
         else None
     )
-    return build_quality_report(
-        payload.fixtures,
-        baseline_trace=baseline_trace,
-        candidate_trace=candidate_trace,
-        min_score=payload.min_score,
-    )
+    try:
+        return build_quality_report(
+            payload.fixtures,
+            baseline_trace=baseline_trace,
+            candidate_trace=candidate_trace,
+            min_score=payload.min_score,
+        )
+    except QualityValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @app.get("/traces/{run_id}/value")

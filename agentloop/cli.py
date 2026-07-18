@@ -22,6 +22,7 @@ from agentloop.otel import trace_from_otel, trace_to_otel
 from agentloop.patches import build_patch_plan, patch_plan_to_markdown
 from agentloop.plan_export import export_optimization_json, export_optimization_markdown
 from agentloop.quality import (
+    QualityValidationError,
     build_quality_report,
     load_quality_fixtures,
     quality_report_to_markdown,
@@ -111,6 +112,29 @@ def _load_trace(
     except (AttributeError, KeyError, TypeError, ValueError) as exc:
         raise typer.BadParameter(
             f"Input file is not a valid {format_name} trace: {path} ({exc})",
+            param_hint=param_hint,
+        ) from exc
+
+
+def _build_quality_report_from_file(
+    path: Path,
+    *,
+    param_hint: str,
+    baseline_trace: AgentTrace | None = None,
+    candidate_trace: AgentTrace | None = None,
+    min_score: float | None = None,
+) -> dict:
+    try:
+        fixtures = load_quality_fixtures(path)
+        return build_quality_report(
+            fixtures,
+            baseline_trace=baseline_trace,
+            candidate_trace=candidate_trace,
+            min_score=min_score,
+        )
+    except (OSError, UnicodeError, QualityValidationError) as exc:
+        raise typer.BadParameter(
+            f"Invalid quality fixture file: {path} ({exc})",
             param_hint=param_hint,
         ) from exc
 
@@ -210,7 +234,7 @@ def replay_command(
         False, help="Require candidate trace metadata/report to mark schema output as valid."
     ),
     min_quality_score: float | None = typer.Option(
-        None, min=0.0, help="Optional minimum candidate quality score."
+        None, min=0.0, max=1.0, help="Optional minimum candidate quality score."
     ),
     quality_fixtures: Path | None = typer.Option(None, help="Optional quality fixture JSON file."),
     fail_on_gate: bool = typer.Option(True, help="Exit non-zero when replay gates fail."),
@@ -218,8 +242,9 @@ def replay_command(
     baseline_trace = _load_trace(baseline, param_hint="--baseline")
     candidate_trace = _load_trace(candidate, param_hint="--candidate")
     quality = (
-        build_quality_report(
-            load_quality_fixtures(quality_fixtures),
+        _build_quality_report_from_file(
+            quality_fixtures,
+            param_hint="--quality-fixtures",
             baseline_trace=baseline_trace,
             candidate_trace=candidate_trace,
             min_score=min_quality_score,
@@ -262,7 +287,7 @@ def quality_report_command(
     json_out: Path | None = typer.Option(
         None, help="Optional machine-readable quality report output."
     ),
-    min_score: float | None = typer.Option(None, min=0.0),
+    min_score: float | None = typer.Option(None, min=0.0, max=1.0),
 ) -> None:
     baseline_trace = (
         _load_trace(baseline, param_hint="--baseline") if baseline is not None else None
@@ -270,8 +295,9 @@ def quality_report_command(
     candidate_trace = (
         _load_trace(candidate, param_hint="--candidate") if candidate is not None else None
     )
-    report_data = build_quality_report(
-        load_quality_fixtures(fixtures),
+    report_data = _build_quality_report_from_file(
+        fixtures,
+        param_hint="fixtures",
         baseline_trace=baseline_trace,
         candidate_trace=candidate_trace,
         min_score=min_score,
@@ -301,7 +327,7 @@ def ci_command(
         False, help="Require candidate trace metadata/report to mark schema output as valid."
     ),
     min_quality_score: float | None = typer.Option(
-        None, min=0.0, help="Optional minimum candidate quality score."
+        None, min=0.0, max=1.0, help="Optional minimum candidate quality score."
     ),
     quality_fixtures: Path | None = typer.Option(None, help="Optional quality fixture JSON file."),
     github_step_summary: bool = typer.Option(
@@ -312,8 +338,9 @@ def ci_command(
     baseline_trace = _load_trace(baseline, param_hint="--baseline")
     candidate_trace = _load_trace(candidate, param_hint="--candidate")
     quality = (
-        build_quality_report(
-            load_quality_fixtures(quality_fixtures),
+        _build_quality_report_from_file(
+            quality_fixtures,
+            param_hint="--quality-fixtures",
             baseline_trace=baseline_trace,
             candidate_trace=candidate_trace,
             min_score=min_quality_score,

@@ -320,21 +320,26 @@ def _gate_results(
                 else "candidate schema validity missing or failed",
             )
         )
+    if quality_report is not None:
+        fixture_passed = bool(quality_report.get("passed"))
+        failed_count = int(quality_report.get("failed_case_count", 0) or 0)
+        results.append(
+            _gate(
+                "quality_fixtures",
+                fixture_passed,
+                "supplied quality fixtures passed"
+                if fixture_passed
+                else f"{failed_count} supplied quality fixture case(s) failed",
+            )
+        )
     if gates.min_quality_score is not None:
         quality_score = _optional_float(candidate.get("quality_score"))
-        fixture_passed = quality_report is None or bool(quality_report.get("passed"))
-        passed = (
-            quality_score is not None
-            and quality_score >= gates.min_quality_score
-            and fixture_passed
-        )
+        passed = quality_score is not None and quality_score >= gates.min_quality_score
         detail = (
             f"{quality_score:.4f} candidate quality >= {gates.min_quality_score:.4f} required"
             if quality_score is not None
             else f"candidate quality score missing; {gates.min_quality_score:.4f} required"
         )
-        if quality_report is not None and not fixture_passed:
-            detail += f"; {quality_report.get('failed_case_count', 0)} fixture case(s) failed"
         results.append(_gate("quality_score", passed, detail))
     return results
 

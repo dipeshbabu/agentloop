@@ -75,6 +75,10 @@ it behind an authenticated reverse proxy and follow
 [PRODUCTION.md](PRODUCTION.md), including TLS, explicit CORS, API-key auth,
 retention, backups, and database access controls.
 
+Quality fixture validation runs only when the Quality Gates form is submitted.
+Empty suites, missing scorer requirements, and malformed JSON are shown beside
+the form and do not produce a passing report.
+
 Custom quality scorers import Python code and must be used only with trusted
 local fixtures. The HTTP API rejects custom scorers and raw regular-expression
 scorers; use bounded `glob` or `contains` matching for untrusted input.

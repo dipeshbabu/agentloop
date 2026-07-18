@@ -131,3 +131,52 @@ def test_cli_ci_exits_nonzero_when_gate_fails(tmp_path) -> None:
     )
 
     assert result.exit_code == 1
+
+
+def test_cli_ci_fails_supplied_quality_fixtures_without_minimum_score(tmp_path) -> None:
+    baseline = _trace("baseline", duration_ms=1000, input_tokens=1000)
+    candidate = _trace("candidate", duration_ms=400, input_tokens=500)
+    baseline_path = tmp_path / "baseline.json"
+    candidate_path = tmp_path / "candidate.json"
+    fixture_path = tmp_path / "fixtures.json"
+    json_out = tmp_path / "ci.json"
+    baseline.export_json(baseline_path)
+    candidate.export_json(candidate_path)
+    fixture_path.write_text(
+        json.dumps(
+            {
+                "fixtures": [
+                    {
+                        "id": "wrong-answer",
+                        "baseline_output": "ok",
+                        "candidate_output": "wrong",
+                        "expected": "ok",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "ci",
+            "--baseline",
+            str(baseline_path),
+            "--candidate",
+            str(candidate_path),
+            "--quality-fixtures",
+            str(fixture_path),
+            "--json-out",
+            str(json_out),
+        ],
+    )
+
+    assert result.exit_code == 1
+    report = json.loads(json_out.read_text(encoding="utf-8"))
+    assert report["passed"] is False
+    fixture_gate = next(
+        item for item in report["replay"]["gates"]["results"] if item["name"] == "quality_fixtures"
+    )
+    assert fixture_gate["passed"] is False

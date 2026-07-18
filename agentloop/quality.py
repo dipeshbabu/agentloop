@@ -3,6 +3,7 @@ from __future__ import annotations
 import fnmatch
 import importlib
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -10,13 +11,116 @@ from agentloop.markdown import markdown_table_cell
 
 _MAX_GLOB_PATTERN_LENGTH = 256
 _MAX_GLOB_TEXT_LENGTH = 1_000_000
+_SCORER_TYPES = {
+    "contains",
+    "custom",
+    "exact_match",
+    "glob",
+    "json_schema",
+    "json_subset",
+    "regex",
+    "required_fields",
+}
+
+
+class QualityValidationError(ValueError):
+    """Raised when a quality suite cannot safely act as a correctness gate."""
+
+
+def parse_quality_fixtures(payload: Any) -> list[dict[str, Any]]:
+    if isinstance(payload, list):
+        fixtures = payload
+    elif isinstance(payload, dict):
+        if "fixtures" not in payload:
+            raise QualityValidationError("top-level object must contain a 'fixtures' list")
+        fixtures = payload["fixtures"]
+    else:
+        raise QualityValidationError("quality fixtures must be a JSON list or object")
+    return validate_quality_fixtures(fixtures)
 
 
 def load_quality_fixtures(path: str | Path) -> list[dict[str, Any]]:
-    payload = json.loads(Path(path).read_text(encoding="utf-8"))
-    if isinstance(payload, list):
-        return payload
-    return list(payload.get("fixtures", []))
+    try:
+        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise QualityValidationError(
+            f"fixture file is not valid JSON: {exc.msg} at line {exc.lineno}, column {exc.colno}"
+        ) from exc
+    return parse_quality_fixtures(payload)
+
+
+def validate_quality_fixtures(fixtures: Any) -> list[dict[str, Any]]:
+    if not isinstance(fixtures, list):
+        raise QualityValidationError("'fixtures' must be a list")
+    if not fixtures:
+        raise QualityValidationError("quality fixture suite must contain at least one case")
+
+    for index, fixture in enumerate(fixtures):
+        path = f"fixtures[{index}]"
+        if not isinstance(fixture, dict):
+            raise QualityValidationError(f"{path} must be an object")
+        if "id" in fixture and (not isinstance(fixture["id"], str) or not fixture["id"].strip()):
+            raise QualityValidationError(f"{path}.id must be a non-empty string")
+
+        scorer = fixture.get("scorer", {"type": "exact_match"})
+        if not isinstance(scorer, dict):
+            raise QualityValidationError(f"{path}.scorer must be an object")
+        scorer_type = scorer.get("type", "exact_match")
+        if not isinstance(scorer_type, str) or not scorer_type.strip():
+            raise QualityValidationError(f"{path}.scorer.type must be a non-empty string")
+        scorer_type = scorer_type.strip()
+        if scorer_type not in _SCORER_TYPES:
+            raise QualityValidationError(
+                f"{path}.scorer.type is unsupported: {scorer_type}; "
+                f"expected one of {', '.join(sorted(_SCORER_TYPES))}"
+            )
+
+        if scorer_type == "exact_match":
+            _require_non_empty(
+                _configured_value(fixture, scorer, "expected", "expected"),
+                f"{path}.expected",
+            )
+        elif scorer_type == "contains":
+            value = _configured_value(fixture, scorer, "expected", "text")
+            if not isinstance(value, str) or not value.strip():
+                raise QualityValidationError(
+                    f"{path} contains scorer requires non-empty 'expected' or 'scorer.text'"
+                )
+        elif scorer_type in {"glob", "regex"}:
+            value = _configured_value(fixture, scorer, "expected", "pattern")
+            if not isinstance(value, str) or not value:
+                raise QualityValidationError(
+                    f"{path} {scorer_type} scorer requires a non-empty pattern"
+                )
+        elif scorer_type in {"required_fields", "json_schema"}:
+            required = scorer.get("required", scorer.get("required_fields"))
+            if not isinstance(required, list) or not required:
+                raise QualityValidationError(
+                    f"{path} {scorer_type} scorer requires a non-empty field list"
+                )
+            if any(not isinstance(field, str) or not field.strip() for field in required):
+                raise QualityValidationError(
+                    f"{path} {scorer_type} scorer fields must be non-empty strings"
+                )
+        elif scorer_type == "json_subset":
+            expected = scorer.get("expected", fixture.get("expected"))
+            expected_data = _json_value(expected)
+            if not isinstance(expected_data, dict) or not expected_data:
+                raise QualityValidationError(
+                    f"{path} json_subset scorer requires a non-empty expected object"
+                )
+        elif scorer_type == "custom":
+            target = scorer.get("callable")
+            if (
+                not isinstance(target, str)
+                or target.count(":") != 1
+                or any(not part.strip() for part in target.split(":"))
+            ):
+                raise QualityValidationError(
+                    f"{path} custom scorer callable must use module:function"
+                )
+
+    return fixtures
 
 
 def build_quality_report(
@@ -26,6 +130,10 @@ def build_quality_report(
     candidate_trace: Any | None = None,
     min_score: float | None = None,
 ) -> dict[str, Any]:
+    validate_quality_fixtures(fixtures)
+    if min_score is not None:
+        _bounded_score(min_score, "min_score")
+
     cases = []
     for index, fixture in enumerate(fixtures, start=1):
         case_id = str(fixture.get("id") or f"case_{index:03d}")
@@ -129,16 +237,28 @@ def _score_custom(output: Any, fixture: dict[str, Any], scorer: dict[str, Any]) 
     if ":" not in target:
         return _result(False, "custom scorer callable must use module:function")
     module_name, function_name = target.split(":", 1)
-    fn = getattr(importlib.import_module(module_name), function_name)
-    raw = fn(output, fixture, scorer)
+    try:
+        fn = getattr(importlib.import_module(module_name), function_name)
+        raw = fn(output, fixture, scorer)
+    except Exception as exc:
+        raise QualityValidationError(f"custom scorer {target} failed: {exc}") from exc
     if isinstance(raw, dict):
+        if not isinstance(raw.get("passed"), bool):
+            raise QualityValidationError(
+                f"custom scorer {target} must return a boolean 'passed' field"
+            )
+        score = _bounded_score(
+            raw.get("score", 1.0 if raw["passed"] else 0.0),
+            f"custom scorer {target} score",
+        )
         return {
-            "score": float(raw.get("score", 1.0 if raw.get("passed") else 0.0)),
-            "passed": bool(raw.get("passed")),
+            "score": score,
+            "passed": raw["passed"],
             "detail": str(raw.get("detail", "")),
         }
-    passed = bool(raw)
-    return _result(passed, "custom scorer passed" if passed else "custom scorer failed")
+    if isinstance(raw, bool):
+        return _result(raw, "custom scorer passed" if raw else "custom scorer failed")
+    raise QualityValidationError(f"custom scorer {target} must return a boolean or result object")
 
 
 def quality_report_to_markdown(report: dict[str, Any]) -> str:
@@ -219,4 +339,26 @@ def _result(passed: bool, detail: str) -> dict[str, Any]:
 
 
 def _is_empty(value: Any) -> bool:
-    return value is None or value == "" or value == [] or value == {}
+    if isinstance(value, str):
+        return not value.strip()
+    return value is None or value == [] or value == {}
+
+
+def _configured_value(
+    fixture: dict[str, Any], scorer: dict[str, Any], fixture_key: str, scorer_key: str
+) -> Any:
+    return fixture[fixture_key] if fixture_key in fixture else scorer.get(scorer_key)
+
+
+def _require_non_empty(value: Any, path: str) -> None:
+    if _is_empty(value):
+        raise QualityValidationError(f"{path} must be configured and non-empty")
+
+
+def _bounded_score(value: Any, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        raise QualityValidationError(f"{name} must be a number between 0 and 1")
+    score = float(value)
+    if not math.isfinite(score) or not 0.0 <= score <= 1.0:
+        raise QualityValidationError(f"{name} must be between 0 and 1")
+    return score
