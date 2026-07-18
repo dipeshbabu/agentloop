@@ -1,4 +1,8 @@
+from pathlib import Path
+
 from agentloop.issues import build_issue_drafts, issue_drafts_to_markdown
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_build_issue_drafts_for_patchable_queue_items() -> None:
@@ -22,6 +26,20 @@ def test_build_issue_drafts_for_patchable_queue_items() -> None:
     markdown = issue_drafts_to_markdown(drafts)
 
     assert drafts[0]["title"].startswith("Optimize agent workflow")
-    assert "agentloop:cache_context" in drafts[0]["labels"]
+    assert drafts[0]["labels"] == ["enhancement"]
     assert "`run_a`" in drafts[0]["body"]
     assert "AgentLoop GitHub Issue Drafts" in markdown
+
+
+def test_issue_forms_reference_only_existing_primary_labels() -> None:
+    expected = {
+        "bug_report.yml": "labels: [bug]",
+        "feature_request.yml": "labels: [enhancement]",
+        "question.yml": "labels: [question]",
+    }
+
+    forms = ROOT / ".github" / "ISSUE_TEMPLATE"
+    for filename, label_line in expected.items():
+        content = (forms / filename).read_text(encoding="utf-8")
+        assert label_line in content
+        assert "triage" not in content

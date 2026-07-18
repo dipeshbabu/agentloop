@@ -8,6 +8,8 @@ Project history from before the first public release remains available in Git.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-07-18
+
 ### Added
 
 - Apache-2.0 licensing and open-source project metadata.
@@ -71,6 +73,12 @@ Project history from before the first public release remains available in Git.
 
 ### Changed
 
+- Selected `agentloop-profiler` as the installable distribution name while
+  retaining `agentloop` as the Python import package and command-line program.
+  Install published releases with `pip install agentloop-profiler`.
+- Issue forms and generated optimization drafts now use only labels that exist
+  in the repository, and the launch checklist records the audited/target branch,
+  tag, security, Dependabot, and Actions controls for periodic owner review.
 - **OpenTelemetry import now preserves the full trace ID.** A valid imported
   OTLP trace ID keeps all 32 characters instead of being truncated to the last
   16, so it round-trips back out unchanged. **Compatibility:** the run ID for a
@@ -199,4 +207,5 @@ Project history from before the first public release remains available in Git.
 - Constrained patch-plan source discovery to a normalized allowed root and
   excluded source and directory symlinks from scans.
 
-[Unreleased]: https://github.com/dipeshbabu/agentloop/commits/main
+[Unreleased]: https://github.com/dipeshbabu/agentloop/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/dipeshbabu/agentloop/releases/tag/v0.4.0

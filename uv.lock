@@ -15,7 +15,7 @@ resolution-markers = [
 ]
 
 [[package]]
-name = "agentloop"
+name = "agentloop-profiler"
 version = "0.4.0"
 source = { editable = "." }
 dependencies = [

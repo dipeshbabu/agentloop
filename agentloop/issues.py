@@ -4,6 +4,11 @@ from typing import Any
 
 from agentloop.markdown import markdown_code_span, markdown_heading, markdown_text
 
+# Generated drafts target this repository, so use only deliberately maintained
+# labels that already exist. Finding type and severity remain structured fields
+# in the draft body instead of creating an unbounded dynamic label taxonomy.
+ISSUE_DRAFT_LABELS = ("enhancement",)
+
 
 def build_issue_drafts(queue: list[dict[str, Any]], *, limit: int = 5) -> list[dict[str, Any]]:
     drafts = []
@@ -38,7 +43,7 @@ def issue_drafts_to_markdown(drafts: list[dict[str, Any]]) -> str:
 
 def _issue_for_queue_item(item: dict[str, Any]) -> dict[str, Any]:
     title = f"Optimize agent workflow: {item['title']}"
-    labels = ["agentloop", "agent-performance", f"agentloop:{item['type']}"]
+    labels = list(ISSUE_DRAFT_LABELS)
     body = "\n".join(
         [
             "AgentLoop detected a recurring patchable optimization opportunity.",
