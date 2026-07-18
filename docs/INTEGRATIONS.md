@@ -86,6 +86,13 @@ from agentloop.integrations.openai import instrument_callable
 wrapped_create = instrument_callable(client.responses.create, name="openai.responses.create")
 ```
 
+Instrumentation is idempotent: instrumenting the same client or callable more than
+once is a no-op, so one request records one event. Streaming responses
+(`stream=True`) are finalized when the stream is fully consumed, closed, fails, or
+is cancelled — not when the iterator is created — so the recorded latency covers
+consumption and final usage is captured when the SDK reports it in the stream.
+Calls made without an active trace are not recorded and do not raise.
+
 ## LangGraph
 
 ```python
