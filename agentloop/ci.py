@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from agentloop.findings import build_diagnosis
+from agentloop.markdown import markdown_table_cell, markdown_text
 from agentloop.replay import ReplayGates, build_replay_report
 
 
@@ -38,8 +39,8 @@ def ci_report_to_markdown(report: dict[str, Any]) -> str:
         "# AgentLoop CI Report",
         "",
         f"- Status: {gate_status}",
-        f"- Replay: {replay['summary']}",
-        f"- Merge recommendation: {summary['merge_recommendation']}",
+        f"- Replay: {markdown_text(replay['summary'])}",
+        f"- Merge recommendation: {markdown_text(summary['merge_recommendation'])}",
         (
             f"- Findings: {summary['finding_count']} total, "
             f"{summary['high_severity_count']} high severity, "
@@ -53,7 +54,10 @@ def ci_report_to_markdown(report: dict[str, Any]) -> str:
     ]
     for gate in replay["gates"]["results"]:
         status = "pass" if gate["passed"] else "fail"
-        lines.append(f"| {_cell(gate['name'])} | {status} | {_cell(gate['detail'])} |")
+        lines.append(
+            f"| {markdown_table_cell(gate['name'])} | {status} | "
+            f"{markdown_table_cell(gate['detail'])} |"
+        )
 
     lines.extend(
         [
@@ -86,10 +90,11 @@ def ci_report_to_markdown(report: dict[str, Any]) -> str:
         for finding in findings[:5]:
             lines.append(
                 "| "
-                f"{_cell(finding['finding_id'])}: {_cell(finding['title'])} | "
-                f"{_cell(finding['severity'])} | "
-                f"`{_cell(finding['type'])}` | "
-                f"{_cell(finding['rewrite']['hint'])} |"
+                f"{markdown_table_cell(finding['finding_id'])}: "
+                f"{markdown_table_cell(finding['title'])} | "
+                f"{markdown_table_cell(finding['severity'])} | "
+                f"{markdown_table_cell(finding['type'])} | "
+                f"{markdown_table_cell(finding['rewrite']['hint'])} |"
             )
 
     return "\n".join(lines).rstrip() + "\n"
@@ -120,10 +125,6 @@ def _summary(replay: dict[str, Any], diagnosis: dict[str, Any]) -> dict[str, Any
         "patchable_count": diagnosis_summary["patchable_count"],
         "merge_recommendation": merge_recommendation,
     }
-
-
-def _cell(value: Any) -> str:
-    return str(value).replace("|", "\\|").replace("\n", " ")
 
 
 def _format_optional(value: Any, suffix: str = "") -> str:

@@ -25,8 +25,12 @@ def trace_from_otel(
     trace = AgentTrace(name=name or _trace_name(spans), run_id=run_id, metadata={"source": "otel"})
     for span in spans:
         trace.add_event(_event_from_span(span, run_id))
-    if trace.events:
-        trace.started_at = min(event.started_at for event in trace.events)
+    bounds = _trace_bounds_ns(spans)
+    if bounds is not None:
+        started_ns, ended_ns = bounds
+        trace.started_at = _iso_from_ns(started_ns)
+        trace.ended_at = _iso_from_ns(ended_ns)
+        trace.elapsed_ms = (ended_ns - started_ns) / _NANOSECONDS_PER_MILLISECOND
     return trace
 
 
@@ -232,6 +236,19 @@ def _duration_ms(started_ns: int | None, ended_ns: int | None, span: dict[str, A
     if started_ns is not None and ended_ns is not None and ended_ns >= started_ns:
         return (ended_ns - started_ns) / _NANOSECONDS_PER_MILLISECOND
     return float(span.get("duration_ms") or span.get("durationMs") or 0.0)
+
+
+def _trace_bounds_ns(spans: list[dict[str, Any]]) -> tuple[int, int] | None:
+    if not spans:
+        return None
+    bounds: list[tuple[int, int]] = []
+    for span in spans:
+        started_ns = _int_or_none(span.get("startTimeUnixNano") or span.get("start_time_unix_nano"))
+        ended_ns = _int_or_none(span.get("endTimeUnixNano") or span.get("end_time_unix_nano"))
+        if started_ns is None or ended_ns is None or ended_ns < started_ns:
+            return None
+        bounds.append((started_ns, ended_ns))
+    return min(started for started, _ in bounds), max(ended for _, ended in bounds)
 
 
 def _iso_from_ns(value: int | None) -> str:

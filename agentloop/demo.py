@@ -15,6 +15,12 @@ SYSTEM_SHORT = (
 )
 
 
+def _demo_metadata(**values: object) -> dict[str, object]:
+    metadata: dict[str, object] = {"synthetic": True, "source": "agentloop_demo"}
+    metadata.update(values)
+    return metadata
+
+
 def sleep_ms(ms: int) -> None:
     time.sleep(ms / 1000)
 
@@ -36,7 +42,7 @@ def inspect_result(result: str) -> str:
 
 def run_baseline(out_dir: str | Path = "runs") -> Path:
     out_path = Path(out_dir) / "research_agent_baseline.json"
-    with trace_agent("research_agent_baseline") as trace:
+    with trace_agent("research_agent_baseline", metadata=_demo_metadata()) as trace:
         with trace_model_call(
             "plan",
             model="gpt-4.1",
@@ -95,7 +101,8 @@ def run_proof_baseline(out_dir: str | Path = "runs") -> Path:
     out_path = Path(out_dir) / "agentloop_proof_baseline.json"
     repeated_context = SYSTEM_LONG + "Classify and summarize every source independently. " * 20
     with trace_agent(
-        "agentloop_proof_baseline", metadata={"schema_valid": False, "quality_score": 0.82}
+        "agentloop_proof_baseline",
+        metadata=_demo_metadata(schema_valid=False, quality_score=0.82),
     ) as trace:
         with trace_model_call(
             "classify_intent",
@@ -159,7 +166,8 @@ def run_proof_candidate(out_dir: str | Path = "runs") -> Path:
         SYSTEM_SHORT + "Use cached instructions, batch summaries, and stop after convergence."
     )
     with trace_agent(
-        "agentloop_proof_candidate", metadata={"schema_valid": True, "quality_score": 0.94}
+        "agentloop_proof_candidate",
+        metadata=_demo_metadata(schema_valid=True, quality_score=0.94),
     ) as trace:
         with trace_model_call(
             "classify_intent",
@@ -204,7 +212,7 @@ def run_proof_candidate(out_dir: str | Path = "runs") -> Path:
 
 def run_optimized(out_dir: str | Path = "runs") -> Path:
     out_path = Path(out_dir) / "research_agent_optimized.json"
-    with trace_agent("research_agent_optimized") as trace:
+    with trace_agent("research_agent_optimized", metadata=_demo_metadata()) as trace:
         with trace_model_call(
             "plan",
             model="gpt-4.1-mini",
@@ -258,7 +266,7 @@ def run_langgraph_style(out_dir: str | Path = "runs") -> Path:
         return state
 
     out_path = Path(out_dir) / "langgraph_style_demo.json"
-    with trace_agent("langgraph_style_demo") as trace:
+    with trace_agent("langgraph_style_demo", metadata=_demo_metadata()) as trace:
         state = {"question": "How should agent runtimes be profiled?"}
         with trace_model_call(
             "planner", model="gpt-4.1-mini", input_text=state["question"], output_tokens=120

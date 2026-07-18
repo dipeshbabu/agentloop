@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from agentloop.markdown import markdown_code_span, markdown_heading, markdown_text
 from agentloop.optimizer import build_optimization_plan
 
 
@@ -58,9 +59,9 @@ def diagnosis_to_markdown(diagnosis: dict[str, Any]) -> str:
     current = diagnosis["current"]
     after = diagnosis["estimated_after"]
     lines = [
-        f"# AgentLoop Diagnosis: {diagnosis['name']}",
+        f"# AgentLoop Diagnosis: {markdown_heading(diagnosis['name'])}",
         "",
-        f"- Run ID: `{diagnosis['run_id']}`",
+        f"- Run ID: {markdown_code_span(diagnosis['run_id'])}",
         f"- Current runtime: {current['runtime_ms'] / 1000:.2f}s",
         f"- Estimated runtime after fixes: {after['runtime_ms'] / 1000:.2f}s",
         f"- Estimated latency reduction: {after['latency_reduction_pct']:.2f}%",
@@ -80,16 +81,18 @@ def diagnosis_to_markdown(diagnosis: dict[str, Any]) -> str:
         validation = finding["validation"]
         lines.extend(
             [
-                f"### {finding['finding_id']}: {finding['title']}",
+                f"### {markdown_heading(finding['finding_id'])}: "
+                f"{markdown_heading(finding['title'])}",
                 "",
-                f"- Severity: {finding['severity']}",
-                f"- Type: `{finding['type']}`",
-                f"- Confidence: {finding['confidence']}",
-                f"- Affected spans: {', '.join(finding['affected_spans']) or 'none'}",
+                f"- Severity: {markdown_text(finding['severity'])}",
+                f"- Type: {markdown_code_span(finding['type'])}",
+                f"- Confidence: {markdown_text(finding['confidence'])}",
+                "- Affected spans: "
+                f"{markdown_text(', '.join(map(str, finding['affected_spans'])) or 'none')}",
                 f"- Estimated latency savings: {savings['estimated_latency_savings_ms'] / 1000:.2f}s",
                 f"- Estimated cost savings: ${savings['estimated_cost_savings_usd']:.4f}",
-                f"- Rewrite: {rewrite['hint']}",
-                f"- Validation: {validation['acceptance_criteria']}",
+                f"- Rewrite: {markdown_text(rewrite['hint'])}",
+                f"- Validation: {markdown_text(validation['acceptance_criteria'])}",
                 "",
             ]
         )

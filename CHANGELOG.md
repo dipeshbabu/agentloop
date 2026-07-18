@@ -39,6 +39,10 @@ Project history from before the first public release remains available in Git.
 
 - Replaced internal sales-planning documentation with contributor-focused
   dashboard and roadmap guides.
+- Removed the trace-consuming CLI commands' implicit `--autogen` fallback.
+  Missing, unreadable, non-file, and malformed inputs now fail with a non-zero
+  exit code. Generate synthetic traces explicitly with `agentloop demo` or
+  `agentloop demo-all`; generated traces are labeled and marked as synthetic.
 - Renamed value-report response fields from `sales_summary`,
   `estimated_customer_value_usd`, and `packaging_notes` to `value_summary`,
   `estimated_monthly_value_usd`, and `scenario_notes` before the first official
@@ -49,6 +53,22 @@ Project history from before the first public release remains available in Git.
 
 ### Fixed
 
+- Optimization plans no longer double-count savings from overlapping cards.
+  Cards sharing affected spans are treated as mutually exclusive alternatives:
+  plan totals now come from the compatible (span-disjoint) subset of cards that
+  maximizes latency savings, breaking ties by cost savings, capped at the run's
+  actual runtime and cost. `latency_reduction_pct` can no longer exceed 100%,
+  and the reported latency/cost totals are always achievable by one concrete
+  set of changes. Plans gain a `savings_aggregation` block recording the rule,
+  the selected card indexes, and raw versus effective totals. The optimization
+  queue applies the same rule per run and cluster, so `priority_score` consumes
+  deduplicated savings. Compatibility: per-card estimates and all existing plan
+  fields are unchanged; only the aggregated `estimated_after` totals (previously
+  inflated), the queue's savings totals, and derived priority scores change,
+  and `savings_aggregation` is a new additive field.
+- Measure trace runtime as end-to-end elapsed time, retain cumulative span work
+  separately, and calculate execution order and critical paths from timestamps
+  and parent relationships.
 - Remote CLI commands now honor environment-based user and administrator API
   keys while keeping administrator credentials out of ordinary requests.
 - Corrected uv and CLI path examples across the README, dashboard, and
@@ -61,6 +81,8 @@ Project history from before the first public release remains available in Git.
   no longer collide (e.g. `a` and `0a`) and conforming OTLP consumers no longer
   reject the payload. Already-valid IDs are preserved unchanged. The native
   export and the OpenAI Agents bridge share one implementation.
+- Escaped trace-derived content in every Markdown exporter with context-specific
+  handling for headings, tables, inline code, fenced code, and raw HTML.
 
 ### Security
 

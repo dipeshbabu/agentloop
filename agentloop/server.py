@@ -34,6 +34,8 @@ class TracePayload(BaseModel):
     name: str
     run_id: str
     started_at: str | None = None
+    ended_at: str | None = None
+    elapsed_ms: float | None = Field(default=None, ge=0)
     metadata: dict[str, Any] = Field(default_factory=dict)
     events: list[dict[str, Any]] = Field(default_factory=list)
 

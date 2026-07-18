@@ -53,6 +53,29 @@ trace.print_report()
 trace.export_json("runs/research_agent.json")
 ```
 
+### Timing semantics
+
+`total_runtime_ms` is the end-to-end elapsed duration of a trace, including work
+that was not wrapped in an event. `cumulative_span_time_ms` is the sum of all
+instrumented event durations, so it can exceed elapsed runtime when spans overlap
+or are nested. Native trace JSON stores `ended_at` and the monotonic-clock
+`elapsed_ms`. Timestamped imports use the earliest span start and latest span end.
+Legacy traces without trustworthy end-time metadata fall back to their cumulative
+event duration for compatibility.
+
+### Markdown export safety
+
+AgentLoop treats trace-derived values as untrusted in every Markdown exporter.
+Names, findings, recommendations, statuses, paths, and other captured strings are
+rendered as escaped single-line text in headings and prose, and table values cannot
+add rows or columns. Inline and fenced code use delimiters longer than any backtick
+run in their content. Raw HTML is escaped in prose and tables and remains literal
+inside code spans and fences. Exporters do not turn trace values into Markdown links.
+
+Keep the Markdown renderer's normal safe mode or HTML sanitizer enabled when reports
+are converted to HTML. These guarantees protect AgentLoop's generated structure;
+they do not make separately appended Markdown or renderer extensions trusted.
+
 ## Framework integrations
 
 AgentLoop now includes dependency-free wrappers for the agent frameworks and SDKs teams are already using:
@@ -124,7 +147,15 @@ uv run agentloop demo --kind proof
 uv run python examples/langgraph_auto_instrumentation_demo.py
 ```
 
-`agentloop compare`, `agentloop audit`, `agentloop optimize`, and `agentloop value-report` auto-generate missing demo traces by default, so missing `runs/research_agent_baseline.json` should not block the local workflow.
+Only `agentloop demo` and `agentloop demo-all` generate synthetic traces. Their
+output is labeled as synthetic in the terminal and carries
+`metadata.synthetic = true` with `metadata.source = "agentloop_demo"`.
+
+Commands that load a trace require the supplied path to be an existing,
+readable regular file containing a valid trace. Missing, unreadable, or malformed
+inputs produce a clear error and a non-zero exit code; they are never replaced
+with demo data. The former `--autogen` fallback has been removed. Run one of the
+demo commands explicitly before using the generated paths in the examples above.
 
 ## Replay gates
 
@@ -240,6 +271,14 @@ AgentLoop reconstructs an execution graph, identifies bottlenecks, and emits opt
 
 Each card includes a reason, affected nodes, confidence, rewrite hint, and estimated latency or cost savings.
 
+Cards that touch the same spans compete for the same work, so their estimates are
+alternatives rather than additive. The plan's projected totals come from the
+compatible (span-disjoint) subset of cards that maximizes latency savings, with
+ties broken by cost savings, capped at the run's actual runtime and cost — so the
+reported latency/cost pair is always achievable by one concrete set of changes.
+The plan's `savings_aggregation` block records the rule, the selected card
+indexes, and the raw versus effective totals.
+
 ## Diagnosis and OpenTelemetry interop
 
 ```bash
@@ -263,7 +302,11 @@ batching, model routing, split/compress rewrites, runaway-loop guardrails, and
 tool-oscillation guards without modifying source files.
 When traces are stored through the local or deployed API, AgentLoop persists the
 diagnosis findings and clusters them into an optimization queue ranked by
-severity, frequency, patchability, and estimated savings.
+severity, frequency, patchability, and estimated savings. Queue savings use the
+same overlap rule as optimization plans: within one run, findings of the same
+type and title that share affected spans count once (the best compatible
+selection), so repeated detections of the same problem do not inflate
+`priority_score`.
 `agentloop github-issue-drafts` turns the top patchable queue items into
 GitHub-ready issue titles, labels, bodies, and acceptance criteria.
 

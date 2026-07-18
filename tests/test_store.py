@@ -71,6 +71,77 @@ def test_sqlite_usage_summary(tmp_path):
     assert summary["tool_call_count"] == 1
 
 
+def _diagnosis_finding(finding_id, spans, latency_ms, cost_usd=0.0):
+    return {
+        "finding_id": finding_id,
+        "type": "parallelize_tools",
+        "severity": "medium",
+        "title": "Parallelize independent tools",
+        "confidence": "medium",
+        "affected_spans": spans,
+        "evidence": [],
+        "savings": {
+            "estimated_latency_savings_ms": latency_ms,
+            "estimated_cost_savings_usd": cost_usd,
+        },
+        "rewrite": {"patchable": True},
+        "validation": {},
+        "metadata": {},
+    }
+
+
+def test_optimization_queue_deduplicates_overlapping_findings_within_a_run(tmp_path):
+    store = SQLiteTraceStore(path=str(tmp_path / "agentloop.db"))
+    # f1=[n1]/100 and f3=[n2]/100 are compatible; f2=[n1, n2]/150 overlaps
+    # both. A realizable fix applies f1+f3 for 200 ms — not the raw sum of 350.
+    store.save_diagnosis(
+        {
+            "run_id": "run_overlap",
+            "findings": [
+                _diagnosis_finding("f1", ["n1"], 100.0),
+                _diagnosis_finding("f2", ["n1", "n2"], 150.0),
+                _diagnosis_finding("f3", ["n2"], 100.0),
+            ],
+        },
+        project_id="proj_a",
+    )
+
+    queue = store.optimization_queue(project_id="proj_a")
+
+    assert len(queue) == 1
+    item = queue[0]
+    assert item["estimated_latency_savings_ms"] == 200.0
+    assert item["occurrence_count"] == 3
+    # priority_score consumes the deduplicated savings, not the raw sum:
+    # 500 (medium) + 100 (patchable) + 200/100 + 3*25 = 677.
+    assert item["priority_score"] == 677.0
+
+
+def test_optimization_queue_sums_deduplicated_savings_across_runs(tmp_path):
+    store = SQLiteTraceStore(path=str(tmp_path / "agentloop.db"))
+    for run_id in ("run_one", "run_two"):
+        store.save_diagnosis(
+            {
+                "run_id": run_id,
+                "findings": [
+                    _diagnosis_finding(f"{run_id}_a", ["n1"], 100.0),
+                    _diagnosis_finding(f"{run_id}_b", ["n1"], 60.0),
+                ],
+            },
+            project_id="proj_a",
+        )
+
+    queue = store.optimization_queue(project_id="proj_a")
+
+    assert len(queue) == 1
+    item = queue[0]
+    # Within each run the two same-span findings are alternatives (100 wins);
+    # the two independent runs still add up.
+    assert item["estimated_latency_savings_ms"] == 200.0
+    assert item["run_count"] == 2
+    assert item["occurrence_count"] == 4
+
+
 def test_sqlite_persists_findings_and_optimization_queue(tmp_path):
     store = SQLiteTraceStore(path=str(tmp_path / "agentloop.db"))
     with trace_agent("queue-test") as trace:
