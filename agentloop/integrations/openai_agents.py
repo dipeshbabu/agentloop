@@ -17,43 +17,88 @@ class AgentLoopTracingProcessor:
     so AgentLoop can expose the integration without adding a hard dependency.
     """
 
-    def __init__(self, out_dir: str | Path | None = None):
+    def __init__(self, out_dir: str | Path | None = None, *, retain_exported: bool = True):
         self.out_dir = Path(out_dir) if out_dir is not None else None
+        # Retain exported AgentTrace objects on ``exported_traces``. Long-lived
+        # processors that never read that list can set ``retain_exported=False``
+        # so completed traces are not held in memory.
+        self.retain_exported = retain_exported
         self._traces: dict[str, Any] = {}
-        self._spans: list[Any] = []
+        # Trace ids started but not yet ended, in start order. Used to attribute
+        # spans that arrive without a readable trace id to a single open trace.
+        self._active_trace_ids: list[str] = []
+        # Spans are grouped by their owning trace id and released when that trace
+        # ends, so memory does not grow with the number of completed traces.
+        self._spans_by_trace: dict[str, list[Any]] = {}
         self.exported_traces: list[AgentTrace] = []
 
     def on_trace_start(self, trace: Any) -> None:
-        trace_id = _read(trace, "trace_id", "id") or "trace_unknown"
-        self._traces[str(trace_id)] = trace
+        trace_id = str(_read(trace, "trace_id", "id") or "trace_unknown")
+        self._traces[trace_id] = trace
+        if trace_id not in self._active_trace_ids:
+            self._active_trace_ids.append(trace_id)
 
     def on_trace_end(self, trace: Any) -> None:
-        agent_trace = self._build_trace(trace)
-        self.exported_traces.append(agent_trace)
-        if self.out_dir is not None:
-            self.out_dir.mkdir(parents=True, exist_ok=True)
-            agent_trace.export_json(self.out_dir / f"{agent_trace.run_id}.json")
+        trace_id = str(_read(trace, "trace_id", "id") or "trace_unknown")
+        if not self._is_known(trace_id):
+            # Unknown trace id: already exported (duplicate on_trace_end) or never
+            # observed. Nothing to export and nothing to release.
+            return
+
+        try:
+            agent_trace = self._build_trace(trace, trace_id)
+            if self.retain_exported:
+                self.exported_traces.append(agent_trace)
+            if self.out_dir is not None:
+                self.out_dir.mkdir(parents=True, exist_ok=True)
+                agent_trace.export_json(self.out_dir / f"{agent_trace.run_id}.json")
+        finally:
+            # Release state for the completed trace even if build/export fails, so a
+            # failed export cannot re-introduce the completed-trace memory leak.
+            self._traces.pop(trace_id, None)
+            self._spans_by_trace.pop(trace_id, None)
+            if trace_id in self._active_trace_ids:
+                self._active_trace_ids.remove(trace_id)
 
     def on_span_start(self, span: Any) -> None:
         return None
 
     def on_span_end(self, span: Any) -> None:
-        self._spans.append(span)
+        trace_id = _span_trace_id(span)
+        if trace_id is None:
+            # No readable trace id: attribute the span to the most recently started
+            # open trace. If none is open, drop it rather than copy it into an
+            # unrelated trace that ends later.
+            trace_id = self._current_active_trace_id()
+            if trace_id is None:
+                return
+        self._spans_by_trace.setdefault(trace_id, []).append(span)
 
     def shutdown(self) -> None:
-        return None
+        # Release all retained state; further callbacks start from empty.
+        self._traces.clear()
+        self._active_trace_ids.clear()
+        self._spans_by_trace.clear()
 
     def force_flush(self) -> None:
+        # Spans are exported when their trace ends; nothing is buffered to flush.
         return None
 
-    def _build_trace(self, trace: Any) -> AgentTrace:
-        trace_id = str(_read(trace, "trace_id", "id") or "trace_unknown")
+    def _current_active_trace_id(self) -> str | None:
+        return self._active_trace_ids[-1] if self._active_trace_ids else None
+
+    def _is_known(self, trace_id: str) -> bool:
+        return (
+            trace_id in self._traces
+            or trace_id in self._spans_by_trace
+            or trace_id in self._active_trace_ids
+        )
+
+    def _build_trace(self, trace: Any, trace_id: str | None = None) -> AgentTrace:
+        if trace_id is None:
+            trace_id = str(_read(trace, "trace_id", "id") or "trace_unknown")
         name = str(_read(trace, "name", "workflow_name") or "openai_agents_trace")
-        spans = [
-            _span_to_otel(span, trace_id)
-            for span in self._spans
-            if _span_trace_id(span) in {None, trace_id}
-        ]
+        spans = [_span_to_otel(span, trace_id) for span in self._spans_by_trace.get(trace_id, [])]
         return trace_from_otel({"spans": spans}, name=name)
 
 

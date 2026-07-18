@@ -9,7 +9,7 @@ from rich.console import Console
 from rich.table import Table
 
 from agentloop.audit import estimate_improvement
-from agentloop.autoinstrument import auto_instrument
+from agentloop.autoinstrument import detect_integrations
 from agentloop.ci import build_ci_report, ci_report_to_markdown
 from agentloop.client import AgentLoopClient
 from agentloop.demo import run_baseline, run_langgraph_style, run_optimized, run_proof_pair
@@ -529,13 +529,29 @@ def production_check_command(
     _print_doctor(result)
 
 
-@app.command("auto-instrument")
-def auto_instrument_command(json_out: Path | None = typer.Option(None)) -> None:
-    result = auto_instrument().to_dict()
+@app.command("detect-integrations")
+def detect_integrations_command(json_out: Path | None = typer.Option(None)) -> None:
+    """Report which framework integrations are available in this environment.
+
+    Detection only: it checks whether each integration's SDK is importable and
+    does not instrument anything. Apply agentloop.integrations helpers from your
+    application startup to record traces.
+    """
+    result = detect_integrations().to_dict()
     if json_out:
         _write_json(json_out, result)
-        console.print(f"Wrote auto instrumentation output to {json_out}")
+        console.print(f"Wrote integration detection output to {json_out}")
     console.print_json(data=result)
+
+
+@app.command("auto-instrument", hidden=True, deprecated=True)
+def auto_instrument_command(json_out: Path | None = typer.Option(None)) -> None:
+    """Deprecated alias for `detect-integrations`; it only detects, never instruments."""
+    console.print(
+        "[yellow]`auto-instrument` is deprecated and never enabled instrumentation; "
+        "use `detect-integrations`.[/yellow]"
+    )
+    detect_integrations_command(json_out=json_out)
 
 
 @app.command("init-store")

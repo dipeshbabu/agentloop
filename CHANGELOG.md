@@ -53,11 +53,56 @@ Project history from before the first public release remains available in Git.
 - Replaced caller-supplied regular-expression quality scorers with bounded glob
   scorers. Raw `regex` scorers are now rejected; use `glob`, `contains`, or
   `exact_match`.
+- **Renamed auto-instrument to integration detection.** `auto_instrument()` never
+  enabled instrumentation — it only detected installed frameworks — so it is now
+  `detect_integrations()` and the CLI command `auto-instrument` is now
+  `detect-integrations`. Result fields `enabled`/`skipped` are renamed to
+  `available`/`unavailable`, and detection uses `importlib.util.find_spec` instead
+  of importing the frameworks. **Compatibility:** `auto_instrument()` and the
+  `auto-instrument` command remain as deprecated aliases that emit a
+  `DeprecationWarning`; `InstrumentationResult` remains as an alias of
+  `DetectionResult`. Update code that read the `enabled`/`skipped` keys.
 - Aligned the official container with the tested Python 3.13 runtime and made
   application files read-only to its non-root user; `/data` remains writable.
 
 ### Fixed
 
+- **OpenAI instrumentation is now idempotent and stream-aware.** Wrapping the
+  same client or callable more than once is a no-op, so one request records one
+  event instead of doubling metrics. Streaming responses (`stream=True`) are
+  finalized when the stream is consumed, closed, fails, or is cancelled — not when
+  the iterator is created — so the recorded duration covers consumption and final
+  usage is captured when the SDK provides it; a mid-stream error is recorded once
+  and propagates unchanged. Final usage on the Responses streaming API is read from
+  the terminal event's nested `response.usage`, not just a top-level `usage`. Trace
+  ownership is captured at invocation time, so a stream is always recorded into the
+  trace that was active when the call was made (or not recorded at all if none was),
+  never into a later or unrelated trace that happens to consume it. Calls made
+  without an active trace are no longer recorded and no longer raise, so they cannot
+  break a successful application call.
+- **The OpenAI Agents tracing processor now isolates and releases state per
+  trace.** Spans are grouped by their owning trace id and released when that trace
+  ends, so interleaved traces export only their own spans and processor memory no
+  longer grows with the number of completed traces. A span that arrives without a
+  readable trace id is attributed to the single most recently started open trace
+  (or dropped if none is open) instead of being copied into every trace that ends.
+  Duplicate `on_trace_end`, a missing `on_trace_start`, `shutdown`, and
+  `force_flush` now have defined behavior, and `AgentLoopTracingProcessor` gained a
+  `retain_exported` option to avoid holding completed `exported_traces` in memory.
+  Per-trace state is released even if building or exporting the trace fails, so a
+  failed export cannot re-introduce the completed-trace memory leak.
+- **Trace finalization side effects now run independently.** Export, local
+  storage, and upload each have their own error boundary and run in a
+  deterministic order, so a failure in one no longer prevents the others when
+  `fail_silently=True`. Each entry in `result["errors"]` now identifies its
+  `destination` (previously a flat list of messages). A finalization in which
+  every attempted destination succeeds clears the process-global
+  `get_last_error()` so monitoring no longer reports a recovered failure. With
+  `fail_silently=False`, the first failing destination raises the new
+  `FinalizationError`, whose `result` attribute preserves already-completed
+  destinations. `init()` gained a `CLEAR` sentinel to explicitly reset optional
+  values such as `api_key` and `export_dir` (passing `None` still means "keep the
+  current value").
 - Optimization plans no longer double-count savings from overlapping cards.
   Cards sharing affected spans are treated as mutually exclusive alternatives:
   plan totals now come from the compatible (span-disjoint) subset of cards that
