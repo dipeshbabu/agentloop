@@ -33,8 +33,10 @@ to review ownership or licensing questions that are unclear.
       real prompts, customer data, internal URLs, tokens, or personal information.
 - [ ] Review `.env.example`, Docker defaults, workflow permissions, and production
       documentation for safe public defaults.
-- [ ] Enable GitHub private vulnerability reporting and verify that the link in
-      `SECURITY.md` opens the private advisory form.
+- [x] Enable GitHub private vulnerability reporting and verify that the link in
+      `SECURITY.md` reaches the private advisory flow. A signed-out request is
+      redirected to GitHub login with the advisory URL preserved as the return
+      target.
 - [ ] Publish a private Code of Conduct reporting address or form and replace the
       fallback contact instructions in `CODE_OF_CONDUCT.md`.
 
@@ -44,67 +46,69 @@ safe again.
 
 ## GitHub repository settings
 
-- [ ] Add a concise repository description, homepage, and topics such as
-      `ai-agents`, `observability`, `profiling`, and `python`.
+- [x] Add a concise repository description, the official PyPI project as the
+      homepage, and the `ai-agents`, `observability`,
+      `performance-engineering`, `profiling`, and `python` topics.
 - [x] Enable the dependency graph and Dependabot alerts.
-- [ ] Enable Dependabot security updates. The repository already configures uv,
+- [x] Enable Dependabot security updates. The repository already configures uv,
       pre-commit, Actions, and Docker version updates.
 - [x] Enable code scanning so `.github/workflows/codeql.yml` can upload results.
-- [ ] Protect `main`: require a pull request, passing CI and security checks,
+- [x] Protect `main`: require a pull request, passing CI and security checks,
       resolved review conversations, and no force pushes.
-- [ ] Protect release tags matching `v*`.
-- [ ] Decide whether GitHub Discussions will be offered for usage questions and
-      update `SUPPORT.md` if it is enabled.
+- [x] Protect release tags matching `v*` against deletion and movement.
+- [x] Keep GitHub Discussions disabled for now; `SUPPORT.md` directs usage
+      questions and feature proposals to the existing public issue forms.
 - [x] Confirm that issue labels referenced by the forms, Dependabot, and generated
       optimization drafts exist. Generated drafts use the stable `enhancement`
       label and keep finding type/severity in the issue body instead of creating
       dynamic labels.
-- [ ] Review Actions permissions and allow only the actions used by the checked-in
-      workflows.
+- [x] Require every external GitHub Action and reusable workflow to be pinned to
+      a full commit SHA. All checked-in workflows satisfy this policy.
 
 ### Repository settings target and review record
 
-The settings audit was repeated on 2026-07-18. Code scanning, secret scanning,
-push protection, the dependency graph, and Dependabot alerts are enabled. The
-repository still has no branch or tag ruleset; private vulnerability reporting
-and Dependabot security updates are disabled; Actions currently allows every
-source and does not require SHA pinning. These unchecked settings remain owner
-actions and must not be reported as complete until verified through GitHub.
+The owner completed and verified the settings audit on 2026-07-18:
 
-Configure a `main` ruleset with these properties:
-
-- require pull requests and resolution of review conversations;
-- block force pushes and deletion, with bypass limited to the repository owner
-  for documented emergencies;
-- require `Python 3.10`, `Python 3.13`, `Docker image and deployment smoke`,
+- the active `Protect main` ruleset requires pull requests, resolved review
+  conversations, strict up-to-date status checks, and blocks deletion and
+  non-fast-forward pushes. It requires `Python 3.10`, `Python 3.13`,
+  `Docker image and deployment smoke`, `Package artifact and wheel smoke`,
   `Replay and optimization gates`, `Analyze Python`, and
-  `Review dependency changes`; add `Package artifact and wheel smoke` when the
-  release-validation workflow from issue #25 lands; and
-- allow workflows for forked pull requests to run with read-only permissions and
-  synthetic credentials, without exposing repository or environment secrets.
+  `Review dependency changes` from GitHub Actions;
+- the active `Protect release tags` ruleset covers `refs/tags/v*` and blocks
+  deletion and non-fast-forward updates;
+- neither ruleset has a standing bypass actor. The owner can change the ruleset
+  itself for a documented emergency, which keeps normal pushes and tag changes
+  subject to the same controls as contributor changes;
+- private vulnerability reporting, the dependency graph, Dependabot alerts,
+  Dependabot security updates, code scanning, secret scanning, and push
+  protection are enabled;
+- the `SECURITY.md` advisory URL was checked signed out and reached GitHub login
+  with the private advisory URL preserved as its return target; and
+- Actions remains available to the project's required sources, but GitHub now
+  rejects any external action or reusable workflow that is not pinned to a full
+  commit SHA. Forked pull-request workflows retain read-only permissions and do
+  not receive repository or environment secrets.
 
-Add a second ruleset protecting tags matching `v*`. Restrict Actions to GitHub,
-verified creators, and the pinned actions used by this repository, or enable the
-repository SHA-pinning requirement. Enable private vulnerability reporting and
-verify the `SECURITY.md` advisory link while signed out or as a non-maintainer.
-
-The repository owner should review these controls quarterly and before every
-release. Record the date and any approved exception in this section.
+The owner must review these controls quarterly and before every release. The
+next scheduled review is 2026-10-18. Record the date and any approved exception
+in this section.
 
 ## Packaging and releases
 
 - [x] Select the unique `agentloop-profiler` distribution name while retaining
       `agentloop` as the import package and CLI name.
-- [ ] Register the `agentloop-profiler` pending publisher for owner `dipeshbabu`,
-      repository `agentloop`, workflow `release.yml`, and environment `pypi`.
+- [x] Configure and verify the `agentloop-profiler` trusted publisher for owner
+      `dipeshbabu`, repository `agentloop`, workflow `release.yml`, and
+      environment `pypi`.
 - [x] Protect the GitHub `pypi` environment with maintainer approval and a custom
       `v*` tag deployment policy.
-- [ ] Set `PYPI_PUBLISH_ENABLED=true` only after the trusted publisher is ready.
+- [x] Set `PYPI_PUBLISH_ENABLED=true` after the trusted publisher was ready.
 - [x] Build the wheel and source archive, inspect their contents, and install each
       in a clean environment.
 - [x] Create the first versioned changelog entry.
-- [ ] Publish an immutable annotated tag that matches the package version only
-      after the trusted publisher and release checks are ready.
+- [x] Publish immutable annotated tag `v0.4.0` after the trusted publisher and
+      exact-commit release checks passed.
 
 ## Launch
 
