@@ -3,6 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from agentloop.integrations.openai_agents import AgentLoopTracingProcessor
 
 
@@ -123,3 +125,20 @@ def test_out_dir_writes_one_file_per_trace(tmp_path: Path) -> None:
 
     written = list(tmp_path.glob("*.json"))
     assert len(written) == 1
+
+
+def test_export_failure_still_releases_trace_state(tmp_path: Path) -> None:
+    # out_dir points at an existing file, so mkdir() raises during on_trace_end.
+    out_file = tmp_path / "not-a-dir"
+    out_file.write_text("blocker", encoding="utf-8")
+    proc = AgentLoopTracingProcessor(out_dir=out_file)
+    proc.on_trace_start(_trace("t1"))
+    proc.on_span_end(_span("t1", "a"))
+
+    with pytest.raises(OSError):
+        proc.on_trace_end(_trace("t1"))
+
+    # State must still be released so a failed export cannot leak completed-trace memory.
+    assert proc._traces == {}
+    assert proc._spans_by_trace == {}
+    assert proc._active_trace_ids == []

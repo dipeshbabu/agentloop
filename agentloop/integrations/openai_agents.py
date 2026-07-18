@@ -45,18 +45,20 @@ class AgentLoopTracingProcessor:
             # observed. Nothing to export and nothing to release.
             return
 
-        agent_trace = self._build_trace(trace, trace_id)
-        if self.retain_exported:
-            self.exported_traces.append(agent_trace)
-        if self.out_dir is not None:
-            self.out_dir.mkdir(parents=True, exist_ok=True)
-            agent_trace.export_json(self.out_dir / f"{agent_trace.run_id}.json")
-
-        # Release state for the completed trace.
-        self._traces.pop(trace_id, None)
-        self._spans_by_trace.pop(trace_id, None)
-        if trace_id in self._active_trace_ids:
-            self._active_trace_ids.remove(trace_id)
+        try:
+            agent_trace = self._build_trace(trace, trace_id)
+            if self.retain_exported:
+                self.exported_traces.append(agent_trace)
+            if self.out_dir is not None:
+                self.out_dir.mkdir(parents=True, exist_ok=True)
+                agent_trace.export_json(self.out_dir / f"{agent_trace.run_id}.json")
+        finally:
+            # Release state for the completed trace even if build/export fails, so a
+            # failed export cannot re-introduce the completed-trace memory leak.
+            self._traces.pop(trace_id, None)
+            self._spans_by_trace.pop(trace_id, None)
+            if trace_id in self._active_trace_ids:
+                self._active_trace_ids.remove(trace_id)
 
     def on_span_start(self, span: Any) -> None:
         return None

@@ -245,3 +245,77 @@ def test_async_stream_records_after_consumption() -> None:
         assert trace.events[0].output_tokens == 9
 
     asyncio.run(run())
+
+
+def test_responses_stream_captures_nested_final_usage() -> None:
+    # The locked Responses streaming API delivers final usage on the terminal
+    # ResponseCompletedEvent under event.response.usage, not event.usage.
+    completed = SimpleNamespace(
+        type="response.completed",
+        response=SimpleNamespace(usage=SimpleNamespace(input_tokens=21, output_tokens=13)),
+    )
+
+    def create(**kwargs):
+        return FakeSyncStream([SimpleNamespace(delta="a"), completed])
+
+    wrapped = instrument_callable(create, name="openai.responses.create")
+
+    with trace_agent("nested") as trace:
+        list(wrapped(stream=True))
+
+    assert len(trace.events) == 1
+    assert trace.events[0].input_tokens == 21
+    assert trace.events[0].output_tokens == 13
+
+
+def test_stream_created_without_trace_is_not_recorded_in_later_trace() -> None:
+    def create(**kwargs):
+        return FakeSyncStream(
+            [SimpleNamespace(delta="a", usage=SimpleNamespace(input_tokens=5, output_tokens=5))]
+        )
+
+    wrapped = instrument_callable(create, name="openai.responses.create")
+
+    stream = wrapped(stream=True)  # invoked with no active trace
+    with trace_agent("later") as trace:
+        list(stream)  # consumed inside an unrelated later trace
+
+    assert len(trace.events) == 0
+
+
+def test_stream_records_into_invocation_trace_not_consumption_trace() -> None:
+    def create(**kwargs):
+        return FakeSyncStream(
+            [SimpleNamespace(delta="a", usage=SimpleNamespace(input_tokens=4, output_tokens=6))]
+        )
+
+    wrapped = instrument_callable(create, name="openai.responses.create")
+
+    with trace_agent("A") as trace_a:
+        stream = wrapped(stream=True)  # ownership captured for trace A
+    with trace_agent("B") as trace_b:
+        list(stream)  # consumed under trace B
+
+    assert len(trace_a.events) == 1
+    assert trace_a.events[0].input_tokens == 4
+    assert len(trace_b.events) == 0
+
+
+def test_async_stream_records_into_invocation_trace_not_consumption_trace() -> None:
+    async def create(**kwargs):
+        return FakeAsyncStream(
+            [SimpleNamespace(delta="a", usage=SimpleNamespace(input_tokens=7, output_tokens=2))]
+        )
+
+    wrapped = instrument_callable(create, name="astream")
+
+    async def run() -> None:
+        with trace_agent("A") as trace_a:
+            stream = await wrapped(stream=True)
+        with trace_agent("B") as trace_b:
+            _ = [chunk async for chunk in stream]
+        assert len(trace_a.events) == 1
+        assert trace_a.events[0].input_tokens == 7
+        assert len(trace_b.events) == 0
+
+    asyncio.run(run())

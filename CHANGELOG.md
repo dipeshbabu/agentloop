@@ -73,8 +73,13 @@ Project history from before the first public release remains available in Git.
   finalized when the stream is consumed, closed, fails, or is cancelled — not when
   the iterator is created — so the recorded duration covers consumption and final
   usage is captured when the SDK provides it; a mid-stream error is recorded once
-  and propagates unchanged. Calls made without an active trace are no longer
-  recorded and no longer raise, so they cannot break a successful application call.
+  and propagates unchanged. Final usage on the Responses streaming API is read from
+  the terminal event's nested `response.usage`, not just a top-level `usage`. Trace
+  ownership is captured at invocation time, so a stream is always recorded into the
+  trace that was active when the call was made (or not recorded at all if none was),
+  never into a later or unrelated trace that happens to consume it. Calls made
+  without an active trace are no longer recorded and no longer raise, so they cannot
+  break a successful application call.
 - **The OpenAI Agents tracing processor now isolates and releases state per
   trace.** Spans are grouped by their owning trace id and released when that trace
   ends, so interleaved traces export only their own spans and processor memory no
@@ -84,6 +89,8 @@ Project history from before the first public release remains available in Git.
   Duplicate `on_trace_end`, a missing `on_trace_start`, `shutdown`, and
   `force_flush` now have defined behavior, and `AgentLoopTracingProcessor` gained a
   `retain_exported` option to avoid holding completed `exported_traces` in memory.
+  Per-trace state is released even if building or exporting the trace fails, so a
+  failed export cannot re-introduce the completed-trace memory leak.
 - **Trace finalization side effects now run independently.** Export, local
   storage, and upload each have their own error boundary and run in a
   deterministic order, so a failure in one no longer prevents the others when
