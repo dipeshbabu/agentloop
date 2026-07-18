@@ -42,6 +42,19 @@ Project history from before the first public release remains available in Git.
 
 ### Fixed
 
+- Optimization plans no longer double-count savings from overlapping cards.
+  Cards sharing affected spans are treated as mutually exclusive alternatives:
+  plan totals now come from the compatible (span-disjoint) subset of cards that
+  maximizes latency savings, breaking ties by cost savings, capped at the run's
+  actual runtime and cost. `latency_reduction_pct` can no longer exceed 100%,
+  and the reported latency/cost totals are always achievable by one concrete
+  set of changes. Plans gain a `savings_aggregation` block recording the rule,
+  the selected card indexes, and raw versus effective totals. The optimization
+  queue applies the same rule per run and cluster, so `priority_score` consumes
+  deduplicated savings. Compatibility: per-card estimates and all existing plan
+  fields are unchanged; only the aggregated `estimated_after` totals (previously
+  inflated), the queue's savings totals, and derived priority scores change,
+  and `savings_aggregation` is a new additive field.
 - Measure trace runtime as end-to-end elapsed time, retain cumulative span work
   separately, and calculate execution order and critical paths from timestamps
   and parent relationships.

@@ -5,6 +5,7 @@ from enum import Enum
 from typing import Any
 
 from agentloop.graph import ExecutionGraph
+from agentloop.savings import SavingsItem, select_compatible
 
 
 class RecommendationType(str, Enum):
@@ -56,10 +57,11 @@ def build_optimization_plan(trace: Any, report: dict[str, Any] | None = None) ->
     cards.extend(_runaway_loop_cards(graph))
     cards.extend(_tool_oscillation_cards(graph))
 
-    total_latency_savings = sum(card.estimated_latency_savings_ms for card in cards)
-    total_cost_savings = sum(card.estimated_cost_savings_usd for card in cards)
     current_runtime = report.get("total_runtime_ms", graph.total_runtime_ms())
     current_cost = report.get("estimated_cost_usd", 0.0)
+    aggregate = _aggregate_savings(cards, current_runtime, current_cost)
+    total_latency_savings = aggregate["latency_savings_ms"]
+    total_cost_savings = aggregate["cost_savings_usd"]
 
     return {
         "run_id": trace.run_id,
@@ -82,8 +84,58 @@ def build_optimization_plan(trace: Any, report: dict[str, Any] | None = None) ->
             if current_cost
             else 0.0,
         },
+        "savings_aggregation": aggregate["explanation"],
         "graph": graph.to_dict(),
         "optimization_cards": [card.to_dict() for card in cards],
+    }
+
+
+def _aggregate_savings(
+    cards: list[OptimizationCard], current_runtime: float, current_cost: float
+) -> dict[str, Any]:
+    """Combine per-card savings without double-counting overlapping spans.
+
+    Cards that share any affected span compete for the same work, so their
+    estimates are mutually exclusive alternatives, not additive. The plan
+    totals come from the compatible (span-disjoint) subset of cards that
+    maximizes latency savings, breaking ties by cost savings — so the reported
+    latency and cost pair is achievable by one concrete set of changes, never a
+    mix of incompatible alternatives. The totals are finally capped at the
+    current runtime/cost, because no plan can save more wall-clock time (or
+    money) than the run actually spent. This keeps ``latency_reduction_pct`` at
+    or below 100% and internally consistent with ``runtime_ms``, while per-card
+    estimates stay untouched and explainable.
+    """
+    items = [
+        SavingsItem(
+            spans=frozenset(card.affected_nodes or []),
+            latency_ms=float(card.estimated_latency_savings_ms or 0.0),
+            cost_usd=float(card.estimated_cost_savings_usd or 0.0),
+        )
+        for card in cards
+    ]
+    selection = select_compatible(items)
+    capped_latency = min(selection.latency_ms, current_runtime) if current_runtime else 0.0
+    capped_cost = min(selection.cost_usd, current_cost) if current_cost else 0.0
+    raw_latency = sum(card.estimated_latency_savings_ms for card in cards)
+    raw_cost = sum(card.estimated_cost_savings_usd for card in cards)
+    return {
+        "latency_savings_ms": capped_latency,
+        "cost_savings_usd": capped_cost,
+        "explanation": {
+            "rule": (
+                "cards sharing affected spans are mutually exclusive alternatives; "
+                "totals come from the compatible (span-disjoint) subset of cards "
+                "that maximizes latency savings, breaking ties by cost savings, "
+                "capped at current runtime/cost"
+            ),
+            "card_count": len(cards),
+            "selected_card_indexes": list(selection.indices),
+            "raw_latency_savings_ms": round(raw_latency, 3),
+            "effective_latency_savings_ms": round(capped_latency, 3),
+            "raw_cost_savings_usd": round(raw_cost, 6),
+            "effective_cost_savings_usd": round(capped_cost, 6),
+        },
     }
 
 
