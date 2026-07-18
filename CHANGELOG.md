@@ -8,6 +8,13 @@ Project history from before the first public release remains available in Git.
 
 ## [Unreleased]
 
+### Fixed
+
+- Quality fixture suites now fail closed across the library, CLI, replay/CI,
+  HTTP API, and dashboard. Empty or vacuous suites are rejected, score ranges
+  are validated, and any supplied failed fixture report fails replay and CI
+  even without a minimum quality threshold.
+
 ### Security
 
 - Upgraded release artifact downloads to the native Node.js 24 action runtime

@@ -12,7 +12,12 @@ from agentloop.findings import build_diagnosis
 from agentloop.issues import build_issue_drafts, issue_drafts_to_markdown
 from agentloop.optimizer import build_optimization_plan
 from agentloop.patches import build_patch_plan
-from agentloop.quality import build_quality_report, quality_report_to_markdown
+from agentloop.quality import (
+    QualityValidationError,
+    build_quality_report,
+    parse_quality_fixtures,
+    quality_report_to_markdown,
+)
 from agentloop.replay import ReplayGates, build_replay_report
 from agentloop.store import (
     ALLOWED_FINDING_TRANSITIONS,
@@ -558,18 +563,6 @@ elif page == "Quality Gates":
     else:
         options = trace_options(traces)
         labels = list(options.keys())
-        baseline_label = st.selectbox("Baseline trace", labels, index=0, key="quality_baseline")
-        candidate_label = st.selectbox(
-            "Candidate trace", labels, index=1 if len(labels) > 1 else 0, key="quality_candidate"
-        )
-        baseline = load_trace_for_project(options[baseline_label], project_id)
-        candidate = load_trace_for_project(options[candidate_label], project_id)
-        min_score = st.number_input(
-            "Minimum candidate quality score", min_value=0.0, max_value=1.0, value=0.9
-        )
-        uploaded = st.file_uploader(
-            "Upload quality fixture JSON", type=["json"], key="quality_fixture_upload"
-        )
         default_fixture = [
             {
                 "id": "required_summary_fields",
@@ -585,47 +578,72 @@ elif page == "Quality Gates":
                 "scorer": {"type": "required_fields", "required": ["summary", "sources"]},
             }
         ]
-        fixtures_text = st.text_area(
-            "Fixture JSON",
-            value=json.dumps({"fixtures": default_fixture}, indent=2),
-            height=260,
-        )
-        if uploaded is not None:
-            fixtures_payload = json.loads(uploaded.read().decode("utf-8"))
-        else:
-            fixtures_payload = json.loads(fixtures_text)
-        fixtures = (
-            fixtures_payload
-            if isinstance(fixtures_payload, list)
-            else fixtures_payload.get("fixtures", [])
-        )
+        with st.form("quality_gate_form"):
+            baseline_label = st.selectbox("Baseline trace", labels, index=0, key="quality_baseline")
+            candidate_label = st.selectbox(
+                "Candidate trace",
+                labels,
+                index=1 if len(labels) > 1 else 0,
+                key="quality_candidate",
+            )
+            min_score = st.number_input(
+                "Minimum candidate quality score", min_value=0.0, max_value=1.0, value=0.9
+            )
+            uploaded = st.file_uploader(
+                "Upload quality fixture JSON", type=["json"], key="quality_fixture_upload"
+            )
+            fixtures_text = st.text_area(
+                "Fixture JSON",
+                value=json.dumps({"fixtures": default_fixture}, indent=2),
+                height=260,
+            )
+            submitted = st.form_submit_button("Run quality gate")
 
-        if baseline is not None and candidate is not None:
-            quality = build_quality_report(
-                fixtures,
-                baseline_trace=baseline,
-                candidate_trace=candidate,
-                min_score=min_score,
-            )
-            status = "passed" if quality["passed"] else "failed"
-            c1, c2, c3, c4 = st.columns(4)
-            c1.metric("Status", status)
-            c2.metric("Candidate score", f"{quality['candidate_score']:.4f}")
-            c3.metric("Quality delta", f"{quality['quality_delta']:.4f}")
-            c4.metric("Failed cases", quality["failed_case_count"])
-            st.dataframe(pd.DataFrame(quality["cases"]), width="stretch", hide_index=True)
-            st.download_button(
-                "Download quality report JSON",
-                data=json.dumps(quality, indent=2),
-                file_name="agentloop_quality_report.json",
-                mime="application/json",
-            )
-            st.download_button(
-                "Download quality report Markdown",
-                data=quality_report_to_markdown(quality),
-                file_name="agentloop_quality_report.md",
-                mime="text/markdown",
-            )
+        if submitted:
+            try:
+                raw_fixtures = (
+                    uploaded.read().decode("utf-8") if uploaded is not None else fixtures_text
+                )
+                fixtures = parse_quality_fixtures(json.loads(raw_fixtures))
+                baseline = load_trace_for_project(options[baseline_label], project_id)
+                candidate = load_trace_for_project(options[candidate_label], project_id)
+                if baseline is None or candidate is None:
+                    raise QualityValidationError(
+                        "selected baseline or candidate trace is unavailable"
+                    )
+                quality = build_quality_report(
+                    fixtures,
+                    baseline_trace=baseline,
+                    candidate_trace=candidate,
+                    min_score=min_score,
+                )
+            except json.JSONDecodeError as exc:
+                st.error(
+                    "Fix the quality fixture JSON: "
+                    f"{exc.msg} at line {exc.lineno}, column {exc.colno}."
+                )
+            except (UnicodeError, QualityValidationError) as exc:
+                st.error(f"Fix the quality fixture JSON: {exc}.")
+            else:
+                status = "passed" if quality["passed"] else "failed"
+                c1, c2, c3, c4 = st.columns(4)
+                c1.metric("Status", status)
+                c2.metric("Candidate score", f"{quality['candidate_score']:.4f}")
+                c3.metric("Quality delta", f"{quality['quality_delta']:.4f}")
+                c4.metric("Failed cases", quality["failed_case_count"])
+                st.dataframe(pd.DataFrame(quality["cases"]), width="stretch", hide_index=True)
+                st.download_button(
+                    "Download quality report JSON",
+                    data=json.dumps(quality, indent=2),
+                    file_name="agentloop_quality_report.json",
+                    mime="application/json",
+                )
+                st.download_button(
+                    "Download quality report Markdown",
+                    data=quality_report_to_markdown(quality),
+                    file_name="agentloop_quality_report.md",
+                    mime="text/markdown",
+                )
 
 elif page == "Value & Pricing":
     traces = store.list_traces(project_id=project_id)
