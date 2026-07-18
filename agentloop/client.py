@@ -49,10 +49,23 @@ class AgentLoopClient:
             payload = json.loads(Path(trace).read_text(encoding="utf-8"))
         return self._request("POST", "/traces", payload)
 
-    def list_traces(self, project_id: str | None = None) -> dict[str, Any]:
-        route = "/traces"
+    def list_traces(
+        self,
+        project_id: str | None = None,
+        *,
+        page_size: int | None = None,
+        cursor: str | None = None,
+    ) -> dict[str, Any]:
+        params: dict[str, Any] = {}
         if project_id:
-            route += "?" + urllib.parse.urlencode({"project_id": project_id})
+            params["project_id"] = project_id
+        if page_size is not None:
+            params["page_size"] = page_size
+        if cursor:
+            params["cursor"] = cursor
+        route = "/traces"
+        if params:
+            route += "?" + urllib.parse.urlencode(params)
         return self._request("GET", route)
 
     def usage_summary(self, project_id: str | None = None) -> dict[str, Any]:
@@ -74,17 +87,33 @@ class AgentLoopClient:
         return self._request("GET", f"/traces/{encoded_run_id}/diagnose")
 
     def list_findings(
-        self, project_id: str | None = None, status: str | None = None
+        self,
+        project_id: str | None = None,
+        status: str | None = None,
+        *,
+        page_size: int | None = None,
+        cursor: str | None = None,
     ) -> dict[str, Any]:
         params: dict[str, Any] = {}
         if project_id:
             params["project_id"] = project_id
         if status:
             params["status"] = status
+        if page_size is not None:
+            params["page_size"] = page_size
+        if cursor:
+            params["cursor"] = cursor
         route = "/findings"
         if params:
             route += "?" + urllib.parse.urlencode(params)
         return self._request("GET", route)
+
+    def update_finding_status(self, run_id: str, finding_id: str, status: str) -> dict[str, Any]:
+        encoded_run_id = urllib.parse.quote(run_id, safe="")
+        encoded_finding_id = urllib.parse.quote(finding_id, safe="")
+        return self._request(
+            "POST", f"/findings/{encoded_run_id}/{encoded_finding_id}/status", {"status": status}
+        )
 
     def optimization_queue(self, project_id: str | None = None) -> dict[str, Any]:
         route = "/optimization-queue"
