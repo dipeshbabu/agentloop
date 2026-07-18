@@ -12,7 +12,16 @@ from agentloop.findings import build_diagnosis
 from agentloop.issues import build_issue_drafts
 from agentloop.optimizer import build_optimization_plan
 from agentloop.quality import build_quality_report
-from agentloop.store import TraceProjectConflictError, TraceStore, get_store
+from agentloop.store import (
+    DEFAULT_PAGE_SIZE,
+    MAX_PAGE_SIZE,
+    FindingNotFoundError,
+    FindingTransitionError,
+    InvalidCursorError,
+    TraceProjectConflictError,
+    TraceStore,
+    get_store,
+)
 from agentloop.tracer import AgentTrace
 from agentloop.value import build_value_report
 from agentloop.version import __version__
@@ -140,11 +149,36 @@ def _selected_project(project_id_filter: str | None, authenticated_project: str)
 @app.get("/traces")
 def list_traces(
     project_id_filter: str | None = Query(default=None, alias="project_id"),
+    page_size: int | None = Query(default=None, ge=1, le=MAX_PAGE_SIZE),
+    cursor: str | None = Query(default=None),
     project_id: str = Depends(resolve_project),
     db: TraceStore = Depends(store),
 ) -> dict[str, Any]:
+    """List traces for a project.
+
+    Without `page_size`/`cursor`, returns the full (bounded) list for
+    backward compatibility. Pass `page_size` to opt into keyset pagination:
+    the response then includes `next_cursor` — pass it back as `cursor` to
+    fetch the next page; `next_cursor: null` means there are no more rows.
+    """
     selected_project = _selected_project(project_id_filter, project_id)
-    return {"project_id": selected_project, "traces": db.list_traces(project_id=selected_project)}
+    if page_size is None and cursor is None:
+        return {
+            "project_id": selected_project,
+            "traces": db.list_traces(project_id=selected_project),
+            "next_cursor": None,
+        }
+    try:
+        page = db.list_traces_page(
+            project_id=selected_project, limit=page_size or DEFAULT_PAGE_SIZE, cursor=cursor
+        )
+    except InvalidCursorError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+    return {
+        "project_id": selected_project,
+        "traces": page["items"],
+        "next_cursor": page["next_cursor"],
+    }
 
 
 def _load_trace_or_404(db: TraceStore, run_id: str, project_id: str) -> AgentTrace:
@@ -187,14 +221,59 @@ def diagnose_trace(
 def list_findings(
     status: str | None = Query(default=None),
     project_id_filter: str | None = Query(default=None, alias="project_id"),
+    page_size: int | None = Query(default=None, ge=1, le=MAX_PAGE_SIZE),
+    cursor: str | None = Query(default=None),
     project_id: str = Depends(resolve_project),
     db: TraceStore = Depends(store),
 ) -> dict[str, Any]:
+    """List findings for a project. See `list_traces` for the pagination contract.
+
+    Paginated results are ordered by recency (most recently updated first),
+    not by the priority order `optimization-queue` uses.
+    """
     selected_project = _selected_project(project_id_filter, project_id)
+    if page_size is None and cursor is None:
+        return {
+            "project_id": selected_project,
+            "findings": db.list_findings(project_id=selected_project, status=status),
+            "next_cursor": None,
+        }
+    try:
+        page = db.list_findings_page(
+            project_id=selected_project,
+            status=status,
+            limit=page_size or DEFAULT_PAGE_SIZE,
+            cursor=cursor,
+        )
+    except InvalidCursorError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
     return {
         "project_id": selected_project,
-        "findings": db.list_findings(project_id=selected_project, status=status),
+        "findings": page["items"],
+        "next_cursor": page["next_cursor"],
     }
+
+
+class FindingStatusPayload(BaseModel):
+    status: str
+
+
+@app.post("/findings/{run_id}/{finding_id}/status")
+def update_finding_status(
+    run_id: str,
+    finding_id: str,
+    payload: FindingStatusPayload,
+    project_id: str = Depends(resolve_project),
+    db: TraceStore = Depends(store),
+) -> dict[str, Any]:
+    try:
+        return db.update_finding_status(project_id, run_id, finding_id, payload.status)
+    except FindingNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from None
+    except FindingTransitionError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from None
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
 
 
 @app.get("/optimization-queue")

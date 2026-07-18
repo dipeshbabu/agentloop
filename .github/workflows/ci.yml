@@ -25,6 +25,24 @@ jobs:
       matrix:
         python-version: ["3.10", "3.13"]
 
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: agentloop
+          POSTGRES_PASSWORD: agentloop-ci-test-only
+          POSTGRES_DB: agentloop_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U agentloop -d agentloop_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      AGENTLOOP_TEST_POSTGRES_DSN: postgresql://agentloop:agentloop-ci-test-only@localhost:5432/agentloop_test
+
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -41,6 +59,17 @@ jobs:
 
       - name: Code quality
         run: uv run --frozen pre-commit run --all-files --show-diff-on-failure
+
+      - name: Wait for Postgres readiness
+        run: |
+          for attempt in $(seq 1 30); do
+            if pg_isready -h 127.0.0.1 -p 5432 -U agentloop -d agentloop_test; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Postgres service did not become ready" >&2
+          exit 1
 
       - name: Test
         run: uv run --frozen --all-extras python -m pytest -q

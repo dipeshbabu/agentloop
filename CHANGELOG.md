@@ -32,9 +32,44 @@ Project history from before the first public release remains available in Git.
 - Docker deployment CI that starts the exact built image with Postgres, waits for
   API and dashboard readiness, verifies a trace round-trip, and checks the
   non-root runtime filesystem posture.
-- A reusable release-validation gate that tests the exact tagged commit across
-  supported Python versions, package and CLI smoke, and the production container
-  before the already-validated distribution files can reach PyPI publishing.
+- **Versioned database migrations and a shared SQLite/Postgres contract test
+  suite.** `agentloop/migrations.py` replaces the implicit `CREATE TABLE IF NOT
+  EXISTS` schema evolution with an ordered, idempotent migration list tracked in
+  a new `schema_migrations` table; a database that predates this system is
+  recognized as already at the pre-migration baseline, so upgrading is
+  automatic on the next `init()` (which every store call already triggers).
+  `tests/test_store_contract.py` and `tests/test_migrations.py` run the same
+  assertions — init, API keys, upsert/conflicts, idempotent usage, findings,
+  filters, pagination, the finding lifecycle, concurrent `init()`, connection
+  failures, and fresh-vs-upgraded schema equivalence — against both backends;
+  CI now runs a pinned Postgres service so the Postgres half actually executes
+  instead of being silently skipped. See `docs/PRODUCTION.md` for the
+  backup/upgrade/rollback procedure.
+- **Pagination for trace and finding list APIs.** `GET /traces` and `GET
+  /findings` accept `page_size` (max 200) and an opaque `cursor`; responses
+  include `next_cursor` (`null` on the last page). `list-stored-traces` and
+  `list-findings` gained `--limit`/`--cursor`, printing the next cursor when
+  more rows are available. The dashboard's Traces page gained a page-size
+  control with Previous/Next navigation. `optimization_queue()` now considers
+  a bounded window of the most recently updated open findings per project
+  (default 5000) instead of a project's entire finding history.
+- **Finding lifecycle: `detected` → `accepted` → `resolved`, plus `dismissed`
+  and `reopened` (back to `detected`) from any terminal state.**
+  `update_finding_status()` on the store, `POST
+  /findings/{run_id}/{finding_id}/status` on the API, `AgentLoopClient.
+  update_finding_status()`, the CLI's `update-finding-status` /
+  `remote-update-finding-status`, and a transition control on the dashboard's
+  Optimization Queue page all expose the same state machine. Transitions are
+  project-scoped and distinguish a missing finding (404) from an invalid
+  transition (409). Re-diagnosing a run now **upserts** findings instead of
+  deleting and recreating them: an unchanged finding keeps its reviewed
+  status, and a finding that disappears from a new diagnosis is marked
+  `superseded` (not silently reset to `detected`) unless it was already
+  `resolved` or `dismissed`, in which case that decision is preserved. A
+  `superseded` finding that reappears in a later diagnosis becomes `detected`
+  again. **Compatibility:** `optimization_queue()` and the paginated finding
+  listing now exclude `dismissed` and `superseded` findings in addition to
+  `resolved` ones.
 
 ### Changed
 
@@ -78,6 +113,16 @@ Project history from before the first public release remains available in Git.
 
 ### Fixed
 
+- **Trace ingestion is now idempotent and atomic on both storage backends.**
+  Re-saving the same `(project_id, run_id)` — e.g. on a client retry after a
+  lost response — used to append a new `usage_events` row every time, inflating
+  run counts, token totals, and modeled cost. `record_usage()` now upserts on a
+  new unique `(project_id, run_id)` index (existing duplicate rows are
+  de-duplicated, keeping the most recent, by the migration that adds the
+  constraint), and `save_trace()` upserts the trace, usage, and findings in a
+  single transaction per backend, so a mid-save failure can no longer leave a
+  trace without its expected usage or findings. Saving a run ID already owned
+  by another project still raises the existing conflict error.
 - **OpenAI instrumentation is now idempotent and stream-aware.** Wrapping the
   same client or callable more than once is a no-op, so one request records one
   event instead of doubling metrics. Streaming responses (`stream=True`) are
