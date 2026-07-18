@@ -27,6 +27,9 @@ Project history from before the first public release remains available in Git.
   (`agentloop.native_event_id`, `agentloop.native_parent_id`, and, from the
   OpenAI Agents bridge, `agentloop.native_span_id` / `agentloop.native_trace_id`)
   so a remapped id stays diagnosable.
+- Docker deployment CI that starts the exact built image with Postgres, waits for
+  API and dashboard readiness, verifies a trace round-trip, and checks the
+  non-root runtime filesystem posture.
 
 ### Changed
 
@@ -50,6 +53,8 @@ Project history from before the first public release remains available in Git.
 - Replaced caller-supplied regular-expression quality scorers with bounded glob
   scorers. Raw `regex` scorers are now rejected; use `glob`, `contains`, or
   `exact_match`.
+- Aligned the official container with the tested Python 3.13 runtime and made
+  application files read-only to its non-root user; `/data` remains writable.
 
 ### Fixed
 
@@ -83,6 +88,10 @@ Project history from before the first public release remains available in Git.
   export and the OpenAI Agents bridge share one implementation.
 - Escaped trace-derived content in every Markdown exporter with context-specific
   handling for headings, tables, inline code, fenced code, and raw HTML.
+- Docker Compose now supplies Postgres credentials through a file-backed secret
+  and separate libpq parameters, so reserved password characters no longer
+  corrupt a generated database URL. Explicit `AGENTLOOP_DATABASE_URL` and
+  `DATABASE_URL` values remain higher-priority connection overrides.
 
 ### Security
 

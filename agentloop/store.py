@@ -12,6 +12,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
+from agentloop.config import (
+    get_postgres_dsn,
+    get_postgres_password_file,
+    postgres_connection_source,
+)
 from agentloop.findings import build_diagnosis
 from agentloop.savings import SavingsItem, select_compatible
 from agentloop.tracer import AgentTrace
@@ -528,7 +533,8 @@ class SQLiteTraceStore:
 
 @dataclass
 class PostgresTraceStore:
-    dsn: str
+    dsn: str | None = None
+    password_file: str | None = None
 
     def _connect(self):
         try:
@@ -537,7 +543,12 @@ class PostgresTraceStore:
             raise RuntimeError(
                 "Install postgres support with: uv sync --locked --extra postgres"
             ) from exc
-        return psycopg.connect(self.dsn)
+        if self.dsn:
+            return psycopg.connect(self.dsn)
+        connect_kwargs: dict[str, str] = {}
+        if self.password_file:
+            connect_kwargs["password"] = _read_postgres_password(self.password_file)
+        return psycopg.connect("", **connect_kwargs)
 
     def init(self) -> None:
         with self._connect() as conn:
@@ -805,10 +816,25 @@ class PostgresTraceStore:
 def get_store() -> TraceStore:
     backend = os.getenv("AGENTLOOP_STORE_BACKEND", "sqlite").lower()
     if backend == "postgres":
-        dsn = os.getenv("AGENTLOOP_DATABASE_URL") or os.getenv("DATABASE_URL")
-        if not dsn:
+        dsn = get_postgres_dsn()
+        if not postgres_connection_source():
             raise RuntimeError(
-                "AGENTLOOP_STORE_BACKEND=postgres requires AGENTLOOP_DATABASE_URL or DATABASE_URL"
+                "AGENTLOOP_STORE_BACKEND=postgres requires AGENTLOOP_DATABASE_URL, "
+                "DATABASE_URL, or libpq PGHOST/PGSERVICE configuration"
             )
-        return PostgresTraceStore(dsn=dsn)
+        return PostgresTraceStore(
+            dsn=dsn,
+            password_file=None if dsn else get_postgres_password_file(),
+        )
     return SQLiteTraceStore(path=os.getenv("AGENTLOOP_SQLITE_PATH", "runs/agentloop.db"))
+
+
+def _read_postgres_password(path: str) -> str:
+    """Read a file-backed Postgres password without including it in errors or logs."""
+    try:
+        password = Path(path).read_text(encoding="utf-8").rstrip("\r\n")
+    except (OSError, UnicodeError) as exc:
+        raise RuntimeError(f"Unable to read Postgres password file: {path}") from exc
+    if not password:
+        raise RuntimeError(f"Postgres password file is empty: {path}")
+    return password
