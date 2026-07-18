@@ -33,9 +33,7 @@ def test_list_stored_traces_limit_prints_next_cursor(tmp_path, monkeypatch) -> N
                 pass
         store.save_trace(trace, project_id="cli-test")
 
-    result = runner.invoke(
-        app, ["list-stored-traces", "--project-id", "cli-test", "--limit", "2"]
-    )
+    result = runner.invoke(app, ["list-stored-traces", "--project-id", "cli-test", "--limit", "2"])
 
     assert result.exit_code == 0
     assert "More results available. Next cursor:" in result.output
@@ -58,7 +56,9 @@ def test_list_stored_traces_without_limit_matches_previous_behavior(tmp_path, mo
     assert "Next cursor" not in result.output
 
 
-def test_update_finding_status_command_transitions_and_rejects_invalid(tmp_path, monkeypatch) -> None:
+def test_update_finding_status_command_transitions_and_rejects_invalid(
+    tmp_path, monkeypatch
+) -> None:
     monkeypatch.chdir(tmp_path)
     db_path = tmp_path / "runs" / "agentloop.db"
     db_path.parent.mkdir(parents=True, exist_ok=True)
