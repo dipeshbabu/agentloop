@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from agentloop.autoinstrument import auto_instrument
+import pytest
+
+from agentloop.autoinstrument import auto_instrument, detect_integrations
 from agentloop.doctor import run_doctor, run_production_check
 
 
@@ -16,14 +18,42 @@ def test_run_doctor_without_api(tmp_path: Path) -> None:
     assert any(check["name"] == "store" for check in result["checks"])
 
 
-def test_auto_instrument_returns_structured_result() -> None:
-    result = auto_instrument()
+def test_detect_integrations_returns_structured_result() -> None:
+    result = detect_integrations()
     payload = result.to_dict()
 
-    assert set(payload.keys()) == {"ok", "enabled", "skipped"}
-    assert isinstance(payload["enabled"], list)
-    assert isinstance(payload["skipped"], dict)
-    assert "vercel_ai_sdk" in payload["skipped"]
+    assert set(payload.keys()) == {"ok", "available", "unavailable"}
+    assert isinstance(payload["available"], list)
+    assert isinstance(payload["unavailable"], dict)
+    # Vercel is JS-side and can never be reported as an available Python package.
+    assert "vercel_ai_sdk" in payload["unavailable"]
+    assert "vercel_ai_sdk" not in payload["available"]
+
+
+def test_detect_integrations_is_idempotent() -> None:
+    assert detect_integrations().to_dict() == detect_integrations().to_dict()
+
+
+def test_detect_integrations_reports_missing_package(monkeypatch) -> None:
+    import agentloop.autoinstrument as ai
+
+    def fake_available(module_name: str) -> bool:
+        return module_name == "openai"
+
+    monkeypatch.setattr(ai, "_module_available", fake_available)
+    payload = detect_integrations().to_dict()
+
+    assert "openai" in payload["available"]
+    assert payload["unavailable"]["langgraph"] == "package not installed"
+    assert payload["unavailable"]["crewai"] == "package not installed"
+
+
+def test_auto_instrument_is_deprecated_alias() -> None:
+    with pytest.warns(DeprecationWarning):
+        result = auto_instrument()
+
+    # The deprecated alias returns the same detection contract.
+    assert set(result.to_dict().keys()) == {"ok", "available", "unavailable"}
 
 
 def test_production_check_rejects_unsafe_defaults(monkeypatch) -> None:

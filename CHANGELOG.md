@@ -50,6 +50,15 @@ Project history from before the first public release remains available in Git.
 - Replaced caller-supplied regular-expression quality scorers with bounded glob
   scorers. Raw `regex` scorers are now rejected; use `glob`, `contains`, or
   `exact_match`.
+- **Renamed auto-instrument to integration detection.** `auto_instrument()` never
+  enabled instrumentation — it only detected installed frameworks — so it is now
+  `detect_integrations()` and the CLI command `auto-instrument` is now
+  `detect-integrations`. Result fields `enabled`/`skipped` are renamed to
+  `available`/`unavailable`, and detection uses `importlib.util.find_spec` instead
+  of importing the frameworks. **Compatibility:** `auto_instrument()` and the
+  `auto-instrument` command remain as deprecated aliases that emit a
+  `DeprecationWarning`; `InstrumentationResult` remains as an alias of
+  `DetectionResult`. Update code that read the `enabled`/`skipped` keys.
 
 ### Fixed
 
