@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+DOWNLOAD_ARTIFACT_SHA = "3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c"
 
 
 def test_ci_exposes_reusable_full_validation_and_release_artifact() -> None:
@@ -18,6 +19,10 @@ def test_ci_exposes_reusable_full_validation_and_release_artifact() -> None:
     assert "Docker image and deployment smoke" in workflow
     assert "upload_release_artifact" in workflow
     assert "name: python-package" in workflow
+    assert f"actions/download-artifact@{DOWNLOAD_ARTIFACT_SHA}" in workflow
+    assert "Download validated release artifact" in workflow
+    assert ".artifact-download-smoke" in workflow
+    assert "sha256sum * | sort" in workflow
 
 
 def test_release_requires_guard_and_reusable_validation_before_publish() -> None:
@@ -30,5 +35,5 @@ def test_release_requires_guard_and_reusable_validation_before_publish() -> None
     assert "needs: [guard, validate]" in workflow
     assert "environment: pypi" in workflow
     assert "id-token: write" in workflow
-    assert "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093" in workflow
+    assert f"actions/download-artifact@{DOWNLOAD_ARTIFACT_SHA}" in workflow
     assert "uv build" not in workflow
