@@ -154,6 +154,31 @@ Event type mapping:
 - `text`, `generate`, `stream`, `model` -> `model_call`
 - `tool`, `tool-call`, `step` -> `tool_call`
 
+## OpenTelemetry trace and span IDs
+
+OTLP requires trace IDs to be 32 lowercase hexadecimal characters and span IDs
+16, and forbids all-zero values. AgentLoop lets you choose custom run and event
+IDs (the local/API constructors and the OpenAI Agents bridge all allow them),
+so when exporting to OTLP (`export-otel`, `trace_to_otel`, or the OpenAI Agents
+processor) AgentLoop maps every identifier to a valid one:
+
+- An **already-valid** ID (correct width, non-zero, lowercase hex) is preserved
+  exactly — so a trace imported from OTLP round-trips back out unchanged.
+- **Every other** ID — non-hex, wrong width, empty, or all-zero — is mapped
+  deterministically with SHA-256. Distinct native IDs stay distinct (for example
+  `a` and `0a` do **not** collapse to the same value), preserving within-trace
+  uniqueness and parent linkage.
+
+The original native identifiers are preserved on the exported span attributes
+(`agentloop.native_event_id`, `agentloop.native_parent_id`, and, from the OpenAI
+Agents bridge, `agentloop.native_span_id` / `agentloop.native_trace_id`; the run
+ID is also on `agentloop.run_id`), so a remapped ID is still diagnosable.
+
+> **Compatibility note.** Importing an OTLP trace now preserves the full 32-hex
+> trace ID rather than truncating it to the last 16, so a trace imported from
+> OTLP has a run ID of the form `run_` + 32 hex characters (previously `run_` +
+> 16). Native (non-imported) run IDs are unchanged.
+
 ## Typical workflow
 
 1. Install AgentLoop.

@@ -71,7 +71,9 @@ def test_trace_from_otel_imports_genai_spans() -> None:
     trace = trace_from_otel(payload, name="imported")
 
     assert trace.name == "imported"
-    assert trace.run_id == "run_0000000000000001"
+    # The full 32-char trace id is preserved (not truncated to 16) so a valid
+    # OTLP id round-trips unchanged.
+    assert trace.run_id == "run_" + "0" * 31 + "1"
     assert len(trace.events) == 2
     assert trace.events[0].event_type == "model_call"
     assert trace.events[0].model == "gpt-test"
