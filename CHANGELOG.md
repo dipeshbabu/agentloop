@@ -62,6 +62,18 @@ Project history from before the first public release remains available in Git.
 
 ### Fixed
 
+- **Trace finalization side effects now run independently.** Export, local
+  storage, and upload each have their own error boundary and run in a
+  deterministic order, so a failure in one no longer prevents the others when
+  `fail_silently=True`. Each entry in `result["errors"]` now identifies its
+  `destination` (previously a flat list of messages). A finalization in which
+  every attempted destination succeeds clears the process-global
+  `get_last_error()` so monitoring no longer reports a recovered failure. With
+  `fail_silently=False`, the first failing destination raises the new
+  `FinalizationError`, whose `result` attribute preserves already-completed
+  destinations. `init()` gained a `CLEAR` sentinel to explicitly reset optional
+  values such as `api_key` and `export_dir` (passing `None` still means "keep the
+  current value").
 - Optimization plans no longer double-count savings from overlapping cards.
   Cards sharing affected spans are treated as mutually exclusive alternatives:
   plan totals now come from the compatible (span-disjoint) subset of cards that

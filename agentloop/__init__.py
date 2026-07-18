@@ -11,7 +11,14 @@ from agentloop.findings import build_diagnosis
 from agentloop.otel import trace_from_otel, trace_to_otel
 from agentloop.patches import build_patch_plan
 from agentloop.replay import ReplayGates, build_replay_report
-from agentloop.runtime import get_last_error, get_runtime_config, init, reset_runtime
+from agentloop.runtime import (
+    CLEAR,
+    FinalizationError,
+    get_last_error,
+    get_runtime_config,
+    init,
+    reset_runtime,
+)
 from agentloop.tracer import (
     AgentTrace,
     current_trace,
@@ -29,6 +36,8 @@ __all__ = [
     "AgentLoopClient",
     "AgentLoopClientError",
     "AgentTrace",
+    "CLEAR",
+    "FinalizationError",
     "DetectionResult",
     "InstrumentationResult",
     "ReplayGates",
