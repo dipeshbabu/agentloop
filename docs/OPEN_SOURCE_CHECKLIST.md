@@ -93,17 +93,18 @@ release. Record the date and any approved exception in this section.
 
 ## Packaging and releases
 
-- [ ] Resolve the PyPI name collision described in `docs/RELEASING.md`. Update the
-      distribution name in `pyproject.toml` without changing the `agentloop`
-      import package unless a broader rename is intentional.
-- [ ] Reserve the final distribution name and configure a PyPI trusted publisher
-      for this repository and its `pypi` environment.
-- [ ] Add environment protection rules for publishing, then set
-      `PYPI_PUBLISH_ENABLED=true` only when publishing is ready.
-- [ ] Build the wheel and source archive, inspect their contents, and install each
+- [x] Confirm maintainer control of the existing `agentloop` PyPI project and use
+      `agentloop` consistently as the distribution, import package, and CLI name.
+- [ ] Configure the PyPI trusted publisher for owner `dipeshbabu`, repository
+      `agentloop`, workflow `release.yml`, and environment `pypi`.
+- [x] Protect the GitHub `pypi` environment with maintainer approval and a custom
+      `v*` tag deployment policy.
+- [ ] Set `PYPI_PUBLISH_ENABLED=true` only after the trusted publisher is ready.
+- [x] Build the wheel and source archive, inspect their contents, and install each
       in a clean environment.
-- [ ] Create the first versioned changelog entry and publish an immutable annotated
-      tag that matches the package version.
+- [x] Create the first versioned changelog entry.
+- [ ] Publish an immutable annotated tag that matches the package version only
+      after the trusted publisher and release checks are ready.
 
 ## Launch
 
