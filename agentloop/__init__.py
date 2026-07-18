@@ -1,4 +1,9 @@
-from agentloop.autoinstrument import InstrumentationResult, auto_instrument
+from agentloop.autoinstrument import (
+    DetectionResult,
+    InstrumentationResult,
+    auto_instrument,
+    detect_integrations,
+)
 from agentloop.client import AgentLoopClient, AgentLoopClientError
 from agentloop.decorators import trace_model, trace_tool, traceable
 from agentloop.doctor import run_doctor
@@ -24,9 +29,11 @@ __all__ = [
     "AgentLoopClient",
     "AgentLoopClientError",
     "AgentTrace",
+    "DetectionResult",
     "InstrumentationResult",
     "ReplayGates",
     "auto_instrument",
+    "detect_integrations",
     "build_value_report",
     "build_diagnosis",
     "build_patch_plan",
