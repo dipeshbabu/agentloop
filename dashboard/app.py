@@ -14,7 +14,12 @@ from agentloop.optimizer import build_optimization_plan
 from agentloop.patches import build_patch_plan
 from agentloop.quality import build_quality_report, quality_report_to_markdown
 from agentloop.replay import ReplayGates, build_replay_report
-from agentloop.store import get_store
+from agentloop.store import (
+    ALLOWED_FINDING_TRANSITIONS,
+    FindingNotFoundError,
+    FindingTransitionError,
+    get_store,
+)
 from agentloop.tracer import AgentTrace
 from agentloop.value import build_value_report
 
@@ -138,7 +143,27 @@ if page == "Overview":
 
 elif page == "Traces":
     st.subheader("Stored traces")
-    traces = store.list_traces(project_id=project_id)
+
+    cursor_key = f"traces_cursor_stack::{project_id}"
+    if cursor_key not in st.session_state:
+        st.session_state[cursor_key] = [None]  # cursor to fetch the *current* page
+
+    page_index = len(st.session_state[cursor_key]) - 1
+    page_size = st.number_input("Page size", min_value=5, max_value=200, value=25, step=5)
+    page = store.list_traces_page(
+        project_id=project_id, limit=int(page_size), cursor=st.session_state[cursor_key][-1]
+    )
+    traces = page["items"]
+
+    nav_cols = st.columns([1, 1, 6])
+    if nav_cols[0].button("◀ Previous", disabled=page_index == 0):
+        st.session_state[cursor_key].pop()
+        st.rerun()
+    if nav_cols[1].button("Next ▶", disabled=page["next_cursor"] is None):
+        st.session_state[cursor_key].append(page["next_cursor"])
+        st.rerun()
+    st.caption(f"Page {page_index + 1}")
+
     if not traces:
         st.info("No traces stored for this project yet.")
     else:
@@ -242,6 +267,38 @@ elif page == "Optimization Queue":
         if item_findings:
             st.subheader("Finding instances")
             st.dataframe(pd.DataFrame(item_findings), width="stretch", hide_index=True)
+
+            st.markdown("**Update finding status**")
+            finding_labels = {
+                f"{f['run_id']} · {f['finding_id']} (currently {f['status']})": f
+                for f in item_findings
+            }
+            selected_finding_label = st.selectbox(
+                "Finding", list(finding_labels.keys()), key=f"finding_select_{item['queue_id']}"
+            )
+            selected_finding = finding_labels[selected_finding_label]
+            allowed_targets = sorted(
+                ALLOWED_FINDING_TRANSITIONS.get(selected_finding["status"], ())
+            )
+            if allowed_targets:
+                new_status = st.selectbox(
+                    "New status", allowed_targets, key=f"status_select_{item['queue_id']}"
+                )
+                if st.button("Apply transition", key=f"apply_transition_{item['queue_id']}"):
+                    try:
+                        store.update_finding_status(
+                            project_id,
+                            selected_finding["run_id"],
+                            selected_finding["finding_id"],
+                            new_status,
+                        )
+                    except (FindingNotFoundError, FindingTransitionError) as exc:
+                        st.error(str(exc))
+                    else:
+                        st.success(f"{selected_finding['finding_id']} is now {new_status}")
+                        st.rerun()
+            else:
+                st.caption(f"No transitions available from '{selected_finding['status']}'.")
 
         st.download_button(
             "Download optimization queue JSON",
