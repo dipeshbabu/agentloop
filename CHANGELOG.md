@@ -8,30 +8,10 @@ Project history from before the first public release remains available in Git.
 
 ## [Unreleased]
 
-## [0.4.0] - 2026-07-18
+## [0.5.0] - 2026-07-18
 
 ### Added
 
-- Apache-2.0 licensing and open-source project metadata.
-- Contributor, security, support, governance, release, and community conduct
-  guidance.
-- Structured bug and feature request forms, a pull request template, ownership
-  rules, and automated dependency update configuration.
-- A locked uv development workflow with pre-commit, PEP 8 checks, Ruff linting
-  and formatting, and matching CI commands.
-- Reproducible, lockfile-based uv installs in the official container build.
-- Safer localhost-only Compose port bindings and explicit dashboard perimeter,
-  TLS, request-limit, and trace-retention production guidance.
-- Dashboard packaging in built distributions.
-- CodeQL and dependency-review workflows for public-repository security checks.
-- Local and CI security scanning with Bandit.
-- Original native identifiers on exported OTLP spans
-  (`agentloop.native_event_id`, `agentloop.native_parent_id`, and, from the
-  OpenAI Agents bridge, `agentloop.native_span_id` / `agentloop.native_trace_id`)
-  so a remapped id stays diagnosable.
-- Docker deployment CI that starts the exact built image with Postgres, waits for
-  API and dashboard readiness, verifies a trace round-trip, and checks the
-  non-root runtime filesystem posture.
 - **Versioned database migrations and a shared SQLite/Postgres contract test
   suite.** `agentloop/migrations.py` replaces the implicit `CREATE TABLE IF NOT
   EXISTS` schema evolution with an ordered, idempotent migration list tracked in
@@ -70,6 +50,44 @@ Project history from before the first public release remains available in Git.
   again. **Compatibility:** `optimization_queue()` and the paginated finding
   listing now exclude `dismissed` and `superseded` findings in addition to
   `resolved` ones.
+
+### Fixed
+
+- **Trace ingestion is now idempotent and atomic on both storage backends.**
+  Re-saving the same `(project_id, run_id)` — e.g. on a client retry after a
+  lost response — used to append a new `usage_events` row every time, inflating
+  run counts, token totals, and modeled cost. `record_usage()` now upserts on a
+  new unique `(project_id, run_id)` index (existing duplicate rows are
+  de-duplicated, keeping the most recent, by the migration that adds the
+  constraint), and `save_trace()` upserts the trace, usage, and findings in a
+  single transaction per backend, so a mid-save failure can no longer leave a
+  trace without its expected usage or findings. Saving a run ID already owned
+  by another project still raises the existing conflict error.
+
+## [0.4.0] - 2026-07-18
+
+### Added
+
+- Apache-2.0 licensing and open-source project metadata.
+- Contributor, security, support, governance, release, and community conduct
+  guidance.
+- Structured bug and feature request forms, a pull request template, ownership
+  rules, and automated dependency update configuration.
+- A locked uv development workflow with pre-commit, PEP 8 checks, Ruff linting
+  and formatting, and matching CI commands.
+- Reproducible, lockfile-based uv installs in the official container build.
+- Safer localhost-only Compose port bindings and explicit dashboard perimeter,
+  TLS, request-limit, and trace-retention production guidance.
+- Dashboard packaging in built distributions.
+- CodeQL and dependency-review workflows for public-repository security checks.
+- Local and CI security scanning with Bandit.
+- Original native identifiers on exported OTLP spans
+  (`agentloop.native_event_id`, `agentloop.native_parent_id`, and, from the
+  OpenAI Agents bridge, `agentloop.native_span_id` / `agentloop.native_trace_id`)
+  so a remapped id stays diagnosable.
+- Docker deployment CI that starts the exact built image with Postgres, waits for
+  API and dashboard readiness, verifies a trace round-trip, and checks the
+  non-root runtime filesystem posture.
 
 ### Changed
 
@@ -113,16 +131,6 @@ Project history from before the first public release remains available in Git.
 
 ### Fixed
 
-- **Trace ingestion is now idempotent and atomic on both storage backends.**
-  Re-saving the same `(project_id, run_id)` — e.g. on a client retry after a
-  lost response — used to append a new `usage_events` row every time, inflating
-  run counts, token totals, and modeled cost. `record_usage()` now upserts on a
-  new unique `(project_id, run_id)` index (existing duplicate rows are
-  de-duplicated, keeping the most recent, by the migration that adds the
-  constraint), and `save_trace()` upserts the trace, usage, and findings in a
-  single transaction per backend, so a mid-save failure can no longer leave a
-  trace without its expected usage or findings. Saving a run ID already owned
-  by another project still raises the existing conflict error.
 - **OpenAI instrumentation is now idempotent and stream-aware.** Wrapping the
   same client or callable more than once is a no-op, so one request records one
   event instead of doubling metrics. Streaming responses (`stream=True`) are
@@ -207,5 +215,6 @@ Project history from before the first public release remains available in Git.
 - Constrained patch-plan source discovery to a normalized allowed root and
   excluded source and directory symlinks from scans.
 
-[Unreleased]: https://github.com/dipeshbabu/agentloop/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/dipeshbabu/agentloop/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/dipeshbabu/agentloop/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/dipeshbabu/agentloop/releases/tag/v0.4.0
