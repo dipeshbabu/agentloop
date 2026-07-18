@@ -4,7 +4,10 @@ on:
   workflow_dispatch:
     inputs:
       bump_type:
-        description: Semantic version part to increment (ignored if version is set)
+        description: >-
+          patch (default) for routine changes and fixes; minor only for a
+          notable user-facing feature; major only for a breaking change.
+          Ignored if version is set.
         required: false
         type: choice
         options: [patch, minor, major]
