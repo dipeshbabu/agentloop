@@ -3,15 +3,16 @@
 This guide is for maintainers publishing official artifacts. Contributors do not
 need release credentials.
 
-## Distribution ownership and trusted publishing
+## Distribution name and trusted publishing
 
-The maintainer controls the existing `agentloop` project on PyPI and has selected
-it as this repository's official distribution. The distribution, Python import
-package, and command-line program therefore all remain `agentloop`.
+The official PyPI distribution is `agentloop-profiler`. The Python import package
+and command-line program remain `agentloop`, so users install
+`agentloop-profiler` and write `import agentloop`.
 
 The GitHub `pypi` environment requires maintainer approval and accepts only `v*`
-tags. PyPI must trust owner `dipeshbabu`, repository `agentloop`, workflow
-`release.yml`, and environment `pypi` before the first tag is created.
+tags. The PyPI pending publisher for project `agentloop-profiler` must trust owner
+`dipeshbabu`, repository `agentloop`, workflow `release.yml`, and environment
+`pypi` before the first tag is created.
 
 The release workflow requires the repository variable `PYPI_PUBLISH_ENABLED` to
 equal `true` before its publish job will run. Leave that variable unset until the
@@ -65,8 +66,8 @@ After the PyPI trusted publisher is configured:
 5. Verify the installed artifact in a fresh environment:
 
    ```bash
-   python -m pip install agentloop==X.Y.Z
-   python -m pip show agentloop
+   python -m pip install agentloop-profiler==X.Y.Z
+   python -m pip show agentloop-profiler
    agentloop --help
    ```
 6. Publish GitHub release notes based on the changelog and link the workflow run.
