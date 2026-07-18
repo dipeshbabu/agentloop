@@ -1,7 +1,7 @@
 name: Usage question
 description: Ask a focused setup, integration, or behavior question.
 title: "[Question]: "
-labels: [question, triage]
+labels: [question]
 body:
   - type: markdown
     attributes:

@@ -9,13 +9,15 @@ permissions:
   contents: read
 
 jobs:
-  build:
-    name: Build package
+  guard:
+    name: Verify release ref
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
 
       - name: Set up uv and Python
         uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
@@ -27,21 +29,26 @@ jobs:
       - name: Check tag matches package version
         run: test "v$(uv version --short)" = "$GITHUB_REF_NAME"
 
-      - name: Build distribution
-        run: uv build
+      - name: Require tag commit on main
+        shell: bash
+        run: |
+          tag_commit="$(git rev-list -n 1 "$GITHUB_REF")"
+          git fetch --no-tags origin refs/heads/main:refs/remotes/origin/main
+          if ! git merge-base --is-ancestor "$tag_commit" refs/remotes/origin/main; then
+            echo "Release tags must point to a commit reachable from main." >&2
+            exit 1
+          fi
 
-      - name: Validate distribution metadata
-        run: uv run --isolated --no-project --with twine twine check dist/*
-
-      - name: Upload distribution artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: python-package
-          path: dist/*
+  validate:
+    name: Validate exact tag commit
+    needs: guard
+    uses: ./.github/workflows/ci.yml
+    with:
+      upload_release_artifact: true
 
   publish-pypi:
     name: Publish to PyPI
-    needs: build
+    needs: [guard, validate]
     if: ${{ vars.PYPI_PUBLISH_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     environment: pypi
