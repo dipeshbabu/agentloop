@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from agentloop.otel import trace_from_otel
+from agentloop.otel_ids import to_span_id, to_trace_id
 from agentloop.tracer import AgentTrace
 
 
@@ -82,10 +83,13 @@ def _span_to_otel(span: Any, trace_id: str) -> dict[str, Any]:
     attrs.append(_attribute("gen_ai.usage.input_tokens", int(input_tokens or 0)))
     attrs.append(_attribute("gen_ai.usage.output_tokens", int(output_tokens or 0)))
 
-    span_id = str(_read(span, "span_id", "id") or "0").replace("span_", "")[-16:].rjust(16, "0")
+    native_span_id = str(_read(span, "span_id", "id") or "0")
+    # Preserve the original native ids for diagnosability (see agentloop.otel_ids).
+    attrs.append(_attribute("agentloop.native_span_id", native_span_id))
+    attrs.append(_attribute("agentloop.native_trace_id", str(trace_id)))
     out = {
-        "traceId": trace_id.replace("trace_", "").replace("run_", "").rjust(32, "0")[-32:],
-        "spanId": span_id,
+        "traceId": to_trace_id(trace_id),
+        "spanId": to_span_id(native_span_id),
         "name": name,
         "startTimeUnixNano": str(_time_ns(_read(span, "started_at", "start_time"))),
         "endTimeUnixNano": str(_time_ns(_read(span, "ended_at", "end_time"))),
@@ -94,7 +98,8 @@ def _span_to_otel(span: Any, trace_id: str) -> dict[str, Any]:
     }
     parent_id = _read(span, "parent_id", "parent_span_id")
     if parent_id:
-        out["parentSpanId"] = str(parent_id).replace("span_", "")[-16:].rjust(16, "0")
+        attrs.append(_attribute("agentloop.native_parent_id", str(parent_id)))
+        out["parentSpanId"] = to_span_id(str(parent_id))
     return out
 
 

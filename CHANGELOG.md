@@ -23,8 +23,19 @@ Project history from before the first public release remains available in Git.
 - Dashboard packaging in built distributions.
 - CodeQL and dependency-review workflows for public-repository security checks.
 - Local and CI security scanning with Bandit.
+- Original native identifiers on exported OTLP spans
+  (`agentloop.native_event_id`, `agentloop.native_parent_id`, and, from the
+  OpenAI Agents bridge, `agentloop.native_span_id` / `agentloop.native_trace_id`)
+  so a remapped id stays diagnosable.
 
 ### Changed
+
+- **OpenTelemetry import now preserves the full trace ID.** A valid imported
+  OTLP trace ID keeps all 32 characters instead of being truncated to the last
+  16, so it round-trips back out unchanged. **Compatibility:** the run ID for a
+  trace imported from OTLP now has the shape `run_` + 32 hex characters (it was
+  `run_` + 16). Code that assumed a fixed 20-character imported run ID should be
+  updated; native (non-imported) run IDs are unaffected.
 
 - Replaced internal sales-planning documentation with contributor-focused
   dashboard and roadmap guides.
@@ -64,6 +75,12 @@ Project history from before the first public release remains available in Git.
   deployment guides.
 - Made OpenTelemetry exports report the package version instead of a hard-coded
   version string.
+- OpenTelemetry export now emits valid trace and span identifiers for custom
+  run/event IDs. Non-hex, wrong-width, empty, or all-zero native IDs are mapped
+  deterministically (SHA-256) instead of being padded/truncated, so distinct IDs
+  no longer collide (e.g. `a` and `0a`) and conforming OTLP consumers no longer
+  reject the payload. Already-valid IDs are preserved unchanged. The native
+  export and the OpenAI Agents bridge share one implementation.
 - Escaped trace-derived content in every Markdown exporter with context-specific
   handling for headings, tables, inline code, fenced code, and raw HTML.
 
