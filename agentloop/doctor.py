@@ -12,6 +12,7 @@ from urllib.error import URLError
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
+from agentloop.config import postgres_connection_source
 from agentloop.runtime import get_runtime_config
 from agentloop.store import get_store
 
@@ -245,12 +246,16 @@ def run_production_check(
             )
         )
 
-    database_url = os.getenv("AGENTLOOP_DATABASE_URL") or os.getenv("DATABASE_URL")
-    if database_url:
-        checks.append(_ok("database_url", "configured"))
+    database_source = postgres_connection_source()
+    if database_source:
+        checks.append(_ok("database_url", f"configured via {database_source}"))
     else:
         checks.append(
-            _fail("database_url", "missing", "Set AGENTLOOP_DATABASE_URL or DATABASE_URL.")
+            _fail(
+                "database_url",
+                "missing",
+                "Set AGENTLOOP_DATABASE_URL/DATABASE_URL or libpq PGHOST/PGSERVICE variables.",
+            )
         )
 
     if check_store:

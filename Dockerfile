@@ -1,4 +1,4 @@
-FROM python:3.14-slim
+FROM python:3.13-slim
 
 COPY --from=ghcr.io/astral-sh/uv:0.11.28 /uv /uvx /bin/
 
@@ -21,7 +21,7 @@ RUN uv sync --frozen --no-dev --all-extras --no-editable
 
 ENV PATH="/app/.venv/bin:$PATH"
 
-RUN mkdir -p /data && chown -R agentloop:agentloop /app /data
+RUN mkdir -p /data && chown -R agentloop:agentloop /data
 
 USER agentloop
 
