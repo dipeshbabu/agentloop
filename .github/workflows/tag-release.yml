@@ -1,0 +1,68 @@
+name: Tag release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - agentloop/version.py
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  tag:
+    name: Tag the version bump and dispatch release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Determine version and tag
+        id: version
+        run: |
+          version="$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' agentloop/version.py)"
+          if [ -z "$version" ]; then
+            echo "Could not read __version__ from agentloop/version.py" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+
+      - name: Skip if the tag already exists
+        id: check
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          if git rev-parse "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists; nothing to do (this push did not introduce a new version)."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create and push the tag
+        if: steps.check.outputs.exists == 'false'
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "AgentLoop $VERSION"
+          git push origin "$TAG"
+
+      # Pushing a tag with the default GITHUB_TOKEN does not trigger release.yml's
+      # `push: tags:` listener (GitHub's anti-recursion rule for GITHUB_TOKEN-authored
+      # events), so dispatch it explicitly. workflow_dispatch is exempt from that
+      # rule, and running it with --ref set to the tag makes release.yml see the same
+      # ref context (github.ref / GITHUB_REF_NAME) it would from a real tag push.
+      - name: Dispatch release.yml against the new tag
+        if: steps.check.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: gh workflow run release.yml --ref "$TAG"
