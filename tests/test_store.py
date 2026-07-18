@@ -1,6 +1,14 @@
 import sqlite3
+import sys
+from types import SimpleNamespace
 
-from agentloop.store import SQLiteTraceStore, hash_api_key, verify_api_key_hash
+from agentloop.store import (
+    PostgresTraceStore,
+    SQLiteTraceStore,
+    get_store,
+    hash_api_key,
+    verify_api_key_hash,
+)
 from agentloop.tracer import trace_agent, trace_model_call, trace_tool_call
 
 
@@ -56,6 +64,70 @@ def test_api_key_hash_uses_unique_salts_and_rejects_malformed_hashes():
     assert verify_api_key_hash(api_key, first_hash) is True
     assert verify_api_key_hash("al_wrong-key", first_hash) is False
     assert verify_api_key_hash(api_key, "not-a-supported-hash") is False
+
+
+def test_postgres_store_reads_reserved_password_characters_from_file(tmp_path, monkeypatch):
+    password = "p@/s?s#1%2:with-reserved-characters"
+    password_file = tmp_path / "postgres-password"
+    password_file.write_text(password + "\n", encoding="utf-8")
+    captured = {}
+
+    def connect(conninfo, **kwargs):
+        captured["conninfo"] = conninfo
+        captured["kwargs"] = kwargs
+        return object()
+
+    monkeypatch.setitem(sys.modules, "psycopg", SimpleNamespace(connect=connect))
+
+    connection = PostgresTraceStore(password_file=str(password_file))._connect()
+
+    assert connection is not None
+    assert captured == {"conninfo": "", "kwargs": {"password": password}}
+
+
+def test_explicit_postgres_dsn_takes_precedence_over_libpq_secret_file(tmp_path, monkeypatch):
+    dsn = "postgresql://explicit.example/agentloop"
+    missing_password_file = tmp_path / "must-not-be-read"
+    captured = {}
+
+    def connect(conninfo, **kwargs):
+        captured["conninfo"] = conninfo
+        captured["kwargs"] = kwargs
+        return object()
+
+    monkeypatch.setitem(sys.modules, "psycopg", SimpleNamespace(connect=connect))
+    monkeypatch.setenv("AGENTLOOP_STORE_BACKEND", "postgres")
+    monkeypatch.setenv("AGENTLOOP_DATABASE_URL", dsn)
+    monkeypatch.setenv("PGHOST", "db")
+    monkeypatch.setenv("AGENTLOOP_POSTGRES_PASSWORD_FILE", str(missing_password_file))
+
+    store = get_store()
+    connection = store._connect()
+
+    assert isinstance(store, PostgresTraceStore)
+    assert store.dsn == dsn
+    assert store.password_file is None
+    assert connection is not None
+    assert captured == {"conninfo": dsn, "kwargs": {}}
+
+
+def test_get_store_accepts_libpq_connection_environment(tmp_path, monkeypatch):
+    password_file = tmp_path / "postgres-password"
+    password_file.write_text("secret", encoding="utf-8")
+    monkeypatch.setenv("AGENTLOOP_STORE_BACKEND", "postgres")
+    monkeypatch.delenv("AGENTLOOP_DATABASE_URL", raising=False)
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.setenv("PGHOST", "db")
+    monkeypatch.setenv("PGPORT", "5432")
+    monkeypatch.setenv("PGDATABASE", "agentloop")
+    monkeypatch.setenv("PGUSER", "agentloop")
+    monkeypatch.setenv("AGENTLOOP_POSTGRES_PASSWORD_FILE", str(password_file))
+
+    store = get_store()
+
+    assert isinstance(store, PostgresTraceStore)
+    assert store.dsn is None
+    assert store.password_file == str(password_file)
 
 
 def test_sqlite_usage_summary(tmp_path):
