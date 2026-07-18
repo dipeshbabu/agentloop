@@ -1,0 +1,105 @@
+name: Bump version
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump_type:
+        description: Semantic version part to increment (ignored if version is set)
+        required: false
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+      version:
+        description: Explicit version to set instead of bump_type, e.g. 1.2.3
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate main before release-prep
+    uses: ./.github/workflows/ci.yml
+
+  bump:
+    name: Open release-prep pull request
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Set up uv and Python
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          version: "0.11.28"
+          python-version: "3.13"
+          enable-cache: true
+
+      - name: Install package
+        run: uv sync --locked --all-extras --dev
+
+      - name: Bump version and roll the changelog
+        id: bump
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            new_version="$(uv run --frozen python scripts/bump_version.py --set "${{ inputs.version }}")"
+          else
+            new_version="$(uv run --frozen python scripts/bump_version.py "${{ inputs.bump_type }}")"
+          fi
+          echo "version=$new_version" >> "$GITHUB_OUTPUT"
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Commit and push the release-prep branch
+        env:
+          BRANCH: release/${{ steps.bump.outputs.version }}
+        run: |
+          git checkout -b "$BRANCH"
+          git add pyproject.toml agentloop/version.py uv.lock CHANGELOG.md
+          git commit -m "Prepare agentloop-profiler ${{ steps.bump.outputs.version }} release"
+          git push --force origin "$BRANCH"
+
+      - name: Open the release-prep pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: release/${{ steps.bump.outputs.version }}
+          VERSION: ${{ steps.bump.outputs.version }}
+        run: |
+          gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "Prepare agentloop-profiler $VERSION release" \
+            --body "$(cat <<EOF
+          Automated release-prep pull request opened by the **Bump version** workflow.
+
+          - Moved \`## [Unreleased]\` into a new \`## [$VERSION]\` section in \`CHANGELOG.md\`.
+          - Bumped \`pyproject.toml\` and \`agentloop/version.py\` to \`$VERSION\` in lockstep.
+          - Refreshed \`uv.lock\`.
+
+          The full CI suite (lint, tests on both supported Python versions against
+          SQLite and Postgres, package build, Docker deployment smoke) already ran
+          against \`main\` as the \`validate\` job of this same workflow run before
+          this branch was created. Because this PR was opened with the default
+          \`GITHUB_TOKEN\`, GitHub does not start a separate \`pull_request\`-triggered
+          CI run for it (this is a GitHub Actions anti-recursion restriction, not a
+          skipped check) — see the workflow run that created this PR for the results.
+
+          Review the changelog placement and version choice, then merge normally.
+          Merging pushes to \`main\`, which triggers \`tag-release.yml\`: it creates
+          and pushes the matching \`v$VERSION\` tag and dispatches \`release.yml\`
+          against it automatically. Publishing to PyPI still requires the \`pypi\`
+          environment's required-reviewer approval — nothing publishes without a
+          human clicking approve.
+          EOF
+          )"
