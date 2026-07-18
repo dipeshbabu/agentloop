@@ -126,12 +126,27 @@ jobs:
           .package-smoke/bin/agentloop --help
 
       - name: Upload validated release artifact
-        if: ${{ inputs.upload_release_artifact }}
+        if: ${{ inputs.upload_release_artifact || github.event_name == 'pull_request' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: python-package
           path: dist/*
           if-no-files-found: error
+
+      - name: Download validated release artifact
+        if: ${{ inputs.upload_release_artifact || github.event_name == 'pull_request' }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: python-package
+          path: .artifact-download-smoke
+
+      - name: Verify downloaded artifact bytes
+        if: ${{ inputs.upload_release_artifact || github.event_name == 'pull_request' }}
+        shell: bash
+        run: |
+          diff -u \
+            <(cd dist && sha256sum * | sort) \
+            <(cd .artifact-download-smoke && sha256sum * | sort)
 
   docker:
     name: Docker image and deployment smoke

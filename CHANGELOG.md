@@ -8,6 +8,12 @@ Project history from before the first public release remains available in Git.
 
 ## [Unreleased]
 
+### Security
+
+- Upgraded release artifact downloads to the native Node.js 24 action runtime
+  and added a checksum-preserving upload/download smoke test for the exact
+  distributions passed to the publishing job.
+
 ## [0.5.0] - 2026-07-18
 
 ### Added
@@ -204,6 +210,10 @@ Project history from before the first public release remains available in Git.
 
 ### Security
 
+- Enforced pull-request and required-check protection on `main`, protected
+  release tags from deletion or movement, enabled private vulnerability
+  reporting and Dependabot security updates, and required full-commit-SHA pins
+  for every external GitHub Action and reusable workflow.
 - Prevented authenticated project keys from selecting another project's API
   data and prevented an existing trace run ID from being reassigned across
   projects.
