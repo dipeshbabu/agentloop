@@ -1,31 +1,35 @@
 # Stream D — Analysis & reporting correctness
 
-> **Status: 🟡 Partial.** #12 is closed and shipped (fail-closed quality fixtures — see
-> `agentloop/quality.py`'s `QualityValidationError` and its 422 mapping in
-> `agentloop/server.py`). **#20 is still open** — that's the only remaining work in this
-> stream. The "do #20 first if you want the smaller win" framing below no longer
-> applies; #12 is done, so just do #20.
+> **Status: 🔴 Open.** #12 was reopened after the shipped implementation left replay
+> fail-open paths. #20 and #41 are also open. Treat all three as active correctness
+> work rather than relying on the earlier completion banner.
 
 ## Scope
 
-Correctness of the gates and money numbers: quality-fixture evaluation and model cost
-estimation. Work lands in **`agentloop/quality.py`**, **`agentloop/replay.py`**,
-**`agentloop/costs.py`**, and **`agentloop/metrics.py`**, feeding `ci.py`/`value.py` reports.
+Correctness of gates, money numbers, and savings selection: quality-fixture evaluation,
+model cost estimation, and optimization aggregation. Work lands in
+**`agentloop/quality.py`**, **`agentloop/replay.py`**, **`agentloop/costs.py`**,
+**`agentloop/metrics.py`**, and the savings/optimization modules feeding `ci.py` and
+`value.py` reports.
 
 Issues: **#12** (fail closed on empty/invalid/failing quality fixtures), **#20**
-(provider-aware, explicit cost estimates).
+(provider-aware, explicit cost estimates), **#41** (optimal savings selection or explicit
+approximation semantics).
 
 ## Approach for the stream as a whole
 
-The two issues are independent — either order. Both are about **not silently presenting a
-wrong-but-green result**:
+The three issues are mostly independent. All are about **not silently presenting a
+wrong-but-green or unjustifiably exact result**:
 
 - #12: a green check must mean "actually correct," not "no fixtures ran."
 - #20: a cost number must be measured or explicitly flagged as an estimate — never a hidden
   fabricated rate.
+- #41: a large selection must be proven optimal or explicitly labeled as an
+  approximation, including in machine-readable outputs.
 
-Do **#20 first** if you want the smaller win (contained to `costs.py`/`metrics.py`); **#12**
-touches gating semantics across replay/CI/API/CLI/dashboard and is the more careful change.
+Keep each issue in a separate PR. #20 and #41 both feed value/optimization reporting, so
+rebase and run their combined report tests if they are developed near each other. #12
+touches gating semantics across replay, CI, API, CLI, and dashboard surfaces.
 
 ## Stream-specific rules
 
@@ -38,16 +42,17 @@ touches gating semantics across replay/CI/API/CLI/dashboard and is the more care
 
 ## Cross-stream coordination
 
-- ~~#12 touches the same replay/CI surfaces referenced by the `agentloop-performance.yml`
-  workflow — verify the workflow path still behaves.~~ **Resolved**: #12 shipped; the
-  workflow path was verified as part of that PR.
+- #12 touches the same replay/CI surfaces used by `agentloop-performance.yml`; its
+  reopened acceptance criteria require verifying that workflow path again.
 - #20's "unknown cost" behavior interacts with replay gates; define it, don't coerce unknowns
-  to zero/default. *(Still applies — #20 is the remaining work here.)*
+  to zero/default.
+- #20 and #41 both affect reported optimization value; preserve one explicit contract for
+  unknown cost and approximation metadata.
 
 ## Definition of done for the stream
 
-Both issues' acceptance criteria met; new/changed gate semantics covered by tests for CLI
-exit codes, report JSON, HTTP input, and the workflow path; changelog documents the
-behavior flips.
+All three issues' acceptance criteria are met; gate semantics are covered by tests for
+CLI exit codes, report JSON, HTTP input, and the workflow path; pricing uncertainty and
+savings approximation are machine-readable; and the changelog documents behavior flips.
 
 See [`../SHARED_CONVENTIONS.md`](../SHARED_CONVENTIONS.md).
