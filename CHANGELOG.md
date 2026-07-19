@@ -10,10 +10,12 @@ Project history from before the first public release remains available in Git.
 
 ### Fixed
 
-- Quality fixture suites now fail closed across the library, CLI, replay/CI,
-  HTTP API, and dashboard. Empty or vacuous suites are rejected, score ranges
-  are validated, and any supplied failed fixture report fails replay and CI
-  even without a minimum quality threshold.
+- Quality fixture validation now rejects empty or vacuous suites and invalid
+  score ranges across the library, CLI, HTTP API, and dashboard. Fully
+  fail-closed replay/CI behavior remains tracked in #12.
+- Release-prep CI runs started through `workflow_dispatch` now upload, download,
+  and byte-verify the built wheel and source archive, matching pull-request CI
+  and leaving artifacts available for maintainer review.
 
 ### Security
 

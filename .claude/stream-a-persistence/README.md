@@ -1,8 +1,9 @@
 # Stream A — Persistence layer & data APIs
 
-> **Status: ✅ Done.** All four issues closed and shipped in `v0.5.0`. Kept here as the
-> historical plan — read the current `agentloop/store.py`/`migrations.py` for what was
-> actually built, not this document, if you're touching persistence now.
+> **Status: 🟡 Follow-up required.** #10 and #22 remain complete, but #19 and #31
+> were reopened after a regression audit found unmet acceptance criteria. Use the
+> current code and live issues for implementation details; the original plan below is
+> retained for dependency and migration context.
 
 ## Scope
 
@@ -11,10 +12,23 @@ work lands in **`agentloop/store.py`** (which holds both `SQLiteTraceStore` and
 `PostgresTraceStore`), with touch points in `agentloop/server.py`, `agentloop/client.py`,
 `agentloop/cli.py`, and `dashboard/app.py` for the API/CLI/dashboard surfaces.
 
-Issues: **#22** (Postgres contract tests + migrations), **#10** (idempotent/atomic
-ingestion), **#19** (pagination), **#31** (finding lifecycle).
+Completed: **#22** (Postgres contract tests + migrations), **#10** (idempotent/atomic
+ingestion). Open: **#19** (pagination and bounded queries), **#31** (finding lifecycle
+and state preservation during re-diagnosis).
 
-## Approach for the stream as a whole
+## Current follow-up work
+
+- **#19** must bound queries all the way from SQL through HTTP, client, CLI,
+  optimization queues, and dashboard consumers. Preserve deterministic ordering and
+  dual-backend parity.
+- **#31** must add supported lifecycle transitions and preserve reviewed state when a
+  diagnosis is recomputed. Build on the existing migration system and stable project
+  isolation rules.
+
+Keep these as separate PRs, but rebase frequently because both touch store contracts and
+their API/dashboard consumers.
+
+## Historical approach for the original scope
 
 1. **Do #22 first.** It creates two things the rest of the stream depends on: a shared
    backend **contract-test suite** that runs against both SQLite and Postgres, and a
@@ -54,9 +68,11 @@ hard prerequisite for the others.
 
 ## Definition of done for the stream
 
-All four issues' acceptance criteria met; shared contract tests green on **both** SQLite
-and Postgres in CI; a documented migration path for every schema change; production docs
-(`docs/PRODUCTION.md`) updated with backup/upgrade/rollback where #22 requires it.
+All four issues' acceptance criteria are met, including the reopened criteria for #19
+and #31; shared contract tests are green on **both** SQLite and Postgres in CI; queries
+are bounded through every consumer; finding state survives re-diagnosis; every schema
+change has a documented migration path; and production backup/upgrade/rollback guidance
+remains accurate.
 
 See [`../SHARED_CONVENTIONS.md`](../SHARED_CONVENTIONS.md) for the base workflow and the
 both-backend / compatibility rules.
