@@ -102,3 +102,56 @@ def test_repeated_context_recommendation() -> None:
 
     titles = [rec["title"] for rec in trace.report()["recommendations"]]
     assert "Cache repeated context" in titles
+
+
+def test_cost_status_reflects_completeness() -> None:
+    def status_for(model: str) -> str:
+        with trace_agent("t") as trace:
+            with trace_model_call("m", model=model, input_tokens=100, output_tokens=10):
+                pass
+        return trace.report()["cost_status"]
+
+    assert status_for("gpt-4o") == "complete"
+    assert status_for("unpriced-model") == "unknown"
+
+    with trace_agent("mix") as trace:
+        with trace_model_call("a", model="gpt-4o", input_tokens=100, output_tokens=10):
+            pass
+        with trace_model_call("b", model="unpriced", input_tokens=100, output_tokens=10):
+            pass
+    assert trace.report()["cost_status"] == "partial"
+
+    with trace_agent("empty") as trace:
+        pass
+    assert trace.report()["cost_status"] == "empty"
+
+
+def test_invalid_provider_reported_metadata_does_not_crash_report() -> None:
+    for bad in (float("nan"), float("inf"), -3.0, "not-a-number"):
+        with trace_agent("t") as trace:
+            with trace_model_call(
+                "m",
+                model="gpt-4o",
+                input_tokens=100,
+                output_tokens=10,
+                metadata={"provider_reported_cost_usd": bad},
+            ):
+                pass
+        report = trace.report()  # must not raise
+        assert report["cost_status"] == "unknown"
+        assert "invalid_metadata" in report["cost_breakdown"]["unknown_reasons"]
+
+
+def test_cached_tokens_metadata_is_clamped_to_input() -> None:
+    with trace_agent("t") as trace:
+        with trace_model_call(
+            "m",
+            model="gpt-4o",
+            input_tokens=100,
+            output_tokens=10,
+            metadata={"cached_input_tokens": 10_000},
+        ):
+            pass
+    report = trace.report()
+    assert report["cost_status"] == "complete"
+    assert report["cost_breakdown"]["model_calls"][0]["cached_input_tokens"] == 100

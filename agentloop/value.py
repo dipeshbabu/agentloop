@@ -63,9 +63,15 @@ def build_value_report(
         cards=cards,
     )
 
+    # When the trace used unpriced models, current/optimized cost are lower
+    # bounds, so the model-cost-savings and total-value figures below are
+    # incomplete too. Surface the status rather than presenting them as exact.
+    cost_status = plan.get("cost_status", current.get("cost_status", "complete"))
+
     return {
         "run_id": plan.get("run_id"),
         "name": plan.get("name"),
+        "cost_status": cost_status,
         "assumptions": {
             "runs_per_month": runs_per_month,
             "engineer_hourly_rate_usd": engineer_hourly_rate_usd,

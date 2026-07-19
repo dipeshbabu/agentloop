@@ -413,3 +413,55 @@ def test_indeterminate_cost_gate_renders_in_markdown() -> None:
     markdown = replay_report_to_markdown(build_replay_report(baseline, candidate))
 
     assert "indeterminate" in markdown
+
+
+def test_unknown_cost_makes_replay_cost_deltas_unavailable() -> None:
+    baseline = _trace(
+        "baseline",
+        model_duration_ms=800,
+        tool_duration_ms=200,
+        input_tokens=1000,
+        output_tokens=200,
+        model="unpriced-model",
+    )
+    candidate = _trace(
+        "candidate",
+        model_duration_ms=400,
+        tool_duration_ms=100,
+        input_tokens=500,
+        output_tokens=100,
+        model="unpriced-model",
+    )
+
+    report = build_replay_report(baseline, candidate)
+
+    assert report["deltas"]["cost_usd_delta"] is None
+    assert report["deltas"]["cost_improvement_pct"] is None
+    assert report["deltas"]["cost_regression_pct"] is None
+    markdown = replay_report_to_markdown(report)
+    cost_row = next(line for line in markdown.splitlines() if line.startswith("| Cost"))
+    assert "unavailable" in cost_row
+
+
+def test_known_cost_keeps_numeric_replay_deltas() -> None:
+    baseline = _trace(
+        "baseline",
+        model_duration_ms=800,
+        tool_duration_ms=200,
+        input_tokens=1000,
+        output_tokens=200,
+        model="gpt-4o",
+    )
+    candidate = _trace(
+        "candidate",
+        model_duration_ms=400,
+        tool_duration_ms=100,
+        input_tokens=500,
+        output_tokens=100,
+        model="gpt-4o",
+    )
+
+    report = build_replay_report(baseline, candidate)
+
+    assert report["deltas"]["cost_usd_delta"] is not None
+    assert report["deltas"]["cost_improvement_pct"] is not None

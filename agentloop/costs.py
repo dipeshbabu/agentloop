@@ -25,6 +25,7 @@ file (see ``load_pricing_table``), or by passing a ``PricingTable`` explicitly.
 from __future__ import annotations
 
 import json
+import math
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -54,6 +55,13 @@ class ModelPricing:
     source: str
     as_of: str
     cached_input_usd_per_mtok: float | None = None
+    # This rate is only valid up to this many input tokens; above it the entry
+    # does not apply (many providers charge a higher tier for long context, e.g.
+    # Gemini above 200K). ``None`` means the rate has no declared upper bound.
+    max_input_tokens: int | None = None
+
+    def applies_to(self, input_tokens: int) -> bool:
+        return self.max_input_tokens is None or input_tokens <= self.max_input_tokens
 
     def cost_usd(
         self, input_tokens: int, output_tokens: int, cached_input_tokens: int = 0
@@ -88,6 +96,11 @@ class CostEstimate:
     input_tokens: int
     output_tokens: int
     cached_input_tokens: int = 0
+    # Populated only when ``state == "unknown"``: a short machine-usable reason
+    # (e.g. ``unpriced_model``, ``context_over_threshold``,
+    # ``unsupported_billing_mode``, ``invalid_metadata``) so consumers can tell
+    # "no rate for this model" apart from "we refused to price this call".
+    unknown_reason: str | None = None
 
     @property
     def is_known(self) -> bool:
@@ -104,6 +117,7 @@ class CostEstimate:
             "input_tokens": self.input_tokens,
             "output_tokens": self.output_tokens,
             "cached_input_tokens": self.cached_input_tokens,
+            "unknown_reason": self.unknown_reason,
         }
 
 
@@ -114,28 +128,50 @@ class CostEstimate:
 _OPENAI_SOURCE = "https://openai.com/api/pricing/"
 _ANTHROPIC_SOURCE = "https://www.anthropic.com/pricing"
 _GOOGLE_SOURCE = "https://ai.google.dev/pricing"
-_BUILTIN_AS_OF = "2025-06-01"
+_OPENAI_AS_OF = "2025-06-01"
+_ANTHROPIC_AS_OF = "2025-06-01"
+_GOOGLE_AS_OF = "2025-06-01"
+
+# Gemini 2.5 charges a higher tier above 200K input tokens; the built-in flat
+# rate is only correct at or below that, so above it we return unknown rather
+# than under-report. A deployment that needs the long-context tier priced adds
+# its own override (see docs/PRICING.md).
+_GEMINI_STANDARD_CONTEXT = 200_000
 
 _BUILTIN_PRICING: dict[str, ModelPricing] = {
     # OpenAI. The original three rates this module shipped with are preserved so
     # previously-priced traces keep the same numbers.
-    "gpt-4.1": ModelPricing(2.00, 8.00, "openai", _OPENAI_SOURCE, _BUILTIN_AS_OF, 0.50),
-    "gpt-4.1-mini": ModelPricing(0.40, 1.60, "openai", _OPENAI_SOURCE, _BUILTIN_AS_OF, 0.10),
-    "gpt-4o-mini": ModelPricing(0.15, 0.60, "openai", _OPENAI_SOURCE, _BUILTIN_AS_OF, 0.075),
-    "gpt-4o": ModelPricing(2.50, 10.00, "openai", _OPENAI_SOURCE, _BUILTIN_AS_OF, 1.25),
+    "gpt-4.1": ModelPricing(2.00, 8.00, "openai", _OPENAI_SOURCE, _OPENAI_AS_OF, 0.50),
+    "gpt-4.1-mini": ModelPricing(0.40, 1.60, "openai", _OPENAI_SOURCE, _OPENAI_AS_OF, 0.10),
+    "gpt-4o-mini": ModelPricing(0.15, 0.60, "openai", _OPENAI_SOURCE, _OPENAI_AS_OF, 0.075),
+    "gpt-4o": ModelPricing(2.50, 10.00, "openai", _OPENAI_SOURCE, _OPENAI_AS_OF, 1.25),
     # Anthropic.
     "claude-sonnet-4": ModelPricing(
-        3.00, 15.00, "anthropic", _ANTHROPIC_SOURCE, _BUILTIN_AS_OF, 0.30
+        3.00, 15.00, "anthropic", _ANTHROPIC_SOURCE, _ANTHROPIC_AS_OF, 0.30
     ),
     "claude-opus-4": ModelPricing(
-        15.00, 75.00, "anthropic", _ANTHROPIC_SOURCE, _BUILTIN_AS_OF, 1.50
+        15.00, 75.00, "anthropic", _ANTHROPIC_SOURCE, _ANTHROPIC_AS_OF, 1.50
     ),
     "claude-3-5-haiku": ModelPricing(
-        0.80, 4.00, "anthropic", _ANTHROPIC_SOURCE, _BUILTIN_AS_OF, 0.08
+        0.80, 4.00, "anthropic", _ANTHROPIC_SOURCE, _ANTHROPIC_AS_OF, 0.08
     ),
-    # Google.
-    "gemini-2.5-pro": ModelPricing(1.25, 10.00, "google", _GOOGLE_SOURCE, _BUILTIN_AS_OF),
-    "gemini-2.5-flash": ModelPricing(0.30, 2.50, "google", _GOOGLE_SOURCE, _BUILTIN_AS_OF),
+    # Google. Flat rates apply only up to the standard-context threshold.
+    "gemini-2.5-pro": ModelPricing(
+        1.25,
+        10.00,
+        "google",
+        _GOOGLE_SOURCE,
+        _GOOGLE_AS_OF,
+        max_input_tokens=_GEMINI_STANDARD_CONTEXT,
+    ),
+    "gemini-2.5-flash": ModelPricing(
+        0.30,
+        2.50,
+        "google",
+        _GOOGLE_SOURCE,
+        _GOOGLE_AS_OF,
+        max_input_tokens=_GEMINI_STANDARD_CONTEXT,
+    ),
 }
 
 
@@ -151,13 +187,37 @@ class PricingTable:
 
     rates: dict[str, ModelPricing] = field(default_factory=dict)
 
-    def resolve(self, model: str | None, provider: str | None = None) -> ModelPricing | None:
+    def resolve(
+        self,
+        model: str | None,
+        provider: str | None = None,
+        billing_mode: str | None = None,
+    ) -> ModelPricing | None:
+        """Resolve a rate, treating an explicit provider as a hard constraint.
+
+        When a provider is specified (as the ``provider`` argument or a
+        ``provider/model`` prefix), a bare-model entry only matches if its own
+        ``provider`` equals it — so ``azure/gpt-4o`` or ``provider="bedrock"``
+        will not silently borrow the OpenAI or Anthropic rate for a same-named
+        model. A key that was itself provider-qualified (e.g. a user override
+        keyed ``"azure/gpt-4o"``) is trusted as an explicit intent.
+
+        A non-standard ``billing_mode`` (e.g. ``batch``) only matches a
+        mode-qualified key; it never falls back to the standard rate.
+        """
         if not model:
             return None
-        for candidate in _resolution_candidates(model, provider):
+        effective_provider = provider or _provider_prefix(model)
+        mode = _normalize_billing_mode(billing_mode)
+        for candidate, provider_qualified in _resolution_candidates(model, provider, mode):
             pricing = self.rates.get(candidate)
-            if pricing is not None:
+            if pricing is None:
+                continue
+            if provider_qualified:
                 return pricing
+            if effective_provider and pricing.provider.lower() != effective_provider.lower():
+                continue
+            return pricing
         return None
 
     def with_overrides(self, overrides: dict[str, ModelPricing]) -> PricingTable:
@@ -170,37 +230,64 @@ def _normalize_key(model: str) -> str:
     return model.strip().lower()
 
 
-def _resolution_candidates(model: str, provider: str | None) -> list[str]:
-    """Ordered lookup keys for a model, most specific first.
+_STANDARD_BILLING_MODES = {"", "standard", "default", "sync", "on-demand"}
+
+
+def _normalize_billing_mode(billing_mode: str | None) -> str | None:
+    if billing_mode is None:
+        return None
+    mode = billing_mode.strip().lower()
+    return None if mode in _STANDARD_BILLING_MODES else mode
+
+
+def _provider_prefix(model: str) -> str | None:
+    normalized = _normalize_key(model)
+    for separator in ("/", ":"):
+        if separator in normalized:
+            return normalized.split(separator, 1)[0]
+    return None
+
+
+def _resolution_candidates(
+    model: str, provider: str | None, billing_mode: str | None
+) -> list[tuple[str, bool]]:
+    """Ordered ``(key, provider_qualified)`` pairs for a model, most specific first.
 
     Handles ``provider/model`` prefixes, ``provider:model`` prefixes, and dated
     snapshot suffixes (a trailing ``-YYYY-MM-DD`` or ``-YYYYMMDD``) so a specific
-    snapshot falls back to its base model rate when only the base is known.
+    snapshot falls back to its base model rate when only the base is known. When
+    ``billing_mode`` is non-standard, every key is mode-suffixed (``model#mode``)
+    and the plain keys are omitted, so a non-standard mode never resolves to a
+    standard rate.
     """
     normalized = _normalize_key(model)
-    candidates: list[str] = []
+    base: list[tuple[str, bool]] = []
+    seen: set[str] = set()
 
-    def _add(value: str) -> None:
-        if value and value not in candidates:
-            candidates.append(value)
+    def _add(value: str, provider_qualified: bool) -> None:
+        if value and value not in seen:
+            seen.add(value)
+            base.append((value, provider_qualified))
 
     # A provider-qualified key is the most specific: try "provider/model" first.
     if provider:
-        _add(f"{_normalize_key(provider)}/{normalized}")
+        _add(f"{_normalize_key(provider)}/{normalized}", True)
 
     # Strip a leading "provider/" or "provider:" that came in the model string.
     bare = normalized
     for separator in ("/", ":"):
         if separator in bare:
             bare = bare.split(separator, 1)[1]
-    _add(normalized)
-    _add(bare)
+    _add(normalized, False)
+    _add(bare, False)
 
     # Strip a trailing dated snapshot suffix so gpt-4.1-2025-04-14 -> gpt-4.1.
-    for base in (_strip_snapshot(normalized), _strip_snapshot(bare)):
-        _add(base)
+    for snapshot_base in (_strip_snapshot(normalized), _strip_snapshot(bare)):
+        _add(snapshot_base, False)
 
-    return candidates
+    if billing_mode is None:
+        return base
+    return [(f"{key}#{billing_mode}", qualified) for key, qualified in base]
 
 
 def _strip_snapshot(model: str) -> str:
@@ -238,6 +325,7 @@ def _pricing_from_mapping(key: str, raw: dict[str, Any]) -> ModelPricing:
             f"and 'output_usd_per_mtok' ({exc})"
         ) from exc
     cached_raw = raw.get("cached_input_usd_per_mtok")
+    max_input_raw = raw.get("max_input_tokens")
     return ModelPricing(
         input_usd_per_mtok=input_rate,
         output_usd_per_mtok=output_rate,
@@ -245,6 +333,7 @@ def _pricing_from_mapping(key: str, raw: dict[str, Any]) -> ModelPricing:
         source=str(raw.get("source", "user override")),
         as_of=str(raw.get("as_of", "user-provided")),
         cached_input_usd_per_mtok=None if cached_raw is None else float(cached_raw),
+        max_input_tokens=None if max_input_raw is None else int(max_input_raw),
     )
 
 
@@ -295,6 +384,32 @@ def load_pricing_table(
     return table
 
 
+def _is_finite_number(value: Any) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+
+
+def _unknown(
+    model: str | None,
+    provider: str | None,
+    input_tokens: int,
+    output_tokens: int,
+    cached_input_tokens: int,
+    reason: str,
+) -> CostEstimate:
+    return CostEstimate(
+        state="unknown",
+        amount_usd=None,
+        model=model,
+        provider=provider,
+        pricing_source=None,
+        pricing_as_of=None,
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        cached_input_tokens=cached_input_tokens,
+        unknown_reason=reason,
+    )
+
+
 def estimate_cost(
     model: str | None,
     input_tokens: int,
@@ -302,6 +417,7 @@ def estimate_cost(
     *,
     provider: str | None = None,
     cached_input_tokens: int = 0,
+    billing_mode: str | None = None,
     provider_reported_cost_usd: float | None = None,
     pricing: PricingTable | None = None,
 ) -> CostEstimate:
@@ -309,16 +425,36 @@ def estimate_cost(
 
     - If ``provider_reported_cost_usd`` is given, it's used verbatim
       (``provider_reported``) — the provider's own number always beats a
-      calculation.
-    - Otherwise, if the model resolves to a known rate, the cost is
+      calculation. A non-finite or negative reported cost is rejected with a
+      ``ValueError`` (report construction catches this and yields ``unknown``).
+    - Otherwise, if the model resolves to a known rate — under the effective
+      provider, billing mode, and context threshold — the cost is
       ``calculated``.
-    - Otherwise the estimate is ``unknown`` with ``amount_usd = None``; no
-      generic rate is substituted.
+    - Otherwise the estimate is ``unknown`` with ``amount_usd = None`` and an
+      ``unknown_reason``; no generic rate is substituted.
+
+    ``cached_input_tokens`` must satisfy ``0 <= cached <= input_tokens``.
     """
     table = pricing if pricing is not None else load_pricing_table()
 
+    if not _is_finite_number(input_tokens) or not _is_finite_number(output_tokens):
+        raise ValueError("input_tokens and output_tokens must be finite numbers")
+    input_tokens = int(input_tokens)
+    output_tokens = int(output_tokens)
+    if input_tokens < 0 or output_tokens < 0:
+        raise ValueError("input_tokens and output_tokens must be non-negative")
+    if not _is_finite_number(cached_input_tokens):
+        raise ValueError("cached_input_tokens must be a finite number")
+    cached_input_tokens = int(cached_input_tokens)
+    if not 0 <= cached_input_tokens <= input_tokens:
+        raise ValueError(
+            "cached_input_tokens must satisfy 0 <= cached_input_tokens <= input_tokens"
+        )
+
     if provider_reported_cost_usd is not None:
-        resolved = table.resolve(model, provider)
+        if not _is_finite_number(provider_reported_cost_usd) or provider_reported_cost_usd < 0:
+            raise ValueError("provider_reported_cost_usd must be a finite, non-negative number")
+        resolved = table.resolve(model, provider, billing_mode)
         return CostEstimate(
             state="provider_reported",
             amount_usd=round(float(provider_reported_cost_usd), 6),
@@ -331,18 +467,24 @@ def estimate_cost(
             cached_input_tokens=cached_input_tokens,
         )
 
-    resolved = table.resolve(model, provider)
+    resolved = table.resolve(model, provider, billing_mode)
     if resolved is None:
-        return CostEstimate(
-            state="unknown",
-            amount_usd=None,
-            model=model,
-            provider=provider,
-            pricing_source=None,
-            pricing_as_of=None,
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
-            cached_input_tokens=cached_input_tokens,
+        reason = (
+            "unsupported_billing_mode"
+            if _normalize_billing_mode(billing_mode) is not None
+            else "unpriced_model"
+        )
+        return _unknown(model, provider, input_tokens, output_tokens, cached_input_tokens, reason)
+
+    if not resolved.applies_to(input_tokens):
+        # A rate exists but only for a smaller context; refuse to under-report.
+        return _unknown(
+            model,
+            resolved.provider,
+            input_tokens,
+            output_tokens,
+            cached_input_tokens,
+            "context_over_threshold",
         )
 
     return CostEstimate(

@@ -33,10 +33,13 @@ def build_report(trace: Any) -> dict[str, Any]:
         "input_tokens": sum(e.input_tokens for e in model_events),
         "output_tokens": sum(e.output_tokens for e in model_events),
         # Sum of *known* costs only (calculated + provider-reported). A model with
-        # no known rate contributes nothing here rather than a fabricated rate;
-        # `cost_breakdown` records that some cost was unavailable so this number is
-        # never mistaken for a complete measurement. See docs/PRICING.md.
+        # no known rate contributes nothing here rather than a fabricated rate.
+        # `cost_status` and `cost_breakdown` record whether that number is a
+        # complete measurement or a lower bound, so consumers reading the flat
+        # field can tell. Only trust the total as exact when cost_status is
+        # "complete" (or "empty"). See docs/PRICING.md.
         "estimated_cost_usd": cost["known_cost_usd"],
+        "cost_status": cost["cost_status"],
         "cost_breakdown": cost,
         "repeated_context_tokens": repeated["repeated_context_tokens"],
         "repeated_context_ratio": repeated["repeated_context_ratio"],
@@ -46,30 +49,61 @@ def build_report(trace: Any) -> dict[str, Any]:
     }
 
 
+def _coerce_cached_tokens(value: Any, input_tokens: int) -> int:
+    """Clamp a metadata cached-token count into ``[0, input_tokens]``.
+
+    Cached tokens come from free-form metadata, so a bad value must not raise or
+    let cached exceed the input it's a subset of — it's clamped, not trusted.
+    """
+    try:
+        cached = int(value)
+    except (TypeError, ValueError):
+        return 0
+    return max(0, min(cached, max(0, input_tokens)))
+
+
 def _event_cost_estimate(event: Any, pricing: PricingTable) -> CostEstimate:
     """Estimate one model call's cost, reading provider metadata from the event.
 
-    Provider, cached-input tokens, and any provider-reported cost ride in
-    ``event.metadata`` (a free-form field already in the event schema), so this
-    stays compatible with existing serialized traces — a trace without these
-    keys simply falls back to model-name resolution.
+    Provider, cached-input tokens, billing mode, and any provider-reported cost
+    ride in ``event.metadata`` (a free-form field already in the event schema),
+    so this stays compatible with existing serialized traces — a trace without
+    these keys simply falls back to model-name resolution.
+
+    Metadata is untrusted: a non-finite/negative reported cost (which would raise
+    from :func:`estimate_cost`) is caught and turned into an ``unknown`` estimate
+    with an ``invalid_metadata`` reason rather than crashing report construction
+    or fabricating a number.
     """
     metadata = getattr(event, "metadata", None) or {}
     reported = metadata.get("provider_reported_cost_usd", metadata.get("cost_usd"))
-    cached = metadata.get("cached_input_tokens", 0)
-    try:
-        cached_tokens = max(0, int(cached))
-    except (TypeError, ValueError):
-        cached_tokens = 0
-    return estimate_cost(
-        event.model,
-        event.input_tokens,
-        event.output_tokens,
-        provider=metadata.get("provider"),
-        cached_input_tokens=cached_tokens,
-        provider_reported_cost_usd=None if reported is None else float(reported),
-        pricing=pricing,
+    cached_tokens = _coerce_cached_tokens(
+        metadata.get("cached_input_tokens", 0), event.input_tokens
     )
+    try:
+        return estimate_cost(
+            event.model,
+            event.input_tokens,
+            event.output_tokens,
+            provider=metadata.get("provider"),
+            cached_input_tokens=cached_tokens,
+            billing_mode=metadata.get("billing_mode"),
+            provider_reported_cost_usd=None if reported is None else float(reported),
+            pricing=pricing,
+        )
+    except (TypeError, ValueError):
+        return CostEstimate(
+            state="unknown",
+            amount_usd=None,
+            model=event.model,
+            provider=metadata.get("provider"),
+            pricing_source=None,
+            pricing_as_of=None,
+            input_tokens=event.input_tokens,
+            output_tokens=event.output_tokens,
+            cached_input_tokens=cached_tokens,
+            unknown_reason="invalid_metadata",
+        )
 
 
 def cost_breakdown(model_events: list[Any], pricing: PricingTable | None = None) -> dict[str, Any]:
@@ -95,8 +129,10 @@ def cost_breakdown(model_events: list[Any], pricing: PricingTable | None = None)
         {e.pricing_as_of for e in estimates if e.state == "calculated" and e.pricing_as_of}
     )
     unknown_models = sorted({str(e.model) for e in unknown})
+    unknown_reasons = sorted({e.unknown_reason for e in unknown if e.unknown_reason})
 
     return {
+        "cost_status": _cost_status(len(estimates), len(unknown)),
         "known_cost_usd": round(calculated + provider_reported, 6),
         "calculated_usd": calculated,
         "provider_reported_usd": provider_reported,
@@ -106,8 +142,29 @@ def cost_breakdown(model_events: list[Any], pricing: PricingTable | None = None)
         "pricing_sources": sources,
         "pricing_as_of": as_of,
         "unknown_models": unknown_models,
+        "unknown_reasons": unknown_reasons,
         "model_calls": [e.to_dict() for e in estimates],
     }
+
+
+def _cost_status(total_calls: int, unknown_calls: int) -> str:
+    """Summarize how complete a trace's cost total is.
+
+    - ``empty``    — no model calls, so there is no cost to know.
+    - ``complete`` — every model call had a known (calculated/reported) cost.
+    - ``unknown``  — no model call could be priced.
+    - ``partial``  — some priced, some not; the total is a lower bound.
+
+    Consumers should treat anything other than ``complete``/``empty`` as "do not
+    present the cost total or its deltas as a full, comparable measurement."
+    """
+    if total_calls == 0:
+        return "empty"
+    if unknown_calls == 0:
+        return "complete"
+    if unknown_calls == total_calls:
+        return "unknown"
+    return "partial"
 
 
 def repeated_context_stats(model_events: list[Any]) -> dict[str, Any]:

@@ -24,12 +24,24 @@ table now reports *unknown* cost rather than a plausible-looking wrong number.
 
 ## Reading a cost in a report
 
-Every trace report carries two related fields:
+Every trace report carries these related fields:
 
 - `estimated_cost_usd` — the sum of **known** cost only (calculated +
   provider-reported). A model call with unknown pricing contributes nothing here,
   so this number is never inflated by a fabricated rate. It is still a plain
   float for backward compatibility.
+- `cost_status` — a first-class completeness flag so a consumer reading the flat
+  number knows whether to trust it as exact:
+  - `complete` — every model call had a known cost; `estimated_cost_usd` is exact.
+  - `empty` — no model calls, so there is no cost.
+  - `partial` — some calls priced, some not; `estimated_cost_usd` is a **lower
+    bound**.
+  - `unknown` — no call could be priced.
+
+  `optimization_plan`, the value report, and the replay report each carry
+  `cost_status` too, and the replay report renders its cost delta/percentages as
+  `unavailable` (JSON `null`) whenever either side is not `complete` — so
+  lower-bound arithmetic is never presented as a valid comparison.
 - `cost_breakdown` — the full picture:
 
   ```json
@@ -96,9 +108,11 @@ export AGENTLOOP_PRICING_FILE=/etc/agentloop/pricing.json
 ```
 
 - Keys are matched after normalization: a bare model name, a `provider/model`
-  string, or a specific dated snapshot are all valid keys.
+  string, a specific dated snapshot, or a `model#mode` billing-mode key are all
+  valid.
 - `input_usd_per_mtok` and `output_usd_per_mtok` are required; `provider`,
-  `source`, `as_of`, and `cached_input_usd_per_mtok` are optional.
+  `source`, `as_of`, `cached_input_usd_per_mtok`, and `max_input_tokens` (a
+  context ceiling above which the entry does not apply) are optional.
 - A file entry **overrides** the built-in rate for the same model.
 - The top-level `models` wrapper is optional — a flat `{ "model": { ... } }`
   object works too.
@@ -124,6 +138,35 @@ granularity you need:
 
 So a dated snapshot automatically inherits its base model's rate unless you price
 the snapshot explicitly.
+
+### Provider is a hard constraint
+
+When a provider is given — as the `provider` argument or a `provider/model`
+prefix — a bare-model rate only matches if its own provider is the same one.
+`azure/gpt-4o` will **not** borrow the OpenAI `gpt-4o` rate, and
+`provider="bedrock"` will not borrow the first-party Anthropic rate for a
+same-named Claude model; both resolve to **unknown** unless you add a rate for
+that provider. To price a provider's hosting explicitly, add an override — either
+keyed `provider/model` (e.g. `"azure/gpt-4o"`, which is trusted as-is) or with a
+matching `provider` field.
+
+### Context thresholds
+
+A rate can declare a `max_input_tokens` above which it does not apply (many
+providers charge a higher tier for long context). The built-in Gemini 2.5 rates
+apply only at or below 200K input tokens; above that they resolve to **unknown**
+(`unknown_reason: context_over_threshold`) rather than under-report. Add an
+override with a higher `max_input_tokens` (or none) to price the long-context
+tier yourself.
+
+### Billing modes
+
+`estimate_cost(..., billing_mode=...)` — or an event's `metadata.billing_mode` —
+selects a mode-specific rate. A non-standard mode (e.g. `batch`, `priority`)
+**only** matches a mode-qualified key like `"gpt-4o#batch"`; it never falls back
+to the standard rate, so an unpriced mode is **unknown**
+(`unknown_reason: unsupported_billing_mode`). `standard`/`default`/`sync`/
+`on-demand` (and no mode) use the ordinary rate.
 
 ## Provider-reported cost
 

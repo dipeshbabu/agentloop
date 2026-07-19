@@ -59,6 +59,11 @@ def build_optimization_plan(trace: Any, report: dict[str, Any] | None = None) ->
 
     current_runtime = report.get("total_runtime_ms", graph.total_runtime_ms())
     current_cost = report.get("estimated_cost_usd", 0.0)
+    # `estimated_cost_usd` is only a complete measurement when cost_status is
+    # "complete"/"empty"; otherwise it's a lower bound (some model calls were
+    # unpriced). Surface that so a consumer doesn't read the cost/savings numbers
+    # below as exact for a trace that used unpriced models.
+    cost_status = report.get("cost_status", "complete")
     aggregate = _aggregate_savings(cards, current_runtime, current_cost)
     total_latency_savings = aggregate["latency_savings_ms"]
     total_cost_savings = aggregate["cost_savings_usd"]
@@ -66,9 +71,11 @@ def build_optimization_plan(trace: Any, report: dict[str, Any] | None = None) ->
     return {
         "run_id": trace.run_id,
         "name": trace.name,
+        "cost_status": cost_status,
         "current": {
             "runtime_ms": current_runtime,
             "estimated_cost_usd": current_cost,
+            "cost_status": cost_status,
             "input_tokens": report.get("input_tokens", 0),
             "output_tokens": report.get("output_tokens", 0),
             "retry_count": report.get("retry_count", 0),
@@ -77,6 +84,7 @@ def build_optimization_plan(trace: Any, report: dict[str, Any] | None = None) ->
         "estimated_after": {
             "runtime_ms": round(max(0.0, current_runtime - total_latency_savings), 3),
             "estimated_cost_usd": round(max(0.0, current_cost - total_cost_savings), 6),
+            "cost_status": cost_status,
             "latency_reduction_pct": round((total_latency_savings / current_runtime) * 100, 2)
             if current_runtime
             else 0.0,

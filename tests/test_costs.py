@@ -177,3 +177,81 @@ def test_pricing_table_resolve_returns_none_for_missing_model() -> None:
     table = PricingTable(rates={})
     assert table.resolve("anything") is None
     assert table.resolve(None) is None
+
+
+# --- provider enforced as a hard constraint (review: costs.py provider) ---
+
+
+def test_provider_prefix_does_not_borrow_another_providers_rate() -> None:
+    # azure/gpt-4o must not silently resolve to the OpenAI gpt-4o rate
+    estimate = estimate_cost("azure/gpt-4o", 1000, 100)
+    assert estimate.state == "unknown"
+    assert estimate.unknown_reason == "unpriced_model"
+
+
+def test_provider_argument_mismatch_returns_unknown() -> None:
+    # bedrock-hosted Claude must not resolve to the Anthropic first-party rate
+    estimate = estimate_cost("claude-sonnet-4", 1000, 100, provider="bedrock")
+    assert estimate.state == "unknown"
+
+
+def test_matching_provider_still_resolves() -> None:
+    assert estimate_cost("gpt-4o", 1000, 100, provider="openai").state == "calculated"
+    assert estimate_cost("openai/gpt-4o", 1000, 100).state == "calculated"
+    # a provider-qualified override key is trusted regardless of its provider field
+    table = load_pricing_table(
+        overrides={"azure/gpt-4o": ModelPricing(2.5, 10.0, "azure", "deal", "2026-01-01")}
+    )
+    assert estimate_cost("azure/gpt-4o", 1000, 100, pricing=table).state == "calculated"
+
+
+def test_no_provider_specified_matches_by_model_name_as_before() -> None:
+    assert estimate_cost("gpt-4o", 1000, 100).state == "calculated"
+
+
+# --- context threshold + billing modes (review: costs.py Gemini/flat) ---
+
+
+def test_context_over_threshold_is_unknown_not_underreported() -> None:
+    small = estimate_cost("gemini-2.5-pro", 1000, 100)
+    large = estimate_cost("gemini-2.5-pro", 300_000, 100)
+    assert small.state == "calculated"
+    assert large.state == "unknown"
+    assert large.unknown_reason == "context_over_threshold"
+
+
+def test_non_standard_billing_mode_requires_a_mode_specific_rate() -> None:
+    # no batch rate for gpt-4o -> unknown, not the standard rate
+    unpriced = estimate_cost("gpt-4o", 1000, 100, billing_mode="batch")
+    assert unpriced.state == "unknown"
+    assert unpriced.unknown_reason == "unsupported_billing_mode"
+    # a batch override keyed model#batch is used only for batch mode
+    table = load_pricing_table(
+        overrides={"gpt-4o#batch": ModelPricing(1.25, 5.0, "openai", "batch", "2025-06-01")}
+    )
+    assert estimate_cost("gpt-4o", 1000, 100, billing_mode="batch", pricing=table).state == (
+        "calculated"
+    )
+    # standard mode still uses the standard rate
+    assert estimate_cost("gpt-4o", 1000, 100, pricing=table).state == "calculated"
+
+
+# --- input validation (review: metrics.py untrusted metadata) ---
+
+
+def test_estimate_cost_rejects_non_finite_or_negative_reported_cost() -> None:
+    for bad in (float("nan"), float("inf"), -1.0):
+        with pytest.raises(ValueError):
+            estimate_cost("gpt-4o", 100, 10, provider_reported_cost_usd=bad)
+
+
+def test_estimate_cost_rejects_cached_tokens_out_of_range() -> None:
+    with pytest.raises(ValueError):
+        estimate_cost("gpt-4o", 100, 10, cached_input_tokens=200)
+    with pytest.raises(ValueError):
+        estimate_cost("gpt-4o", 100, 10, cached_input_tokens=-5)
+
+
+def test_unknown_reason_is_populated_only_when_unknown() -> None:
+    assert estimate_cost("gpt-4o", 100, 10).unknown_reason is None
+    assert estimate_cost("nope", 100, 10).unknown_reason == "unpriced_model"
