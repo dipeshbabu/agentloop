@@ -75,6 +75,9 @@ Project history from before the first public release remains available in Git.
 
 ### Security
 
+- Restricted Python client credentials to their intended endpoints. Ordinary requests
+  now send only the project API key, while API-key creation sends only the admin key,
+  even when `AgentLoopClient.from_env()` loads both credentials.
 - Upgraded release artifact downloads to the native Node.js 24 action runtime
   and added a checksum-preserving upload/download smoke test for the exact
   distributions passed to the publishing job.
