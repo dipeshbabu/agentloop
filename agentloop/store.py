@@ -269,8 +269,10 @@ def _report_cost_completeness(report: dict[str, Any]) -> tuple[str, int, int]:
             priced, unavailable = 0, total
         elif status == "partial" and total > 1:
             priced, unavailable = total - 1, 1
-        else:
+        elif status == "complete":
             priced, unavailable = total, 0
+        else:
+            priced, unavailable = 0, total
     return _aggregate_cost_status(priced, unavailable), priced, unavailable
 
 

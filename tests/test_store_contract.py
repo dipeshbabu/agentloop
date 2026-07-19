@@ -238,6 +238,24 @@ def test_usage_missing_cost_is_persisted_as_unknown_not_zero(store):
     assert summary["unavailable_model_call_count"] == 1
 
 
+@pytest.mark.parametrize("cost_status", [None, "invalid", "empty"])
+def test_usage_without_pricing_evidence_fails_closed(store, cost_status):
+    store.init()
+    report = {
+        "estimated_cost_usd": 1.0,
+        "model_call_count": 1,
+    }
+    if cost_status is not None:
+        report["cost_status"] = cost_status
+    store.record_usage("proj_a", "legacy-no-breakdown", report)
+
+    summary = store.usage_summary(project_id="proj_a")
+    assert summary["cost_status"] == "unknown"
+    assert summary["estimated_cost_usd"] is None
+    assert summary["priced_model_call_count"] == 0
+    assert summary["unavailable_model_call_count"] == 1
+
+
 @pytest.mark.parametrize(
     "bad_count",
     ["invalid", None, float("nan"), float("inf"), -1, 1.5, True, 2_147_483_648],

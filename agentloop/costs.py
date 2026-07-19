@@ -441,15 +441,18 @@ def _pricing_from_mapping(key: str, raw: dict[str, Any]) -> ModelPricing:
     max_input_raw = raw.get("max_input_tokens")
     if max_input_raw is not None and not _is_integral_number(max_input_raw):
         raise ValueError(f"pricing override for {key!r} must set an integer 'max_input_tokens'")
-    return ModelPricing(
-        input_usd_per_mtok=input_rate,
-        output_usd_per_mtok=output_rate,
-        provider=raw.get("provider", "custom"),
-        source=raw.get("source", "user override"),
-        as_of=raw.get("as_of", "user-provided"),
-        cached_input_usd_per_mtok=cached_rate,
-        max_input_tokens=None if max_input_raw is None else int(max_input_raw),
-    )
+    try:
+        return ModelPricing(
+            input_usd_per_mtok=input_rate,
+            output_usd_per_mtok=output_rate,
+            provider=raw.get("provider", "custom"),
+            source=raw.get("source", "user override"),
+            as_of=raw.get("as_of", "user-provided"),
+            cached_input_usd_per_mtok=cached_rate,
+            max_input_tokens=None if max_input_raw is None else int(max_input_raw),
+        )
+    except ValueError as exc:
+        raise ValueError(f"pricing override for {key!r} is invalid: {exc}") from exc
 
 
 def load_overrides_from_file(path: str | os.PathLike[str]) -> dict[str, ModelPricing]:
@@ -578,9 +581,10 @@ def estimate_cost(
 
     resolved = table.resolve(model, provider, billing_mode)
     if resolved is None:
+        mode = _normalize_billing_mode(billing_mode)
         reason = (
             "unsupported_billing_mode"
-            if _normalize_billing_mode(billing_mode) is not None
+            if mode is not None and table.resolve(model, provider) is not None
             else "unpriced_model"
         )
         return _unknown(model, provider, input_tokens, output_tokens, cached_input_tokens, reason)

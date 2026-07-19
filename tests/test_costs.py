@@ -196,6 +196,25 @@ def test_load_overrides_from_file_rejects_boolean_rates(tmp_path, field) -> None
         load_overrides_from_file(bad)
 
 
+def test_override_metadata_error_names_the_model_key(tmp_path) -> None:
+    bad = tmp_path / "bad-metadata.json"
+    bad.write_text(
+        json.dumps(
+            {
+                "broken-model": {
+                    "input_usd_per_mtok": 1.0,
+                    "output_usd_per_mtok": 2.0,
+                    "provider": None,
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="pricing override for 'broken-model'.*provider"):
+        load_overrides_from_file(bad)
+
+
 def test_legacy_estimate_cost_usd_returns_none_for_unknown_model() -> None:
     assert estimate_cost_usd("gpt-4.1-mini", 100, 20) is not None
     assert estimate_cost_usd("totally-unknown-model", 100, 20) is None
@@ -364,6 +383,13 @@ def test_non_standard_billing_mode_requires_a_mode_specific_rate() -> None:
     )
     # standard mode still uses the standard rate
     assert estimate_cost("gpt-4o", 1000, 100, pricing=table).state == "calculated"
+
+
+def test_unknown_model_with_non_standard_mode_remains_unpriced() -> None:
+    estimate = estimate_cost("totally-unknown-model", 1000, 100, billing_mode="batch")
+
+    assert estimate.state == "unknown"
+    assert estimate.unknown_reason == "unpriced_model"
 
 
 # --- input validation (review: metrics.py untrusted metadata) ---
