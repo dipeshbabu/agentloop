@@ -32,6 +32,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      actions: write
 
     steps:
       - name: Checkout
@@ -95,8 +96,17 @@ jobs:
           against \`main\` as the \`validate\` job of this same workflow run before
           this branch was created. Because this PR was opened with the default
           \`GITHUB_TOKEN\`, GitHub does not start a separate \`pull_request\`-triggered
-          CI run for it (this is a GitHub Actions anti-recursion restriction, not a
-          skipped check) — see the workflow run that created this PR for the results.
+          CI run for it (a GitHub Actions anti-recursion restriction) — so this
+          workflow separately dispatches \`ci.yml\`, \`codeql.yml\`,
+          \`dependency-review.yml\`, and \`agentloop-performance.yml\` against this
+          branch (workflow_dispatch is exempt from that restriction) so the checks
+          branch protection requires actually run and report here. Give them a minute
+          to appear if they're not showing yet.
+
+          If any of those four checks are still missing after a few minutes (the
+          dispatch call itself failed, rather than the check failing), push any commit
+          to this branch or close and reopen this PR yourself — either done with your
+          own account rather than a bot token — which triggers them the normal way.
 
           Review the changelog placement and version choice, then merge normally.
           Merging pushes to \`main\`, which triggers \`tag-release.yml\`: it creates
@@ -106,3 +116,21 @@ jobs:
           human clicking approve.
           EOF
           )"
+
+      # Branch protection on main requires named checks with no bypass (see
+      # docs/RELEASING.md). Those checks come from ci.yml, codeql.yml,
+      # dependency-review.yml, and agentloop-performance.yml's pull_request
+      # triggers, which — like this PR itself — never fire for a GITHUB_TOKEN-
+      # authored event. Dispatch each of them directly against this branch instead;
+      # workflow_dispatch is exempt from that restriction, and each of these
+      # workflows' job names match the required-check names exactly, so a
+      # successful dispatch run satisfies the requirement the same way a native
+      # pull_request run would.
+      - name: Dispatch the branch-protection-required checks against this branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: release/${{ steps.bump.outputs.version }}
+        run: |
+          for workflow in ci.yml codeql.yml dependency-review.yml agentloop-performance.yml; do
+            gh workflow run "$workflow" --ref "$BRANCH"
+          done

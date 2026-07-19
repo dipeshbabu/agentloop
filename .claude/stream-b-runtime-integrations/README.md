@@ -1,5 +1,9 @@
 # Stream B — Tracing runtime & SDK integrations
 
+> **Status: ✅ Done.** All four issues closed and shipped in `v0.5.0`. Kept here as the
+> historical plan — read the current `agentloop/runtime.py`/`agentloop/integrations/`
+> for what was actually built, not this document, if you're touching the runtime now.
+
 ## Scope
 
 The trace finalization runtime and the optional framework/SDK adapters. Work lands in

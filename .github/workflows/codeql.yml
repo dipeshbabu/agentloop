@@ -7,6 +7,10 @@ on:
     branches: [main]
   schedule:
     - cron: "23 4 * * 1"
+  # See the equivalent comment in ci.yml: lets bump-version.yml's release-prep PR
+  # (opened with the default GITHUB_TOKEN) get this required check to actually run
+  # against its head commit via `gh workflow run codeql.yml --ref <branch>`.
+  workflow_dispatch: {}
 
 permissions:
   actions: read

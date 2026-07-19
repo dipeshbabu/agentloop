@@ -1,5 +1,9 @@
 # Stream A — Persistence layer & data APIs
 
+> **Status: ✅ Done.** All four issues closed and shipped in `v0.5.0`. Kept here as the
+> historical plan — read the current `agentloop/store.py`/`migrations.py` for what was
+> actually built, not this document, if you're touching persistence now.
+
 ## Scope
 
 This stream owns the storage backends and the list/query APIs built on them. Almost all
