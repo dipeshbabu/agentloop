@@ -1,5 +1,9 @@
 # Stream F — Docker & deployment
 
+> **Status: ✅ Done.** Both issues closed and shipped in `v0.5.0`. Kept here as the
+> historical plan — read the current `Dockerfile`/`docker-compose.yml`/`ci.yml` for what
+> was actually built, not this document, if you're touching deployment now.
+
 ## Scope
 
 The container image, the Compose stack, and their CI coverage. Work lands in **`Dockerfile`**,

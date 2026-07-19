@@ -29,10 +29,19 @@ known parse/domain errors into inline, accessible feedback while preserving the 
 
 ## Cross-stream coordination
 
-- **#19 (Stream A)** changes how recent-runs/findings lists are loaded and rendered here
-  (pagination). If both are active, align on the list-rendering code path.
+- ~~**#19 (Stream A)** changes how recent-runs/findings lists are loaded and rendered
+  here (pagination). If both are active, align on the list-rendering code path.~~
+  **Resolved**: #19 shipped, including the dashboard changes — the Traces page now has
+  a page-size control with Previous/Next navigation (`store.list_traces_page()`), and
+  the Optimization Queue page has a finding-status transition form
+  (`ALLOWED_FINDING_TRANSITIONS`, `FindingNotFoundError`, `FindingTransitionError` from
+  `agentloop.store`). #21 builds on top of this UI, not around it in flight — confirm
+  the page-size input and the status-transition selectbox already reject malformed
+  input structurally (Streamlit's typed widgets should make most of this a non-issue),
+  and focus #21's effort on whatever paths still call `int()`/`json.loads()`/similar on
+  raw user text elsewhere in `dashboard/app.py`.
 - If **#13 (Stream C)** lands a shared validation/error contract, reuse it for trace-upload
-  validation rather than duplicating.
+  validation rather than duplicating. *(#13 hasn't started yet — still applies.)*
 
 ## Definition of done for the stream
 
