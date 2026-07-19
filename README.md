@@ -565,7 +565,7 @@ priorities, and non-goals.
 
 ## License
 
-Copyright 2026 Dipesh Babu and AgentLoop contributors.
+Copyright 2026 Dipesh Tharu Mahato and AgentLoop contributors.
 
 AgentLoop is licensed under the [Apache License 2.0](LICENSE). Dependencies keep
 their own terms; see the [third-party software inventory](THIRD_PARTY_LICENSES.md).
