@@ -1053,7 +1053,7 @@ class PostgresTraceStore:
             "unavailable_model_call_count",
             "created_at",
         ]
-        return [dict(zip(keys, row)) for row in rows]
+        return [dict(zip(keys, row, strict=True)) for row in rows]
 
     def list_traces_page(
         self,
@@ -1089,7 +1089,7 @@ class PostgresTraceStore:
                 """,
                 (project_id, 1 if cursor else 0, after_created_at, after_run_id, limit + 1),
             ).fetchall()
-        items = [dict(zip(keys, row)) for row in rows[:limit]]
+        items = [dict(zip(keys, row, strict=True)) for row in rows[:limit]]
         next_cursor = None
         if len(rows) > limit:
             last = items[-1]
@@ -1158,7 +1158,7 @@ class PostgresTraceStore:
             "created_at",
             "updated_at",
         ]
-        return [_finding_row(dict(zip(keys, row))) for row in rows]
+        return [_finding_row(dict(zip(keys, row, strict=True))) for row in rows]
 
     def list_findings_page(
         self,
@@ -1211,7 +1211,7 @@ class PostgresTraceStore:
                     limit + 1,
                 ),
             ).fetchall()
-        items = [_finding_row(dict(zip(keys, row))) for row in rows[:limit]]
+        items = [_finding_row(dict(zip(keys, row, strict=True))) for row in rows[:limit]]
         next_cursor = None
         if len(rows) > limit:
             last = items[-1]
@@ -1269,7 +1269,7 @@ class PostgresTraceStore:
                 """,
                 (project_id, run_id, finding_id),
             ).fetchone()
-        return _finding_row(dict(zip(keys, row)))
+        return _finding_row(dict(zip(keys, row, strict=True)))
 
     def optimization_queue(self, project_id: str | None = None) -> list[dict[str, Any]]:
         self.init()
@@ -1303,7 +1303,7 @@ class PostgresTraceStore:
             "created_at",
             "updated_at",
         ]
-        findings = [_finding_row(dict(zip(keys, row))) for row in rows]
+        findings = [_finding_row(dict(zip(keys, row, strict=True))) for row in rows]
         return _build_optimization_queue(findings, project_id)
 
     def record_usage(self, project_id: str, run_id: str, report: dict[str, Any]) -> None:
@@ -1334,7 +1334,7 @@ class PostgresTraceStore:
             "tool_call_count",
             "retry_count",
         ]
-        result = dict(zip(keys, row))
+        result = dict(zip(keys, row, strict=True))
         result["cost_status"] = _aggregate_cost_status(
             int(result["priced_model_call_count"]),
             int(result["unavailable_model_call_count"]),

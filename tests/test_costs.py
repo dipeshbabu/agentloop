@@ -157,7 +157,7 @@ def test_include_builtins_false_makes_every_unlisted_model_unknown() -> None:
     assert estimate_cost("gpt-4o", 1000, 1000, pricing=table).state == "unknown"
 
 
-@pytest.mark.parametrize("bad_rate", ["not-a-number", float("nan"), float("inf"), -1.0])
+@pytest.mark.parametrize("bad_rate", ["not-a-number", float("nan"), float("inf"), -1.0, True])
 def test_load_overrides_from_file_rejects_malformed_entries(tmp_path, bad_rate) -> None:
     bad = tmp_path / "bad.json"
     bad.write_text(
@@ -166,6 +166,26 @@ def test_load_overrides_from_file_rejects_malformed_entries(tmp_path, bad_rate) 
                 "m": {
                     "input_usd_per_mtok": bad_rate,
                     "output_usd_per_mtok": 1.0,
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError):
+        load_overrides_from_file(bad)
+
+
+@pytest.mark.parametrize("field", ["output_usd_per_mtok", "cached_input_usd_per_mtok"])
+def test_load_overrides_from_file_rejects_boolean_rates(tmp_path, field) -> None:
+    bad = tmp_path / f"bad-{field}.json"
+    bad.write_text(
+        json.dumps(
+            {
+                "m": {
+                    "input_usd_per_mtok": 1.0,
+                    "output_usd_per_mtok": 1.0,
+                    field: True,
                 }
             }
         ),

@@ -383,14 +383,28 @@ def _looks_like_date_parts(parts: list[str]) -> bool:
 def _pricing_from_mapping(key: str, raw: dict[str, Any]) -> ModelPricing:
     """Build a ModelPricing from a JSON/dict override entry, with clear errors."""
     try:
-        input_rate = float(raw["input_usd_per_mtok"])
-        output_rate = float(raw["output_usd_per_mtok"])
-    except (KeyError, TypeError, ValueError) as exc:
+        input_raw = raw["input_usd_per_mtok"]
+        output_raw = raw["output_usd_per_mtok"]
+        if isinstance(input_raw, bool) or isinstance(output_raw, bool):
+            raise TypeError("rates must be numeric, not boolean")
+        input_rate = float(input_raw)
+        output_rate = float(output_raw)
+    except (KeyError, OverflowError, TypeError, ValueError) as exc:
         raise ValueError(
             f"pricing override for {key!r} must set numeric 'input_usd_per_mtok' "
             f"and 'output_usd_per_mtok' ({exc})"
         ) from exc
     cached_raw = raw.get("cached_input_usd_per_mtok")
+    if isinstance(cached_raw, bool):
+        raise ValueError(
+            f"pricing override for {key!r} 'cached_input_usd_per_mtok' must be numeric, not boolean"
+        )
+    try:
+        cached_rate = None if cached_raw is None else float(cached_raw)
+    except (OverflowError, TypeError, ValueError) as exc:
+        raise ValueError(
+            f"pricing override for {key!r} must set a numeric 'cached_input_usd_per_mtok' ({exc})"
+        ) from exc
     max_input_raw = raw.get("max_input_tokens")
     if max_input_raw is not None and not _is_integral_number(max_input_raw):
         raise ValueError(f"pricing override for {key!r} must set an integer 'max_input_tokens'")
@@ -400,7 +414,7 @@ def _pricing_from_mapping(key: str, raw: dict[str, Any]) -> ModelPricing:
         provider=str(raw.get("provider", "custom")),
         source=str(raw.get("source", "user override")),
         as_of=str(raw.get("as_of", "user-provided")),
-        cached_input_usd_per_mtok=None if cached_raw is None else float(cached_raw),
+        cached_input_usd_per_mtok=cached_rate,
         max_input_tokens=None if max_input_raw is None else int(max_input_raw),
     )
 
