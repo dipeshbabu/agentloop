@@ -7,9 +7,11 @@ import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from agentloop.tracer import AgentTrace
+
+CredentialScope = Literal["project", "admin"]
 
 
 class AgentLoopClientError(RuntimeError):
@@ -38,7 +40,12 @@ class AgentLoopClient:
         return self._request("GET", "/health")
 
     def create_api_key(self, project_id: str = "default", name: str = "default") -> dict[str, Any]:
-        return self._request("POST", "/api-keys", {"project_id": project_id, "name": name})
+        return self._request(
+            "POST",
+            "/api-keys",
+            {"project_id": project_id, "name": name},
+            credential_scope="admin",
+        )
 
     def upload_trace(self, trace: AgentTrace | str | Path | dict[str, Any]) -> dict[str, Any]:
         if isinstance(trace, AgentTrace):
@@ -170,7 +177,12 @@ class AgentLoopClient:
         return self._request("GET", route)
 
     def _request(
-        self, method: str, path: str, payload: dict[str, Any] | None = None
+        self,
+        method: str,
+        path: str,
+        payload: dict[str, Any] | None = None,
+        *,
+        credential_scope: CredentialScope = "project",
     ) -> dict[str, Any]:
         parsed_base_url = urllib.parse.urlsplit(self.base_url)
         if parsed_base_url.scheme not in {"http", "https"} or not parsed_base_url.netloc:
@@ -180,10 +192,14 @@ class AgentLoopClient:
         headers = {"Accept": "application/json"}
         if payload is not None:
             headers["Content-Type"] = "application/json"
-        if self.api_key:
-            headers["X-AgentLoop-Key"] = self.api_key
-        if self.admin_api_key:
-            headers["X-AgentLoop-Admin-Key"] = self.admin_api_key
+        if credential_scope == "project":
+            if self.api_key:
+                headers["X-AgentLoop-Key"] = self.api_key
+        elif credential_scope == "admin":
+            if self.admin_api_key:
+                headers["X-AgentLoop-Admin-Key"] = self.admin_api_key
+        else:
+            raise AgentLoopClientError(f"Unsupported credential scope: {credential_scope}")
         req = urllib.request.Request(url=url, data=body, method=method, headers=headers)
         try:
             with urllib.request.urlopen(  # nosec B310 - base URL scheme is validated above.
