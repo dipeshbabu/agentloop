@@ -7,6 +7,7 @@ from contextvars import ContextVar
 from pathlib import Path
 from typing import Any, Iterator
 
+from agentloop.costs import format_cost_usd
 from agentloop.events import AgentEvent, new_event_id, new_run_id, utc_now_iso
 from agentloop.metrics import build_report
 
@@ -107,7 +108,12 @@ class AgentTrace:
         print(f"AgentLoop Report: {self.name}")
         print(f"Run ID: {self.run_id}")
         print(f"Total runtime: {report['total_runtime_ms'] / 1000:.2f}s")
-        print(f"Estimated cost: ${report['estimated_cost_usd']:.4f}")
+        print(
+            "Estimated cost: "
+            + format_cost_usd(
+                report.get("estimated_cost_usd"), report.get("cost_status", "complete")
+            )
+        )
         print(f"Model time: {report['model_time_ms'] / 1000:.2f}s")
         print(f"Tool time: {report['tool_time_ms'] / 1000:.2f}s")
         print(f"Retry time: {report['retry_time_ms'] / 1000:.2f}s")

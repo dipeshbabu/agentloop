@@ -23,16 +23,21 @@ Project history from before the first public release remains available in Git.
   a `cost_breakdown` object distinguishing calculated, provider-reported, and
   unavailable cost, with per-model detail and the pricing sources/dates used, and
   a first-class `cost_status` (`complete` / `partial` / `unknown` / `empty`)
-  propagated to the optimization plan, value report, and replay report so a
-  lower-bound total is never mistaken for an exact one. An explicit provider is a
+  propagated through optimization, value, replay, diagnosis, audit, persistence,
+  exports, CLI/CI, and dashboard views so a lower-bound total is never mistaken
+  for an exact one. Cost-dependent savings, totals, and pricing are unavailable
+  for partial/unknown cost. An explicit provider is a
   hard resolution constraint (`azure/gpt-4o` will not borrow the OpenAI rate),
   rates can declare a `max_input_tokens` context ceiling (Gemini 2.5 above 200K
   resolves to unknown rather than under-reporting), and non-standard billing
   modes (`batch`, `priority`) require a `model#mode` rate or resolve to unknown.
   Untrusted event metadata can no longer crash report generation: a non-finite,
   negative, or non-numeric provider-reported cost yields an `unknown`
-  (`invalid_metadata`) estimate, and cached-input tokens are clamped to the input
-  count. When cost is incomplete, replay's `cost_usd_delta` /
+  (`invalid_metadata`) estimate. Non-string provider/mode fields, non-mapping
+  metadata, and invalid cached-input counts are rejected rather than clamped.
+  Pricing rates are finite/non-negative, context ceilings are positive integers,
+  and stable Gemini provenance starts June 17, 2025. When cost is incomplete,
+  replay's `cost_usd_delta` /
   `cost_improvement_pct` / `cost_regression_pct` are `null` (rendered
   `unavailable`) instead of lower-bound arithmetic.
 - Added a repository-owned CodeRabbit configuration for automatic, incremental

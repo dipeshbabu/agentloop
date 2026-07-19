@@ -126,6 +126,7 @@ def test_init_is_idempotent_and_creates_default_project(store):
     store.init()
     traces = store.list_traces(project_id="default")
     assert traces == []
+    assert store.usage_summary(project_id="default")["cost_status"] == "empty"
 
 
 def test_concurrent_init_does_not_raise_or_duplicate_migrations(store):
@@ -184,6 +185,34 @@ def test_double_save_does_not_double_count_usage(store):
     summary = store.usage_summary(project_id="proj_a")
     assert summary["run_count"] == 1
     assert summary["model_call_count"] == 1
+
+
+def test_cost_completeness_survives_trace_and_usage_persistence(store):
+    with trace_agent("partial-cost") as trace:
+        with trace_model_call("known", model="gpt-4o", input_tokens=100, output_tokens=10):
+            pass
+        with trace_model_call("unknown", model="private-model", input_tokens=100, output_tokens=10):
+            pass
+
+    store.save_trace(trace, project_id="proj_a")
+
+    stored = store.list_traces(project_id="proj_a")[0]
+    assert stored["cost_status"] == "partial"
+    assert stored["priced_model_call_count"] == 1
+    assert stored["unavailable_model_call_count"] == 1
+    paged = store.list_traces_page(project_id="proj_a", limit=1)["items"][0]
+    assert paged["cost_status"] == "partial"
+    assert paged["priced_model_call_count"] == 1
+    assert paged["unavailable_model_call_count"] == 1
+
+    summary = store.usage_summary(project_id="proj_a")
+    assert summary["cost_status"] == "partial"
+    assert summary["priced_model_call_count"] == 1
+    assert summary["unavailable_model_call_count"] == 1
+    queue = store.optimization_queue(project_id="proj_a")
+    assert queue
+    assert all(item["cost_status"] == "partial" for item in queue)
+    assert all(item["estimated_cost_savings_usd"] is None for item in queue)
 
 
 def test_retry_after_simulated_lost_response_is_idempotent(store):

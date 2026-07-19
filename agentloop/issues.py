@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from agentloop.costs import format_cost_usd
 from agentloop.markdown import markdown_code_span, markdown_heading, markdown_text
 
 # Generated drafts target this repository, so use only deliberately maintained
@@ -59,7 +60,7 @@ def _issue_for_queue_item(item: dict[str, Any]) -> dict[str, Any]:
             f"- Requires scorer: {item.get('requires_scorer', True)}",
             f"- Safe to auto-patch: {item.get('safe_to_auto_patch', False)}",
             f"- Estimated latency savings: {item['estimated_latency_savings_ms'] / 1000:.2f}s",
-            f"- Estimated cost savings: ${item['estimated_cost_savings_usd']:.4f}",
+            "- Estimated cost savings: " + format_cost_usd(item.get("estimated_cost_savings_usd")),
             f"- Priority score: {item['priority_score']:.1f}",
             "",
             "## Affected Runs",

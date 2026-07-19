@@ -127,14 +127,19 @@ def test_cost_status_reflects_completeness() -> None:
 
 
 def test_invalid_provider_reported_metadata_does_not_crash_report() -> None:
-    for bad in (float("nan"), float("inf"), -3.0, "not-a-number"):
+    cases = [
+        {"provider_reported_cost_usd": bad}
+        for bad in (float("nan"), float("inf"), -3.0, "not-a-number")
+    ]
+    cases.extend([{"provider": 123}, {"billing_mode": 123}, ["not", "a", "mapping"]])
+    for metadata in cases:
         with trace_agent("t") as trace:
             with trace_model_call(
                 "m",
                 model="gpt-4o",
                 input_tokens=100,
                 output_tokens=10,
-                metadata={"provider_reported_cost_usd": bad},
+                metadata=metadata,
             ):
                 pass
         report = trace.report()  # must not raise
@@ -142,16 +147,17 @@ def test_invalid_provider_reported_metadata_does_not_crash_report() -> None:
         assert "invalid_metadata" in report["cost_breakdown"]["unknown_reasons"]
 
 
-def test_cached_tokens_metadata_is_clamped_to_input() -> None:
-    with trace_agent("t") as trace:
-        with trace_model_call(
-            "m",
-            model="gpt-4o",
-            input_tokens=100,
-            output_tokens=10,
-            metadata={"cached_input_tokens": 10_000},
-        ):
-            pass
-    report = trace.report()
-    assert report["cost_status"] == "complete"
-    assert report["cost_breakdown"]["model_calls"][0]["cached_input_tokens"] == 100
+def test_invalid_cached_tokens_metadata_is_unknown() -> None:
+    for bad in (10_000, -1, 1.5, "bad", float("nan"), float("inf")):
+        with trace_agent("t") as trace:
+            with trace_model_call(
+                "m",
+                model="gpt-4o",
+                input_tokens=100,
+                output_tokens=10,
+                metadata={"cached_input_tokens": bad},
+            ):
+                pass
+        report = trace.report()
+        assert report["cost_status"] == "unknown"
+        assert "invalid_metadata" in report["cost_breakdown"]["unknown_reasons"]

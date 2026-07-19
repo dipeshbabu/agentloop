@@ -38,10 +38,11 @@ Every trace report carries these related fields:
     bound**.
   - `unknown` — no call could be priced.
 
-  `optimization_plan`, the value report, and the replay report each carry
-  `cost_status` too, and the replay report renders its cost delta/percentages as
-  `unavailable` (JSON `null`) whenever either side is not `complete` — so
-  lower-bound arithmetic is never presented as a valid comparison.
+  Optimization, value, replay, diagnosis, audit, exports, CLI/CI, dashboard, and
+  persisted trace/usage views all preserve this status. Cost savings,
+  percentages, total value, and suggested pricing are `null`/`unavailable`
+  whenever a total is `partial` or `unknown`; a partial current total is labeled
+  as a known lower bound.
 - `cost_breakdown` — the full picture:
 
   ```json
@@ -69,6 +70,10 @@ reported in `pricing_as_of`). Provider prices change, new models ship, and old
 snapshots get repriced. The built-ins are a convenience for common models, **not
 an authority** — for anything cost-sensitive, supply your own rates so you
 control both the numbers and their `as_of` provenance.
+
+The built-in stable Gemini 2.5 Pro and Flash entries use a June 17, 2025
+provenance date, matching their stable-model release. Their standard-context
+rates apply only through 200K input tokens.
 
 ## Supplying your own rates
 
@@ -189,10 +194,16 @@ Related `metadata` keys read by cost estimation:
 
 - `provider` — disambiguates the model against the pricing table.
 - `cached_input_tokens` — billed at the model's cached-input rate when it has one.
+- `billing_mode` — selects a mode-specific rate such as `model#batch`.
 - `provider_reported_cost_usd` (or `cost_usd`) — the actual billed cost.
 
 These ride in the free-form event `metadata`, so adding them never breaks an
-existing serialized trace.
+existing serialized trace. Metadata is validated strictly: provider and billing
+mode must be strings; monetary values must be finite and non-negative; token
+counts must be finite non-negative integers; and cached tokens cannot exceed
+input tokens. Invalid metadata makes that call `unknown` with
+`unknown_reason: invalid_metadata`; values are never clamped into a plausible
+measurement.
 
 ## Replay gates and unknown cost
 

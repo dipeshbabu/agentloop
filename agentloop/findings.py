@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from agentloop.costs import format_cost_usd
 from agentloop.markdown import markdown_code_span, markdown_heading, markdown_text
 from agentloop.optimizer import build_optimization_plan
 
@@ -47,6 +48,7 @@ def build_diagnosis(trace: Any) -> dict[str, Any]:
     return {
         "run_id": plan["run_id"],
         "name": plan["name"],
+        "cost_status": plan.get("cost_status", "complete"),
         "current": plan["current"],
         "estimated_after": plan["estimated_after"],
         "summary": _summary(plan, findings),
@@ -65,9 +67,16 @@ def diagnosis_to_markdown(diagnosis: dict[str, Any]) -> str:
         f"- Current runtime: {current['runtime_ms'] / 1000:.2f}s",
         f"- Estimated runtime after fixes: {after['runtime_ms'] / 1000:.2f}s",
         f"- Estimated latency reduction: {after['latency_reduction_pct']:.2f}%",
-        f"- Current cost: ${current['estimated_cost_usd']:.4f}",
-        f"- Estimated cost after fixes: ${after['estimated_cost_usd']:.4f}",
-        f"- Estimated cost reduction: {after['cost_reduction_pct']:.2f}%",
+        "- Current cost: "
+        + format_cost_usd(current.get("estimated_cost_usd"), current.get("cost_status")),
+        "- Estimated cost after fixes: "
+        + format_cost_usd(after.get("estimated_cost_usd"), after.get("cost_status")),
+        "- Estimated cost reduction: "
+        + (
+            "unavailable"
+            if after.get("cost_reduction_pct") is None
+            else f"{after['cost_reduction_pct']:.2f}%"
+        ),
         "",
         "## Findings",
         "",
@@ -90,7 +99,8 @@ def diagnosis_to_markdown(diagnosis: dict[str, Any]) -> str:
                 "- Affected spans: "
                 f"{markdown_text(', '.join(map(str, finding['affected_spans'])) or 'none')}",
                 f"- Estimated latency savings: {savings['estimated_latency_savings_ms'] / 1000:.2f}s",
-                f"- Estimated cost savings: ${savings['estimated_cost_savings_usd']:.4f}",
+                "- Estimated cost savings: "
+                + format_cost_usd(savings.get("estimated_cost_savings_usd")),
                 f"- Rewrite: {markdown_text(rewrite['hint'])}",
                 f"- Validation: {markdown_text(validation['acceptance_criteria'])}",
                 "",
@@ -105,7 +115,8 @@ def _finding_from_card(
     affected_spans = list(card.get("affected_nodes", []))
     finding_type = str(card.get("type", "optimization"))
     latency_savings = float(card.get("estimated_latency_savings_ms", 0.0) or 0.0)
-    cost_savings = float(card.get("estimated_cost_savings_usd", 0.0) or 0.0)
+    raw_cost_savings = card.get("estimated_cost_savings_usd")
+    cost_savings = None if raw_cost_savings is None else float(raw_cost_savings)
     severity = _severity(latency_savings, cost_savings, str(card.get("confidence", "low")), plan)
     node_lookup = {node["node_id"]: node for node in plan.get("graph", {}).get("nodes", [])}
     evidence = [
@@ -122,7 +133,9 @@ def _finding_from_card(
         evidence=evidence,
         savings={
             "estimated_latency_savings_ms": round(latency_savings, 3),
-            "estimated_cost_savings_usd": round(cost_savings, 6),
+            "estimated_cost_savings_usd": (
+                None if cost_savings is None else round(cost_savings, 6)
+            ),
             "formula": _savings_formula(finding_type),
         },
         rewrite={
@@ -144,7 +157,7 @@ def _finding_from_card(
             "command": "agentloop replay",
             "acceptance_criteria": _acceptance_criteria(finding_type),
         },
-        metadata={"why": card.get("why", "")},
+        metadata={"why": card.get("why", ""), "cost_status": plan.get("cost_status")},
     )
 
 
@@ -159,12 +172,15 @@ def _summary(plan: dict[str, Any], findings: list[OptimizationFinding]) -> dict[
 
 
 def _severity(
-    latency_savings: float, cost_savings: float, confidence: str, plan: dict[str, Any]
+    latency_savings: float,
+    cost_savings: float | None,
+    confidence: str,
+    plan: dict[str, Any],
 ) -> str:
     runtime = float(plan.get("current", {}).get("runtime_ms", 0.0) or 0.0)
     cost = float(plan.get("current", {}).get("estimated_cost_usd", 0.0) or 0.0)
     latency_share = latency_savings / runtime if runtime else 0.0
-    cost_share = cost_savings / cost if cost else 0.0
+    cost_share = cost_savings / cost if cost and cost_savings is not None else 0.0
     if confidence == "high" or latency_share >= 0.25 or cost_share >= 0.20:
         return "high"
     if confidence == "medium" or latency_share >= 0.10 or cost_share >= 0.10:

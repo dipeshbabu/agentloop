@@ -197,6 +197,11 @@ reported as **unknown** rather than assigned a fabricated fallback rate. Configu
 rates for your own or newer models with `AGENTLOOP_PRICING_FILE` — see the
 [pricing guide](docs/PRICING.md).
 
+Reports persist a `cost_status` (`complete`, `partial`, `unknown`, or `empty`).
+Partial totals are labeled as known lower bounds, while savings, comparisons,
+modeled total value, and suggested pricing remain unavailable until every model
+call has a valid rate or provider-reported cost.
+
 ## Quality gates
 
 ```json

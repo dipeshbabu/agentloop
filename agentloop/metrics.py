@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter, defaultdict
+from collections.abc import Mapping
 from typing import Any
 
 from agentloop.costs import CostEstimate, PricingTable, estimate_cost, load_pricing_table
@@ -49,19 +50,6 @@ def build_report(trace: Any) -> dict[str, Any]:
     }
 
 
-def _coerce_cached_tokens(value: Any, input_tokens: int) -> int:
-    """Clamp a metadata cached-token count into ``[0, input_tokens]``.
-
-    Cached tokens come from free-form metadata, so a bad value must not raise or
-    let cached exceed the input it's a subset of — it's clamped, not trusted.
-    """
-    try:
-        cached = int(value)
-    except (TypeError, ValueError):
-        return 0
-    return max(0, min(cached, max(0, input_tokens)))
-
-
 def _event_cost_estimate(event: Any, pricing: PricingTable) -> CostEstimate:
     """Estimate one model call's cost, reading provider metadata from the event.
 
@@ -75,33 +63,48 @@ def _event_cost_estimate(event: Any, pricing: PricingTable) -> CostEstimate:
     with an ``invalid_metadata`` reason rather than crashing report construction
     or fabricating a number.
     """
-    metadata = getattr(event, "metadata", None) or {}
-    reported = metadata.get("provider_reported_cost_usd", metadata.get("cost_usd"))
-    cached_tokens = _coerce_cached_tokens(
-        metadata.get("cached_input_tokens", 0), event.input_tokens
-    )
     try:
+        raw_metadata = getattr(event, "metadata", None)
+        if raw_metadata is None:
+            metadata: Mapping[str, Any] = {}
+        elif isinstance(raw_metadata, Mapping):
+            metadata = raw_metadata
+        else:
+            raise ValueError("metadata must be a mapping")
+
+        provider = metadata.get("provider")
+        billing_mode = metadata.get("billing_mode")
+        if provider is not None and not isinstance(provider, str):
+            raise ValueError("metadata provider must be a string")
+        if billing_mode is not None and not isinstance(billing_mode, str):
+            raise ValueError("metadata billing_mode must be a string")
+
+        reported = metadata.get("provider_reported_cost_usd", metadata.get("cost_usd"))
         return estimate_cost(
             event.model,
             event.input_tokens,
             event.output_tokens,
-            provider=metadata.get("provider"),
-            cached_input_tokens=cached_tokens,
-            billing_mode=metadata.get("billing_mode"),
+            provider=provider,
+            cached_input_tokens=metadata.get("cached_input_tokens", 0),
+            billing_mode=billing_mode,
             provider_reported_cost_usd=None if reported is None else float(reported),
             pricing=pricing,
         )
-    except (TypeError, ValueError):
+    except (AttributeError, OverflowError, TypeError, ValueError):
+        raw_metadata = getattr(event, "metadata", None)
+        metadata = raw_metadata if isinstance(raw_metadata, Mapping) else {}
+        provider = metadata.get("provider")
+        provider = provider if isinstance(provider, str) else None
         return CostEstimate(
             state="unknown",
             amount_usd=None,
             model=event.model,
-            provider=metadata.get("provider"),
+            provider=provider,
             pricing_source=None,
             pricing_as_of=None,
             input_tokens=event.input_tokens,
             output_tokens=event.output_tokens,
-            cached_input_tokens=cached_tokens,
+            cached_input_tokens=0,
             unknown_reason="invalid_metadata",
         )
 

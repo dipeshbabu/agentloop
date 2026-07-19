@@ -39,6 +39,14 @@ def test_sqlite_fresh_install_and_upgraded_database_reach_equivalent_schema(tmp_
     with sqlite3.connect(str(upgraded_path)) as conn:
         for statement in _BASELINE_SQLITE:
             conn.execute(statement)
+        conn.execute(
+            "INSERT INTO traces(run_id, project_id, name, payload_json, model_call_count) "
+            "VALUES ('legacy', 'default', 'legacy', '{}', 2)"
+        )
+        conn.execute(
+            "INSERT INTO usage_events(project_id, run_id, model_call_count) "
+            "VALUES ('default', 'legacy', 2)"
+        )
     upgraded_store = SQLiteTraceStore(path=str(upgraded_path))
     upgraded_store.init()
 
@@ -46,7 +54,17 @@ def test_sqlite_fresh_install_and_upgraded_database_reach_equivalent_schema(tmp_
 
     with sqlite3.connect(str(upgraded_path)) as conn:
         versions = {row[0] for row in conn.execute("SELECT version FROM schema_migrations")}
-    assert versions == {1, 2, 3}
+        trace_cost = conn.execute(
+            "SELECT cost_status, priced_model_call_count, unavailable_model_call_count "
+            "FROM traces WHERE run_id = 'legacy'"
+        ).fetchone()
+        usage_cost = conn.execute(
+            "SELECT cost_status, priced_model_call_count, unavailable_model_call_count "
+            "FROM usage_events WHERE run_id = 'legacy'"
+        ).fetchone()
+    assert versions == {1, 2, 3, 4}
+    assert trace_cost == ("complete", 2, 0)
+    assert usage_cost == ("complete", 2, 0)
 
 
 def test_sqlite_connection_failure_raises_a_clear_error(tmp_path):
@@ -86,12 +104,20 @@ def test_postgres_fresh_install_and_upgraded_database_reach_equivalent_schema():
         with psycopg.connect(_scoped_dsn(upgraded_schema)) as conn:
             for statement in _BASELINE_POSTGRES:
                 conn.execute(statement)
+            conn.execute(
+                "INSERT INTO traces(run_id, project_id, name, payload_json, model_call_count) "
+                "VALUES ('legacy', 'default', 'legacy', '{}'::jsonb, 2)"
+            )
+            conn.execute(
+                "INSERT INTO usage_events(project_id, run_id, model_call_count) "
+                "VALUES ('default', 'legacy', 2)"
+            )
             conn.commit()
         PostgresTraceStore(dsn=_scoped_dsn(upgraded_schema)).init()
 
         with psycopg.connect(POSTGRES_TEST_DSN) as conn:
 
-            def _signature(schema: str) -> tuple[set[str], set[str]]:
+            def _signature(schema: str) -> tuple[set[str], set[str], set[tuple[str, str]]]:
                 tables = {
                     row[0]
                     for row in conn.execute(
@@ -106,17 +132,39 @@ def test_postgres_fresh_install_and_upgraded_database_reach_equivalent_schema():
                         "SELECT indexname FROM pg_indexes WHERE schemaname = %s", (schema,)
                     ).fetchall()
                 }
-                return tables, indexes
+                columns = {
+                    (row[0], row[1])
+                    for row in conn.execute(
+                        "SELECT table_name, column_name FROM information_schema.columns "
+                        "WHERE table_schema = %s",
+                        (schema,),
+                    ).fetchall()
+                    if row[0] != "schema_migrations"
+                }
+                return tables, indexes, columns
 
-            fresh_tables, fresh_indexes = _signature(fresh_schema)
-            upgraded_tables, upgraded_indexes = _signature(upgraded_schema)
+            fresh_tables, fresh_indexes, fresh_columns = _signature(fresh_schema)
+            upgraded_tables, upgraded_indexes, upgraded_columns = _signature(upgraded_schema)
 
         assert fresh_tables == upgraded_tables
         assert fresh_indexes == upgraded_indexes
+        assert fresh_columns == upgraded_columns
+        assert ("traces", "cost_status") in fresh_columns
+        assert ("usage_events", "unavailable_model_call_count") in fresh_columns
 
         with psycopg.connect(_scoped_dsn(upgraded_schema)) as conn:
             versions = {row[0] for row in conn.execute("SELECT version FROM schema_migrations")}
-        assert versions == {1, 2, 3}
+            trace_cost = conn.execute(
+                "SELECT cost_status, priced_model_call_count, unavailable_model_call_count "
+                "FROM traces WHERE run_id = 'legacy'"
+            ).fetchone()
+            usage_cost = conn.execute(
+                "SELECT cost_status, priced_model_call_count, unavailable_model_call_count "
+                "FROM usage_events WHERE run_id = 'legacy'"
+            ).fetchone()
+        assert versions == {1, 2, 3, 4}
+        assert trace_cost == ("complete", 2, 0)
+        assert usage_cost == ("complete", 2, 0)
     finally:
         with psycopg.connect(POSTGRES_TEST_DSN, autocommit=True) as conn:
             for schema in (fresh_schema, upgraded_schema):

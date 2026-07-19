@@ -107,14 +107,7 @@ def replay_report_to_markdown(report: dict[str, Any]) -> str:
             deltas["latency_improvement_pct"],
             "ms",
         ),
-        _metric_row(
-            "Cost",
-            baseline["estimated_cost_usd"],
-            candidate["estimated_cost_usd"],
-            deltas["cost_usd_delta"],
-            deltas["cost_improvement_pct"],
-            "usd",
-        ),
+        _cost_metric_row(baseline, candidate, deltas),
         _metric_row(
             "Input tokens",
             baseline["input_tokens"],
@@ -457,6 +450,21 @@ def _metric_row(
     return (
         f"| {metric} | {_format_metric(baseline, kind)} | {_format_metric(candidate, kind)} | "
         f"{_format_metric(delta, kind)} | {improvement_cell} |"
+    )
+
+
+def _cost_metric_row(
+    baseline: dict[str, Any], candidate: dict[str, Any], deltas: dict[str, Any]
+) -> str:
+    from agentloop.costs import format_cost_usd
+
+    improvement = deltas["cost_improvement_pct"]
+    improvement_cell = "unavailable" if improvement is None else f"{improvement:.2f}%"
+    return (
+        "| Cost | "
+        f"{format_cost_usd(baseline.get('estimated_cost_usd'), baseline.get('cost_status'), decimals=6)} | "
+        f"{format_cost_usd(candidate.get('estimated_cost_usd'), candidate.get('cost_status'), decimals=6)} | "
+        f"{_format_metric(deltas['cost_usd_delta'], 'usd')} | {improvement_cell} |"
     )
 
 

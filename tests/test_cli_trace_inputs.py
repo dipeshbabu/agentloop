@@ -7,6 +7,7 @@ import pytest
 from typer.testing import CliRunner
 
 from agentloop.cli import app
+from agentloop.tracer import trace_agent, trace_model_call
 
 
 def _clean(output: str) -> str:
@@ -126,3 +127,36 @@ def test_trace_command_rejects_invalid_trace_schema(tmp_path: Path) -> None:
 
     assert result.exit_code == 2
     assert "Input file is not a valid AgentLoop trace" in _clean(result.output)
+
+
+def test_unknown_cost_cli_reports_unavailable_instead_of_zero_savings(tmp_path: Path) -> None:
+    repeated = "stable context " * 100
+    with trace_agent("unknown-cost") as trace:
+        for name in ("first", "second"):
+            with trace_model_call(
+                name,
+                model="private-model",
+                input_tokens=200,
+                output_tokens=10,
+                input_text=repeated,
+            ):
+                pass
+    trace_path = tmp_path / "unknown.json"
+    trace.export_json(trace_path)
+
+    report = CliRunner().invoke(app, ["report", str(trace_path)])
+    optimize = CliRunner().invoke(
+        app,
+        ["optimize", "--path", str(trace_path), "--out", str(tmp_path / "plan.md")],
+    )
+    value = CliRunner().invoke(
+        app,
+        ["value-report", "--path", str(trace_path), "--out", str(tmp_path / "value.json")],
+    )
+
+    assert report.exit_code == 0
+    assert optimize.exit_code == 0
+    assert value.exit_code == 0
+    assert "unavailable" in report.output
+    assert "unavailable cost" in optimize.output
+    assert "unavailable" in value.output

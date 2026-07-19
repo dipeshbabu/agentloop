@@ -59,6 +59,8 @@ MAX_PAGE_SIZE = 200
 # project's entire finding history.
 _QUEUE_MAX_FINDINGS = 5000
 
+_COST_STATUSES = frozenset({"complete", "partial", "unknown", "empty"})
+
 
 class TraceProjectConflictError(ValueError):
     """Raised when a run ID is already owned by a different project."""
@@ -232,9 +234,57 @@ def _finding_row(row: dict[str, Any]) -> dict[str, Any]:
     payload = json.loads(raw_payload) if isinstance(raw_payload, str) else raw_payload
     row["patchable"] = bool(row["patchable"])
     row["estimated_latency_savings_ms"] = float(row["estimated_latency_savings_ms"] or 0)
-    row["estimated_cost_savings_usd"] = float(row["estimated_cost_savings_usd"] or 0)
+    row["estimated_cost_savings_usd"] = (
+        None
+        if row["estimated_cost_savings_usd"] is None
+        else float(row["estimated_cost_savings_usd"])
+    )
     row["finding"] = payload
     return row
+
+
+def _report_cost_completeness(report: dict[str, Any]) -> tuple[str, int, int]:
+    """Return validated status and priced/unavailable call counts for storage."""
+
+    breakdown = report.get("cost_breakdown")
+    breakdown = breakdown if isinstance(breakdown, dict) else {}
+    total = max(0, int(report.get("model_call_count", 0) or 0))
+    status = report.get("cost_status")
+    status = status if status in _COST_STATUSES else None
+
+    try:
+        priced = max(0, int(breakdown.get("priced_model_call_count", 0) or 0))
+        unavailable = max(0, int(breakdown.get("unavailable_model_call_count", 0) or 0))
+    except (OverflowError, TypeError, ValueError):
+        priced = unavailable = 0
+
+    if priced + unavailable != total:
+        if status == "unknown":
+            priced, unavailable = 0, total
+        elif status == "partial" and total > 1:
+            priced, unavailable = total - 1, 1
+        else:
+            priced, unavailable = total, 0
+    return _aggregate_cost_status(priced, unavailable), priced, unavailable
+
+
+def _aggregate_cost_status(priced: int, unavailable: int) -> str:
+    total = priced + unavailable
+    if total == 0:
+        return "empty"
+    if unavailable == 0:
+        return "complete"
+    if priced == 0:
+        return "unknown"
+    return "partial"
+
+
+def _merge_cost_status(left: str | None, right: str) -> str:
+    if left is None or left == right:
+        return right
+    if left in {"complete", "empty"} and right in {"complete", "empty"}:
+        return "complete"
+    return "partial"
 
 
 def _max_severity(left: str, right: str) -> str:
@@ -246,7 +296,7 @@ def _priority_score(item: dict[str, Any]) -> float:
     severity_weight = {"high": 1000.0, "medium": 500.0, "low": 100.0}.get(item["severity"], 0.0)
     patch_weight = 100.0 if item["patchable_count"] else 0.0
     latency_weight = float(item["estimated_latency_savings_ms"]) / 100.0
-    cost_weight = float(item["estimated_cost_savings_usd"]) * 1000.0
+    cost_weight = float(item["estimated_cost_savings_usd"] or 0.0) * 1000.0
     occurrence_weight = float(item["occurrence_count"]) * 25.0
     return round(
         severity_weight + patch_weight + latency_weight + cost_weight + occurrence_weight, 3
@@ -283,6 +333,7 @@ def _build_optimization_queue(
                 "patchable_count": 0,
                 "estimated_latency_savings_ms": 0.0,
                 "estimated_cost_savings_usd": 0.0,
+                "cost_status": None,
                 "latest_created_at": finding["created_at"],
                 "project_id": project_id,
                 "quality_risk": _quality_risk(finding["type"]),
@@ -300,6 +351,12 @@ def _build_optimization_queue(
             str(cluster["latest_created_at"]), str(finding["created_at"])
         )
         payload = finding.get("finding") or {}
+        finding_status = payload.get("metadata", {}).get("cost_status")
+        if finding_status not in _COST_STATUSES:
+            finding_status = (
+                "complete" if finding["estimated_cost_savings_usd"] is not None else "unknown"
+            )
+        cluster["cost_status"] = _merge_cost_status(cluster["cost_status"], finding_status)
         cluster_items.setdefault(key, {}).setdefault(finding["run_id"], []).append(
             SavingsItem(
                 spans=frozenset(payload.get("affected_spans") or []),
@@ -316,7 +373,10 @@ def _build_optimization_queue(
             latency += selection.latency_ms
             cost += selection.cost_usd
         cluster["estimated_latency_savings_ms"] = round(latency, 3)
-        cluster["estimated_cost_savings_usd"] = round(cost, 6)
+        cluster["cost_status"] = cluster["cost_status"] or "complete"
+        cluster["estimated_cost_savings_usd"] = (
+            round(cost, 6) if cluster["cost_status"] in {"complete", "empty"} else None
+        )
 
     queue = list(clusters.values())
     for item in queue:
@@ -392,13 +452,15 @@ class SQLiteTraceStore:
         self, conn: sqlite3.Connection, trace: AgentTrace, project_id: str
     ) -> dict[str, Any]:
         report = trace.report()
+        cost_status, priced_calls, unavailable_calls = _report_cost_completeness(report)
         conn.execute("INSERT OR IGNORE INTO projects(project_id) VALUES (?)", (project_id,))
         cursor = conn.execute(
             """
             INSERT INTO traces(
                 run_id, project_id, name, started_at, payload_json, total_runtime_ms,
-                estimated_cost_usd, model_call_count, tool_call_count, retry_count
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                estimated_cost_usd, cost_status, priced_model_call_count,
+                unavailable_model_call_count, model_call_count, tool_call_count, retry_count
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(run_id) DO UPDATE SET
                 project_id=excluded.project_id,
                 name=excluded.name,
@@ -406,6 +468,9 @@ class SQLiteTraceStore:
                 payload_json=excluded.payload_json,
                 total_runtime_ms=excluded.total_runtime_ms,
                 estimated_cost_usd=excluded.estimated_cost_usd,
+                cost_status=excluded.cost_status,
+                priced_model_call_count=excluded.priced_model_call_count,
+                unavailable_model_call_count=excluded.unavailable_model_call_count,
                 model_call_count=excluded.model_call_count,
                 tool_call_count=excluded.tool_call_count,
                 retry_count=excluded.retry_count
@@ -419,6 +484,9 @@ class SQLiteTraceStore:
                 json.dumps(trace.to_dict()),
                 report.get("total_runtime_ms", 0),
                 report.get("estimated_cost_usd", 0),
+                cost_status,
+                priced_calls,
+                unavailable_calls,
                 report.get("model_call_count", 0),
                 report.get("tool_call_count", 0),
                 report.get("retry_count", 0),
@@ -433,17 +501,22 @@ class SQLiteTraceStore:
     def _upsert_usage(
         self, conn: sqlite3.Connection, project_id: str, run_id: str, report: dict[str, Any]
     ) -> None:
+        cost_status, priced_calls, unavailable_calls = _report_cost_completeness(report)
         conn.execute(
             """
             INSERT INTO usage_events(
                 project_id, run_id, total_runtime_ms, estimated_cost_usd, input_tokens,
-                output_tokens, model_call_count, tool_call_count, retry_count
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                output_tokens, cost_status, priced_model_call_count,
+                unavailable_model_call_count, model_call_count, tool_call_count, retry_count
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(project_id, run_id) DO UPDATE SET
                 total_runtime_ms=excluded.total_runtime_ms,
                 estimated_cost_usd=excluded.estimated_cost_usd,
                 input_tokens=excluded.input_tokens,
                 output_tokens=excluded.output_tokens,
+                cost_status=excluded.cost_status,
+                priced_model_call_count=excluded.priced_model_call_count,
+                unavailable_model_call_count=excluded.unavailable_model_call_count,
                 model_call_count=excluded.model_call_count,
                 tool_call_count=excluded.tool_call_count,
                 retry_count=excluded.retry_count,
@@ -456,6 +529,9 @@ class SQLiteTraceStore:
                 report.get("estimated_cost_usd", 0),
                 report.get("input_tokens", 0),
                 report.get("output_tokens", 0),
+                cost_status,
+                priced_calls,
+                unavailable_calls,
                 report.get("model_call_count", 0),
                 report.get("tool_call_count", 0),
                 report.get("retry_count", 0),
@@ -536,13 +612,15 @@ class SQLiteTraceStore:
         with self._connect() as conn:
             if project_id:
                 rows = conn.execute(
-                    "SELECT run_id, project_id, name, started_at, total_runtime_ms, estimated_cost_usd, created_at "
+                    "SELECT run_id, project_id, name, started_at, total_runtime_ms, estimated_cost_usd, "
+                    "cost_status, priced_model_call_count, unavailable_model_call_count, created_at "
                     "FROM traces WHERE project_id = ? ORDER BY created_at DESC, run_id DESC LIMIT ?",
                     (project_id, _LEGACY_LIST_SAFETY_LIMIT),
                 ).fetchall()
             else:
                 rows = conn.execute(
-                    "SELECT run_id, project_id, name, started_at, total_runtime_ms, estimated_cost_usd, created_at "
+                    "SELECT run_id, project_id, name, started_at, total_runtime_ms, estimated_cost_usd, "
+                    "cost_status, priced_model_call_count, unavailable_model_call_count, created_at "
                     "FROM traces ORDER BY created_at DESC, run_id DESC LIMIT ?",
                     (_LEGACY_LIST_SAFETY_LIMIT,),
                 ).fetchall()
@@ -560,7 +638,8 @@ class SQLiteTraceStore:
         with self._connect() as conn:
             rows = conn.execute(
                 """
-                SELECT run_id, project_id, name, started_at, total_runtime_ms, estimated_cost_usd, created_at
+                SELECT run_id, project_id, name, started_at, total_runtime_ms, estimated_cost_usd,
+                    cost_status, priced_model_call_count, unavailable_model_call_count, created_at
                 FROM traces
                 WHERE project_id = COALESCE(?, project_id)
                   AND (? = 0 OR (created_at, run_id) < (?, ?))
@@ -739,6 +818,8 @@ class SQLiteTraceStore:
                     COUNT(*) AS run_count,
                     COALESCE(SUM(total_runtime_ms), 0) AS total_runtime_ms,
                     COALESCE(SUM(estimated_cost_usd), 0) AS estimated_cost_usd,
+                    COALESCE(SUM(priced_model_call_count), 0) AS priced_model_call_count,
+                    COALESCE(SUM(unavailable_model_call_count), 0) AS unavailable_model_call_count,
                     COALESCE(SUM(input_tokens), 0) AS input_tokens,
                     COALESCE(SUM(output_tokens), 0) AS output_tokens,
                     COALESCE(SUM(model_call_count), 0) AS model_call_count,
@@ -750,6 +831,10 @@ class SQLiteTraceStore:
                 (project_id or None,),
             ).fetchone()
         result = dict(row)
+        result["cost_status"] = _aggregate_cost_status(
+            int(result["priced_model_call_count"]),
+            int(result["unavailable_model_call_count"]),
+        )
         if project_id:
             result["project_id"] = project_id
         return result
@@ -814,15 +899,20 @@ class PostgresTraceStore:
 
     def _upsert_trace(self, conn, trace: AgentTrace, project_id: str) -> dict[str, Any]:
         report = trace.report()
+        cost_status, priced_calls, unavailable_calls = _report_cost_completeness(report)
         conn.execute(
             "INSERT INTO projects(project_id) VALUES (%s) ON CONFLICT DO NOTHING", (project_id,)
         )
         cursor = conn.execute(
             """
-            INSERT INTO traces(run_id, project_id, name, started_at, payload_json, total_runtime_ms, estimated_cost_usd, model_call_count, tool_call_count, retry_count)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO traces(run_id, project_id, name, started_at, payload_json, total_runtime_ms,
+                estimated_cost_usd, cost_status, priced_model_call_count,
+                unavailable_model_call_count, model_call_count, tool_call_count, retry_count)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT(run_id) DO UPDATE SET project_id=excluded.project_id, name=excluded.name, started_at=excluded.started_at,
             payload_json=excluded.payload_json, total_runtime_ms=excluded.total_runtime_ms, estimated_cost_usd=excluded.estimated_cost_usd,
+            cost_status=excluded.cost_status, priced_model_call_count=excluded.priced_model_call_count,
+            unavailable_model_call_count=excluded.unavailable_model_call_count,
             model_call_count=excluded.model_call_count, tool_call_count=excluded.tool_call_count, retry_count=excluded.retry_count
             WHERE traces.project_id = excluded.project_id
             """,
@@ -834,6 +924,9 @@ class PostgresTraceStore:
                 json.dumps(trace.to_dict()),
                 report.get("total_runtime_ms", 0),
                 report.get("estimated_cost_usd", 0),
+                cost_status,
+                priced_calls,
+                unavailable_calls,
                 report.get("model_call_count", 0),
                 report.get("tool_call_count", 0),
                 report.get("retry_count", 0),
@@ -846,15 +939,21 @@ class PostgresTraceStore:
         return report
 
     def _upsert_usage(self, conn, project_id: str, run_id: str, report: dict[str, Any]) -> None:
+        cost_status, priced_calls, unavailable_calls = _report_cost_completeness(report)
         conn.execute(
             """
-            INSERT INTO usage_events(project_id, run_id, total_runtime_ms, estimated_cost_usd, input_tokens, output_tokens, model_call_count, tool_call_count, retry_count)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO usage_events(project_id, run_id, total_runtime_ms, estimated_cost_usd,
+                input_tokens, output_tokens, cost_status, priced_model_call_count,
+                unavailable_model_call_count, model_call_count, tool_call_count, retry_count)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT(project_id, run_id) DO UPDATE SET
                 total_runtime_ms=excluded.total_runtime_ms,
                 estimated_cost_usd=excluded.estimated_cost_usd,
                 input_tokens=excluded.input_tokens,
                 output_tokens=excluded.output_tokens,
+                cost_status=excluded.cost_status,
+                priced_model_call_count=excluded.priced_model_call_count,
+                unavailable_model_call_count=excluded.unavailable_model_call_count,
                 model_call_count=excluded.model_call_count,
                 tool_call_count=excluded.tool_call_count,
                 retry_count=excluded.retry_count,
@@ -867,6 +966,9 @@ class PostgresTraceStore:
                 report.get("estimated_cost_usd", 0),
                 report.get("input_tokens", 0),
                 report.get("output_tokens", 0),
+                cost_status,
+                priced_calls,
+                unavailable_calls,
                 report.get("model_call_count", 0),
                 report.get("tool_call_count", 0),
                 report.get("retry_count", 0),
@@ -931,12 +1033,12 @@ class PostgresTraceStore:
         with self._connect() as conn:
             if project_id:
                 rows = conn.execute(
-                    "SELECT run_id, project_id, name, started_at, total_runtime_ms, estimated_cost_usd, created_at::text FROM traces WHERE project_id = %s ORDER BY created_at DESC, run_id DESC LIMIT %s",
+                    "SELECT run_id, project_id, name, started_at, total_runtime_ms, estimated_cost_usd, cost_status, priced_model_call_count, unavailable_model_call_count, created_at::text FROM traces WHERE project_id = %s ORDER BY created_at DESC, run_id DESC LIMIT %s",
                     (project_id, _LEGACY_LIST_SAFETY_LIMIT),
                 ).fetchall()
             else:
                 rows = conn.execute(
-                    "SELECT run_id, project_id, name, started_at, total_runtime_ms, estimated_cost_usd, created_at::text FROM traces ORDER BY created_at DESC, run_id DESC LIMIT %s",
+                    "SELECT run_id, project_id, name, started_at, total_runtime_ms, estimated_cost_usd, cost_status, priced_model_call_count, unavailable_model_call_count, created_at::text FROM traces ORDER BY created_at DESC, run_id DESC LIMIT %s",
                     (_LEGACY_LIST_SAFETY_LIMIT,),
                 ).fetchall()
         keys = [
@@ -946,6 +1048,9 @@ class PostgresTraceStore:
             "started_at",
             "total_runtime_ms",
             "estimated_cost_usd",
+            "cost_status",
+            "priced_model_call_count",
+            "unavailable_model_call_count",
             "created_at",
         ]
         return [dict(zip(keys, row)) for row in rows]
@@ -965,13 +1070,17 @@ class PostgresTraceStore:
             "started_at",
             "total_runtime_ms",
             "estimated_cost_usd",
+            "cost_status",
+            "priced_model_call_count",
+            "unavailable_model_call_count",
             "created_at",
         ]
         self.init()
         with self._connect() as conn:
             rows = conn.execute(
                 """
-                SELECT run_id, project_id, name, started_at, total_runtime_ms, estimated_cost_usd, created_at::text
+                SELECT run_id, project_id, name, started_at, total_runtime_ms, estimated_cost_usd,
+                    cost_status, priced_model_call_count, unavailable_model_call_count, created_at::text
                 FROM traces
                 WHERE project_id = COALESCE(%s, project_id)
                   AND (%s = 0 OR (created_at, run_id) < (%s, %s))
@@ -1206,17 +1315,19 @@ class PostgresTraceStore:
         with self._connect() as conn:
             if project_id:
                 row = conn.execute(
-                    "SELECT COUNT(*), COALESCE(SUM(total_runtime_ms),0), COALESCE(SUM(estimated_cost_usd),0), COALESCE(SUM(input_tokens),0), COALESCE(SUM(output_tokens),0), COALESCE(SUM(model_call_count),0), COALESCE(SUM(tool_call_count),0), COALESCE(SUM(retry_count),0) FROM usage_events WHERE project_id = %s",
+                    "SELECT COUNT(*), COALESCE(SUM(total_runtime_ms),0), COALESCE(SUM(estimated_cost_usd),0), COALESCE(SUM(priced_model_call_count),0), COALESCE(SUM(unavailable_model_call_count),0), COALESCE(SUM(input_tokens),0), COALESCE(SUM(output_tokens),0), COALESCE(SUM(model_call_count),0), COALESCE(SUM(tool_call_count),0), COALESCE(SUM(retry_count),0) FROM usage_events WHERE project_id = %s",
                     (project_id,),
                 ).fetchone()
             else:
                 row = conn.execute(
-                    "SELECT COUNT(*), COALESCE(SUM(total_runtime_ms),0), COALESCE(SUM(estimated_cost_usd),0), COALESCE(SUM(input_tokens),0), COALESCE(SUM(output_tokens),0), COALESCE(SUM(model_call_count),0), COALESCE(SUM(tool_call_count),0), COALESCE(SUM(retry_count),0) FROM usage_events"
+                    "SELECT COUNT(*), COALESCE(SUM(total_runtime_ms),0), COALESCE(SUM(estimated_cost_usd),0), COALESCE(SUM(priced_model_call_count),0), COALESCE(SUM(unavailable_model_call_count),0), COALESCE(SUM(input_tokens),0), COALESCE(SUM(output_tokens),0), COALESCE(SUM(model_call_count),0), COALESCE(SUM(tool_call_count),0), COALESCE(SUM(retry_count),0) FROM usage_events"
                 ).fetchone()
         keys = [
             "run_count",
             "total_runtime_ms",
             "estimated_cost_usd",
+            "priced_model_call_count",
+            "unavailable_model_call_count",
             "input_tokens",
             "output_tokens",
             "model_call_count",
@@ -1224,6 +1335,10 @@ class PostgresTraceStore:
             "retry_count",
         ]
         result = dict(zip(keys, row))
+        result["cost_status"] = _aggregate_cost_status(
+            int(result["priced_model_call_count"]),
+            int(result["unavailable_model_call_count"]),
+        )
         if project_id:
             result["project_id"] = project_id
         return result

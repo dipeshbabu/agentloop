@@ -10,6 +10,7 @@ from agentloop.costs import (
     PricingTable,
     estimate_cost,
     estimate_cost_usd,
+    format_cost_usd,
     load_overrides_from_file,
     load_pricing_table,
 )
@@ -79,10 +80,11 @@ def test_unknown_model_returns_explicit_state_and_no_synthetic_rate() -> None:
 
 
 def test_provider_reported_cost_is_used_verbatim() -> None:
-    estimate = estimate_cost("anything-at-all", 10, 10, provider_reported_cost_usd=0.0123)
+    reported = 0.0123456789
+    estimate = estimate_cost("anything-at-all", 10, 10, provider_reported_cost_usd=reported)
 
     assert estimate.state == "provider_reported"
-    assert estimate.amount_usd == 0.0123
+    assert estimate.amount_usd == reported
     assert estimate.pricing_source == "provider-reported"
 
 
@@ -155,9 +157,20 @@ def test_include_builtins_false_makes_every_unlisted_model_unknown() -> None:
     assert estimate_cost("gpt-4o", 1000, 1000, pricing=table).state == "unknown"
 
 
-def test_load_overrides_from_file_rejects_malformed_entries(tmp_path) -> None:
+@pytest.mark.parametrize("bad_rate", ["not-a-number", float("nan"), float("inf"), -1.0])
+def test_load_overrides_from_file_rejects_malformed_entries(tmp_path, bad_rate) -> None:
     bad = tmp_path / "bad.json"
-    bad.write_text(json.dumps({"m": {"input_usd_per_mtok": "not-a-number"}}), encoding="utf-8")
+    bad.write_text(
+        json.dumps(
+            {
+                "m": {
+                    "input_usd_per_mtok": bad_rate,
+                    "output_usd_per_mtok": 1.0,
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
 
     with pytest.raises(ValueError):
         load_overrides_from_file(bad)
@@ -220,6 +233,35 @@ def test_context_over_threshold_is_unknown_not_underreported() -> None:
     assert large.unknown_reason == "context_over_threshold"
 
 
+def test_google_stable_model_pricing_provenance_matches_ga_release() -> None:
+    estimate = estimate_cost("gemini-2.5-flash", 1000, 100)
+    assert estimate.pricing_as_of == "2025-06-17"
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("input_usd_per_mtok", float("nan")),
+        ("output_usd_per_mtok", float("inf")),
+        ("cached_input_usd_per_mtok", -0.01),
+        ("max_input_tokens", 0),
+        ("max_input_tokens", -1),
+        ("max_input_tokens", 1.5),
+    ],
+)
+def test_model_pricing_rejects_invalid_invariants(field, value) -> None:
+    values = {
+        "input_usd_per_mtok": 1.0,
+        "output_usd_per_mtok": 2.0,
+        "provider": "test",
+        "source": "test",
+        "as_of": "2026-01-01",
+    }
+    values[field] = value
+    with pytest.raises(ValueError):
+        ModelPricing(**values)
+
+
 def test_non_standard_billing_mode_requires_a_mode_specific_rate() -> None:
     # no batch rate for gpt-4o -> unknown, not the standard rate
     unpriced = estimate_cost("gpt-4o", 1000, 100, billing_mode="batch")
@@ -252,6 +294,23 @@ def test_estimate_cost_rejects_cached_tokens_out_of_range() -> None:
         estimate_cost("gpt-4o", 100, 10, cached_input_tokens=-5)
 
 
+@pytest.mark.parametrize(
+    "bad",
+    [1.5, float("nan"), float("inf"), pytest.param(10**10_000, id="oversized-integer")],
+)
+def test_estimate_cost_rejects_non_integral_token_counts(bad) -> None:
+    with pytest.raises(ValueError):
+        estimate_cost("gpt-4o", bad, 10)
+    with pytest.raises(ValueError):
+        estimate_cost("gpt-4o", 100, 10, cached_input_tokens=bad)
+
+
 def test_unknown_reason_is_populated_only_when_unknown() -> None:
     assert estimate_cost("gpt-4o", 100, 10).unknown_reason is None
     assert estimate_cost("nope", 100, 10).unknown_reason == "unpriced_model"
+
+
+def test_cost_formatter_fails_closed_for_invalid_status() -> None:
+    assert format_cost_usd(1.0, "invalid") == "unavailable"
+    assert format_cost_usd(float("nan")) == "unavailable"
+    assert format_cost_usd(-1.0) == "unavailable"

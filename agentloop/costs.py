@@ -32,11 +32,56 @@ from pathlib import Path
 from typing import Any, Literal
 
 CostState = Literal["provider_reported", "calculated", "unknown"]
+CostStatus = Literal["complete", "partial", "unknown", "empty"]
 
 # Environment variable pointing at a JSON pricing-override file. Kept here (not in
 # config.py) so the cost module stays self-contained and importable without the
 # rest of the package's configuration surface.
 PRICING_FILE_ENV = "AGENTLOOP_PRICING_FILE"
+
+
+def is_cost_evaluable(status: str | None) -> bool:
+    """Return whether a cost total is complete enough for comparisons."""
+
+    return status in {"complete", "empty"}
+
+
+def format_cost_usd(
+    amount_usd: float | None, status: str | None = "complete", *, decimals: int = 4
+) -> str:
+    """Format a cost without presenting unknown totals as exact amounts."""
+
+    status = "complete" if status is None else status
+    if (
+        amount_usd is None
+        or not _is_finite_number(amount_usd)
+        or amount_usd < 0
+        or status not in {"complete", "empty", "partial"}
+    ):
+        return "unavailable"
+    rendered = f"${float(amount_usd):,.{decimals}f}"
+    return f"{rendered} (known lower bound)" if status == "partial" else rendered
+
+
+def _is_finite_number(value: Any) -> bool:
+    """Return whether value is a supported finite real number.
+
+    Values must also fit Python's floating-point calculations; extremely large
+    integers are rejected instead of surfacing ``OverflowError`` later.
+    """
+
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
+    try:
+        return math.isfinite(float(value))
+    except OverflowError:
+        return False
+
+
+def _is_integral_number(value: Any) -> bool:
+    return _is_finite_number(value) and (
+        isinstance(value, int) or (isinstance(value, float) and value.is_integer())
+    )
 
 
 @dataclass(frozen=True)
@@ -59,6 +104,19 @@ class ModelPricing:
     # does not apply (many providers charge a higher tier for long context, e.g.
     # Gemini above 200K). ``None`` means the rate has no declared upper bound.
     max_input_tokens: int | None = None
+
+    def __post_init__(self) -> None:
+        for name, rate in (
+            ("input_usd_per_mtok", self.input_usd_per_mtok),
+            ("output_usd_per_mtok", self.output_usd_per_mtok),
+            ("cached_input_usd_per_mtok", self.cached_input_usd_per_mtok),
+        ):
+            if rate is not None and (not _is_finite_number(rate) or rate < 0):
+                raise ValueError(f"{name} must be a finite, non-negative number")
+        if self.max_input_tokens is not None and (
+            not _is_integral_number(self.max_input_tokens) or self.max_input_tokens <= 0
+        ):
+            raise ValueError("max_input_tokens must be a positive integer")
 
     def applies_to(self, input_tokens: int) -> bool:
         return self.max_input_tokens is None or input_tokens <= self.max_input_tokens
@@ -102,6 +160,14 @@ class CostEstimate:
     # "no rate for this model" apart from "we refused to price this call".
     unknown_reason: str | None = None
 
+    def __post_init__(self) -> None:
+        if (self.state == "unknown") != (self.amount_usd is None):
+            raise ValueError("amount_usd must be None exactly when state is unknown")
+        if self.amount_usd is not None and (
+            not _is_finite_number(self.amount_usd) or self.amount_usd < 0
+        ):
+            raise ValueError("amount_usd must be a finite, non-negative number")
+
     @property
     def is_known(self) -> bool:
         return self.state != "unknown"
@@ -127,10 +193,10 @@ class CostEstimate:
 # overridden for anything cost-sensitive (see docs/PRICING.md).
 _OPENAI_SOURCE = "https://openai.com/api/pricing/"
 _ANTHROPIC_SOURCE = "https://www.anthropic.com/pricing"
-_GOOGLE_SOURCE = "https://ai.google.dev/pricing"
+_GOOGLE_SOURCE = "https://ai.google.dev/gemini-api/docs/pricing"
 _OPENAI_AS_OF = "2025-06-01"
 _ANTHROPIC_AS_OF = "2025-06-01"
-_GOOGLE_AS_OF = "2025-06-01"
+_GOOGLE_AS_OF = "2025-06-17"
 
 # Gemini 2.5 charges a higher tier above 200K input tokens; the built-in flat
 # rate is only correct at or below that, so above it we return unknown rather
@@ -326,6 +392,8 @@ def _pricing_from_mapping(key: str, raw: dict[str, Any]) -> ModelPricing:
         ) from exc
     cached_raw = raw.get("cached_input_usd_per_mtok")
     max_input_raw = raw.get("max_input_tokens")
+    if max_input_raw is not None and not _is_integral_number(max_input_raw):
+        raise ValueError(f"pricing override for {key!r} must set an integer 'max_input_tokens'")
     return ModelPricing(
         input_usd_per_mtok=input_rate,
         output_usd_per_mtok=output_rate,
@@ -384,10 +452,6 @@ def load_pricing_table(
     return table
 
 
-def _is_finite_number(value: Any) -> bool:
-    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
-
-
 def _unknown(
     model: str | None,
     provider: str | None,
@@ -437,19 +501,26 @@ def estimate_cost(
     """
     table = pricing if pricing is not None else load_pricing_table()
 
-    if not _is_finite_number(input_tokens) or not _is_finite_number(output_tokens):
-        raise ValueError("input_tokens and output_tokens must be finite numbers")
+    if not _is_integral_number(input_tokens) or not _is_integral_number(output_tokens):
+        raise ValueError("input_tokens and output_tokens must be finite integers")
     input_tokens = int(input_tokens)
     output_tokens = int(output_tokens)
     if input_tokens < 0 or output_tokens < 0:
         raise ValueError("input_tokens and output_tokens must be non-negative")
-    if not _is_finite_number(cached_input_tokens):
-        raise ValueError("cached_input_tokens must be a finite number")
+    if not _is_integral_number(cached_input_tokens):
+        raise ValueError("cached_input_tokens must be a finite integer")
     cached_input_tokens = int(cached_input_tokens)
     if not 0 <= cached_input_tokens <= input_tokens:
         raise ValueError(
             "cached_input_tokens must satisfy 0 <= cached_input_tokens <= input_tokens"
         )
+
+    if model is not None and not isinstance(model, str):
+        raise ValueError("model must be a string or None")
+    if provider is not None and not isinstance(provider, str):
+        raise ValueError("provider must be a string or None")
+    if billing_mode is not None and not isinstance(billing_mode, str):
+        raise ValueError("billing_mode must be a string or None")
 
     if provider_reported_cost_usd is not None:
         if not _is_finite_number(provider_reported_cost_usd) or provider_reported_cost_usd < 0:
@@ -457,7 +528,7 @@ def estimate_cost(
         resolved = table.resolve(model, provider, billing_mode)
         return CostEstimate(
             state="provider_reported",
-            amount_usd=round(float(provider_reported_cost_usd), 6),
+            amount_usd=float(provider_reported_cost_usd),
             model=model,
             provider=provider or (resolved.provider if resolved else None),
             pricing_source="provider-reported",
