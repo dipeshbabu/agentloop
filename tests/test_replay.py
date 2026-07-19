@@ -392,6 +392,36 @@ def test_known_cost_keeps_cost_gates_determinate() -> None:
     assert all(not g["indeterminate"] for g in cost_gates)
 
 
+def test_one_unknown_side_makes_replay_cost_indeterminate_in_either_order() -> None:
+    for baseline_model, candidate_model in (
+        ("gpt-4o", "local-llama-3"),
+        ("local-llama-3", "gpt-4o"),
+    ):
+        baseline = _trace(
+            "baseline",
+            model_duration_ms=800,
+            tool_duration_ms=200,
+            input_tokens=1000,
+            output_tokens=200,
+            model=baseline_model,
+        )
+        candidate = _trace(
+            "candidate",
+            model_duration_ms=400,
+            tool_duration_ms=100,
+            input_tokens=500,
+            output_tokens=100,
+            model=candidate_model,
+        )
+
+        report = build_replay_report(baseline, candidate)
+
+        assert report["gates"]["cost_evaluable"] is False
+        assert report["deltas"]["cost_usd_delta"] is None
+        assert report["deltas"]["cost_improvement_pct"] is None
+        assert report["deltas"]["cost_regression_pct"] is None
+
+
 def test_indeterminate_cost_gate_renders_in_markdown() -> None:
     baseline = _trace(
         "baseline",

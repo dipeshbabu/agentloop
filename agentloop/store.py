@@ -5,6 +5,7 @@ import binascii
 import hashlib
 import hmac
 import json
+import math
 import os
 import secrets
 import sqlite3
@@ -60,6 +61,7 @@ MAX_PAGE_SIZE = 200
 _QUEUE_MAX_FINDINGS = 5000
 
 _COST_STATUSES = frozenset({"complete", "partial", "unknown", "empty"})
+_MAX_DATABASE_INTEGER = 2_147_483_647
 
 
 class TraceProjectConflictError(ValueError):
@@ -248,8 +250,10 @@ def _report_cost_completeness(report: dict[str, Any]) -> tuple[str, int, int]:
 
     breakdown = report.get("cost_breakdown")
     breakdown = breakdown if isinstance(breakdown, dict) else {}
-    total = max(0, int(report.get("model_call_count", 0) or 0))
-    if report.get("estimated_cost_usd") is None and total:
+    total, count_is_valid = _normalized_model_call_count(report)
+    if not count_is_valid:
+        return "unknown", 0, 0
+    if _normalized_estimated_cost(report) is None and total:
         return "unknown", 0, total
     status = report.get("cost_status")
     status = status if status in _COST_STATUSES else None
@@ -270,7 +274,30 @@ def _report_cost_completeness(report: dict[str, Any]) -> tuple[str, int, int]:
     return _aggregate_cost_status(priced, unavailable), priced, unavailable
 
 
-def _aggregate_cost_status(priced: int, unavailable: int) -> str:
+def _normalized_model_call_count(report: dict[str, Any]) -> tuple[int, bool]:
+    raw = report.get("model_call_count", 0)
+    if isinstance(raw, bool) or not isinstance(raw, (int, float)):
+        return 0, False
+    if isinstance(raw, float) and (not math.isfinite(raw) or not raw.is_integer()):
+        return 0, False
+    count = int(raw)
+    return (count, True) if 0 <= count <= _MAX_DATABASE_INTEGER else (0, False)
+
+
+def _normalized_estimated_cost(report: dict[str, Any]) -> float | None:
+    raw = report.get("estimated_cost_usd")
+    if isinstance(raw, bool) or not isinstance(raw, (int, float)):
+        return None
+    try:
+        cost = float(raw)
+    except OverflowError:
+        return None
+    return cost if math.isfinite(cost) and cost >= 0 else None
+
+
+def _aggregate_cost_status(priced: int, unavailable: int, *, incomplete_run_count: int = 0) -> str:
+    if incomplete_run_count:
+        return "unknown" if priced == 0 else "partial"
     total = priced + unavailable
     if total == 0:
         return "empty"
@@ -282,10 +309,10 @@ def _aggregate_cost_status(priced: int, unavailable: int) -> str:
 
 
 def _merge_cost_status(left: str | None, right: str) -> str:
-    if left is None or left == right:
+    if left is None or left == "empty" or left == right:
         return right
-    if left in {"complete", "empty"} and right in {"complete", "empty"}:
-        return "complete"
+    if right == "empty":
+        return left
     return "partial"
 
 
@@ -457,6 +484,8 @@ class SQLiteTraceStore:
     ) -> dict[str, Any]:
         report = trace.report()
         cost_status, priced_calls, unavailable_calls = _report_cost_completeness(report)
+        model_call_count, _ = _normalized_model_call_count(report)
+        estimated_cost_usd = _normalized_estimated_cost(report)
         conn.execute("INSERT OR IGNORE INTO projects(project_id) VALUES (?)", (project_id,))
         cursor = conn.execute(
             """
@@ -487,11 +516,11 @@ class SQLiteTraceStore:
                 trace.started_at,
                 json.dumps(trace.to_dict()),
                 report.get("total_runtime_ms", 0),
-                report.get("estimated_cost_usd"),
+                estimated_cost_usd,
                 cost_status,
                 priced_calls,
                 unavailable_calls,
-                report.get("model_call_count", 0),
+                model_call_count,
                 report.get("tool_call_count", 0),
                 report.get("retry_count", 0),
             ),
@@ -506,6 +535,8 @@ class SQLiteTraceStore:
         self, conn: sqlite3.Connection, project_id: str, run_id: str, report: dict[str, Any]
     ) -> None:
         cost_status, priced_calls, unavailable_calls = _report_cost_completeness(report)
+        model_call_count, _ = _normalized_model_call_count(report)
+        estimated_cost_usd = _normalized_estimated_cost(report)
         conn.execute(
             """
             INSERT INTO usage_events(
@@ -530,13 +561,13 @@ class SQLiteTraceStore:
                 project_id,
                 run_id,
                 report.get("total_runtime_ms", 0),
-                report.get("estimated_cost_usd"),
+                estimated_cost_usd,
                 report.get("input_tokens", 0),
                 report.get("output_tokens", 0),
                 cost_status,
                 priced_calls,
                 unavailable_calls,
-                report.get("model_call_count", 0),
+                model_call_count,
                 report.get("tool_call_count", 0),
                 report.get("retry_count", 0),
             ),
@@ -824,6 +855,7 @@ class SQLiteTraceStore:
                     COALESCE(SUM(estimated_cost_usd), 0) AS estimated_cost_usd,
                     COALESCE(SUM(priced_model_call_count), 0) AS priced_model_call_count,
                     COALESCE(SUM(unavailable_model_call_count), 0) AS unavailable_model_call_count,
+                    COALESCE(SUM(CASE WHEN cost_status IN ('partial', 'unknown') THEN 1 ELSE 0 END), 0) AS incomplete_cost_run_count,
                     COALESCE(SUM(input_tokens), 0) AS input_tokens,
                     COALESCE(SUM(output_tokens), 0) AS output_tokens,
                     COALESCE(SUM(model_call_count), 0) AS model_call_count,
@@ -835,9 +867,11 @@ class SQLiteTraceStore:
                 (project_id or None,),
             ).fetchone()
         result = dict(row)
+        incomplete_run_count = int(result.pop("incomplete_cost_run_count"))
         result["cost_status"] = _aggregate_cost_status(
             int(result["priced_model_call_count"]),
             int(result["unavailable_model_call_count"]),
+            incomplete_run_count=incomplete_run_count,
         )
         if result["cost_status"] not in {"complete", "empty"}:
             result["estimated_cost_usd"] = None
@@ -906,6 +940,8 @@ class PostgresTraceStore:
     def _upsert_trace(self, conn, trace: AgentTrace, project_id: str) -> dict[str, Any]:
         report = trace.report()
         cost_status, priced_calls, unavailable_calls = _report_cost_completeness(report)
+        model_call_count, _ = _normalized_model_call_count(report)
+        estimated_cost_usd = _normalized_estimated_cost(report)
         conn.execute(
             "INSERT INTO projects(project_id) VALUES (%s) ON CONFLICT DO NOTHING", (project_id,)
         )
@@ -929,11 +965,11 @@ class PostgresTraceStore:
                 trace.started_at,
                 json.dumps(trace.to_dict()),
                 report.get("total_runtime_ms", 0),
-                report.get("estimated_cost_usd"),
+                estimated_cost_usd,
                 cost_status,
                 priced_calls,
                 unavailable_calls,
-                report.get("model_call_count", 0),
+                model_call_count,
                 report.get("tool_call_count", 0),
                 report.get("retry_count", 0),
             ),
@@ -946,6 +982,8 @@ class PostgresTraceStore:
 
     def _upsert_usage(self, conn, project_id: str, run_id: str, report: dict[str, Any]) -> None:
         cost_status, priced_calls, unavailable_calls = _report_cost_completeness(report)
+        model_call_count, _ = _normalized_model_call_count(report)
+        estimated_cost_usd = _normalized_estimated_cost(report)
         conn.execute(
             """
             INSERT INTO usage_events(project_id, run_id, total_runtime_ms, estimated_cost_usd,
@@ -969,13 +1007,13 @@ class PostgresTraceStore:
                 project_id,
                 run_id,
                 report.get("total_runtime_ms", 0),
-                report.get("estimated_cost_usd"),
+                estimated_cost_usd,
                 report.get("input_tokens", 0),
                 report.get("output_tokens", 0),
                 cost_status,
                 priced_calls,
                 unavailable_calls,
-                report.get("model_call_count", 0),
+                model_call_count,
                 report.get("tool_call_count", 0),
                 report.get("retry_count", 0),
             ),
@@ -1321,12 +1359,12 @@ class PostgresTraceStore:
         with self._connect() as conn:
             if project_id:
                 row = conn.execute(
-                    "SELECT COUNT(*), COALESCE(SUM(total_runtime_ms),0), COALESCE(SUM(estimated_cost_usd),0), COALESCE(SUM(priced_model_call_count),0), COALESCE(SUM(unavailable_model_call_count),0), COALESCE(SUM(input_tokens),0), COALESCE(SUM(output_tokens),0), COALESCE(SUM(model_call_count),0), COALESCE(SUM(tool_call_count),0), COALESCE(SUM(retry_count),0) FROM usage_events WHERE project_id = %s",
+                    "SELECT COUNT(*), COALESCE(SUM(total_runtime_ms),0), COALESCE(SUM(estimated_cost_usd),0), COALESCE(SUM(priced_model_call_count),0), COALESCE(SUM(unavailable_model_call_count),0), COALESCE(SUM(CASE WHEN cost_status IN ('partial', 'unknown') THEN 1 ELSE 0 END),0), COALESCE(SUM(input_tokens),0), COALESCE(SUM(output_tokens),0), COALESCE(SUM(model_call_count),0), COALESCE(SUM(tool_call_count),0), COALESCE(SUM(retry_count),0) FROM usage_events WHERE project_id = %s",
                     (project_id,),
                 ).fetchone()
             else:
                 row = conn.execute(
-                    "SELECT COUNT(*), COALESCE(SUM(total_runtime_ms),0), COALESCE(SUM(estimated_cost_usd),0), COALESCE(SUM(priced_model_call_count),0), COALESCE(SUM(unavailable_model_call_count),0), COALESCE(SUM(input_tokens),0), COALESCE(SUM(output_tokens),0), COALESCE(SUM(model_call_count),0), COALESCE(SUM(tool_call_count),0), COALESCE(SUM(retry_count),0) FROM usage_events"
+                    "SELECT COUNT(*), COALESCE(SUM(total_runtime_ms),0), COALESCE(SUM(estimated_cost_usd),0), COALESCE(SUM(priced_model_call_count),0), COALESCE(SUM(unavailable_model_call_count),0), COALESCE(SUM(CASE WHEN cost_status IN ('partial', 'unknown') THEN 1 ELSE 0 END),0), COALESCE(SUM(input_tokens),0), COALESCE(SUM(output_tokens),0), COALESCE(SUM(model_call_count),0), COALESCE(SUM(tool_call_count),0), COALESCE(SUM(retry_count),0) FROM usage_events"
                 ).fetchone()
         keys = [
             "run_count",
@@ -1334,6 +1372,7 @@ class PostgresTraceStore:
             "estimated_cost_usd",
             "priced_model_call_count",
             "unavailable_model_call_count",
+            "incomplete_cost_run_count",
             "input_tokens",
             "output_tokens",
             "model_call_count",
@@ -1341,9 +1380,11 @@ class PostgresTraceStore:
             "retry_count",
         ]
         result = dict(zip(keys, row, strict=True))
+        incomplete_run_count = int(result.pop("incomplete_cost_run_count"))
         result["cost_status"] = _aggregate_cost_status(
             int(result["priced_model_call_count"]),
             int(result["unavailable_model_call_count"]),
+            incomplete_run_count=incomplete_run_count,
         )
         if result["cost_status"] not in {"complete", "empty"}:
             result["estimated_cost_usd"] = None

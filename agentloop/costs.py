@@ -125,6 +125,14 @@ class ModelPricing:
     max_input_tokens: int | None = None
 
     def __post_init__(self) -> None:
+        for name, value in (
+            ("provider", self.provider),
+            ("source", self.source),
+            ("as_of", self.as_of),
+        ):
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError(f"{name} must be a non-empty string")
+            object.__setattr__(self, name, value.strip())
         for name, rate in (
             ("input_usd_per_mtok", self.input_usd_per_mtok),
             ("output_usd_per_mtok", self.output_usd_per_mtok),
@@ -436,9 +444,9 @@ def _pricing_from_mapping(key: str, raw: dict[str, Any]) -> ModelPricing:
     return ModelPricing(
         input_usd_per_mtok=input_rate,
         output_usd_per_mtok=output_rate,
-        provider=str(raw.get("provider", "custom")),
-        source=str(raw.get("source", "user override")),
-        as_of=str(raw.get("as_of", "user-provided")),
+        provider=raw.get("provider", "custom"),
+        source=raw.get("source", "user override"),
+        as_of=raw.get("as_of", "user-provided"),
         cached_input_usd_per_mtok=cached_rate,
         max_input_tokens=None if max_input_raw is None else int(max_input_raw),
     )
@@ -546,8 +554,9 @@ def estimate_cost(
 
     if model is not None and not isinstance(model, str):
         raise ValueError("model must be a string or None")
-    if provider is not None and not isinstance(provider, str):
-        raise ValueError("provider must be a string or None")
+    if provider is not None and (not isinstance(provider, str) or not provider.strip()):
+        raise ValueError("provider must be a non-empty string or None")
+    provider = provider.strip() if provider is not None else None
     if billing_mode is not None and not isinstance(billing_mode, str):
         raise ValueError("billing_mode must be a string or None")
 

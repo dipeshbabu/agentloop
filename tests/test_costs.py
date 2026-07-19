@@ -290,6 +290,42 @@ def test_model_pricing_rejects_none_for_required_rates() -> None:
 
 
 @pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("provider", None),
+        ("provider", 123),
+        ("provider", " "),
+        ("source", None),
+        ("source", []),
+        ("source", ""),
+        ("as_of", None),
+        ("as_of", 123),
+        ("as_of", " "),
+    ],
+)
+def test_model_pricing_rejects_invalid_required_metadata(field, value) -> None:
+    values = {
+        "input_usd_per_mtok": 1.0,
+        "output_usd_per_mtok": 2.0,
+        "provider": "test",
+        "source": "test",
+        "as_of": "2026-01-01",
+    }
+    values[field] = value
+    with pytest.raises(ValueError, match=field):
+        ModelPricing(**values)
+
+
+def test_model_pricing_normalizes_required_metadata_whitespace() -> None:
+    pricing = ModelPricing(1.0, 2.0, " test ", " source ", " 2026-01-01 ")
+    assert (pricing.provider, pricing.source, pricing.as_of) == (
+        "test",
+        "source",
+        "2026-01-01",
+    )
+
+
+@pytest.mark.parametrize(
     ("input_tokens", "output_tokens", "cached_input_tokens"),
     [
         (-1, 0, 0),

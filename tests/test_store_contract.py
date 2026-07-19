@@ -238,6 +238,44 @@ def test_usage_missing_cost_is_persisted_as_unknown_not_zero(store):
     assert summary["unavailable_model_call_count"] == 1
 
 
+@pytest.mark.parametrize(
+    "bad_count",
+    ["invalid", None, float("nan"), float("inf"), -1, 1.5, True, 2_147_483_648],
+)
+def test_usage_malformed_model_call_count_fails_closed(store, bad_count):
+    store.init()
+    store.record_usage(
+        "proj_a",
+        "malformed-model-count",
+        {
+            "estimated_cost_usd": 1.0,
+            "model_call_count": bad_count,
+        },
+    )
+
+    summary = store.usage_summary(project_id="proj_a")
+    assert summary["cost_status"] == "unknown"
+    assert summary["estimated_cost_usd"] is None
+    assert summary["model_call_count"] == 0
+
+
+@pytest.mark.parametrize("bad_cost", ["invalid", float("nan"), float("inf"), -1, True])
+def test_usage_malformed_estimated_cost_fails_closed(store, bad_cost):
+    store.init()
+    store.record_usage(
+        "proj_a",
+        "malformed-cost",
+        {
+            "estimated_cost_usd": bad_cost,
+            "model_call_count": 1,
+        },
+    )
+
+    summary = store.usage_summary(project_id="proj_a")
+    assert summary["cost_status"] == "unknown"
+    assert summary["estimated_cost_usd"] is None
+
+
 def test_retry_after_simulated_lost_response_is_idempotent(store):
     trace = _sample_trace()
     for _ in range(3):

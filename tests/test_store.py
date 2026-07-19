@@ -166,6 +166,33 @@ def test_optimization_queue_tolerates_malformed_persisted_payload() -> None:
     assert queue[0]["estimated_cost_savings_usd"] is None
 
 
+def test_optimization_queue_treats_empty_cost_as_neutral() -> None:
+    findings = []
+    for run_id, status in (("empty-run", "empty"), ("unknown-run", "unknown")):
+        findings.append(
+            {
+                "type": "cache_context",
+                "title": "Cache context",
+                "severity": "medium",
+                "run_id": run_id,
+                "patchable": True,
+                "estimated_latency_savings_ms": 10.0,
+                "estimated_cost_savings_usd": 0.0 if status == "empty" else None,
+                "created_at": "2026-01-01T00:00:00Z",
+                "finding": {
+                    "affected_spans": [run_id],
+                    "metadata": {"cost_status": status},
+                },
+            }
+        )
+
+    for ordered_findings in (findings, list(reversed(findings))):
+        queue = _build_optimization_queue(ordered_findings, "proj_a")
+
+        assert queue[0]["cost_status"] == "unknown"
+        assert queue[0]["estimated_cost_savings_usd"] is None
+
+
 def _diagnosis_finding(finding_id, spans, latency_ms, cost_usd=0.0):
     return {
         "finding_id": finding_id,
