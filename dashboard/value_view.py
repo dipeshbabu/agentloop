@@ -4,12 +4,16 @@ import json
 from typing import Any
 
 
-def money(value: float, decimals: int = 2) -> str:
-    return f"${float(value):,.{decimals}f}"
+def money(value: float | None, decimals: int = 2) -> str:
+    return "unavailable" if value is None else f"${float(value):,.{decimals}f}"
 
 
 def seconds(ms: float) -> str:
     return f"{float(ms) / 1000:,.2f}s"
+
+
+def percentage(value: float | None, decimals: int = 1) -> str:
+    return "unavailable" if value is None else f"{float(value):.{decimals}f}%"
 
 
 def _streamlit() -> Any:
@@ -71,7 +75,7 @@ def render_value_report(value: dict, *, show_download: bool = True) -> None:
 
     st.subheader("Pricing scenario")
     p1, p2, p3, p4 = st.columns(4)
-    p1.metric("Modeled tier", pricing.get("suggested_plan", "n/a"))
+    p1.metric("Modeled tier", pricing.get("suggested_plan") or "unavailable")
     p2.metric("Modeled price", money(pricing.get("suggested_monthly_price_usd", 0), decimals=0))
     ratio = pricing.get("value_to_price_ratio")
     p3.metric("Value / price", "n/a" if ratio is None else f"{ratio}x")

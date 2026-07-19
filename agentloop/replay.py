@@ -32,9 +32,28 @@ def build_replay_report(
     if quality_report is not None:
         baseline["quality_score"] = float(quality_report.get("baseline_score", 0.0))
         candidate["quality_score"] = float(quality_report.get("candidate_score", 0.0))
+    cost_evaluable = not (
+        bool(baseline.get("has_unknown_cost")) or bool(candidate.get("has_unknown_cost"))
+    )
     deltas = _deltas(baseline, candidate)
-    gate_results = _gate_results(deltas, baseline, candidate, gates, quality_report=quality_report)
+    if not cost_evaluable:
+        # The cost totals are lower bounds when a model is unpriced, so their
+        # delta and percentages are not a valid comparison — expose them as
+        # unavailable (None) rather than let a consumer read lower-bound
+        # arithmetic as a real number. The gate stays indeterminate below.
+        deltas["cost_usd_delta"] = None
+        deltas["cost_improvement_pct"] = None
+        deltas["cost_regression_pct"] = None
+    gate_results = _gate_results(
+        deltas,
+        baseline,
+        candidate,
+        gates,
+        quality_report=quality_report,
+        cost_evaluable=cost_evaluable,
+    )
     passed = all(item["passed"] for item in gate_results)
+    indeterminate_gates = [item["name"] for item in gate_results if item.get("indeterminate")]
 
     return {
         "baseline": baseline,
@@ -42,6 +61,8 @@ def build_replay_report(
         "deltas": deltas,
         "gates": {
             "passed": passed,
+            "cost_evaluable": cost_evaluable,
+            "indeterminate": indeterminate_gates,
             "config": {
                 "max_cost_regression_pct": gates.max_cost_regression_pct,
                 "max_latency_regression_pct": gates.max_latency_regression_pct,
@@ -54,7 +75,7 @@ def build_replay_report(
             "results": gate_results,
         },
         "quality": quality_report,
-        "summary": _summary(deltas, passed),
+        "summary": _summary(deltas, passed, cost_evaluable=cost_evaluable),
     }
 
 
@@ -86,14 +107,7 @@ def replay_report_to_markdown(report: dict[str, Any]) -> str:
             deltas["latency_improvement_pct"],
             "ms",
         ),
-        _metric_row(
-            "Cost",
-            baseline["estimated_cost_usd"],
-            candidate["estimated_cost_usd"],
-            deltas["cost_usd_delta"],
-            deltas["cost_improvement_pct"],
-            "usd",
-        ),
+        _cost_metric_row(baseline, candidate, deltas),
         _metric_row(
             "Input tokens",
             baseline["input_tokens"],
@@ -183,7 +197,10 @@ def replay_report_to_markdown(report: dict[str, Any]) -> str:
         ]
     )
     for item in gates["results"]:
-        gate_status = "pass" if item["passed"] else "fail"
+        if item.get("indeterminate"):
+            gate_status = "indeterminate"
+        else:
+            gate_status = "pass" if item["passed"] else "fail"
         lines.append(
             f"| {markdown_table_cell(item['name'])} | {gate_status} | "
             f"{markdown_table_cell(item['detail'])} |"
@@ -193,11 +210,18 @@ def replay_report_to_markdown(report: dict[str, Any]) -> str:
 
 def _trace_summary(trace: Any, report: dict[str, Any]) -> dict[str, Any]:
     metadata = getattr(trace, "metadata", {}) or {}
+    cost = report.get("cost_breakdown") or {}
     return {
         "run_id": trace.run_id,
         "name": trace.name,
         "runtime_ms": float(report.get("total_runtime_ms", 0.0) or 0.0),
         "estimated_cost_usd": float(report.get("estimated_cost_usd", 0.0) or 0.0),
+        # Carried so the cost gates can tell "no cost" apart from "cost unknown":
+        # estimated_cost_usd is the *known* portion, has_unknown_cost flags that
+        # some model calls had no available rate, and cost_status summarizes
+        # completeness (see costs.py / metrics.py).
+        "has_unknown_cost": bool(cost.get("has_unknown_cost", False)),
+        "cost_status": report.get("cost_status", cost.get("cost_status", "complete")),
         "input_tokens": int(report.get("input_tokens", 0) or 0),
         "output_tokens": int(report.get("output_tokens", 0) or 0),
         "retry_count": int(report.get("retry_count", 0) or 0),
@@ -276,28 +300,44 @@ def _gate_results(
     gates: ReplayGates,
     *,
     quality_report: dict[str, Any] | None = None,
+    cost_evaluable: bool = True,
 ) -> list[dict[str, Any]]:
+    if cost_evaluable:
+        cost_regression_gate = _gate(
+            "cost_regression",
+            deltas["cost_regression_pct"] <= gates.max_cost_regression_pct,
+            f"{deltas['cost_regression_pct']:.2f}% regression "
+            f"<= {gates.max_cost_regression_pct:.2f}% allowed",
+        )
+        cost_improvement_gate = _gate(
+            "cost_improvement",
+            deltas["cost_improvement_pct"] >= gates.min_cost_improvement_pct,
+            f"{deltas['cost_improvement_pct']:.2f}% improvement "
+            f">= {gates.min_cost_improvement_pct:.2f}% required",
+        )
+    else:
+        # A missing rate is not itself evidence of a regression, so the
+        # regression gate stays non-failing rather than blocking every
+        # latency-only optimization that uses an unpriced model. But a *required*
+        # cost improvement can't be verified, so it must fail — we won't claim an
+        # improvement we can't compute.
+        cost_regression_gate = _indeterminate_cost_gate("cost_regression", fail=False)
+        cost_improvement_gate = _indeterminate_cost_gate(
+            "cost_improvement", fail=gates.min_cost_improvement_pct > 0
+        )
     results = [
         _gate(
             "latency_regression",
             deltas["latency_regression_pct"] <= gates.max_latency_regression_pct,
             f"{deltas['latency_regression_pct']:.2f}% regression <= {gates.max_latency_regression_pct:.2f}% allowed",
         ),
-        _gate(
-            "cost_regression",
-            deltas["cost_regression_pct"] <= gates.max_cost_regression_pct,
-            f"{deltas['cost_regression_pct']:.2f}% regression <= {gates.max_cost_regression_pct:.2f}% allowed",
-        ),
+        cost_regression_gate,
         _gate(
             "latency_improvement",
             deltas["latency_improvement_pct"] >= gates.min_latency_improvement_pct,
             f"{deltas['latency_improvement_pct']:.2f}% improvement >= {gates.min_latency_improvement_pct:.2f}% required",
         ),
-        _gate(
-            "cost_improvement",
-            deltas["cost_improvement_pct"] >= gates.min_cost_improvement_pct,
-            f"{deltas['cost_improvement_pct']:.2f}% improvement >= {gates.min_cost_improvement_pct:.2f}% required",
-        ),
+        cost_improvement_gate,
     ]
     if gates.require_retry_non_increase:
         base_retries = int(baseline.get("retry_count", 0) or 0)
@@ -344,15 +384,36 @@ def _gate_results(
     return results
 
 
-def _gate(name: str, passed: bool, detail: str) -> dict[str, Any]:
-    return {"name": name, "passed": passed, "detail": detail}
+def _gate(name: str, passed: bool, detail: str, *, indeterminate: bool = False) -> dict[str, Any]:
+    return {"name": name, "passed": passed, "detail": detail, "indeterminate": indeterminate}
 
 
-def _summary(deltas: dict[str, Any], passed: bool) -> str:
+def _indeterminate_cost_gate(name: str, *, fail: bool) -> dict[str, Any]:
+    """A cost gate that couldn't be evaluated because a model cost is unknown.
+
+    Rather than silently comparing coerced/lower-bound numbers, the gate is
+    marked ``indeterminate``. It fails only when the caller explicitly required a
+    cost outcome (``fail``) that therefore can't be verified; otherwise it is a
+    non-failing informational gate.
+    """
+    detail = (
+        "cost could not be evaluated: a model call has no known pricing "
+        "(see cost_breakdown.unknown_models). "
+        + ("failing because a cost outcome was required." if fail else "not gating.")
+    )
+    return _gate(name, passed=not fail, detail=detail, indeterminate=True)
+
+
+def _summary(deltas: dict[str, Any], passed: bool, *, cost_evaluable: bool = True) -> str:
     status = "passed" if passed else "failed"
+    cost_phrase = (
+        f"cost improvement {deltas['cost_improvement_pct']:.2f}%"
+        if cost_evaluable
+        else "cost improvement unavailable (unknown model pricing)"
+    )
     return (
         f"Replay {status}: latency improvement {deltas['latency_improvement_pct']:.2f}%, "
-        f"cost improvement {deltas['cost_improvement_pct']:.2f}%, "
+        f"{cost_phrase}, "
         f"retry delta {deltas['retry_count_delta']}."
     )
 
@@ -378,15 +439,38 @@ def _regression_pct(baseline: float, candidate: float) -> float:
 
 
 def _metric_row(
-    metric: str, baseline: float, candidate: float, delta: float, improvement: float, kind: str
+    metric: str,
+    baseline: float,
+    candidate: float,
+    delta: float | None,
+    improvement: float | None,
+    kind: str,
 ) -> str:
+    improvement_cell = "unavailable" if improvement is None else f"{improvement:.2f}%"
     return (
         f"| {metric} | {_format_metric(baseline, kind)} | {_format_metric(candidate, kind)} | "
-        f"{_format_metric(delta, kind)} | {improvement:.2f}% |"
+        f"{_format_metric(delta, kind)} | {improvement_cell} |"
     )
 
 
-def _format_metric(value: float, kind: str) -> str:
+def _cost_metric_row(
+    baseline: dict[str, Any], candidate: dict[str, Any], deltas: dict[str, Any]
+) -> str:
+    from agentloop.costs import format_cost_usd
+
+    improvement = deltas["cost_improvement_pct"]
+    improvement_cell = "unavailable" if improvement is None else f"{improvement:.2f}%"
+    return (
+        "| Cost | "
+        f"{format_cost_usd(baseline.get('estimated_cost_usd'), baseline.get('cost_status'), decimals=6)} | "
+        f"{format_cost_usd(candidate.get('estimated_cost_usd'), candidate.get('cost_status'), decimals=6)} | "
+        f"{_format_metric(deltas['cost_usd_delta'], 'usd')} | {improvement_cell} |"
+    )
+
+
+def _format_metric(value: float | None, kind: str) -> str:
+    if value is None:
+        return "unavailable"
     if kind == "usd":
         return f"${value:.6f}"
     if kind == "ms":

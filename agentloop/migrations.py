@@ -150,6 +150,32 @@ _PAGINATION_INDEXES = (
     "ON trace_findings(project_id, status, updated_at, run_id, finding_id)",
 )
 
+_COST_COMPLETENESS_SQLITE = (
+    "ALTER TABLE traces ADD COLUMN cost_status TEXT NOT NULL DEFAULT 'complete'",
+    "ALTER TABLE traces ADD COLUMN priced_model_call_count INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE traces ADD COLUMN unavailable_model_call_count INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE usage_events ADD COLUMN cost_status TEXT NOT NULL DEFAULT 'complete'",
+    "ALTER TABLE usage_events ADD COLUMN priced_model_call_count INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE usage_events ADD COLUMN unavailable_model_call_count INTEGER NOT NULL DEFAULT 0",
+    "UPDATE traces SET cost_status = CASE WHEN model_call_count = 0 THEN 'empty' ELSE 'complete' END, "
+    "priced_model_call_count = model_call_count, unavailable_model_call_count = 0",
+    "UPDATE usage_events SET cost_status = CASE WHEN model_call_count = 0 THEN 'empty' ELSE 'complete' END, "
+    "priced_model_call_count = model_call_count, unavailable_model_call_count = 0",
+)
+
+_COST_COMPLETENESS_POSTGRES = (
+    "ALTER TABLE traces ADD COLUMN IF NOT EXISTS cost_status TEXT NOT NULL DEFAULT 'complete'",
+    "ALTER TABLE traces ADD COLUMN IF NOT EXISTS priced_model_call_count INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE traces ADD COLUMN IF NOT EXISTS unavailable_model_call_count INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE usage_events ADD COLUMN IF NOT EXISTS cost_status TEXT NOT NULL DEFAULT 'complete'",
+    "ALTER TABLE usage_events ADD COLUMN IF NOT EXISTS priced_model_call_count INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE usage_events ADD COLUMN IF NOT EXISTS unavailable_model_call_count INTEGER NOT NULL DEFAULT 0",
+    "UPDATE traces SET cost_status = CASE WHEN model_call_count = 0 THEN 'empty' ELSE 'complete' END, "
+    "priced_model_call_count = model_call_count, unavailable_model_call_count = 0",
+    "UPDATE usage_events SET cost_status = CASE WHEN model_call_count = 0 THEN 'empty' ELSE 'complete' END, "
+    "priced_model_call_count = model_call_count, unavailable_model_call_count = 0",
+)
+
 MIGRATIONS: tuple[Migration, ...] = (
     Migration(
         version=1,
@@ -168,6 +194,12 @@ MIGRATIONS: tuple[Migration, ...] = (
         name="pagination_indexes",
         sqlite_statements=_PAGINATION_INDEXES,
         postgres_statements=_PAGINATION_INDEXES,
+    ),
+    Migration(
+        version=4,
+        name="cost_completeness",
+        sqlite_statements=_COST_COMPLETENESS_SQLITE,
+        postgres_statements=_COST_COMPLETENESS_POSTGRES,
     ),
 )
 
@@ -203,7 +235,19 @@ def apply_sqlite_migrations(conn) -> None:
             continue
         try:
             for statement in migration.sqlite_statements:
-                conn.execute(statement)
+                try:
+                    conn.execute(statement)
+                except sqlite3.OperationalError as exc:
+                    # SQLite has no `ADD COLUMN IF NOT EXISTS`. Concurrent
+                    # initializers can both observe migration 4 as pending;
+                    # after one commits the column, the other receives this
+                    # narrow duplicate-column error. Treat only that verified
+                    # race as idempotent and preserve every other SQL failure.
+                    if not (
+                        statement.lstrip().upper().startswith("ALTER TABLE")
+                        and "duplicate column name" in str(exc).lower()
+                    ):
+                        raise
             conn.execute(
                 "INSERT OR IGNORE INTO schema_migrations(version, name) VALUES (?, ?)",
                 (migration.version, migration.name),

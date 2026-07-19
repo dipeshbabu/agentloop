@@ -12,6 +12,7 @@ from agentloop.audit import estimate_improvement
 from agentloop.autoinstrument import detect_integrations
 from agentloop.ci import build_ci_report, ci_report_to_markdown
 from agentloop.client import AgentLoopClient
+from agentloop.costs import format_cost_usd, is_cost_evaluable
 from agentloop.demo import run_baseline, run_langgraph_style, run_optimized, run_proof_pair
 from agentloop.doctor import run_doctor, run_production_check
 from agentloop.exporters import export_report_markdown
@@ -147,17 +148,22 @@ def _print_value_summary(value: dict) -> None:
     table = Table(title="AgentLoop Value Report")
     table.add_column("Metric")
     table.add_column("Value")
-    table.add_row("Total monthly value", f"${monthly['total_value_usd']:,.2f}")
-    table.add_row("Model cost savings / month", f"${monthly['direct_model_cost_savings_usd']:,.2f}")
+    table.add_row(
+        "Total monthly value", format_cost_usd(monthly.get("total_value_usd"), decimals=2)
+    )
+    table.add_row(
+        "Model cost savings / month",
+        format_cost_usd(monthly.get("direct_model_cost_savings_usd"), decimals=2),
+    )
     table.add_row("Engineering hours saved / month", str(monthly["engineering_hours_saved"]))
     table.add_row("Latency saved / run", f"{per_run['latency_savings_ms'] / 1000:.3f}s")
-    table.add_row("Cost saved / run", f"${per_run['cost_savings_usd']:.6f}")
+    table.add_row("Cost saved / run", format_cost_usd(per_run.get("cost_savings_usd"), decimals=6))
     table.add_row("Reliability risk score", f"{reliability['risk_score']}/100")
     if pricing:
-        table.add_row("Suggested plan", str(pricing.get("suggested_plan", "")))
+        table.add_row("Suggested plan", str(pricing.get("suggested_plan") or "unavailable"))
         table.add_row(
             "Suggested monthly price",
-            f"${float(pricing.get('suggested_monthly_price_usd', 0)):,.0f}",
+            format_cost_usd(pricing.get("suggested_monthly_price_usd"), decimals=0),
         )
         ratio = pricing.get("value_to_price_ratio")
         table.add_row("Value / price ratio", "n/a" if ratio is None else f"{ratio}x")
@@ -208,6 +214,17 @@ def compare(
         ("Retry count", base["retry_count"], opt["retry_count"]),
     ]
     for name, b, o in pairs:
+        if name == "Cost USD" and not (
+            is_cost_evaluable(base.get("cost_status", "complete"))
+            and is_cost_evaluable(opt.get("cost_status", "complete"))
+        ):
+            table.add_row(
+                name,
+                format_cost_usd(b, base.get("cost_status")),
+                format_cost_usd(o, opt.get("cost_status")),
+                "unavailable",
+            )
+            continue
         table.add_row(
             name,
             f"{b:.4f}" if isinstance(b, float) else str(b),
@@ -402,7 +419,7 @@ def audit(
     console.print(f"Wrote audit to {out}")
     console.print(
         f"Estimated savings: {improvement['estimated_latency_savings_ms'] / 1000:.2f}s latency, "
-        f"${improvement['estimated_cost_savings_usd']:.4f} cost per run"
+        f"{format_cost_usd(improvement['estimated_cost_savings_usd'])} cost per run"
     )
 
 
@@ -423,7 +440,11 @@ def optimize(
     after = plan["estimated_after"]
     console.print(
         f"Estimated improvement: {after['latency_reduction_pct']:.1f}% latency, "
-        f"{after['cost_reduction_pct']:.1f}% cost"
+        + (
+            "unavailable cost"
+            if after["cost_reduction_pct"] is None
+            else f"{after['cost_reduction_pct']:.1f}% cost"
+        )
     )
 
 
@@ -449,7 +470,11 @@ def diagnose(
         f"Findings: {summary['finding_count']} "
         f"({summary['patchable_count']} patchable), "
         f"estimated improvement: {summary['estimated_latency_reduction_pct']:.1f}% latency, "
-        f"{summary['estimated_cost_reduction_pct']:.1f}% cost"
+        + (
+            "unavailable cost"
+            if summary["estimated_cost_reduction_pct"] is None
+            else f"{summary['estimated_cost_reduction_pct']:.1f}% cost"
+        )
     )
 
 
@@ -642,7 +667,7 @@ def list_stored_traces(
             str(item.get("run_id", "")),
             str(item.get("name", "")),
             f"{float(item.get('total_runtime_ms', 0)):.2f}",
-            f"${float(item.get('estimated_cost_usd', 0)):.4f}",
+            format_cost_usd(item.get("estimated_cost_usd"), item.get("cost_status", "complete")),
         )
     console.print(table)
     if next_cursor:
@@ -684,7 +709,8 @@ def list_findings(
             str(finding["run_id"]),
             str(finding["status"]),
             "yes" if finding["patchable"] else "no",
-            f"{finding['estimated_latency_savings_ms'] / 1000:.2f}s / ${finding['estimated_cost_savings_usd']:.4f}",
+            f"{finding['estimated_latency_savings_ms'] / 1000:.2f}s / "
+            f"{format_cost_usd(finding.get('estimated_cost_savings_usd'))}",
         )
     console.print(table)
     if next_cursor:
@@ -750,7 +776,8 @@ def optimization_queue(
             str(item["title"]),
             str(item["run_count"]),
             str(item["patchable_count"]),
-            f"{item['estimated_latency_savings_ms'] / 1000:.2f}s / ${item['estimated_cost_savings_usd']:.4f}",
+            f"{item['estimated_latency_savings_ms'] / 1000:.2f}s / "
+            f"{format_cost_usd(item.get('estimated_cost_savings_usd'))}",
         )
     console.print(table)
 
@@ -780,7 +807,12 @@ def usage_summary(project_id: str | None = None) -> None:
     table.add_column("Metric")
     table.add_column("Value")
     for key, value in summary.items():
-        table.add_row(key, str(value))
+        rendered = (
+            format_cost_usd(value, summary.get("cost_status", "complete"))
+            if key == "estimated_cost_usd"
+            else str(value)
+        )
+        table.add_row(key, rendered)
     console.print(table)
 
 

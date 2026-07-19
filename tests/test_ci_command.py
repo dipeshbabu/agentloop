@@ -11,7 +11,14 @@ from agentloop.replay import ReplayGates
 from agentloop.tracer import AgentTrace
 
 
-def _trace(name: str, *, duration_ms: float, input_tokens: int, retries: int = 0) -> AgentTrace:
+def _trace(
+    name: str,
+    *,
+    duration_ms: float,
+    input_tokens: int,
+    retries: int = 0,
+    model: str = "gpt-4.1-mini",
+) -> AgentTrace:
     trace = AgentTrace(name=name)
     now = utc_now_iso()
     trace.add_event(
@@ -23,7 +30,7 @@ def _trace(name: str, *, duration_ms: float, input_tokens: int, retries: int = 0
             started_at=now,
             ended_at=now,
             duration_ms=duration_ms,
-            model="gpt-4.1-mini",
+            model=model,
             input_tokens=input_tokens,
             output_tokens=100,
         )
@@ -71,6 +78,21 @@ def test_ci_report_combines_replay_and_findings() -> None:
     assert "# AgentLoop CI Report" in markdown
     assert "## Performance Gates" in markdown
     assert "## Top Findings" in markdown
+
+
+def test_ci_markdown_renders_unknown_cost_as_unavailable() -> None:
+    baseline = _trace(
+        "baseline-unknown", duration_ms=1000, input_tokens=1000, model="private-model"
+    )
+    candidate = _trace(
+        "candidate-unknown", duration_ms=400, input_tokens=500, model="private-model"
+    )
+
+    report = build_ci_report(baseline, candidate)
+    markdown = ci_report_to_markdown(report)
+
+    assert report["summary"]["cost_improvement_pct"] is None
+    assert "| Cost improvement | unavailable |" in markdown
 
 
 def test_cli_ci_writes_markdown_and_json(tmp_path) -> None:

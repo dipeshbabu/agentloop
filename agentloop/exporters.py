@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from agentloop.costs import format_cost_usd
 from agentloop.markdown import (
     markdown_code_span,
     markdown_heading,
@@ -27,7 +28,8 @@ def export_report_markdown(report: dict[str, Any], path: str | Path) -> Path:
         "",
         f"- Run ID: {markdown_code_span(report['run_id'])}",
         f"- Runtime: {report['total_runtime_ms'] / 1000:.2f}s",
-        f"- Estimated cost: ${report['estimated_cost_usd']:.4f}",
+        "- Estimated cost: "
+        + format_cost_usd(report.get("estimated_cost_usd"), report.get("cost_status", "complete")),
         f"- Model calls: {report['model_call_count']}",
         f"- Tool calls: {report['tool_call_count']}",
         f"- Retries: {report['retry_count']}",

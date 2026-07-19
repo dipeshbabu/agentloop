@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from agentloop.costs import format_cost_usd
 from agentloop.markdown import (
     markdown_code_span,
     markdown_heading,
@@ -31,9 +32,16 @@ def export_optimization_markdown(plan: dict[str, Any], path: str | Path) -> Path
         f"- Current runtime: {current['runtime_ms'] / 1000:.2f}s",
         f"- Estimated optimized runtime: {after['runtime_ms'] / 1000:.2f}s",
         f"- Estimated latency reduction: {after['latency_reduction_pct']:.2f}%",
-        f"- Current cost: ${current['estimated_cost_usd']:.4f}",
-        f"- Estimated optimized cost: ${after['estimated_cost_usd']:.4f}",
-        f"- Estimated cost reduction: {after['cost_reduction_pct']:.2f}%",
+        "- Current cost: "
+        + format_cost_usd(current.get("estimated_cost_usd"), current.get("cost_status")),
+        "- Estimated optimized cost: "
+        + format_cost_usd(after.get("estimated_cost_usd"), after.get("cost_status")),
+        "- Estimated cost reduction: "
+        + (
+            "unavailable"
+            if after.get("cost_reduction_pct") is None
+            else f"{after['cost_reduction_pct']:.2f}%"
+        ),
         f"- Repeated context ratio: {current['repeated_context_ratio']:.1%}",
         f"- Retry count: {current['retry_count']}",
         "",
@@ -55,7 +63,8 @@ def export_optimization_markdown(plan: dict[str, Any], path: str | Path) -> Path
                 f"- Why: {markdown_text(card['why'])}",
                 f"- Rewrite hint: {markdown_text(card['rewrite_hint'])}",
                 f"- Estimated latency savings: {card['estimated_latency_savings_ms'] / 1000:.2f}s",
-                f"- Estimated cost savings: ${card['estimated_cost_savings_usd']:.4f}",
+                "- Estimated cost savings: "
+                + format_cost_usd(card.get("estimated_cost_savings_usd")),
                 "",
             ]
         )

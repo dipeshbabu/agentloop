@@ -47,6 +47,90 @@ def test_report_export_escapes_trace_text_by_markdown_context(tmp_path) -> None:
     assert "````code `one` ``two`` ```three``` <script>````" in markdown
 
 
+def test_cost_markdown_labels_partial_totals_and_withholds_savings(tmp_path) -> None:
+    report = {
+        "name": "partial",
+        "run_id": "run_partial",
+        "total_runtime_ms": 1000.0,
+        "estimated_cost_usd": 0.1,
+        "cost_status": "partial",
+        "model_call_count": 2,
+        "tool_call_count": 0,
+        "retry_count": 0,
+        "input_tokens": 10,
+        "output_tokens": 5,
+        "repeated_context_ratio": 0.0,
+        "recommendations": [],
+        "events": [],
+    }
+    report_markdown = export_report_markdown(report, tmp_path / "partial.md").read_text()
+
+    current = {
+        "runtime_ms": 1000.0,
+        "estimated_cost_usd": 0.1,
+        "cost_status": "partial",
+        "repeated_context_ratio": 0.2,
+        "retry_count": 0,
+    }
+    after = {
+        "runtime_ms": 900.0,
+        "estimated_cost_usd": None,
+        "cost_status": "partial",
+        "latency_reduction_pct": 10.0,
+        "cost_reduction_pct": None,
+    }
+    plan = {
+        "name": "partial",
+        "run_id": "run_partial",
+        "current": current,
+        "estimated_after": after,
+        "optimization_cards": [
+            {
+                "title": "Cache",
+                "type": "cache_context",
+                "confidence": "high",
+                "why": "Repeated context",
+                "rewrite_hint": "Cache it",
+                "estimated_latency_savings_ms": 0.0,
+                "estimated_cost_savings_usd": None,
+            }
+        ],
+        "graph": {"bottlenecks": []},
+    }
+    plan_markdown = export_optimization_markdown(plan, tmp_path / "partial-plan.md").read_text()
+    diagnosis_markdown = diagnosis_to_markdown(
+        {
+            "name": "partial",
+            "run_id": "run_partial",
+            "current": current,
+            "estimated_after": after,
+            "findings": [
+                {
+                    "finding_id": "finding_partial",
+                    "title": "Cache",
+                    "severity": "medium",
+                    "type": "cache_context",
+                    "confidence": "high",
+                    "affected_spans": [],
+                    "savings": {
+                        "estimated_latency_savings_ms": 0.0,
+                        "estimated_cost_savings_usd": None,
+                    },
+                    "rewrite": {"hint": "Cache it"},
+                    "validation": {"acceptance_criteria": "Replay passes"},
+                }
+            ],
+        }
+    )
+
+    assert "$0.1000 (known lower bound)" in report_markdown
+    assert "Estimated optimized cost: unavailable" in plan_markdown
+    assert "Estimated cost reduction: unavailable" in plan_markdown
+    assert "Estimated cost savings: unavailable" in plan_markdown
+    assert "Estimated cost after fixes: unavailable" in diagnosis_markdown
+    assert "Estimated cost savings: unavailable" in diagnosis_markdown
+
+
 def test_plan_and_diagnosis_exports_escape_headings_and_trace_fields(tmp_path) -> None:
     current = {
         "runtime_ms": 1000.0,

@@ -67,7 +67,13 @@ def ci_report_to_markdown(report: dict[str, Any]) -> str:
             "| Metric | Impact |",
             "|---|---:|",
             f"| Latency improvement | {summary['latency_improvement_pct']:.2f}% |",
-            f"| Cost improvement | {summary['cost_improvement_pct']:.2f}% |",
+            "| Cost improvement | "
+            + (
+                "unavailable"
+                if summary["cost_improvement_pct"] is None
+                else f"{summary['cost_improvement_pct']:.2f}%"
+            )
+            + " |",
             f"| Retry delta | {summary['retry_count_delta']} |",
             f"| Candidate schema validity | {summary['candidate_schema_validity']} |",
             f"| Candidate quality score | {summary['candidate_quality_score']} |",
