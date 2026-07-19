@@ -84,6 +84,25 @@ def _is_integral_number(value: Any) -> bool:
     )
 
 
+def _validated_token_counts(
+    input_tokens: Any, output_tokens: Any, cached_input_tokens: Any = 0
+) -> tuple[int, int, int]:
+    if not _is_integral_number(input_tokens) or not _is_integral_number(output_tokens):
+        raise ValueError("input_tokens and output_tokens must be finite integers")
+    resolved_input = int(input_tokens)
+    resolved_output = int(output_tokens)
+    if resolved_input < 0 or resolved_output < 0:
+        raise ValueError("input_tokens and output_tokens must be non-negative")
+    if not _is_integral_number(cached_input_tokens):
+        raise ValueError("cached_input_tokens must be a finite integer")
+    resolved_cached = int(cached_input_tokens)
+    if not 0 <= resolved_cached <= resolved_input:
+        raise ValueError(
+            "cached_input_tokens must satisfy 0 <= cached_input_tokens <= input_tokens"
+        )
+    return resolved_input, resolved_output, resolved_cached
+
+
 @dataclass(frozen=True)
 class ModelPricing:
     """Per-model pricing in USD per million tokens, with provenance.
@@ -109,22 +128,28 @@ class ModelPricing:
         for name, rate in (
             ("input_usd_per_mtok", self.input_usd_per_mtok),
             ("output_usd_per_mtok", self.output_usd_per_mtok),
-            ("cached_input_usd_per_mtok", self.cached_input_usd_per_mtok),
         ):
-            if rate is not None and (not _is_finite_number(rate) or rate < 0):
+            if not _is_finite_number(rate) or rate < 0:
                 raise ValueError(f"{name} must be a finite, non-negative number")
+        cached_rate = self.cached_input_usd_per_mtok
+        if cached_rate is not None and (not _is_finite_number(cached_rate) or cached_rate < 0):
+            raise ValueError("cached_input_usd_per_mtok must be a finite, non-negative number")
         if self.max_input_tokens is not None and (
             not _is_integral_number(self.max_input_tokens) or self.max_input_tokens <= 0
         ):
             raise ValueError("max_input_tokens must be a positive integer")
 
     def applies_to(self, input_tokens: int) -> bool:
-        return self.max_input_tokens is None or input_tokens <= self.max_input_tokens
+        resolved_input, _, _ = _validated_token_counts(input_tokens, 0)
+        return self.max_input_tokens is None or resolved_input <= self.max_input_tokens
 
     def cost_usd(
         self, input_tokens: int, output_tokens: int, cached_input_tokens: int = 0
     ) -> float:
-        billable_input = max(0, input_tokens - cached_input_tokens)
+        input_tokens, output_tokens, cached_input_tokens = _validated_token_counts(
+            input_tokens, output_tokens, cached_input_tokens
+        )
+        billable_input = input_tokens - cached_input_tokens
         cached_rate = (
             self.cached_input_usd_per_mtok
             if self.cached_input_usd_per_mtok is not None
@@ -515,19 +540,9 @@ def estimate_cost(
     """
     table = pricing if pricing is not None else load_pricing_table()
 
-    if not _is_integral_number(input_tokens) or not _is_integral_number(output_tokens):
-        raise ValueError("input_tokens and output_tokens must be finite integers")
-    input_tokens = int(input_tokens)
-    output_tokens = int(output_tokens)
-    if input_tokens < 0 or output_tokens < 0:
-        raise ValueError("input_tokens and output_tokens must be non-negative")
-    if not _is_integral_number(cached_input_tokens):
-        raise ValueError("cached_input_tokens must be a finite integer")
-    cached_input_tokens = int(cached_input_tokens)
-    if not 0 <= cached_input_tokens <= input_tokens:
-        raise ValueError(
-            "cached_input_tokens must satisfy 0 <= cached_input_tokens <= input_tokens"
-        )
+    input_tokens, output_tokens, cached_input_tokens = _validated_token_counts(
+        input_tokens, output_tokens, cached_input_tokens
+    )
 
     if model is not None and not isinstance(model, str):
         raise ValueError("model must be a string or None")

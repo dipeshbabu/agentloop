@@ -249,6 +249,8 @@ def _report_cost_completeness(report: dict[str, Any]) -> tuple[str, int, int]:
     breakdown = report.get("cost_breakdown")
     breakdown = breakdown if isinstance(breakdown, dict) else {}
     total = max(0, int(report.get("model_call_count", 0) or 0))
+    if report.get("estimated_cost_usd") is None and total:
+        return "unknown", 0, total
     status = report.get("cost_status")
     status = status if status in _COST_STATUSES else None
 
@@ -350,8 +352,10 @@ def _build_optimization_queue(
         cluster["latest_created_at"] = max(
             str(cluster["latest_created_at"]), str(finding["created_at"])
         )
-        payload = finding.get("finding") or {}
-        finding_status = payload.get("metadata", {}).get("cost_status")
+        raw_payload = finding.get("finding")
+        payload = raw_payload if isinstance(raw_payload, dict) else {}
+        metadata = payload.get("metadata")
+        finding_status = metadata.get("cost_status") if isinstance(metadata, dict) else None
         if finding_status not in _COST_STATUSES:
             finding_status = (
                 "complete" if finding["estimated_cost_savings_usd"] is not None else "unknown"
@@ -483,7 +487,7 @@ class SQLiteTraceStore:
                 trace.started_at,
                 json.dumps(trace.to_dict()),
                 report.get("total_runtime_ms", 0),
-                report.get("estimated_cost_usd", 0),
+                report.get("estimated_cost_usd"),
                 cost_status,
                 priced_calls,
                 unavailable_calls,
@@ -526,7 +530,7 @@ class SQLiteTraceStore:
                 project_id,
                 run_id,
                 report.get("total_runtime_ms", 0),
-                report.get("estimated_cost_usd", 0),
+                report.get("estimated_cost_usd"),
                 report.get("input_tokens", 0),
                 report.get("output_tokens", 0),
                 cost_status,
@@ -835,6 +839,8 @@ class SQLiteTraceStore:
             int(result["priced_model_call_count"]),
             int(result["unavailable_model_call_count"]),
         )
+        if result["cost_status"] not in {"complete", "empty"}:
+            result["estimated_cost_usd"] = None
         if project_id:
             result["project_id"] = project_id
         return result
@@ -923,7 +929,7 @@ class PostgresTraceStore:
                 trace.started_at,
                 json.dumps(trace.to_dict()),
                 report.get("total_runtime_ms", 0),
-                report.get("estimated_cost_usd", 0),
+                report.get("estimated_cost_usd"),
                 cost_status,
                 priced_calls,
                 unavailable_calls,
@@ -963,7 +969,7 @@ class PostgresTraceStore:
                 project_id,
                 run_id,
                 report.get("total_runtime_ms", 0),
-                report.get("estimated_cost_usd", 0),
+                report.get("estimated_cost_usd"),
                 report.get("input_tokens", 0),
                 report.get("output_tokens", 0),
                 cost_status,
@@ -1339,6 +1345,8 @@ class PostgresTraceStore:
             int(result["priced_model_call_count"]),
             int(result["unavailable_model_call_count"]),
         )
+        if result["cost_status"] not in {"complete", "empty"}:
+            result["estimated_cost_usd"] = None
         if project_id:
             result["project_id"] = project_id
         return result

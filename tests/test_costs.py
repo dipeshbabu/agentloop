@@ -192,7 +192,7 @@ def test_load_overrides_from_file_rejects_boolean_rates(tmp_path, field) -> None
         encoding="utf-8",
     )
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="boolean"):
         load_overrides_from_file(bad)
 
 
@@ -280,6 +280,38 @@ def test_model_pricing_rejects_invalid_invariants(field, value) -> None:
     values[field] = value
     with pytest.raises(ValueError):
         ModelPricing(**values)
+
+
+def test_model_pricing_rejects_none_for_required_rates() -> None:
+    with pytest.raises(ValueError):
+        ModelPricing(None, 1.0, "test", "test", "2026-01-01")
+    with pytest.raises(ValueError):
+        ModelPricing(1.0, None, "test", "test", "2026-01-01")
+
+
+@pytest.mark.parametrize(
+    ("input_tokens", "output_tokens", "cached_input_tokens"),
+    [
+        (-1, 0, 0),
+        (1, -1, 0),
+        (1.5, 0, 0),
+        (1, float("nan"), 0),
+        (100, 0, -1),
+        (100, 0, 101),
+        (100, 0, float("inf")),
+    ],
+)
+def test_model_pricing_cost_rejects_invalid_token_counts(
+    input_tokens, output_tokens, cached_input_tokens
+) -> None:
+    pricing = ModelPricing(1.0, 2.0, "test", "test", "2026-01-01")
+    with pytest.raises(ValueError):
+        pricing.cost_usd(input_tokens, output_tokens, cached_input_tokens)
+
+
+def test_model_pricing_cost_accepts_cached_boundary() -> None:
+    pricing = ModelPricing(1.0, 2.0, "test", "test", "2026-01-01", 0.5)
+    assert pricing.cost_usd(100, 0, 100) == pytest.approx(0.00005)
 
 
 def test_non_standard_billing_mode_requires_a_mode_specific_rate() -> None:

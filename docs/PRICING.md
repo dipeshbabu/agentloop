@@ -42,7 +42,9 @@ Every trace report carries these related fields:
   persisted trace/usage views all preserve this status. Cost savings,
   percentages, total value, and suggested pricing are `null`/`unavailable`
   whenever a total is `partial` or `unknown`; a partial current total is labeled
-  as a known lower bound.
+  as a known lower bound. Per-trace storage retains that known subtotal with its
+  status, while aggregate usage totals return `null` whenever any included model
+  call is unpriced.
 - `cost_breakdown` — the full picture:
 
   ```json

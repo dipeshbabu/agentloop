@@ -207,12 +207,35 @@ def test_cost_completeness_survives_trace_and_usage_persistence(store):
 
     summary = store.usage_summary(project_id="proj_a")
     assert summary["cost_status"] == "partial"
+    assert summary["estimated_cost_usd"] is None
     assert summary["priced_model_call_count"] == 1
     assert summary["unavailable_model_call_count"] == 1
     queue = store.optimization_queue(project_id="proj_a")
     assert queue
     assert all(item["cost_status"] == "partial" for item in queue)
     assert all(item["estimated_cost_savings_usd"] is None for item in queue)
+
+
+def test_usage_missing_cost_is_persisted_as_unknown_not_zero(store):
+    store.init()
+    store.record_usage(
+        "proj_a",
+        "legacy-missing-cost",
+        {
+            "total_runtime_ms": 1,
+            "input_tokens": 10,
+            "output_tokens": 1,
+            "model_call_count": 1,
+            "tool_call_count": 0,
+            "retry_count": 0,
+        },
+    )
+
+    summary = store.usage_summary(project_id="proj_a")
+    assert summary["cost_status"] == "unknown"
+    assert summary["estimated_cost_usd"] is None
+    assert summary["priced_model_call_count"] == 0
+    assert summary["unavailable_model_call_count"] == 1
 
 
 def test_retry_after_simulated_lost_response_is_idempotent(store):
