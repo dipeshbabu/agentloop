@@ -35,6 +35,10 @@ def build_replay_report(
     deltas = _deltas(baseline, candidate)
     gate_results = _gate_results(deltas, baseline, candidate, gates, quality_report=quality_report)
     passed = all(item["passed"] for item in gate_results)
+    indeterminate_gates = [item["name"] for item in gate_results if item.get("indeterminate")]
+    cost_evaluable = not (
+        bool(baseline.get("has_unknown_cost")) or bool(candidate.get("has_unknown_cost"))
+    )
 
     return {
         "baseline": baseline,
@@ -42,6 +46,8 @@ def build_replay_report(
         "deltas": deltas,
         "gates": {
             "passed": passed,
+            "cost_evaluable": cost_evaluable,
+            "indeterminate": indeterminate_gates,
             "config": {
                 "max_cost_regression_pct": gates.max_cost_regression_pct,
                 "max_latency_regression_pct": gates.max_latency_regression_pct,
@@ -54,7 +60,7 @@ def build_replay_report(
             "results": gate_results,
         },
         "quality": quality_report,
-        "summary": _summary(deltas, passed),
+        "summary": _summary(deltas, passed, cost_evaluable=cost_evaluable),
     }
 
 
@@ -183,7 +189,10 @@ def replay_report_to_markdown(report: dict[str, Any]) -> str:
         ]
     )
     for item in gates["results"]:
-        gate_status = "pass" if item["passed"] else "fail"
+        if item.get("indeterminate"):
+            gate_status = "indeterminate"
+        else:
+            gate_status = "pass" if item["passed"] else "fail"
         lines.append(
             f"| {markdown_table_cell(item['name'])} | {gate_status} | "
             f"{markdown_table_cell(item['detail'])} |"
@@ -193,11 +202,16 @@ def replay_report_to_markdown(report: dict[str, Any]) -> str:
 
 def _trace_summary(trace: Any, report: dict[str, Any]) -> dict[str, Any]:
     metadata = getattr(trace, "metadata", {}) or {}
+    cost = report.get("cost_breakdown") or {}
     return {
         "run_id": trace.run_id,
         "name": trace.name,
         "runtime_ms": float(report.get("total_runtime_ms", 0.0) or 0.0),
         "estimated_cost_usd": float(report.get("estimated_cost_usd", 0.0) or 0.0),
+        # Carried so the cost gates can tell "no cost" apart from "cost unknown":
+        # estimated_cost_usd is the *known* portion, and has_unknown_cost flags
+        # that some model calls had no available rate (see costs.py / metrics.py).
+        "has_unknown_cost": bool(cost.get("has_unknown_cost", False)),
         "input_tokens": int(report.get("input_tokens", 0) or 0),
         "output_tokens": int(report.get("output_tokens", 0) or 0),
         "retry_count": int(report.get("retry_count", 0) or 0),
@@ -277,26 +291,46 @@ def _gate_results(
     *,
     quality_report: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
+    cost_known = not (
+        bool(baseline.get("has_unknown_cost")) or bool(candidate.get("has_unknown_cost"))
+    )
     results = [
         _gate(
             "latency_regression",
             deltas["latency_regression_pct"] <= gates.max_latency_regression_pct,
             f"{deltas['latency_regression_pct']:.2f}% regression <= {gates.max_latency_regression_pct:.2f}% allowed",
         ),
-        _gate(
+        _cost_gate(
             "cost_regression",
-            deltas["cost_regression_pct"] <= gates.max_cost_regression_pct,
-            f"{deltas['cost_regression_pct']:.2f}% regression <= {gates.max_cost_regression_pct:.2f}% allowed",
+            passed=deltas["cost_regression_pct"] <= gates.max_cost_regression_pct,
+            known_detail=(
+                f"{deltas['cost_regression_pct']:.2f}% regression "
+                f"<= {gates.max_cost_regression_pct:.2f}% allowed"
+            ),
+            cost_known=cost_known,
+            # A regression can't be confirmed absent when cost is unknown, but a
+            # missing rate is not itself evidence of a regression — so this stays
+            # non-failing (indeterminate) rather than blocking every latency-only
+            # optimization that happens to use an unpriced model.
+            fail_when_unknown=False,
         ),
         _gate(
             "latency_improvement",
             deltas["latency_improvement_pct"] >= gates.min_latency_improvement_pct,
             f"{deltas['latency_improvement_pct']:.2f}% improvement >= {gates.min_latency_improvement_pct:.2f}% required",
         ),
-        _gate(
+        _cost_gate(
             "cost_improvement",
-            deltas["cost_improvement_pct"] >= gates.min_cost_improvement_pct,
-            f"{deltas['cost_improvement_pct']:.2f}% improvement >= {gates.min_cost_improvement_pct:.2f}% required",
+            passed=deltas["cost_improvement_pct"] >= gates.min_cost_improvement_pct,
+            known_detail=(
+                f"{deltas['cost_improvement_pct']:.2f}% improvement "
+                f">= {gates.min_cost_improvement_pct:.2f}% required"
+            ),
+            cost_known=cost_known,
+            # If the user actually required a cost improvement, an unverifiable
+            # cost must fail the gate — we can't claim an improvement we can't
+            # compute. With no requirement (the default 0%), it's informational.
+            fail_when_unknown=gates.min_cost_improvement_pct > 0,
         ),
     ]
     if gates.require_retry_non_increase:
@@ -344,15 +378,46 @@ def _gate_results(
     return results
 
 
-def _gate(name: str, passed: bool, detail: str) -> dict[str, Any]:
-    return {"name": name, "passed": passed, "detail": detail}
+def _gate(name: str, passed: bool, detail: str, *, indeterminate: bool = False) -> dict[str, Any]:
+    return {"name": name, "passed": passed, "detail": detail, "indeterminate": indeterminate}
 
 
-def _summary(deltas: dict[str, Any], passed: bool) -> str:
+def _cost_gate(
+    name: str,
+    *,
+    passed: bool,
+    known_detail: str,
+    cost_known: bool,
+    fail_when_unknown: bool,
+) -> dict[str, Any]:
+    """A cost gate that reports ``indeterminate`` when cost data is incomplete.
+
+    When either trace has an unknown model cost, the gate cannot be evaluated
+    from the (partial) numbers. Rather than silently comparing coerced zeros, it
+    is marked ``indeterminate`` and either fails (``fail_when_unknown``, used when
+    the user explicitly required a cost outcome) or is reported as a non-failing
+    informational gate.
+    """
+    if cost_known:
+        return _gate(name, passed, known_detail)
+    detail = (
+        "cost could not be evaluated: a model call has no known pricing "
+        "(see cost_breakdown.unknown_models). "
+        + ("failing because a cost outcome was required." if fail_when_unknown else "not gating.")
+    )
+    return _gate(name, passed=not fail_when_unknown, detail=detail, indeterminate=True)
+
+
+def _summary(deltas: dict[str, Any], passed: bool, *, cost_evaluable: bool = True) -> str:
     status = "passed" if passed else "failed"
+    cost_phrase = (
+        f"cost improvement {deltas['cost_improvement_pct']:.2f}%"
+        if cost_evaluable
+        else "cost improvement unavailable (unknown model pricing)"
+    )
     return (
         f"Replay {status}: latency improvement {deltas['latency_improvement_pct']:.2f}%, "
-        f"cost improvement {deltas['cost_improvement_pct']:.2f}%, "
+        f"{cost_phrase}, "
         f"retry delta {deltas['retry_count_delta']}."
     )
 

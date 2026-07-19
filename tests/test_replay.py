@@ -18,6 +18,7 @@ def _trace(
     input_tokens: int,
     output_tokens: int,
     retries: int = 0,
+    model: str = "gpt-4.1-mini",
 ) -> AgentTrace:
     trace = AgentTrace(name=name)
     now = utc_now_iso()
@@ -30,7 +31,7 @@ def _trace(
             started_at=now,
             ended_at=now,
             duration_ms=model_duration_ms,
-            model="gpt-4.1-mini",
+            model=model,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
         )
@@ -305,3 +306,110 @@ def test_cli_replay_exits_nonzero_when_gate_fails(tmp_path) -> None:
     )
 
     assert result.exit_code == 1
+
+
+def test_unknown_cost_makes_cost_gates_indeterminate_but_not_failing_by_default() -> None:
+    baseline = _trace(
+        "baseline",
+        model_duration_ms=800,
+        tool_duration_ms=200,
+        input_tokens=1000,
+        output_tokens=200,
+        model="local-llama-3",
+    )
+    candidate = _trace(
+        "candidate",
+        model_duration_ms=400,
+        tool_duration_ms=100,
+        input_tokens=500,
+        output_tokens=100,
+        model="local-llama-3",
+    )
+
+    report = build_replay_report(baseline, candidate)
+
+    assert report["gates"]["cost_evaluable"] is False
+    assert set(report["gates"]["indeterminate"]) == {"cost_regression", "cost_improvement"}
+    cost_gates = [g for g in report["gates"]["results"] if "cost" in g["name"]]
+    assert all(g["indeterminate"] for g in cost_gates)
+    # a latency-only improvement is not blocked just because pricing is unknown
+    assert all(g["passed"] for g in cost_gates)
+    assert report["gates"]["passed"] is True
+    assert "cost improvement unavailable" in report["summary"]
+
+
+def test_required_cost_improvement_fails_when_cost_is_unknown() -> None:
+    baseline = _trace(
+        "baseline",
+        model_duration_ms=800,
+        tool_duration_ms=200,
+        input_tokens=1000,
+        output_tokens=200,
+        model="local-llama-3",
+    )
+    candidate = _trace(
+        "candidate",
+        model_duration_ms=400,
+        tool_duration_ms=100,
+        input_tokens=500,
+        output_tokens=100,
+        model="local-llama-3",
+    )
+
+    report = build_replay_report(
+        baseline, candidate, gates=ReplayGates(min_cost_improvement_pct=10.0)
+    )
+
+    improvement = next(g for g in report["gates"]["results"] if g["name"] == "cost_improvement")
+    assert improvement["indeterminate"] is True
+    assert improvement["passed"] is False
+    assert report["gates"]["passed"] is False
+
+
+def test_known_cost_keeps_cost_gates_determinate() -> None:
+    baseline = _trace(
+        "baseline",
+        model_duration_ms=800,
+        tool_duration_ms=200,
+        input_tokens=1000,
+        output_tokens=200,
+        model="gpt-4o",
+    )
+    candidate = _trace(
+        "candidate",
+        model_duration_ms=400,
+        tool_duration_ms=100,
+        input_tokens=500,
+        output_tokens=100,
+        model="gpt-4o",
+    )
+
+    report = build_replay_report(baseline, candidate)
+
+    assert report["gates"]["cost_evaluable"] is True
+    assert report["gates"]["indeterminate"] == []
+    cost_gates = [g for g in report["gates"]["results"] if "cost" in g["name"]]
+    assert all(not g["indeterminate"] for g in cost_gates)
+
+
+def test_indeterminate_cost_gate_renders_in_markdown() -> None:
+    baseline = _trace(
+        "baseline",
+        model_duration_ms=800,
+        tool_duration_ms=200,
+        input_tokens=1000,
+        output_tokens=200,
+        model="local-llama-3",
+    )
+    candidate = _trace(
+        "candidate",
+        model_duration_ms=400,
+        tool_duration_ms=100,
+        input_tokens=500,
+        output_tokens=100,
+        model="local-llama-3",
+    )
+
+    markdown = replay_report_to_markdown(build_replay_report(baseline, candidate))
+
+    assert "indeterminate" in markdown

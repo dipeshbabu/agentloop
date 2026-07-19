@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 from typing import Any
 
-from agentloop.costs import estimate_cost_usd
+from agentloop.costs import CostEstimate, PricingTable, estimate_cost, load_pricing_table
 from agentloop.timing import cumulative_span_time_ms, elapsed_runtime_ms
 
 
@@ -16,6 +16,7 @@ def build_report(trace: Any) -> dict[str, Any]:
     repeated = repeated_context_stats(model_events)
     parallel = parallelism_opportunities(tool_events)
     cumulative_time = cumulative_span_time_ms(events)
+    cost = cost_breakdown(model_events)
 
     return {
         "run_id": trace.run_id,
@@ -31,15 +32,81 @@ def build_report(trace: Any) -> dict[str, Any]:
         "retry_time_ms": round(sum(e.duration_ms for e in retry_events), 3),
         "input_tokens": sum(e.input_tokens for e in model_events),
         "output_tokens": sum(e.output_tokens for e in model_events),
-        "estimated_cost_usd": round(
-            sum(estimate_cost_usd(e.model, e.input_tokens, e.output_tokens) for e in model_events),
-            6,
-        ),
+        # Sum of *known* costs only (calculated + provider-reported). A model with
+        # no known rate contributes nothing here rather than a fabricated rate;
+        # `cost_breakdown` records that some cost was unavailable so this number is
+        # never mistaken for a complete measurement. See docs/PRICING.md.
+        "estimated_cost_usd": cost["known_cost_usd"],
+        "cost_breakdown": cost,
         "repeated_context_tokens": repeated["repeated_context_tokens"],
         "repeated_context_ratio": repeated["repeated_context_ratio"],
         "parallelism_opportunities": parallel,
         "recommendations": build_recommendations(model_events, retry_events, repeated, parallel),
         "events": [e.to_dict() for e in events],
+    }
+
+
+def _event_cost_estimate(event: Any, pricing: PricingTable) -> CostEstimate:
+    """Estimate one model call's cost, reading provider metadata from the event.
+
+    Provider, cached-input tokens, and any provider-reported cost ride in
+    ``event.metadata`` (a free-form field already in the event schema), so this
+    stays compatible with existing serialized traces — a trace without these
+    keys simply falls back to model-name resolution.
+    """
+    metadata = getattr(event, "metadata", None) or {}
+    reported = metadata.get("provider_reported_cost_usd", metadata.get("cost_usd"))
+    cached = metadata.get("cached_input_tokens", 0)
+    try:
+        cached_tokens = max(0, int(cached))
+    except (TypeError, ValueError):
+        cached_tokens = 0
+    return estimate_cost(
+        event.model,
+        event.input_tokens,
+        event.output_tokens,
+        provider=metadata.get("provider"),
+        cached_input_tokens=cached_tokens,
+        provider_reported_cost_usd=None if reported is None else float(reported),
+        pricing=pricing,
+    )
+
+
+def cost_breakdown(model_events: list[Any], pricing: PricingTable | None = None) -> dict[str, Any]:
+    """Aggregate per-call cost estimates, distinguishing the three cost kinds.
+
+    Returns known totals split by source (calculated vs. provider-reported), a
+    count and list of model calls whose pricing was unavailable, and the
+    provenance (sources and ``as_of`` dates) behind the calculated portion, so a
+    report can show exactly how complete and how current its cost number is.
+    """
+    table = pricing if pricing is not None else load_pricing_table()
+    estimates = [_event_cost_estimate(event, table) for event in model_events]
+
+    calculated = round(sum(e.amount_usd or 0.0 for e in estimates if e.state == "calculated"), 6)
+    provider_reported = round(
+        sum(e.amount_usd or 0.0 for e in estimates if e.state == "provider_reported"), 6
+    )
+    unknown = [e for e in estimates if e.state == "unknown"]
+    sources = sorted(
+        {e.pricing_source for e in estimates if e.state == "calculated" and e.pricing_source}
+    )
+    as_of = sorted(
+        {e.pricing_as_of for e in estimates if e.state == "calculated" and e.pricing_as_of}
+    )
+    unknown_models = sorted({str(e.model) for e in unknown})
+
+    return {
+        "known_cost_usd": round(calculated + provider_reported, 6),
+        "calculated_usd": calculated,
+        "provider_reported_usd": provider_reported,
+        "priced_model_call_count": len(estimates) - len(unknown),
+        "unavailable_model_call_count": len(unknown),
+        "has_unknown_cost": bool(unknown),
+        "pricing_sources": sources,
+        "pricing_as_of": as_of,
+        "unknown_models": unknown_models,
+        "model_calls": [e.to_dict() for e in estimates],
     }
 
 

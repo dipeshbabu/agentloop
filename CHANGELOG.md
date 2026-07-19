@@ -8,6 +8,46 @@ Project history from before the first public release remains available in Git.
 
 ## [Unreleased]
 
+### Added
+
+- **Provider-aware model cost estimation with an explicit unknown state.** The
+  cost calculator now recognizes OpenAI, Anthropic, and Google models, resolves
+  provider prefixes (`openai/gpt-4o`) and dated snapshots (`gpt-4.1-2025-04-14`
+  → `gpt-4.1`), and records pricing provenance (`source` and an `as_of` date) on
+  every calculated cost. A provider-reported cost supplied on an event's
+  `metadata` (`provider_reported_cost_usd`) is used verbatim, and cached-input
+  tokens (`cached_input_tokens`) are billed at a model's cached rate where one
+  exists. Configure rates for your own, local, fine-tuned, or newer models
+  without editing the package via the `AGENTLOOP_PRICING_FILE` JSON file or a
+  programmatic `PricingTable` — see the new `docs/PRICING.md`. Trace reports gain
+  a `cost_breakdown` object distinguishing calculated, provider-reported, and
+  unavailable cost, with per-model detail and the pricing sources/dates used.
+
+### Changed
+
+- **Unknown model pricing is now explicit instead of a fabricated default.**
+  Previously every unrecognized model was silently assigned a generic `$1/M`
+  input, `$3/M` output rate, so a Claude, Gemini, local, fine-tuned, or newly
+  released model produced a plausible-looking but invented cost that flowed into
+  regression gates, recommendation priority, modeled monthly value, and suggested
+  pricing. A model with no known rate now reports **unknown** cost (`amount_usd`
+  is `null`) and contributes nothing to the trace's `estimated_cost_usd`, which
+  is now the sum of *known* cost only. **Compatibility:** `estimated_cost_usd`
+  stays a float and is unchanged for recognized models, but drops for any trace
+  that previously relied on the fabricated default — this is the intended
+  correction; when `cost_breakdown.has_unknown_cost` is true, treat
+  `estimated_cost_usd` as a lower bound. `agentloop.costs.estimate_cost_usd()`
+  now returns `float | None` (`None` for unknown models) instead of always a
+  float, and `MODEL_PRICES` no longer has a `default` entry.
+- **Replay/CI cost gates define unknown-cost behavior instead of comparing
+  coerced zeros.** When either trace has an unknown model cost, the
+  `cost_regression` and `cost_improvement` gates are marked `indeterminate` and
+  the report sets `gates.cost_evaluable = false`. By default an indeterminate
+  cost gate does not fail the replay (a latency-only optimization using an
+  unpriced model is not blocked), but a *required* cost improvement
+  (`min_cost_improvement_pct > 0`) fails when it cannot be verified. Price the
+  models via `AGENTLOOP_PRICING_FILE` to make the gates evaluable.
+
 ### Fixed
 
 - Quality fixture suites now fail closed across the library, CLI, replay/CI,
