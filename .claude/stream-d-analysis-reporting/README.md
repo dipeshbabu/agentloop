@@ -1,5 +1,11 @@
 # Stream D — Analysis & reporting correctness
 
+> **Status: 🟡 Partial.** #12 is closed and shipped (fail-closed quality fixtures — see
+> `agentloop/quality.py`'s `QualityValidationError` and its 422 mapping in
+> `agentloop/server.py`). **#20 is still open** — that's the only remaining work in this
+> stream. The "do #20 first if you want the smaller win" framing below no longer
+> applies; #12 is done, so just do #20.
+
 ## Scope
 
 Correctness of the gates and money numbers: quality-fixture evaluation and model cost
@@ -32,10 +38,11 @@ touches gating semantics across replay/CI/API/CLI/dashboard and is the more care
 
 ## Cross-stream coordination
 
-- #12 touches the same replay/CI surfaces referenced by the `agentloop-performance.yml`
-  workflow — verify the workflow path still behaves.
+- ~~#12 touches the same replay/CI surfaces referenced by the `agentloop-performance.yml`
+  workflow — verify the workflow path still behaves.~~ **Resolved**: #12 shipped; the
+  workflow path was verified as part of that PR.
 - #20's "unknown cost" behavior interacts with replay gates; define it, don't coerce unknowns
-  to zero/default.
+  to zero/default. *(Still applies — #20 is the remaining work here.)*
 
 ## Definition of done for the stream
 

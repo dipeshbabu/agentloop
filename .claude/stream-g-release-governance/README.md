@@ -1,5 +1,33 @@
 # Stream G — Release & repo governance
 
+> **Status: ✅ Done**, and then some. All three original issues (#26, #25, #27) are
+> closed and shipped in `v0.5.0`. Two follow-on efforts grew out of this stream after
+> that and are also done:
+>
+> - **#52** — automated the version-bump/changelog-rollover/tagging toil this README's
+>   "Approach" section originally assumed was manual. See
+>   `.github/workflows/bump-version.yml` and `.github/workflows/tag-release.yml`.
+> - **Repository hardening** — the owner completed the branch-protection ruleset,
+>   tag protection, and SHA-pinning policy this README's "Stream-specific rules"
+>   section only asked for informally. See `docs/OPEN_SOURCE_CHECKLIST.md`'s
+>   "GitHub repository settings" section for the current, verified state.
+>
+> Those two shipped independently and interacted: the branch-protection ruleset
+> requires named status checks with **no bypass**, but `bump-version.yml` opens its
+> release-prep PR with the default `GITHUB_TOKEN`, which GitHub's anti-recursion rule
+> exempts from triggering `pull_request`-based checks. `bump-version.yml` now
+> explicitly dispatches `ci.yml`, `codeql.yml`, `dependency-review.yml`, and
+> `agentloop-performance.yml` against the release branch via `workflow_dispatch` (which
+> *is* exempt) so the required checks actually run and report against the PR's head
+> commit. If you touch any of those four workflow files or the branch-protection
+> ruleset again, re-verify this still closes the loop — it's the one place in this
+> repo where two "done" pieces of work depend on each other's internals rather than
+> just not conflicting on files.
+>
+> Kept below as the historical plan for the original three issues — read the current
+> `.github/workflows/`, `docs/RELEASING.md`, and `docs/OPEN_SOURCE_CHECKLIST.md` for
+> what's actually in place now.
+
 ## Scope
 
 Getting the project publishable and the public repo hardened. Work spans **`pyproject.toml`**,

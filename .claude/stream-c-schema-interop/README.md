@@ -29,8 +29,13 @@ writing code — those choices ripple through every adapter and both stores.
 
 ## Cross-stream coordination
 
-- **#19 (Stream A)** also edits `server.py` (list endpoints vs. this issue's ingest
-  endpoints). Rebase frequently if both are in flight.
+- ~~**#19 (Stream A)** also edits `server.py` (list endpoints vs. this issue's ingest
+  endpoints). Rebase frequently if both are in flight.~~ **Resolved**: #19 shipped and
+  is on `main` now, not "in flight" — no concurrent rebasing needed. It added
+  `DEFAULT_PAGE_SIZE`/`MAX_PAGE_SIZE`/`InvalidCursorError` imports from
+  `agentloop.store` and an `InvalidCursorError` → 400 mapping in `server.py`'s list
+  endpoints. Different endpoints than #13 touches, but look at that error-mapping
+  pattern before inventing a separate one for #13's ingest-side 4xx errors.
 - The OTLP ID rules already added by PR #37 (`agentloop/otel_ids.py`) are the model for
   "valid, documented, round-trippable" — mirror that rigor for the schema.
 

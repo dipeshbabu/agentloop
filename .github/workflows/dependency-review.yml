@@ -3,6 +3,13 @@ name: Dependency review
 on:
   pull_request:
     branches: [main]
+  # Lets bump-version.yml's release-prep PR (opened with the default GITHUB_TOKEN, so
+  # the pull_request trigger above never fires for it) get this required check to
+  # actually run via `gh workflow run dependency-review.yml --ref <branch>`. The
+  # dependency-review-action needs explicit base-ref/head-ref outside a real
+  # pull_request event, so the step below is split in two rather than trying to
+  # derive them from a single conditional `with:` block.
+  workflow_dispatch: {}
 
 permissions:
   contents: read
@@ -16,8 +23,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - name: Review dependencies
+      - name: Review dependencies (pull request)
+        if: github.event_name == 'pull_request'
         uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
           fail-on-severity: moderate
           retry-on-snapshot-warnings: true
+
+      - name: Review dependencies (manual dispatch against a branch)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: moderate
+          retry-on-snapshot-warnings: true
+          base-ref: main
+          head-ref: ${{ github.ref_name }}

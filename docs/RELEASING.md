@@ -59,9 +59,20 @@ itself is the reason to cut that release.
 3. It opens a `Prepare agentloop-profiler x.y.z release` pull request. Review
    the changelog placement and the version choice like any other PR — this is
    the point to catch a wrong bump type (e.g. a breaking change bumped as
-   `patch`) before it becomes a tag. Full CI already ran in step 2; GitHub does
-   not start a separate `pull_request`-triggered run for a PR opened by
-   `GITHUB_TOKEN` (an anti-recursion restriction, not a skipped check).
+   `patch`) before it becomes a tag. `main`'s branch-protection ruleset requires
+   `Python 3.10`, `Python 3.13`, `Docker image and deployment smoke`,
+   `Package artifact and wheel smoke`, `Replay and optimization gates`,
+   `Analyze Python`, and `Review dependency changes` to pass, with no bypass —
+   but those all come from `pull_request` triggers, which never fire for a PR
+   opened by `GITHUB_TOKEN` (a GitHub Actions anti-recursion restriction).
+   `bump-version.yml` works around that by dispatching `ci.yml`, `codeql.yml`,
+   `dependency-review.yml`, and `agentloop-performance.yml` directly against the
+   release branch (`workflow_dispatch` is exempt from the restriction) as its
+   last step, so those checks run and report on the PR normally. Give them a
+   minute to appear. If any are still missing after that — the dispatch call
+   itself failed, not the check — push any commit to the branch yourself, or
+   close and reopen the PR, using your own account rather than a bot token;
+   either triggers the checks the ordinary way.
 4. Review the wheel and source archive from that CI run. Confirm that the
    license, README, package code, and required data files are present and that
    no local traces or secrets are included.

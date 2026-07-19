@@ -12,6 +12,13 @@ on:
         required: false
         type: boolean
         default: false
+  # Lets bump-version.yml (which opens its release-prep PR with the default
+  # GITHUB_TOKEN, so the push/pull_request triggers above never fire for it — see
+  # the comment in bump-version.yml) get this workflow's jobs to run and report
+  # against that PR's head commit via `gh workflow run ci.yml --ref <branch>`.
+  # workflow_dispatch is exempt from GitHub's anti-recursion rule for GITHUB_TOKEN-
+  # authored events, unlike push/pull_request.
+  workflow_dispatch: {}
 
 permissions:
   contents: read

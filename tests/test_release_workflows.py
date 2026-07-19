@@ -89,3 +89,46 @@ def test_bump_version_script_exists_and_is_importable() -> None:
 
     assert "def bump(" in script
     assert "class BumpError" in script
+
+
+def test_bump_version_dispatches_the_branch_protection_required_checks() -> None:
+    workflow = (ROOT / ".github" / "workflows" / "bump-version.yml").read_text(encoding="utf-8")
+
+    assert "actions: write" in workflow
+    assert 'gh workflow run "$workflow" --ref "$BRANCH"' in workflow
+    assert "ci.yml codeql.yml dependency-review.yml agentloop-performance.yml" in workflow
+
+
+def test_ci_and_codeql_accept_manual_dispatch_so_bump_version_can_trigger_them() -> None:
+    ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    codeql = (ROOT / ".github" / "workflows" / "codeql.yml").read_text(encoding="utf-8")
+
+    assert "workflow_dispatch: {}" in ci
+    assert "workflow_dispatch: {}" in codeql
+    # both jobs' names must still match the exact required-check context strings
+    assert "name: Python ${{ matrix.python-version }}" in ci
+    assert "name: Package artifact and wheel smoke" in ci
+    assert "name: Docker image and deployment smoke" in ci
+    assert "name: Analyze Python" in codeql
+
+
+def test_dependency_review_dispatch_path_uses_explicit_refs_without_touching_the_pr_path() -> None:
+    workflow = (ROOT / ".github" / "workflows" / "dependency-review.yml").read_text(
+        encoding="utf-8"
+    )
+
+    assert "workflow_dispatch: {}" in workflow
+    assert "name: Review dependency changes" in workflow
+
+    pr_step, dispatch_step = workflow.split("Review dependencies (pull request)")[1].split(
+        "Review dependencies (manual dispatch against a branch)"
+    )
+    # the existing pull_request-triggered step must not gain base-ref/head-ref —
+    # those aren't valid for a real pull_request event and would change behavior
+    assert "base-ref" not in pr_step
+    assert "head-ref" not in pr_step
+    assert "fail-on-severity: moderate" in pr_step
+    # the new dispatch-only step must set them explicitly, since the action
+    # requires base-ref/head-ref outside a real pull_request event
+    assert "base-ref: main" in dispatch_step
+    assert "head-ref: ${{ github.ref_name }}" in dispatch_step
