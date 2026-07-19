@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+import os
 
 import pytest
 
+import agentloop.costs as costs_module
 from agentloop.costs import (
     MODEL_PRICES,
     ModelPricing,
@@ -151,6 +153,67 @@ def test_pricing_file_env_var_is_loaded(tmp_path, monkeypatch) -> None:
     assert estimate.provider == "acme"
 
 
+def test_pricing_file_is_parsed_once_while_unchanged(tmp_path, monkeypatch) -> None:
+    pricing_file = tmp_path / "cached-prices.json"
+    pricing_file.write_text(
+        json.dumps(
+            {
+                "cached-model": {
+                    "input_usd_per_mtok": 1.0,
+                    "output_usd_per_mtok": 2.0,
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    original_loader = costs_module.load_overrides_from_file
+    loaded_paths = []
+
+    def tracked_loader(path):
+        loaded_paths.append(path)
+        return original_loader(path)
+
+    monkeypatch.setattr(costs_module, "load_overrides_from_file", tracked_loader)
+    env = {"AGENTLOOP_PRICING_FILE": str(pricing_file)}
+
+    load_pricing_table(env=env)
+    load_pricing_table(env=env)
+
+    assert loaded_paths == [os.path.abspath(pricing_file)]
+
+
+def test_pricing_file_cache_reloads_after_change(tmp_path) -> None:
+    pricing_file = tmp_path / "changing-prices.json"
+
+    def write_rate(rate: float) -> None:
+        pricing_file.write_text(
+            json.dumps(
+                {
+                    "changing-model": {
+                        "input_usd_per_mtok": rate,
+                        "output_usd_per_mtok": rate,
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
+
+    write_rate(1.0)
+    env = {"AGENTLOOP_PRICING_FILE": str(pricing_file)}
+    first = load_pricing_table(env=env).resolve("changing-model")
+    previous_stat = pricing_file.stat()
+    write_rate(2.0)
+    os.utime(
+        pricing_file,
+        ns=(previous_stat.st_atime_ns, previous_stat.st_mtime_ns + 1_000_000_000),
+    )
+
+    second = load_pricing_table(env=env).resolve("changing-model")
+
+    assert first is not None and first.input_usd_per_mtok == 1.0
+    assert second is not None and second.input_usd_per_mtok == 2.0
+
+
 def test_include_builtins_false_makes_every_unlisted_model_unknown() -> None:
     table = load_pricing_table(include_builtins=False)
 
@@ -270,6 +333,13 @@ def test_context_over_threshold_is_unknown_not_underreported() -> None:
     assert small.state == "calculated"
     assert large.state == "unknown"
     assert large.unknown_reason == "context_over_threshold"
+
+
+def test_gemini_flash_rate_remains_valid_above_200k() -> None:
+    estimate = estimate_cost("gemini-2.5-flash", 300_000, 100)
+
+    assert estimate.state == "calculated"
+    assert estimate.amount_usd == pytest.approx(0.09025)
 
 
 def test_google_stable_model_pricing_provenance_matches_ga_release() -> None:

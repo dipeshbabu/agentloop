@@ -28,6 +28,7 @@ import json
 import math
 import os
 from dataclasses import dataclass, field
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Literal
 
@@ -254,7 +255,8 @@ _BUILTIN_PRICING: dict[str, ModelPricing] = {
     "claude-3-5-haiku": ModelPricing(
         0.80, 4.00, "anthropic", _ANTHROPIC_SOURCE, _ANTHROPIC_AS_OF, 0.08
     ),
-    # Google. Flat rates apply only up to the standard-context threshold.
+    # Google. Pro has a higher price tier above the standard-context threshold;
+    # Flash pricing is flat across its supported context window.
     "gemini-2.5-pro": ModelPricing(
         1.25,
         10.00,
@@ -269,7 +271,6 @@ _BUILTIN_PRICING: dict[str, ModelPricing] = {
         "google",
         _GOOGLE_SOURCE,
         _GOOGLE_AS_OF,
-        max_input_tokens=_GEMINI_STANDARD_CONTEXT,
     ),
 }
 
@@ -477,6 +478,15 @@ def load_overrides_from_file(path: str | os.PathLike[str]) -> dict[str, ModelPri
     return overrides
 
 
+@lru_cache(maxsize=8)
+def _cached_overrides_from_file(
+    path: str, mtime_ns: int, ctime_ns: int, size: int
+) -> dict[str, ModelPricing]:
+    """Reuse parsed overrides until the file's observable identity changes."""
+    _ = (mtime_ns, ctime_ns, size)
+    return load_overrides_from_file(path)
+
+
 def load_pricing_table(
     *,
     overrides: dict[str, ModelPricing] | None = None,
@@ -494,7 +504,15 @@ def load_pricing_table(
 
     file_path = environ.get(PRICING_FILE_ENV)
     if file_path:
-        table = table.with_overrides(load_overrides_from_file(file_path))
+        normalized_path = os.path.abspath(os.fspath(file_path))
+        file_stat = os.stat(normalized_path)
+        file_overrides = _cached_overrides_from_file(
+            normalized_path,
+            file_stat.st_mtime_ns,
+            file_stat.st_ctime_ns,
+            file_stat.st_size,
+        )
+        table = table.with_overrides(file_overrides)
 
     if overrides:
         table = table.with_overrides({_normalize_key(k): v for k, v in overrides.items()})
