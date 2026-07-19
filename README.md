@@ -21,11 +21,69 @@ with user-facing changes recorded in the [changelog](CHANGELOG.md).
 
 ## Install
 
+### Standalone CLI (no Python required)
+
+New tagged releases include a self-contained `agentloop` executable for the
+following platforms. These executables bundle Python and the core CLI runtime.
+
+| Platform | Release asset |
+| --- | --- |
+| Linux x86-64 | `agentloop-vX.Y.Z-linux-x86_64` |
+| Windows x86-64 | `agentloop-vX.Y.Z-windows-x86_64.exe` |
+| macOS Intel | `agentloop-vX.Y.Z-macos-x86_64` |
+| macOS Apple silicon | `agentloop-vX.Y.Z-macos-arm64` |
+
+Download the matching file and `SHA256SUMS` from the
+[GitHub Releases page](https://github.com/dipeshbabu/agentloop/releases). For
+example, on Linux (replace `X.Y.Z` with the release version):
+
+```bash
+version=X.Y.Z
+asset="agentloop-v${version}-linux-x86_64"
+curl -LO "https://github.com/dipeshbabu/agentloop/releases/download/v${version}/${asset}"
+curl -LO "https://github.com/dipeshbabu/agentloop/releases/download/v${version}/SHA256SUMS"
+grep "  ${asset}$" SHA256SUMS | sha256sum --check
+chmod +x "$asset"
+mkdir -p "$HOME/.local/bin"
+mv "$asset" "$HOME/.local/bin/agentloop"
+agentloop --help
+```
+
+On Windows PowerShell:
+
+```powershell
+$Version = "X.Y.Z"
+$Asset = "agentloop-v$Version-windows-x86_64.exe"
+Invoke-WebRequest "https://github.com/dipeshbabu/agentloop/releases/download/v$Version/$Asset" -OutFile agentloop.exe
+.\agentloop.exe --help
+```
+
+Compare `Get-FileHash .\agentloop.exe -Algorithm SHA256` with the matching entry
+in `SHA256SUMS` before installing it on `PATH`. The macOS executables are
+ad-hoc signed but not notarized; depending on local Gatekeeper policy, the first
+launch may require explicit approval in **System Settings → Privacy & Security**.
+
+The standalone executable targets the core profiling CLI. Optional server,
+Postgres, dashboard, and Python SDK integration dependencies remain available
+through the Python package and Docker deployment.
+
+### Python package
+
 The PyPI distribution is named `agentloop-profiler`. The Python import package
 and command-line program remain `agentloop`:
 
 ```bash
 python -m pip install agentloop-profiler
+agentloop --help
+```
+
+For an isolated CLI installation that avoids modifying the system Python
+environment, use [`pipx`](https://pipx.pypa.io/). `pipx` still requires Python
+to be installed; use a standalone executable above when no Python runtime is
+available.
+
+```bash
+pipx install agentloop-profiler
 agentloop --help
 ```
 

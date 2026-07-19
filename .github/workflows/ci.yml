@@ -155,6 +155,78 @@ jobs:
             <(cd dist && sha256sum * | sort) \
             <(cd .artifact-download-smoke && sha256sum * | sort)
 
+  standalone:
+    name: Standalone CLI (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            target: linux-x86_64
+            extension: ""
+          - os: windows-2025
+            target: windows-x86_64
+            extension: .exe
+          - os: macos-15-intel
+            target: macos-x86_64
+            extension: ""
+          - os: macos-15
+            target: macos-arm64
+            extension: ""
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up uv and Python
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          version: "0.11.28"
+          python-version: "3.13"
+          enable-cache: true
+
+      - name: Install standalone build dependencies
+        run: uv sync --locked --no-dev --group standalone
+
+      - name: Read package version
+        id: version
+        shell: bash
+        run: echo "version=$(uv version --short)" >> "$GITHUB_OUTPUT"
+
+      - name: Build standalone executable
+        shell: bash
+        run: |
+          uv run --frozen --no-dev --group standalone pyinstaller \
+            --clean \
+            --noconfirm \
+            --onefile \
+            --paths . \
+            --name "agentloop-v${{ steps.version.outputs.version }}-${{ matrix.target }}" \
+            scripts/agentloop_cli.py
+
+      - name: Smoke standalone executable
+        shell: bash
+        run: |
+          artifact="agentloop-v${{ steps.version.outputs.version }}-${{ matrix.target }}${{ matrix.extension }}"
+          executable="$PWD/dist/$artifact"
+          test -f "$executable"
+          "$executable" --help
+          smoke_dir="$RUNNER_TEMP/agentloop-standalone-smoke"
+          mkdir -p "$smoke_dir"
+          cd "$smoke_dir"
+          "$executable" demo --kind baseline
+          "$executable" report runs/research_agent_baseline.json
+          test -s runs/research_agent_baseline.json
+
+      - name: Upload standalone executable
+        if: ${{ inputs.upload_release_artifact || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: standalone-${{ matrix.target }}
+          path: dist/agentloop-v${{ steps.version.outputs.version }}-${{ matrix.target }}${{ matrix.extension }}
+          if-no-files-found: error
+
   docker:
     name: Docker image and deployment smoke
     runs-on: ubuntu-latest

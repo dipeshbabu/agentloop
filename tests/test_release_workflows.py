@@ -39,6 +39,38 @@ def test_release_requires_guard_and_reusable_validation_before_publish() -> None
     assert "uv build" not in workflow
 
 
+def test_ci_builds_and_smokes_native_standalone_executables() -> None:
+    workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+
+    assert "Standalone CLI (${{ matrix.target }})" in workflow
+    assert "target: linux-x86_64" in workflow
+    assert "target: windows-x86_64" in workflow
+    assert "target: macos-x86_64" in workflow
+    assert "target: macos-arm64" in workflow
+    assert "uv sync --locked --no-dev --group standalone" in workflow
+    assert "--onefile" in workflow
+    assert "--paths ." in workflow
+    assert "scripts/agentloop_cli.py" in workflow
+    assert '"$executable" --help' in workflow
+    assert '"$executable" demo --kind baseline' in workflow
+    assert '"$executable" report runs/research_agent_baseline.json' in workflow
+    assert "name: standalone-${{ matrix.target }}" in workflow
+
+
+def test_release_attaches_validated_artifacts_and_checksums_to_github() -> None:
+    workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
+
+    assert "publish-github:" in workflow
+    assert "needs: [guard, validate]" in workflow
+    assert "contents: write" in workflow
+    assert "pattern: standalone-*" in workflow
+    assert "merge-multiple: true" in workflow
+    assert "find . -maxdepth 1 -type f ! -name SHA256SUMS" in workflow
+    assert "xargs -0 sha256sum > SHA256SUMS" in workflow
+    assert 'gh release create "$GITHUB_REF_NAME"' in workflow
+    assert 'gh release upload "$GITHUB_REF_NAME" release-assets/* --clobber' in workflow
+
+
 def test_release_accepts_manual_dispatch_so_tag_release_can_trigger_it() -> None:
     workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
 
@@ -119,7 +151,7 @@ def test_manually_dispatched_ci_uploads_and_verifies_the_release_artifact() -> N
         "|| github.event_name == 'workflow_dispatch'"
     )
 
-    assert workflow.count(artifact_condition) == 3
+    assert workflow.count(artifact_condition) == 4
     assert "Upload validated release artifact" in workflow
     assert "Download validated release artifact" in workflow
     assert "Verify downloaded artifact bytes" in workflow

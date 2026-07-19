@@ -10,6 +10,10 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added checksummed standalone AgentLoop CLI executables for Linux x86-64,
+  Windows x86-64, macOS Intel, and macOS Apple silicon. Tagged release workflows
+  now smoke-test and attach these binaries to an automatically created GitHub
+  Release, so the core CLI can run without a preinstalled Python environment.
 - Added a repository-owned CodeRabbit configuration for automatic, incremental
   pull-request reviews focused on correctness, security, compatibility, and
   regression coverage, while leaving merge authorization to CI and human reviewers.

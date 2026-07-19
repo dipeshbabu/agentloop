@@ -73,9 +73,10 @@ itself is the reason to cut that release.
    itself failed, not the check — push any commit to the branch yourself, or
    close and reopen the PR, using your own account rather than a bot token;
    either triggers the checks the ordinary way.
-4. Review the wheel and source archive from that CI run. Confirm that the
-   license, README, package code, and required data files are present and that
-   no local traces or secrets are included.
+4. Review the wheel, source archive, and four standalone CLI artifacts from that
+   CI run. Confirm that the license, README, package code, and required data
+   files are present; run the executable for any locally available platform;
+   and verify that no local traces or secrets are included.
 5. Re-run the dependency license inventory documented in
    `THIRD_PARTY_LICENSES.md`. Review new direct and transitive terms, and
    inspect the final container separately because it also includes
@@ -139,20 +140,28 @@ After the PyPI trusted publisher is configured and `PYPI_PUBLISH_ENABLED` is
    tagged commit: supported-Python tests, lock/pre-commit/Bandit checks, CLI
    smoke, package metadata and wheel-install smoke, and the production
    container deployment smoke must all pass.
-3. The reusable CI package job builds the wheel and source archive once, checks
-   those files, and uploads them as the `python-package` artifact. The publish
-   job downloads those exact bytes; it never rebuilds a release artifact.
+3. The reusable CI jobs build the wheel, source archive, and native standalone
+   executables for Linux x86-64, Windows x86-64, macOS Intel, and macOS Apple
+   silicon. Every executable must pass `--help`, generate a demo trace, and read
+   that trace before it is uploaded. Publish jobs download those exact bytes;
+   they never rebuild a release artifact.
 4. The `pypi` GitHub Environment requires a maintainer to approve the
    deployment before `publish-pypi` runs — nothing publishes without that
    manual approval, regardless of how the tag was created.
-5. Verify the installed artifact in a fresh environment:
+5. Independently of the PyPI environment, `publish-github` creates the GitHub
+   Release when needed and attaches the validated Python distributions, four
+   standalone executables, `LICENSE`, `THIRD_PARTY_LICENSES.md`, and
+   `SHA256SUMS`. Rerunning the workflow updates those assets in place.
+6. Verify the installed Python artifact in a fresh environment:
 
    ```bash
    python -m pip install agentloop-profiler==X.Y.Z
    python -m pip show agentloop-profiler
    agentloop --help
    ```
-6. Publish GitHub release notes based on the changelog and link the workflow run.
+7. Download one available standalone executable from the GitHub Release, verify
+   it against `SHA256SUMS`, and run `agentloop --help`. Review the generated
+   release notes and add any important changelog context they missed.
 
 There is currently no side-branch tag exception. If the project later adopts a
 hotfix process, document and protect it before weakening the reachability gate.
