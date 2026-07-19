@@ -16,6 +16,8 @@ Project history from before the first public release remains available in Git.
 
 ### Fixed
 
+- OpenAI Agents SDK spans now propagate failure status, messages, and safely
+  normalized structured error context into AgentLoop events.
 - Quality fixture validation now rejects empty or vacuous suites and invalid
   score ranges across the library, CLI, HTTP API, and dashboard. Fully
   fail-closed replay/CI behavior remains tracked in #12.
