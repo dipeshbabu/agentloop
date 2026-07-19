@@ -1,0 +1,91 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: "en-US"
+early_access: false
+
+reviews:
+  profile: "chill"
+  request_changes_workflow: false
+  high_level_summary: true
+  review_status: true
+  poem: false
+  in_progress_fortune: false
+  enable_prompt_for_ai_agents: true
+
+  auto_review:
+    enabled: true
+    drafts: false
+    auto_incremental_review: true
+
+  path_filters:
+    - "!uv.lock"
+    - "!**/*.lock"
+    - "!dist/**"
+    - "!build/**"
+    - "!htmlcov/**"
+    - "!coverage.xml"
+    - "!**/__pycache__/**"
+    - "!**/*.egg-info/**"
+    - "!tests/snapshots/**"
+
+  path_instructions:
+    - path: "agentloop/**/*.py"
+      instructions: |
+        Prioritize correctness, failure handling, public API and serialized-data
+        compatibility, secret redaction, and deterministic offline behavior. Trace
+        instrumentation must preserve wrapped return values, exceptions, and
+        sync/async behavior. When a report or schema field changes, check every
+        cross-module consumer. Do not report Ruff-owned formatting or style unless
+        it hides a correctness issue.
+
+    - path: "agentloop/integrations/**/*.py"
+      instructions: |
+        Keep third-party imports optional. Preserve SDK signatures, return values,
+        exceptions, streaming behavior, and sync/async lifecycle semantics. Do not
+        record raw prompts, credentials, or provider payloads by default.
+
+    - path: "agentloop/store.py"
+      instructions: |
+        Check SQLite and Postgres parity, transaction boundaries, idempotency,
+        project isolation, concurrent initialization, and backward compatibility.
+
+    - path: "agentloop/migrations.py"
+      instructions: |
+        Require ordered, idempotent migrations with safe upgrades from existing
+        databases and equivalent fresh and upgraded schemas on SQLite and Postgres.
+
+    - path: "agentloop/replay.py"
+      instructions: |
+        Replay and regression gates must fail closed when a required metric cannot
+        be evaluated. Never coerce missing or partial cost/quality data into zero,
+        success, or a valid percentage.
+
+    - path: "agentloop/costs.py"
+      instructions: |
+        Treat provider, model, billing mode, pricing provenance, token tiers, and
+        unknown/partial cost as correctness boundaries. Validate finite,
+        non-negative monetary and token inputs and fail closed on unsupported rates.
+
+    - path: "tests/**/*.py"
+      instructions: |
+        Require public-behavior regression coverage, including malformed inputs,
+        boundary values, deterministic ordering, and failure paths. Tests must not
+        require paid APIs, real credentials, network access, or wall-clock timing.
+
+    - path: ".github/workflows/**"
+      instructions: |
+        Check least-privilege permissions, untrusted pull-request input handling,
+        immutable or trusted action versions, artifact provenance, secret exposure,
+        and that publishing remains explicitly gated.
+
+    - path: "Dockerfile"
+      instructions: |
+        Check reproducibility, minimal runtime contents, non-root execution, health
+        checks, dependency caching, and that build-time secrets cannot enter layers.
+
+  tools:
+    github-checks:
+      enabled: true
+      timeout_ms: 900000
+
+chat:
+  auto_reply: true
