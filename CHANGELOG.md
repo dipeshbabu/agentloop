@@ -22,6 +22,9 @@ Project history from before the first public release remains available in Git.
   programmatic `PricingTable` — see the new `docs/PRICING.md`. Trace reports gain
   a `cost_breakdown` object distinguishing calculated, provider-reported, and
   unavailable cost, with per-model detail and the pricing sources/dates used.
+- Added a repository-owned CodeRabbit configuration for automatic, incremental
+  pull-request reviews focused on correctness, security, compatibility, and
+  regression coverage, while leaving merge authorization to CI and human reviewers.
 
 ### Changed
 
