@@ -190,6 +190,18 @@ result into pass/fail gates for CI and PR comments. It reports latency, cost,
 token, retry, tool-call, model-call, schema, and quality deltas, then exits
 non-zero when gates fail unless `--no-fail-on-gate` is used.
 
+Cost estimates are provider-aware and offline. A model with a known rate is
+calculated (with the pricing `source`/`as_of` recorded in the report), a
+provider-reported cost is used verbatim, and a model with no known rate is
+reported as **unknown** rather than assigned a fabricated fallback rate. Configure
+rates for your own or newer models with `AGENTLOOP_PRICING_FILE` — see the
+[pricing guide](docs/PRICING.md).
+
+Reports persist a `cost_status` (`complete`, `partial`, `unknown`, or `empty`).
+Partial totals are labeled as known lower bounds, while savings, comparisons,
+modeled total value, and suggested pricing remain unavailable until every model
+call has a valid rate or provider-reported cost.
+
 ## Quality gates
 
 ```json

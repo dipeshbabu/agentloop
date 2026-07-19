@@ -233,7 +233,12 @@ def test_value_report_endpoint() -> None:
     client = TestClient(app)
     with trace_agent("server-value-test") as trace:
         for _ in range(3):
-            with trace_model_call("summarize", input_tokens=1000, output_tokens=100):
+            with trace_model_call(
+                "summarize",
+                model="gpt-4o",
+                input_tokens=1000,
+                output_tokens=100,
+            ):
                 pass
     response = client.post("/traces", json=trace.to_dict())
     assert response.status_code == 200
@@ -243,6 +248,27 @@ def test_value_report_endpoint() -> None:
     body = value.json()
     assert body["assumptions"]["runs_per_month"] == 2500
     assert body["monthly_value"]["total_value_usd"] >= 0
+
+
+def test_value_report_endpoint_withholds_unknown_cost_totals() -> None:
+    client = TestClient(app)
+    with trace_agent("server-unknown-value-test") as trace:
+        with trace_model_call(
+            "summarize", model="private-model", input_tokens=1000, output_tokens=100
+        ):
+            pass
+    response = client.post("/traces", json=trace.to_dict())
+    assert response.status_code == 200
+    run_id = response.json()["run_id"]
+
+    value = client.get(f"/traces/{run_id}/value?runs_per_month=2500")
+
+    assert value.status_code == 200
+    body = value.json()
+    assert body["cost_status"] == "unknown"
+    assert body["monthly_value"]["direct_model_cost_savings_usd"] is None
+    assert body["monthly_value"]["total_value_usd"] is None
+    assert body["pricing"]["suggested_plan"] is None
     assert "value_summary" in body
 
 

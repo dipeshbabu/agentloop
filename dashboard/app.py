@@ -7,6 +7,7 @@ import pandas as pd
 import streamlit as st
 
 from agentloop.ci import build_ci_report, ci_report_to_markdown
+from agentloop.costs import format_cost_usd
 from agentloop.demo import run_baseline, run_langgraph_style, run_optimized, run_proof_pair
 from agentloop.findings import build_diagnosis
 from agentloop.issues import build_issue_drafts, issue_drafts_to_markdown
@@ -29,9 +30,9 @@ from agentloop.tracer import AgentTrace
 from agentloop.value import build_value_report
 
 try:
-    from dashboard.value_view import assumption_inputs, render_value_report
+    from dashboard.value_view import assumption_inputs, percentage, render_value_report
 except ModuleNotFoundError:
-    from value_view import assumption_inputs, render_value_report
+    from value_view import assumption_inputs, percentage, render_value_report
 
 st.set_page_config(page_title="AgentLoop Dashboard", layout="wide")
 
@@ -46,8 +47,8 @@ def load_store():
     return db
 
 
-def money(value: float) -> str:
-    return f"${float(value):,.4f}"
+def money(value: float | None) -> str:
+    return "unavailable" if value is None else f"${float(value):,.4f}"
 
 
 def seconds(ms: float) -> str:
@@ -122,7 +123,10 @@ if page == "Overview":
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Runs", int(summary.get("run_count", 0)))
     c2.metric("Total runtime", seconds(summary.get("total_runtime_ms", 0)))
-    c3.metric("Estimated LLM cost", money(summary.get("estimated_cost_usd", 0)))
+    c3.metric(
+        "Estimated LLM cost",
+        format_cost_usd(summary.get("estimated_cost_usd"), summary.get("cost_status", "complete")),
+    )
     c4.metric("Retries", int(summary.get("retry_count", 0)))
 
     c5, c6, c7, c8 = st.columns(4)
@@ -136,7 +140,7 @@ if page == "Overview":
         df = pd.DataFrame(traces)
         st.dataframe(df, width="stretch")
 
-        chart_df = df[["name", "total_runtime_ms", "estimated_cost_usd"]].copy()
+        chart_df = df[["name", "total_runtime_ms"]].copy()
         chart_df["runtime_s"] = chart_df["total_runtime_ms"] / 1000
         st.subheader("Runtime by run")
         st.bar_chart(chart_df, x="name", y="runtime_s")
@@ -181,7 +185,10 @@ elif page == "Traces":
             st.markdown(f"### {trace.name}")
             c1, c2, c3, c4 = st.columns(4)
             c1.metric("Runtime", seconds(report["total_runtime_ms"]))
-            c2.metric("Cost", money(report["estimated_cost_usd"]))
+            c2.metric(
+                "Cost",
+                format_cost_usd(report["estimated_cost_usd"], report.get("cost_status")),
+            )
             c3.metric("Model calls", report["model_call_count"])
             c4.metric("Tool calls", report["tool_call_count"])
 
@@ -347,7 +354,7 @@ elif page == "Optimization":
             c1.metric("Current runtime", seconds(current["runtime_ms"]))
             c2.metric("Estimated runtime", seconds(after["runtime_ms"]))
             c3.metric("Latency reduction", f"{after['latency_reduction_pct']:.1f}%")
-            c4.metric("Cost reduction", f"{after['cost_reduction_pct']:.1f}%")
+            c4.metric("Cost reduction", percentage(after["cost_reduction_pct"]))
 
             with st.expander("Show value and pricing estimate", expanded=False):
                 rpm, rate, incident_cost = assumption_inputs("optimization_")
@@ -518,7 +525,8 @@ elif page == "Replay Proof":
             c1, c2, c3, c4 = st.columns(4)
             c1.metric("Status", status)
             c2.metric("Latency improvement", f"{replay['deltas']['latency_improvement_pct']:.1f}%")
-            c3.metric("Cost improvement", f"{replay['deltas']['cost_improvement_pct']:.1f}%")
+            cost_improvement = replay["deltas"]["cost_improvement_pct"]
+            c3.metric("Cost improvement", percentage(cost_improvement))
             c4.metric("Retry delta", replay["deltas"]["retry_count_delta"])
 
             st.subheader("Gate results")
