@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -132,6 +133,18 @@ def _span_to_otel(span: Any, trace_id: str) -> dict[str, Any]:
     # Preserve the original native ids for diagnosability (see agentloop.otel_ids).
     attrs.append(_attribute("agentloop.native_span_id", native_span_id))
     attrs.append(_attribute("agentloop.native_trace_id", str(trace_id)))
+    error = _read(span, "error")
+    status = {"code": "STATUS_CODE_OK"}
+    if error is not None:
+        status = {
+            "code": "STATUS_CODE_ERROR",
+            "message": _error_message(error),
+        }
+        error_data = _read(error, "data")
+        if error_data is not None:
+            attrs.append(
+                _attribute("openai_agents.error.data", _normalized_error_data_json(error_data))
+            )
     out = {
         "traceId": to_trace_id(trace_id),
         "spanId": to_span_id(native_span_id),
@@ -139,7 +152,7 @@ def _span_to_otel(span: Any, trace_id: str) -> dict[str, Any]:
         "startTimeUnixNano": str(_time_ns(_read(span, "started_at", "start_time"))),
         "endTimeUnixNano": str(_time_ns(_read(span, "ended_at", "end_time"))),
         "attributes": attrs,
-        "status": {"code": "STATUS_CODE_OK"},
+        "status": status,
     }
     parent_id = _read(span, "parent_id", "parent_span_id")
     if parent_id:
@@ -160,6 +173,68 @@ def _read(obj: Any, *names: str) -> Any:
 def _span_trace_id(span: Any) -> str | None:
     value = _read(span, "trace_id")
     return str(value) if value else None
+
+
+def _error_message(error: Any) -> str:
+    message = _read(error, "message")
+    if message is None and isinstance(error, str):
+        message = error
+    if message is not None:
+        normalized = str(message).strip()
+        if normalized:
+            return normalized
+
+    data = _read(error, "data")
+    error_type = _read(data, "type", "error_type", "name", "code")
+    if error_type is not None:
+        normalized_type = str(error_type).strip()
+        if normalized_type:
+            return f"OpenAI Agents span failed ({normalized_type})"
+    return "OpenAI Agents span failed"
+
+
+def _normalized_error_data_json(data: Any) -> str:
+    normalized = _normalize_error_data(data, seen=set())
+    return json.dumps(
+        normalized,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    )
+
+
+def _normalize_error_data(value: Any, *, seen: set[int]) -> Any:
+    if value is None or isinstance(value, str | bool | int):
+        return value
+    if isinstance(value, float):
+        return value if math.isfinite(value) else "<non-finite float>"
+
+    if isinstance(value, dict):
+        identity = id(value)
+        if identity in seen:
+            return "<recursive dict>"
+        seen.add(identity)
+        try:
+            normalized: dict[str, Any] = {}
+            for key, item in value.items():
+                normalized_key = key if isinstance(key, str) else f"<{type(key).__name__} key>"
+                normalized[normalized_key] = _normalize_error_data(item, seen=seen)
+            return normalized
+        finally:
+            seen.remove(identity)
+
+    if isinstance(value, list | tuple):
+        identity = id(value)
+        if identity in seen:
+            return f"<recursive {type(value).__name__}>"
+        seen.add(identity)
+        try:
+            return [_normalize_error_data(item, seen=seen) for item in value]
+        finally:
+            seen.remove(identity)
+
+    return f"<{type(value).__name__}>"
 
 
 def _operation_from_span_type(span_type: str) -> str:
