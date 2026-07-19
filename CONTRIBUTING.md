@@ -187,6 +187,25 @@ review on security-sensitive or compatibility-sensitive work. Maintainers may
 close a proposal that no longer fits the project, but should explain the reason
 and preserve useful technical discussion.
 
+## Automated pull request review
+
+Once the CodeRabbit GitHub App is installed for this repository, it performs an
+automatic first-pass review when a pull request is ready and incrementally reviews
+new pushes. The repository configuration in `.coderabbit.yaml` focuses the bot on
+correctness, security, reliability, compatibility, and missing regression coverage;
+Ruff and pre-commit remain responsible for routine formatting and style checks.
+
+CodeRabbit feedback supplements CI and human review. It cannot authorize a merge,
+and a clean bot review does not replace required approvals or passing checks. Address
+actionable findings before final review, or reply with the technical reason a finding
+does not apply so the decision remains visible in the review thread.
+
+Use `@coderabbitai review` to review changes since the previous pass, or
+`@coderabbitai full review` after a substantial rewrite. The `pause` and `resume`
+commands are available for work-in-progress branches; see the
+[CodeRabbit review commands](https://docs.coderabbit.ai/reference/review-commands)
+for the complete command list.
+
 ## Changelog and compatibility policy
 
 Add an `Unreleased` entry for user-visible additions, fixes, deprecations,

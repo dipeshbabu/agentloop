@@ -8,6 +8,12 @@ Project history from before the first public release remains available in Git.
 
 ## [Unreleased]
 
+### Added
+
+- Added a repository-owned CodeRabbit configuration for automatic, incremental
+  pull-request reviews focused on correctness, security, compatibility, and
+  regression coverage, while leaving merge authorization to CI and human reviewers.
+
 ### Fixed
 
 - Quality fixture validation now rejects empty or vacuous suites and invalid
