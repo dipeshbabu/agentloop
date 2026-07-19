@@ -112,6 +112,19 @@ def test_ci_and_codeql_accept_manual_dispatch_so_bump_version_can_trigger_them()
     assert "name: Analyze Python" in codeql
 
 
+def test_manually_dispatched_ci_uploads_and_verifies_the_release_artifact() -> None:
+    workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    artifact_condition = (
+        "inputs.upload_release_artifact || github.event_name == 'pull_request' "
+        "|| github.event_name == 'workflow_dispatch'"
+    )
+
+    assert workflow.count(artifact_condition) == 3
+    assert "Upload validated release artifact" in workflow
+    assert "Download validated release artifact" in workflow
+    assert "Verify downloaded artifact bytes" in workflow
+
+
 def test_dependency_review_dispatch_path_uses_explicit_refs_without_touching_the_pr_path() -> None:
     workflow = (ROOT / ".github" / "workflows" / "dependency-review.yml").read_text(
         encoding="utf-8"

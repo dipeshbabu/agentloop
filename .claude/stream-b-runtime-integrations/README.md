@@ -1,21 +1,33 @@
 # Stream B — Tracing runtime & SDK integrations
 
-> **Status: ✅ Done.** All four issues closed and shipped in `v0.5.0`. Kept here as the
-> historical plan — read the current `agentloop/runtime.py`/`agentloop/integrations/`
-> for what was actually built, not this document, if you're touching the runtime now.
+> **Status: 🟡 Follow-up required.** The original four issues shipped in `v0.5.0`,
+> but #60, #61, #62, and #64 are open follow-up defects in tracing lifecycle,
+> credential isolation, and integration error propagation.
 
 ## Scope
 
-The trace finalization runtime and the optional framework/SDK adapters. Work lands in
-**`agentloop/runtime.py`**, **`agentloop/integrations/openai.py`**,
-**`agentloop/integrations/openai_agents.py`**, and **`agentloop/autoinstrument.py`**
-(with `agentloop/cli.py`, `agentloop/doctor.py`, and `docs/INTEGRATIONS.md` touch points).
+The trace finalization runtime, decorators, public client, and optional framework/SDK
+adapters. Work lands in **`agentloop/runtime.py`**, **`agentloop/tracer.py`**,
+**`agentloop/decorators.py`**, **`agentloop/client.py`**, and
+**`agentloop/integrations/`** (with `agentloop/cli.py`, `agentloop/doctor.py`, and
+`docs/INTEGRATIONS.md` touch points).
 
-Issues: **#11** (independent finalization side effects), **#15** (idempotent + stream-aware
-OpenAI), **#16** (per-trace OpenAI Agents processor state), **#28** (rename/implement
-auto-instrument).
+Completed: **#11** (independent finalization side effects), **#15** (idempotent and
+stream-aware OpenAI), **#16** (per-trace OpenAI Agents processor state), **#28**
+(auto-instrumentation). Open: **#60** (generator lifecycle), **#61** (async
+cancellation), **#62** (client credential isolation), and **#64** (OpenAI Agents errors).
 
-## Approach for the stream as a whole
+## Current follow-up work
+
+- **#60** and **#61** overlap in native tracing, decorators, and LangGraph wrappers.
+  Sequence or rebase their separate PRs so generator cleanup and cancellation semantics
+  agree.
+- **#64** is focused on the OpenAI Agents processor, but it must use the same failed-
+  outcome contract as #61.
+- **#62** is largely independent. Ordinary client calls must never carry the admin key,
+  and admin operations must not carry the project key.
+
+## Historical approach for the original scope
 
 These four are **independent** of each other — take them in any order. Suggested order by
 value/difficulty: **#28** (small, mostly naming) → **#11** (contained runtime fix) → **#16**
@@ -36,14 +48,15 @@ value/difficulty: **#28** (small, mostly naming) → **#11** (contained runtime 
 
 ## Order & dependencies
 
-No inter-issue dependencies. Each is a self-contained PR. #15 and #16 both touch the OpenAI
-integration area but different files (`openai.py` vs `openai_agents.py`), so they can go in
-parallel.
+Keep every open issue in a self-contained PR. #60 and #61 share lifecycle code and should
+not be edited concurrently without coordination. #61 and #64 share status/error semantics.
+#62 can proceed independently.
 
 ## Definition of done for the stream
 
-Each issue's acceptance criteria met; new tests use fakes and cover sync + async + error +
-cancellation paths where relevant; `docs/INTEGRATIONS.md` updated for any user-visible
-change (#28 especially); changelog updated.
+Every original and follow-up issue's acceptance criteria are met; tests use fakes and
+cover sync, async, generator, error, close, and cancellation paths where relevant;
+credentials are endpoint-scoped; `docs/INTEGRATIONS.md` reflects user-visible behavior;
+and the changelog is updated.
 
 See [`../SHARED_CONVENTIONS.md`](../SHARED_CONVENTIONS.md).

@@ -1,8 +1,8 @@
 # Stream G — Release & repo governance
 
-> **Status: ✅ Done**, and then some. All three original issues (#26, #25, #27) are
-> closed and shipped in `v0.5.0`. Two follow-on efforts grew out of this stream after
-> that and are also done:
+> **Status: 🟡 Follow-up required.** All three original issues (#26, #25, #27), #52,
+> and repository hardening are complete. **#54 is open** for standalone or isolated CLI
+> distribution, so the stream is not currently done.
 >
 > - **#52** — automated the version-bump/changelog-rollover/tagging toil this README's
 >   "Approach" section originally assumed was manual. See
@@ -11,6 +11,9 @@
 >   tag protection, and SHA-pinning policy this README's "Stream-specific rules"
 >   section only asked for informally. See `docs/OPEN_SOURCE_CHECKLIST.md`'s
 >   "GitHub repository settings" section for the current, verified state.
+> - **#54 (open)** — choose and implement a CLI distribution mechanism that avoids a
+>   pre-existing Python environment or PEP 668 installation failures, then integrate
+>   it with the release workflow and installation docs.
 >
 > Those two shipped independently and interacted: the branch-protection ruleset
 > requires named status checks with **no bypass**, but `bump-version.yml` opens its
@@ -30,14 +33,16 @@
 
 ## Scope
 
-Getting the project publishable and the public repo hardened. Work spans **`pyproject.toml`**,
-**`uv.lock`**, **`.github/workflows/release.yml`**, the issue-form/label YAML in
+Getting the project publishable, distributing its CLI, and hardening the public repo.
+Work spans **`pyproject.toml`**, **`uv.lock`**, **`.github/workflows/release.yml`**,
+release artifacts/install documentation, and the issue-form/label YAML in
 **`.github/`**, and GitHub **repository settings** (branch protection, security features) — plus
 `docs/RELEASING.md` and `docs/OPEN_SOURCE_CHECKLIST.md`, which are the source-of-truth
 checklists for this stream.
 
 Issues: **#26** (choose/reserve a PyPI name — P0), **#25** (require full validation before
-publish — P0), **#27** (harden repo settings + align labels — P0/P1).
+publish — P0), **#27** (harden repo settings + align labels — P0/P1), and follow-up
+**#54** (standalone or isolated CLI distribution).
 
 ## Approach for the stream as a whole
 
@@ -53,6 +58,10 @@ publish — P0), **#27** (harden repo settings + align labels — P0/P1).
 
 Some acceptance items require **owner/admin action outside the codebase** — call these out
 explicitly in the PR rather than pretending they're done.
+
+For current work, #54 is the only open issue. Decide on one supported distribution
+mechanism before changing release automation; preserve the existing PyPI package and
+`agentloop` command while adding the chosen installation path.
 
 ## Stream-specific rules
 
@@ -73,9 +82,9 @@ explicitly in the PR rather than pretending they're done.
 
 ## Definition of done for the stream
 
-All three issues' acceptance criteria met (marking owner-only settings items as done once the
-owner confirms); a clean environment can install the built artifact by its final name and run
-`agentloop --help`; `main`/tags protected; release publish is impossible unless the exact
-commit passed the full gate; checklists updated.
+All original issues and #54 meet their acceptance criteria; a clean environment can install
+the PyPI artifact and use the chosen CLI distribution path; `main` and tags are protected;
+release publishing is impossible unless the exact commit passed the full gate; and the
+release/open-source checklists are current.
 
 See [`../SHARED_CONVENTIONS.md`](../SHARED_CONVENTIONS.md).
