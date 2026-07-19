@@ -3,7 +3,7 @@ language: "en-US"
 early_access: false
 
 reviews:
-  profile: "chill"
+  profile: "assertive"
   request_changes_workflow: false
   high_level_summary: true
   review_status: true
@@ -15,6 +15,8 @@ reviews:
     enabled: true
     drafts: false
     auto_incremental_review: true
+    base_branches:
+      - ".*"
 
   path_filters:
     - "!uv.lock"
