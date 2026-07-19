@@ -16,7 +16,7 @@ reviews:
     drafts: false
     auto_incremental_review: true
     base_branches:
-      - "main"
+      - ".*"
 
   path_filters:
     - "!uv.lock"
