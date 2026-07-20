@@ -21,11 +21,84 @@ with user-facing changes recorded in the [changelog](CHANGELOG.md).
 
 ## Install
 
+### Standalone CLI (no Python required)
+
+New tagged releases include a self-contained `agentloop` executable for the
+following platforms. These executables bundle Python and the core CLI runtime.
+
+| Platform | Release asset |
+| --- | --- |
+| Linux x86-64 | `agentloop-vX.Y.Z-linux-x86_64` |
+| Windows x86-64 | `agentloop-vX.Y.Z-windows-x86_64.exe` |
+| macOS Intel | `agentloop-vX.Y.Z-macos-x86_64` |
+| macOS Apple silicon | `agentloop-vX.Y.Z-macos-arm64` |
+
+Download the matching file and `SHA256SUMS` from the
+[GitHub Releases page](https://github.com/dipeshbabu/agentloop/releases). For
+example, on Linux (replace `X.Y.Z` with the release version):
+
+```bash
+set -euo pipefail
+version=X.Y.Z
+asset="agentloop-v${version}-linux-x86_64"
+curl -LO "https://github.com/dipeshbabu/agentloop/releases/download/v${version}/${asset}"
+curl -LO "https://github.com/dipeshbabu/agentloop/releases/download/v${version}/SHA256SUMS"
+mapfile -t checksum_lines < <(awk -v asset="$asset" '$2 == asset { print }' SHA256SUMS)
+if [ "${#checksum_lines[@]}" -ne 1 ]; then
+  echo "Expected exactly one checksum for ${asset}" >&2
+  exit 1
+fi
+printf '%s\n' "${checksum_lines[0]}" | sha256sum --check --strict
+chmod +x "$asset"
+mkdir -p "$HOME/.local/bin"
+mv "$asset" "$HOME/.local/bin/agentloop"
+agentloop --help
+```
+
+On Windows PowerShell:
+
+```powershell
+$Version = "X.Y.Z"
+$Asset = "agentloop-v$Version-windows-x86_64.exe"
+Invoke-WebRequest "https://github.com/dipeshbabu/agentloop/releases/download/v$Version/$Asset" -OutFile agentloop.exe
+Invoke-WebRequest "https://github.com/dipeshbabu/agentloop/releases/download/v$Version/SHA256SUMS" -OutFile SHA256SUMS
+$ChecksumLines = @(Get-Content SHA256SUMS | Where-Object {
+    $_ -match "^[0-9a-fA-F]{64}  $([regex]::Escape($Asset))$"
+})
+if ($ChecksumLines.Count -ne 1) { throw "Expected exactly one checksum for $Asset" }
+$ExpectedHash = ($ChecksumLines[0] -split "  ", 2)[0]
+$ActualHash = (Get-FileHash .\agentloop.exe -Algorithm SHA256).Hash
+if ($ActualHash -ne $ExpectedHash) { throw "Checksum verification failed for $Asset" }
+.\agentloop.exe --help
+```
+
+Each release also includes a platform-specific `THIRD_PARTY_NOTICES-*.txt` with
+the exact CPython and bundled-dependency license and attribution texts. The macOS
+executables are ad-hoc signed but not notarized; depending on local Gatekeeper
+policy, the first launch may require explicit approval in
+**System Settings → Privacy & Security**.
+
+The standalone executable targets the core profiling CLI. Optional server,
+Postgres, dashboard, and Python SDK integration dependencies remain available
+through the Python package and Docker deployment.
+
+### Python package
+
 The PyPI distribution is named `agentloop-profiler`. The Python import package
 and command-line program remain `agentloop`:
 
 ```bash
 python -m pip install agentloop-profiler
+agentloop --help
+```
+
+For an isolated CLI installation that avoids modifying the system Python
+environment, use [`pipx`](https://pipx.pypa.io/). `pipx` still requires Python
+to be installed; use a standalone executable above when no Python runtime is
+available.
+
+```bash
+pipx install agentloop-profiler
 agentloop --help
 ```
 
