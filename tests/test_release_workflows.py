@@ -53,8 +53,13 @@ def test_ci_builds_and_smokes_native_standalone_executables() -> None:
     assert "scripts/agentloop_cli.py" in workflow
     assert '"$executable" --help' in workflow
     assert '"$executable" demo --kind baseline' in workflow
-    assert '"$executable" report runs/research_agent_baseline.json' in workflow
+    assert 'report_output="$smoke_dir/report.txt"' in workflow
+    assert '"$executable" report runs/research_agent_baseline.json > "$report_output"' in workflow
+    assert 'test -s "$report_output"' in workflow
+    assert "scripts/generate_standalone_notices.py" in workflow
+    assert 'test -s "$notice"' in workflow
     assert "name: standalone-${{ matrix.target }}" in workflow
+    assert "dist/THIRD_PARTY_NOTICES-${{ matrix.target }}.txt" in workflow
 
 
 def test_release_attaches_validated_artifacts_and_checksums_to_github() -> None:
@@ -65,10 +70,23 @@ def test_release_attaches_validated_artifacts_and_checksums_to_github() -> None:
     assert "contents: write" in workflow
     assert "pattern: standalone-*" in workflow
     assert "merge-multiple: true" in workflow
+    assert "for target in linux-x86_64 windows-x86_64 macos-x86_64 macos-arm64" in workflow
+    assert 'test -s "THIRD_PARTY_NOTICES-${target}.txt"' in workflow
     assert "find . -maxdepth 1 -type f ! -name SHA256SUMS" in workflow
     assert "xargs -0 sha256sum > SHA256SUMS" in workflow
     assert 'gh release create "$GITHUB_REF_NAME"' in workflow
     assert 'gh release upload "$GITHUB_REF_NAME" release-assets/* --clobber' in workflow
+
+
+def test_readme_checksum_lookup_fails_closed() -> None:
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+    assert "set -euo pipefail" in readme
+    assert "mapfile -t checksum_lines" in readme
+    assert 'if [ "${#checksum_lines[@]}" -ne 1 ]' in readme
+    assert "sha256sum --check --strict" in readme
+    assert "$ChecksumLines.Count -ne 1" in readme
+    assert "Checksum verification failed" in readme
 
 
 def test_release_accepts_manual_dispatch_so_tag_release_can_trigger_it() -> None:

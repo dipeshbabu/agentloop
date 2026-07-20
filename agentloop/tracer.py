@@ -7,8 +7,10 @@ from contextvars import ContextVar
 from pathlib import Path
 from typing import Any, Iterator
 
+from agentloop.costs import format_cost_usd
 from agentloop.events import AgentEvent, new_event_id, new_run_id, utc_now_iso
 from agentloop.metrics import build_report
+from agentloop.schema import SCHEMA_VERSION, validate_trace_dict
 
 _current_trace: ContextVar["AgentTrace | None"] = ContextVar(
     "agentloop_current_trace", default=None
@@ -49,6 +51,7 @@ class AgentTrace:
 
     def to_dict(self) -> dict[str, Any]:
         return {
+            "schema_version": SCHEMA_VERSION,
             "name": self.name,
             "run_id": self.run_id,
             "started_at": self.started_at,
@@ -60,6 +63,15 @@ class AgentTrace:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "AgentTrace":
+        """Deserialize a trace, validating the shared schema contract.
+
+        Raises :class:`agentloop.schema.TraceValidationError` (a ``ValueError``)
+        when the envelope or any event violates the schema. Traces without a
+        ``schema_version`` (0.4-era files) are accepted for backward
+        compatibility.
+        """
+
+        validate_trace_dict(data)
         trace = cls(
             name=data["name"],
             run_id=data["run_id"],
@@ -68,7 +80,10 @@ class AgentTrace:
             ended_at=data.get("ended_at"),
             elapsed_ms=data.get("elapsed_ms"),
         )
-        trace.events = [AgentEvent.from_dict(item) for item in data.get("events", [])]
+        trace.events = [
+            AgentEvent.from_dict(item, index=index)
+            for index, item in enumerate(data.get("events", []))
+        ]
         return trace
 
     def finish(self) -> None:
@@ -107,7 +122,12 @@ class AgentTrace:
         print(f"AgentLoop Report: {self.name}")
         print(f"Run ID: {self.run_id}")
         print(f"Total runtime: {report['total_runtime_ms'] / 1000:.2f}s")
-        print(f"Estimated cost: ${report['estimated_cost_usd']:.4f}")
+        print(
+            "Estimated cost: "
+            + format_cost_usd(
+                report.get("estimated_cost_usd"), report.get("cost_status", "complete")
+            )
+        )
         print(f"Model time: {report['model_time_ms'] / 1000:.2f}s")
         print(f"Tool time: {report['tool_time_ms'] / 1000:.2f}s")
         print(f"Retry time: {report['retry_time_ms'] / 1000:.2f}s")

@@ -102,6 +102,9 @@ jobs:
         run: |
           cp LICENSE THIRD_PARTY_LICENSES.md release-assets/
           cd release-assets
+          for target in linux-x86_64 windows-x86_64 macos-x86_64 macos-arm64; do
+            test -s "THIRD_PARTY_NOTICES-${target}.txt"
+          done
           find . -maxdepth 1 -type f ! -name SHA256SUMS -printf '%f\0' \
             | sort -z \
             | xargs -0 sha256sum > SHA256SUMS

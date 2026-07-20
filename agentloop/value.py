@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from agentloop.costs import is_cost_evaluable
 from agentloop.optimizer import build_optimization_plan
 
 
@@ -32,9 +33,18 @@ def build_value_report(
     estimated_after = plan["estimated_after"]
     cards = plan.get("optimization_cards", [])
 
+    cost_status = plan.get("cost_status", current.get("cost_status", "complete"))
+    cost_evaluable = is_cost_evaluable(cost_status)
     current_cost_per_run = float(current.get("estimated_cost_usd", 0.0))
-    optimized_cost_per_run = float(estimated_after.get("estimated_cost_usd", current_cost_per_run))
-    cost_savings_per_run = max(0.0, current_cost_per_run - optimized_cost_per_run)
+    optimized_cost_raw = estimated_after.get("estimated_cost_usd")
+    optimized_cost_per_run = (
+        float(optimized_cost_raw) if cost_evaluable and optimized_cost_raw is not None else None
+    )
+    cost_savings_per_run = (
+        max(0.0, current_cost_per_run - optimized_cost_per_run)
+        if optimized_cost_per_run is not None
+        else None
+    )
 
     current_runtime_ms = float(current.get("runtime_ms", 0.0))
     optimized_runtime_ms = float(estimated_after.get("runtime_ms", current_runtime_ms))
@@ -51,21 +61,31 @@ def build_value_report(
 
     engineering_hours_saved_monthly = _engineering_hours_saved(cards, runs_per_month)
     engineering_value_monthly = engineering_hours_saved_monthly * engineer_hourly_rate_usd
-    direct_model_cost_savings_monthly = cost_savings_per_run * runs_per_month
-    latency_hours_saved_monthly = (latency_savings_ms_per_run * runs_per_month) / 3_600_000
-    total_value_monthly = (
-        direct_model_cost_savings_monthly + engineering_value_monthly + avoided_incident_value
+    direct_model_cost_savings_monthly = (
+        cost_savings_per_run * runs_per_month if cost_savings_per_run is not None else None
     )
-    pricing = _pricing_scenario(
-        monthly_value=total_value_monthly,
-        runs_per_month=runs_per_month,
-        reliability_risk_score=reliability_risk_score,
-        cards=cards,
+    latency_hours_saved_monthly = (latency_savings_ms_per_run * runs_per_month) / 3_600_000
+    non_cost_value_monthly = engineering_value_monthly + avoided_incident_value
+    total_value_monthly = (
+        direct_model_cost_savings_monthly + non_cost_value_monthly
+        if direct_model_cost_savings_monthly is not None
+        else None
+    )
+    pricing = (
+        _pricing_scenario(
+            monthly_value=total_value_monthly,
+            runs_per_month=runs_per_month,
+            reliability_risk_score=reliability_risk_score,
+            cards=cards,
+        )
+        if total_value_monthly is not None
+        else _unavailable_pricing_scenario(non_cost_value_monthly)
     )
 
     return {
         "run_id": plan.get("run_id"),
         "name": plan.get("name"),
+        "cost_status": cost_status,
         "assumptions": {
             "runs_per_month": runs_per_month,
             "engineer_hourly_rate_usd": engineer_hourly_rate_usd,
@@ -74,18 +94,27 @@ def build_value_report(
         "current": current,
         "estimated_after": estimated_after,
         "per_run": {
-            "cost_savings_usd": round(cost_savings_per_run, 6),
+            "cost_savings_usd": (
+                None if cost_savings_per_run is None else round(cost_savings_per_run, 6)
+            ),
             "latency_savings_ms": round(latency_savings_ms_per_run, 3),
             "latency_reduction_pct": estimated_after.get("latency_reduction_pct", 0.0),
             "cost_reduction_pct": estimated_after.get("cost_reduction_pct", 0.0),
         },
         "monthly_value": {
-            "direct_model_cost_savings_usd": round(direct_model_cost_savings_monthly, 2),
+            "direct_model_cost_savings_usd": (
+                None
+                if direct_model_cost_savings_monthly is None
+                else round(direct_model_cost_savings_monthly, 2)
+            ),
             "engineering_hours_saved": round(engineering_hours_saved_monthly, 2),
             "engineering_value_usd": round(engineering_value_monthly, 2),
             "latency_hours_saved": round(latency_hours_saved_monthly, 2),
             "avoided_incident_value_usd": round(avoided_incident_value, 2),
-            "total_value_usd": round(total_value_monthly, 2),
+            "non_cost_operational_value_usd": round(non_cost_value_monthly, 2),
+            "total_value_usd": (
+                None if total_value_monthly is None else round(total_value_monthly, 2)
+            ),
         },
         "pricing": pricing,
         "reliability": {
@@ -194,6 +223,18 @@ def _pricing_scenario(
     }
 
 
+def _unavailable_pricing_scenario(non_cost_value: float) -> dict[str, Any]:
+    return {
+        "suggested_plan": None,
+        "suggested_monthly_price_usd": None,
+        "estimated_monthly_value_usd": None,
+        "estimated_non_cost_monthly_value_usd": round(non_cost_value, 2),
+        "value_to_price_ratio": None,
+        "rationale": "Pricing is unavailable because one or more model-call costs are unknown.",
+        "scenario_notes": [],
+    }
+
+
 def _scenario_notes(plan: str) -> list[str]:
     if plan == "free":
         return ["Local traces", "CLI reports", "Manual optimization plan export"]
@@ -222,13 +263,22 @@ def _top_risks(cards: list[dict[str, Any]]) -> list[str]:
 
 def _value_summary(
     *,
-    monthly_value: float,
+    monthly_value: float | None,
     latency_savings_ms_per_run: float,
-    cost_savings_per_run: float,
+    cost_savings_per_run: float | None,
     cards: list[dict[str, Any]],
     pricing: dict[str, Any],
 ) -> str:
     strongest_fix = cards[0]["title"] if cards else "No major bottleneck detected"
+    if monthly_value is None or cost_savings_per_run is None:
+        return (
+            f"AgentLoop found {len(cards)} optimization opportunities. "
+            f"The strongest immediate fix is: {strongest_fix}. "
+            f"Estimated latency savings are {latency_savings_ms_per_run / 1000:.2f}s per run. "
+            "Model-cost savings, total monthly value, and pricing are unavailable because "
+            "one or more model-call costs could not be priced."
+        )
+
     price = pricing.get("suggested_monthly_price_usd", 0)
     plan = pricing.get("suggested_plan", "free")
     price_line = "free local usage" if price == 0 else f"the {plan} plan at ${price:,.0f}/month"

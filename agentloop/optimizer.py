@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
+from agentloop.costs import is_cost_evaluable
 from agentloop.graph import ExecutionGraph
 from agentloop.savings import SavingsItem, select_compatible
 
@@ -28,7 +29,7 @@ class OptimizationCard:
     rewrite_hint: str
     confidence: str
     estimated_latency_savings_ms: float = 0.0
-    estimated_cost_savings_usd: float = 0.0
+    estimated_cost_savings_usd: float | None = 0.0
     affected_nodes: list[str] | None = None
 
     def to_dict(self) -> dict[str, Any]:
@@ -39,7 +40,11 @@ class OptimizationCard:
             "rewrite_hint": self.rewrite_hint,
             "confidence": self.confidence,
             "estimated_latency_savings_ms": round(self.estimated_latency_savings_ms, 3),
-            "estimated_cost_savings_usd": round(self.estimated_cost_savings_usd, 6),
+            "estimated_cost_savings_usd": (
+                None
+                if self.estimated_cost_savings_usd is None
+                else round(self.estimated_cost_savings_usd, 6)
+            ),
             "affected_nodes": self.affected_nodes or [],
         }
 
@@ -59,16 +64,29 @@ def build_optimization_plan(trace: Any, report: dict[str, Any] | None = None) ->
 
     current_runtime = report.get("total_runtime_ms", graph.total_runtime_ms())
     current_cost = report.get("estimated_cost_usd", 0.0)
-    aggregate = _aggregate_savings(cards, current_runtime, current_cost)
+    # `estimated_cost_usd` is only a complete measurement when cost_status is
+    # "complete"/"empty"; otherwise it's a lower bound (some model calls were
+    # unpriced). Surface that so a consumer doesn't read the cost/savings numbers
+    # below as exact for a trace that used unpriced models.
+    cost_status = report.get("cost_status", "complete")
+    cost_evaluable = is_cost_evaluable(cost_status)
+    if not cost_evaluable:
+        for card in cards:
+            card.estimated_cost_savings_usd = None
+    aggregate = _aggregate_savings(
+        cards, current_runtime, current_cost, cost_evaluable=cost_evaluable
+    )
     total_latency_savings = aggregate["latency_savings_ms"]
     total_cost_savings = aggregate["cost_savings_usd"]
 
     return {
         "run_id": trace.run_id,
         "name": trace.name,
+        "cost_status": cost_status,
         "current": {
             "runtime_ms": current_runtime,
             "estimated_cost_usd": current_cost,
+            "cost_status": cost_status,
             "input_tokens": report.get("input_tokens", 0),
             "output_tokens": report.get("output_tokens", 0),
             "retry_count": report.get("retry_count", 0),
@@ -76,13 +94,20 @@ def build_optimization_plan(trace: Any, report: dict[str, Any] | None = None) ->
         },
         "estimated_after": {
             "runtime_ms": round(max(0.0, current_runtime - total_latency_savings), 3),
-            "estimated_cost_usd": round(max(0.0, current_cost - total_cost_savings), 6),
+            "estimated_cost_usd": (
+                round(max(0.0, current_cost - total_cost_savings), 6)
+                if total_cost_savings is not None
+                else None
+            ),
+            "cost_status": cost_status,
             "latency_reduction_pct": round((total_latency_savings / current_runtime) * 100, 2)
             if current_runtime
             else 0.0,
-            "cost_reduction_pct": round((total_cost_savings / current_cost) * 100, 2)
-            if current_cost
-            else 0.0,
+            "cost_reduction_pct": (
+                round((total_cost_savings / current_cost) * 100, 2)
+                if total_cost_savings is not None and current_cost
+                else (0.0 if total_cost_savings == 0 else None)
+            ),
         },
         "savings_aggregation": aggregate["explanation"],
         "graph": graph.to_dict(),
@@ -91,7 +116,11 @@ def build_optimization_plan(trace: Any, report: dict[str, Any] | None = None) ->
 
 
 def _aggregate_savings(
-    cards: list[OptimizationCard], current_runtime: float, current_cost: float
+    cards: list[OptimizationCard],
+    current_runtime: float,
+    current_cost: float,
+    *,
+    cost_evaluable: bool = True,
 ) -> dict[str, Any]:
     """Combine per-card savings without double-counting overlapping spans.
 
@@ -116,9 +145,15 @@ def _aggregate_savings(
     ]
     selection = select_compatible(items)
     capped_latency = min(selection.latency_ms, current_runtime) if current_runtime else 0.0
-    capped_cost = min(selection.cost_usd, current_cost) if current_cost else 0.0
+    capped_cost = (
+        (min(selection.cost_usd, current_cost) if current_cost else 0.0) if cost_evaluable else None
+    )
     raw_latency = sum(card.estimated_latency_savings_ms for card in cards)
-    raw_cost = sum(card.estimated_cost_savings_usd for card in cards)
+    raw_cost = (
+        sum(float(card.estimated_cost_savings_usd or 0.0) for card in cards)
+        if cost_evaluable
+        else None
+    )
     return {
         "latency_savings_ms": capped_latency,
         "cost_savings_usd": capped_cost,
@@ -133,8 +168,8 @@ def _aggregate_savings(
             "selected_card_indexes": list(selection.indices),
             "raw_latency_savings_ms": round(raw_latency, 3),
             "effective_latency_savings_ms": round(capped_latency, 3),
-            "raw_cost_savings_usd": round(raw_cost, 6),
-            "effective_cost_savings_usd": round(capped_cost, 6),
+            "raw_cost_savings_usd": None if raw_cost is None else round(raw_cost, 6),
+            "effective_cost_savings_usd": (None if capped_cost is None else round(capped_cost, 6)),
         },
     }
 
@@ -162,6 +197,7 @@ def _context_cache_cards(report: dict[str, Any], graph: ExecutionGraph) -> list[
         return []
     model_nodes = [node.node_id for node in graph.nodes if node.event_type == "model_call"]
     current_cost = report.get("estimated_cost_usd", 0.0)
+    cost_evaluable = is_cost_evaluable(report.get("cost_status", "complete"))
     return [
         OptimizationCard(
             type=RecommendationType.CACHE_CONTEXT,
@@ -169,7 +205,7 @@ def _context_cache_cards(report: dict[str, Any], graph: ExecutionGraph) -> list[
             why=f"Repeated context ratio is {ratio:.1%}, which suggests stable instructions or source text are being resent.",
             rewrite_hint="Move stable instructions into cached prefixes, summaries, or framework-level memory instead of resending full text.",
             confidence="high" if ratio >= 0.20 else "medium",
-            estimated_cost_savings_usd=current_cost * min(0.5, ratio),
+            estimated_cost_savings_usd=(current_cost * min(0.5, ratio) if cost_evaluable else None),
             affected_nodes=model_nodes,
         )
     ]

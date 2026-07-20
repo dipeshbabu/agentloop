@@ -205,6 +205,16 @@ jobs:
             --name "agentloop-v${{ steps.version.outputs.version }}-${{ matrix.target }}" \
             scripts/agentloop_cli.py
 
+      - name: Generate standalone dependency notices
+        shell: bash
+        run: |
+          notice="dist/THIRD_PARTY_NOTICES-${{ matrix.target }}.txt"
+          uv run --frozen --no-dev --group standalone python \
+            scripts/generate_standalone_notices.py \
+            --target "${{ matrix.target }}" \
+            --output "$notice"
+          test -s "$notice"
+
       - name: Smoke standalone executable
         shell: bash
         run: |
@@ -216,7 +226,9 @@ jobs:
           mkdir -p "$smoke_dir"
           cd "$smoke_dir"
           "$executable" demo --kind baseline
-          "$executable" report runs/research_agent_baseline.json
+          report_output="$smoke_dir/report.txt"
+          "$executable" report runs/research_agent_baseline.json > "$report_output"
+          test -s "$report_output"
           test -s runs/research_agent_baseline.json
 
       - name: Upload standalone executable
@@ -224,7 +236,9 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: standalone-${{ matrix.target }}
-          path: dist/agentloop-v${{ steps.version.outputs.version }}-${{ matrix.target }}${{ matrix.extension }}
+          path: |
+            dist/agentloop-v${{ steps.version.outputs.version }}-${{ matrix.target }}${{ matrix.extension }}
+            dist/THIRD_PARTY_NOTICES-${{ matrix.target }}.txt
           if-no-files-found: error
 
   docker:

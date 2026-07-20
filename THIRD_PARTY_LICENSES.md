@@ -8,8 +8,11 @@ The source archive and wheel do not vendor dependency source code. Python
 installers resolve those packages separately from the constraints in
 `pyproject.toml` and the exact resolution in `uv.lock`. The standalone CLI
 executables bundle a Python interpreter, the core runtime dependencies, and the
-PyInstaller bootloader. Official GitHub releases attach this notice alongside
-those executables. The container image also includes installed Python
+PyInstaller bootloader. Official GitHub releases attach this review aid plus a
+generated `THIRD_PARTY_NOTICES-<platform>.txt` containing the version-specific
+CPython license and every locked build component's complete license and
+attribution files. The release workflow fails if any platform notice is missing.
+The container image also includes installed Python
 dependencies and operating-system components, so anyone redistributing either
 form must review and satisfy the licenses shipped in the final artifact.
 

@@ -1,5 +1,5 @@
 from agentloop.demo import run_baseline
-from agentloop.tracer import AgentTrace
+from agentloop.tracer import AgentTrace, trace_agent, trace_model_call
 from agentloop.value import build_value_report
 
 
@@ -44,3 +44,34 @@ def test_value_report_rejects_negative_assumptions(tmp_path):
         assert "runs_per_month" in str(exc)
     else:
         raise AssertionError("expected ValueError")
+
+
+def test_partial_cost_value_report_withholds_totals_and_pricing():
+    repeated = "stable context " * 100
+    with trace_agent("partial-value") as trace:
+        with trace_model_call(
+            "known",
+            model="gpt-4o",
+            input_tokens=200,
+            output_tokens=10,
+            input_text=repeated,
+        ):
+            pass
+        with trace_model_call(
+            "unknown",
+            model="private-model",
+            input_tokens=200,
+            output_tokens=10,
+            input_text=repeated,
+        ):
+            pass
+
+    report = build_value_report(trace, runs_per_month=1000)
+
+    assert report["cost_status"] == "partial"
+    assert report["per_run"]["cost_savings_usd"] is None
+    assert report["monthly_value"]["direct_model_cost_savings_usd"] is None
+    assert report["monthly_value"]["total_value_usd"] is None
+    assert report["pricing"]["suggested_plan"] is None
+    assert report["pricing"]["suggested_monthly_price_usd"] is None
+    assert "unavailable" in report["value_summary"]

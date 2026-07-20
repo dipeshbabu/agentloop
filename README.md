@@ -38,11 +38,17 @@ Download the matching file and `SHA256SUMS` from the
 example, on Linux (replace `X.Y.Z` with the release version):
 
 ```bash
+set -euo pipefail
 version=X.Y.Z
 asset="agentloop-v${version}-linux-x86_64"
 curl -LO "https://github.com/dipeshbabu/agentloop/releases/download/v${version}/${asset}"
 curl -LO "https://github.com/dipeshbabu/agentloop/releases/download/v${version}/SHA256SUMS"
-grep "  ${asset}$" SHA256SUMS | sha256sum --check
+mapfile -t checksum_lines < <(awk -v asset="$asset" '$2 == asset { print }' SHA256SUMS)
+if [ "${#checksum_lines[@]}" -ne 1 ]; then
+  echo "Expected exactly one checksum for ${asset}" >&2
+  exit 1
+fi
+printf '%s\n' "${checksum_lines[0]}" | sha256sum --check --strict
 chmod +x "$asset"
 mkdir -p "$HOME/.local/bin"
 mv "$asset" "$HOME/.local/bin/agentloop"
@@ -55,13 +61,22 @@ On Windows PowerShell:
 $Version = "X.Y.Z"
 $Asset = "agentloop-v$Version-windows-x86_64.exe"
 Invoke-WebRequest "https://github.com/dipeshbabu/agentloop/releases/download/v$Version/$Asset" -OutFile agentloop.exe
+Invoke-WebRequest "https://github.com/dipeshbabu/agentloop/releases/download/v$Version/SHA256SUMS" -OutFile SHA256SUMS
+$ChecksumLines = @(Get-Content SHA256SUMS | Where-Object {
+    $_ -match "^[0-9a-fA-F]{64}  $([regex]::Escape($Asset))$"
+})
+if ($ChecksumLines.Count -ne 1) { throw "Expected exactly one checksum for $Asset" }
+$ExpectedHash = ($ChecksumLines[0] -split "  ", 2)[0]
+$ActualHash = (Get-FileHash .\agentloop.exe -Algorithm SHA256).Hash
+if ($ActualHash -ne $ExpectedHash) { throw "Checksum verification failed for $Asset" }
 .\agentloop.exe --help
 ```
 
-Compare `Get-FileHash .\agentloop.exe -Algorithm SHA256` with the matching entry
-in `SHA256SUMS` before installing it on `PATH`. The macOS executables are
-ad-hoc signed but not notarized; depending on local Gatekeeper policy, the first
-launch may require explicit approval in **System Settings → Privacy & Security**.
+Each release also includes a platform-specific `THIRD_PARTY_NOTICES-*.txt` with
+the exact CPython and bundled-dependency license and attribution texts. The macOS
+executables are ad-hoc signed but not notarized; depending on local Gatekeeper
+policy, the first launch may require explicit approval in
+**System Settings → Privacy & Security**.
 
 The standalone executable targets the core profiling CLI. Optional server,
 Postgres, dashboard, and Python SDK integration dependencies remain available
@@ -247,6 +262,18 @@ uv run agentloop replay \
 result into pass/fail gates for CI and PR comments. It reports latency, cost,
 token, retry, tool-call, model-call, schema, and quality deltas, then exits
 non-zero when gates fail unless `--no-fail-on-gate` is used.
+
+Cost estimates are provider-aware and offline. A model with a known rate is
+calculated (with the pricing `source`/`as_of` recorded in the report), a
+provider-reported cost is used verbatim, and a model with no known rate is
+reported as **unknown** rather than assigned a fabricated fallback rate. Configure
+rates for your own or newer models with `AGENTLOOP_PRICING_FILE` — see the
+[pricing guide](docs/PRICING.md).
+
+Reports persist a `cost_status` (`complete`, `partial`, `unknown`, or `empty`).
+Partial totals are labeled as known lower bounds, while savings, comparisons,
+modeled total value, and suggested pricing remain unavailable until every model
+call has a valid rate or provider-reported cost.
 
 ## Quality gates
 
@@ -611,7 +638,7 @@ priorities, and non-goals.
 
 ## License
 
-Copyright 2026 Dipesh Babu and AgentLoop contributors.
+Copyright 2026 Dipesh Tharu Mahato and AgentLoop contributors.
 
 AgentLoop is licensed under the [Apache License 2.0](LICENSE). Dependencies keep
 their own terms; see the [third-party software inventory](THIRD_PARTY_LICENSES.md).

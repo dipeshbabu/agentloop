@@ -150,8 +150,10 @@ After the PyPI trusted publisher is configured and `PYPI_PUBLISH_ENABLED` is
    manual approval, regardless of how the tag was created.
 5. Independently of the PyPI environment, `publish-github` creates the GitHub
    Release when needed and attaches the validated Python distributions, four
-   standalone executables, `LICENSE`, `THIRD_PARTY_LICENSES.md`, and
-   `SHA256SUMS`. Rerunning the workflow updates those assets in place.
+   standalone executables, four platform-specific complete dependency-notice
+   bundles, `LICENSE`, `THIRD_PARTY_LICENSES.md`, and `SHA256SUMS`. The release
+   fails closed if a dependency notice is missing. Rerunning the workflow updates
+   those assets in place.
 6. Verify the installed Python artifact in a fresh environment:
 
    ```bash

@@ -133,6 +133,10 @@ def _span_to_otel(span: Any, trace_id: str) -> dict[str, Any]:
     # Preserve the original native ids for diagnosability (see agentloop.otel_ids).
     attrs.append(_attribute("agentloop.native_span_id", native_span_id))
     attrs.append(_attribute("agentloop.native_trace_id", str(trace_id)))
+    # The SDK span id is this event's native identity. Emitting it under the same
+    # attribute the core exporter uses keeps event/parent ids in one id space, so
+    # the importer links parents by native id consistently (see agentloop.otel).
+    attrs.append(_attribute("agentloop.native_event_id", native_span_id))
     error = _read(span, "error")
     status = {"code": "STATUS_CODE_OK"}
     if error is not None:

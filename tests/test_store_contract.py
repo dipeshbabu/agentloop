@@ -126,6 +126,7 @@ def test_init_is_idempotent_and_creates_default_project(store):
     store.init()
     traces = store.list_traces(project_id="default")
     assert traces == []
+    assert store.usage_summary(project_id="default")["cost_status"] == "empty"
 
 
 def test_concurrent_init_does_not_raise_or_duplicate_migrations(store):
@@ -184,6 +185,113 @@ def test_double_save_does_not_double_count_usage(store):
     summary = store.usage_summary(project_id="proj_a")
     assert summary["run_count"] == 1
     assert summary["model_call_count"] == 1
+
+
+def test_cost_completeness_survives_trace_and_usage_persistence(store):
+    with trace_agent("partial-cost") as trace:
+        with trace_model_call("known", model="gpt-4o", input_tokens=100, output_tokens=10):
+            pass
+        with trace_model_call("unknown", model="private-model", input_tokens=100, output_tokens=10):
+            pass
+
+    store.save_trace(trace, project_id="proj_a")
+
+    stored = store.list_traces(project_id="proj_a")[0]
+    assert stored["cost_status"] == "partial"
+    assert stored["priced_model_call_count"] == 1
+    assert stored["unavailable_model_call_count"] == 1
+    paged = store.list_traces_page(project_id="proj_a", limit=1)["items"][0]
+    assert paged["cost_status"] == "partial"
+    assert paged["priced_model_call_count"] == 1
+    assert paged["unavailable_model_call_count"] == 1
+
+    summary = store.usage_summary(project_id="proj_a")
+    assert summary["cost_status"] == "partial"
+    assert summary["estimated_cost_usd"] is None
+    assert summary["priced_model_call_count"] == 1
+    assert summary["unavailable_model_call_count"] == 1
+    queue = store.optimization_queue(project_id="proj_a")
+    assert queue
+    assert all(item["cost_status"] == "partial" for item in queue)
+    assert all(item["estimated_cost_savings_usd"] is None for item in queue)
+
+
+def test_usage_missing_cost_is_persisted_as_unknown_not_zero(store):
+    store.init()
+    store.record_usage(
+        "proj_a",
+        "legacy-missing-cost",
+        {
+            "total_runtime_ms": 1,
+            "input_tokens": 10,
+            "output_tokens": 1,
+            "model_call_count": 1,
+            "tool_call_count": 0,
+            "retry_count": 0,
+        },
+    )
+
+    summary = store.usage_summary(project_id="proj_a")
+    assert summary["cost_status"] == "unknown"
+    assert summary["estimated_cost_usd"] is None
+    assert summary["priced_model_call_count"] == 0
+    assert summary["unavailable_model_call_count"] == 1
+
+
+@pytest.mark.parametrize("cost_status", [None, "invalid", "empty"])
+def test_usage_without_pricing_evidence_fails_closed(store, cost_status):
+    store.init()
+    report = {
+        "estimated_cost_usd": 1.0,
+        "model_call_count": 1,
+    }
+    if cost_status is not None:
+        report["cost_status"] = cost_status
+    store.record_usage("proj_a", "legacy-no-breakdown", report)
+
+    summary = store.usage_summary(project_id="proj_a")
+    assert summary["cost_status"] == "unknown"
+    assert summary["estimated_cost_usd"] is None
+    assert summary["priced_model_call_count"] == 0
+    assert summary["unavailable_model_call_count"] == 1
+
+
+@pytest.mark.parametrize(
+    "bad_count",
+    ["invalid", None, float("nan"), float("inf"), -1, 1.5, True, 2_147_483_648],
+)
+def test_usage_malformed_model_call_count_fails_closed(store, bad_count):
+    store.init()
+    store.record_usage(
+        "proj_a",
+        "malformed-model-count",
+        {
+            "estimated_cost_usd": 1.0,
+            "model_call_count": bad_count,
+        },
+    )
+
+    summary = store.usage_summary(project_id="proj_a")
+    assert summary["cost_status"] == "unknown"
+    assert summary["estimated_cost_usd"] is None
+    assert summary["model_call_count"] == 0
+
+
+@pytest.mark.parametrize("bad_cost", ["invalid", float("nan"), float("inf"), -1, True])
+def test_usage_malformed_estimated_cost_fails_closed(store, bad_cost):
+    store.init()
+    store.record_usage(
+        "proj_a",
+        "malformed-cost",
+        {
+            "estimated_cost_usd": bad_cost,
+            "model_call_count": 1,
+        },
+    )
+
+    summary = store.usage_summary(project_id="proj_a")
+    assert summary["cost_status"] == "unknown"
+    assert summary["estimated_cost_usd"] is None
 
 
 def test_retry_after_simulated_lost_response_is_idempotent(store):
