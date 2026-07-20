@@ -42,12 +42,18 @@ old readers.
 
 ## Acceptance criteria (from the issue)
 
-- [ ] Malformed trace and quality payloads never produce an unhandled 500.
-- [ ] Validation responses identify the field and reason.
-- [ ] Valid existing 0.4 trace files remain readable through a documented compatibility path.
-- [ ] Unknown future fields follow an explicit preserve/ignore/reject policy.
-- [ ] CLI import, HTTP ingestion, Vercel/OTLP adapters, both stores, and round-trip tests use the same schema contract.
-- [ ] The schema and compatibility policy are documented for contributors and integrators.
+- [x] Malformed trace and quality payloads never produce an unhandled 500.
+- [x] Validation responses identify the field and reason.
+- [x] Valid existing 0.4 trace files remain readable through a documented compatibility path.
+- [x] Unknown future fields follow an explicit preserve/ignore/reject policy (**ignore**).
+- [x] CLI import, HTTP ingestion, Vercel/OTLP adapters, both stores, and round-trip tests use the same schema contract.
+- [x] The schema and compatibility policy are documented for contributors and integrators.
+
+**Resolved** on branch `stream-c-schema-interop` via `agentloop/schema.py` (shared
+`SCHEMA_VERSION` + `TraceValidationError` + validators wired into
+`AgentTrace/AgentEvent.from_dict`), a `422` mapping in `server.py`, and
+[`docs/TRACE_SCHEMA.md`](../../docs/TRACE_SCHEMA.md). Unknown-field policy: **ignore**
+(use `metadata` to round-trip custom data).
 
 ## Testing
 

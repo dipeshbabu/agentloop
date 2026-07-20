@@ -1,7 +1,10 @@
 # Stream C — Trace schema & interop
 
-> **Status: 🔴 Open.** #13, #40, and #63 are open. #17's OTLP identifier work remains
-> complete, but the broader schema and OTLP round-trip contracts are not done.
+> **Status: 🟢 Resolved on branch `stream-c-schema-interop` (pending PR review/merge).**
+> #13 (versioned schema + 4xx validation), #40 (batched OTLP trace boundaries), and
+> #63 (native identity/metadata across OTLP round trips) are all implemented with tests
+> and docs on this branch. #17's OTLP identifier work was already complete. Once the PR
+> merges and the issues close on GitHub, move this folder into [`../done/`](../done/).
 
 ## Scope
 

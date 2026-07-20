@@ -43,4 +43,4 @@ Both issues' acceptance criteria met; CI starts the built image and hits `/ready
 trace round-trip; a punctuation-heavy DB password works end-to-end; `.env.example` and
 `docs/PRODUCTION.md` updated; no secret ever logged.
 
-See [`../SHARED_CONVENTIONS.md`](../SHARED_CONVENTIONS.md).
+See [`SHARED_CONVENTIONS.md`](../../SHARED_CONVENTIONS.md).
