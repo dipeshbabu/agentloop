@@ -12,6 +12,7 @@ from agentloop.findings import build_diagnosis
 from agentloop.issues import build_issue_drafts
 from agentloop.optimizer import build_optimization_plan
 from agentloop.quality import QualityValidationError, build_quality_report
+from agentloop.schema import TraceValidationError
 from agentloop.store import (
     DEFAULT_PAGE_SIZE,
     MAX_PAGE_SIZE,
@@ -42,6 +43,7 @@ if _cors_origins:
 class TracePayload(BaseModel):
     name: str
     run_id: str
+    schema_version: str | None = None
     started_at: str | None = None
     ended_at: str | None = None
     elapsed_ms: float | None = Field(default=None, ge=0)
@@ -128,7 +130,12 @@ def ingest_trace(
     project_id: str = Depends(resolve_project),
     db: TraceStore = Depends(store),
 ) -> dict[str, Any]:
-    trace = AgentTrace.from_dict(payload.model_dump())
+    try:
+        trace = AgentTrace.from_dict(payload.model_dump())
+    except TraceValidationError as exc:
+        raise HTTPException(
+            status_code=422, detail={"field": exc.field, "reason": exc.reason}
+        ) from None
     try:
         db.save_trace(trace, project_id=project_id)
     except TraceProjectConflictError as exc:

@@ -82,6 +82,79 @@ def test_ingest_trace_preserves_explicit_elapsed_runtime() -> None:
     assert response.json()["report"]["cumulative_span_time_ms"] == 0
 
 
+def test_ingest_trace_serializes_schema_version() -> None:
+    with trace_agent("schema-version") as trace:
+        with trace_model_call("call", input_tokens=1, output_tokens=1):
+            pass
+    from agentloop.schema import SCHEMA_VERSION
+
+    assert trace.to_dict()["schema_version"] == SCHEMA_VERSION
+
+
+def test_ingest_malformed_event_returns_422_not_500() -> None:
+    client = TestClient(app)
+    response = client.post(
+        "/traces",
+        json={"name": "bad", "run_id": "run_bad", "events": [{"unexpected": True}]},
+    )
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert detail["field"].startswith("events[0]")
+    assert detail["reason"]
+
+
+def test_ingest_negative_tokens_returns_422() -> None:
+    client = TestClient(app)
+    with trace_agent("neg-tokens") as trace:
+        with trace_model_call("call", input_tokens=1, output_tokens=1):
+            pass
+    payload = trace.to_dict()
+    payload["events"][0]["input_tokens"] = -5
+
+    response = client.post("/traces", json=payload)
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["field"] == "events[0].input_tokens"
+
+
+def test_ingest_event_run_id_mismatch_returns_422() -> None:
+    client = TestClient(app)
+    with trace_agent("mismatch") as trace:
+        with trace_model_call("call", input_tokens=1, output_tokens=1):
+            pass
+    payload = trace.to_dict()
+    payload["events"][0]["run_id"] = "run_somethingelse"
+
+    response = client.post("/traces", json=payload)
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["field"] == "events[0].run_id"
+
+
+def test_ingest_future_schema_version_returns_422() -> None:
+    client = TestClient(app)
+    with trace_agent("future") as trace:
+        with trace_model_call("call", input_tokens=1, output_tokens=1):
+            pass
+    payload = trace.to_dict()
+    payload["schema_version"] = "999.0"
+
+    response = client.post("/traces", json=payload)
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["field"] == "schema_version"
+
+
+def test_quality_report_string_scorer_is_4xx_not_500() -> None:
+    client = TestClient(app)
+    response = client.post(
+        "/quality-report",
+        json={"fixtures": [{"candidate_output": "ok", "scorer": "exact_match"}]},
+    )
+    assert 400 <= response.status_code < 500
+    assert "object" in response.json()["detail"]
+
+
 def test_optimize_trace_endpoint() -> None:
     client = TestClient(app)
     with trace_agent("server-optimize-test") as trace:

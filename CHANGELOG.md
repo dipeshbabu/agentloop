@@ -43,6 +43,29 @@ Project history from before the first public release remains available in Git.
 - Added a repository-owned CodeRabbit configuration for automatic, incremental
   pull-request reviews focused on correctness, security, compatibility, and
   regression coverage, while leaving merge authorization to CI and human reviewers.
+- **Versioned native trace schema with boundary validation (#13).** Serialized
+  traces now carry a `schema_version` field, and deserialization
+  (`AgentTrace.from_dict`) validates required fields, types, non-negative
+  durations/token counts, supported statuses, unique event ids, and
+  event-to-trace `run_id` consistency through the shared
+  `agentloop.schema` contract. Malformed trace payloads to `POST /traces` now
+  return a structured `422` naming the offending `field` and `reason` instead of
+  an unhandled `500`. Existing 0.4-era traces (no `schema_version`) remain
+  readable, and unknown future fields are ignored rather than rejected — use
+  `metadata` to carry data that must round-trip. The schema and its
+  compatibility policy are documented in the new `docs/TRACE_SCHEMA.md`.
+- **Batched OTLP imports preserve trace boundaries (#40).** New
+  `traces_from_otel()` groups spans by `traceId` (regardless of payload order)
+  and returns one trace per trace id, so an OTLP batch of unrelated traces is no
+  longer collapsed into one. The single-trace `trace_from_otel()` now rejects a
+  multi-trace batch with an actionable error instead of silently rewriting every
+  span's identity; single-trace behavior is unchanged.
+- **AgentLoop identity and metadata survive OTLP round trips (#63).**
+  `trace_from_otel()` now reads AgentLoop resource attributes to restore the
+  native trace name, run id, and per-event/parent identity; decodes the
+  `agentloop.metadata.` namespace exactly once (no more prefix growth across
+  repeated round trips); and keeps transport/native-id attributes out of user
+  metadata while preserving genuine third-party attributes.
 
 ### Changed
 
