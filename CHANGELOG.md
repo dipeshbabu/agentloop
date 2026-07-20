@@ -10,6 +10,11 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added checksummed standalone AgentLoop CLI executables for Linux x86-64,
+  Windows x86-64, macOS Intel, and macOS Apple silicon. Tagged release workflows
+  now smoke-test observable report output and attach these binaries plus complete,
+  version-specific CPython and dependency notices to an automatically created
+  GitHub Release, so the core CLI can run without a preinstalled Python environment.
 - **Provider-aware model cost estimation with an explicit unknown state.** The
   cost calculator now recognizes OpenAI, Anthropic, and Google models, resolves
   provider prefixes (`openai/gpt-4o`) and dated snapshots (`gpt-4.1-2025-04-14`

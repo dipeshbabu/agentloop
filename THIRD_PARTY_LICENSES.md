@@ -6,10 +6,15 @@ relicense those components under the AgentLoop license.
 
 The source archive and wheel do not vendor dependency source code. Python
 installers resolve those packages separately from the constraints in
-`pyproject.toml` and the exact resolution in `uv.lock`. The container image does
-include installed Python dependencies and operating-system components, so anyone
-redistributing that image must review and satisfy the licenses shipped in the
-final image.
+`pyproject.toml` and the exact resolution in `uv.lock`. The standalone CLI
+executables bundle a Python interpreter, the core runtime dependencies, and the
+PyInstaller bootloader. Official GitHub releases attach this review aid plus a
+generated `THIRD_PARTY_NOTICES-<platform>.txt` containing the version-specific
+CPython license and every locked build component's complete license and
+attribution files. The release workflow fails if any platform notice is missing.
+The container image also includes installed Python
+dependencies and operating-system components, so anyone redistributing either
+form must review and satisfy the licenses shipped in the final artifact.
 
 ## Direct runtime dependencies
 
@@ -28,6 +33,13 @@ for the complete license text and notices distributed by each dependency.
 | [psycopg](https://www.psycopg.org/) and `psycopg-binary` | `postgres` extra | LGPL-3.0-only |
 | [OpenAI Python](https://github.com/openai/openai-python) | `instrumentation` extra | Apache-2.0 |
 
+## Standalone executable components
+
+| Dependency | Used by | Reported license |
+| --- | --- | --- |
+| [CPython](https://www.python.org/) | Embedded standalone CLI runtime | PSF-2.0 |
+| [PyInstaller](https://pyinstaller.org/) | Standalone CLI builder and bootloader | GPL-2.0-or-later with a special exception permitting distribution of generated executables under the project's license |
+
 The locked transitive graph also contains packages under permissive licenses and
 components under MPL-2.0, including Certifi and tqdm. Consult `uv.lock` and the
 installed distributions for the complete version-specific dependency graph,
@@ -45,8 +57,9 @@ uv run --no-dev --with pip-licenses pip-licenses --format=markdown --with-urls
 
 Review both direct and transitive changes. In particular, inspect copyleft or
 source-available terms, bundled native binaries, required notices, patent terms,
-and whether the package will be redistributed in the container. Restore the
-development environment afterward with `uv sync --locked --all-extras --dev`.
+and whether the package will be redistributed in the container or standalone
+executables. Restore the development environment afterward with
+`uv sync --locked --all-extras --dev`.
 
 If a dependency's metadata and upstream license disagree, treat the upstream
 license files for the locked version as authoritative and resolve the ambiguity
