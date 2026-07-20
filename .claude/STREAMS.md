@@ -26,12 +26,14 @@ choosing new work.
 | Stream | Status | Open issues | Completed scope |
 |---|---|---|---|
 | A — Persistence & data APIs | 🟡 Follow-up | #19, #31 | #10, #22 |
-| B — Tracing runtime & integrations | 🟡 Follow-up | #60, #61, #62, #64 | #11, #15, #16, #28 |
-| C — Trace schema & interop | 🔴 Open | #13, #40, #63 | #17 |
-| D — Analysis & reporting correctness | 🔴 Open | #12, #20, #41 | none |
+| B — Tracing runtime & integrations | 🟡 Follow-up | #60, #61 | #11, #15, #16, #28, #62, #64 |
+| C — Trace schema & interop | 🟢 Resolved (PR under review) | #13, #40, #63 | #17 |
+| D — Analysis & reporting correctness | 🔴 Open | #12, #41 | #20 |
 | E — Dashboard robustness | 🔴 Open | #21 | none |
-| F — Docker & deployment | ✅ Done | none | #23, #24 |
+| F — Docker & deployment | ✅ Done (archived in `done/`) | none | #23, #24 |
 | G — Release & repo governance | 🟡 Follow-up | #54 | #25, #26, #27, #52 and repository hardening |
+
+Completed streams are moved to [`done/`](done/) so only active streams need tracking here.
 
 ## Current active backlog
 
@@ -51,12 +53,10 @@ do not reuse the old implementation assumptions without checking the code.
 - **#60** — keep generator and async-generator traces active for the iterator lifecycle.
 - **#61** — record async cancellation as a non-successful outcome across native tracing
   and integrations.
-- **#62** — isolate project and administrator credentials in the public client.
-- **#64** — propagate OpenAI Agents span errors into AgentLoop events.
 
-#60 and #61 overlap in tracing/decorator lifecycle code. #61 and #64 also share error
-outcome semantics. Keep each issue in a separate PR, but sequence or rebase them rather
-than editing the same wrappers concurrently. #62 is largely independent.
+#62 (credential isolation) and #64 (OpenAI Agents span-error propagation) are complete.
+#60 and #61 overlap in tracing/decorator lifecycle code. Keep each issue in a separate
+PR, but sequence or rebase them rather than editing the same wrappers concurrently.
 
 ### Stream C — Trace schema & interop
 
@@ -69,15 +69,20 @@ than editing the same wrappers concurrently. #62 is largely independent.
 parallel branches without coordination. #13 defines the broader serialization contract;
 each OTLP change must remain compatible with it.
 
+**Update:** #13, #40, and #63 are implemented together on branch
+`stream-c-schema-interop` (a shared `agentloop/schema.py` contract, `traces_from_otel()`
+batch API, OTLP identity/metadata round-trip fixes, tests, and `docs/TRACE_SCHEMA.md`).
+The PR closes all three. After it merges, archive `stream-c-schema-interop/` into `done/`.
+
 ### Stream D — Analysis & reporting correctness
 
 - **#12** — fail closed for empty, invalid, or failing quality fixtures. This issue was
   reopened because supplied failures can still be ignored by default replay gates.
-- **#20** — make cost estimates provider-aware and explicit for unknown models.
 - **#41** — make large savings selection optimal or expose approximation semantics.
 
-#20 and #41 both affect reported value and optimization results. Keep their machine-
-readable output contracts consistent if they are developed near each other.
+#20 (provider-aware cost estimates) is complete. #41 affects reported value and
+optimization results; keep its machine-readable output contract consistent with the
+already-shipped cost reporting.
 
 ### Stream E — Dashboard robustness
 
@@ -88,7 +93,8 @@ pre-`v0.5.0` dashboard described in the original issue plan.
 
 ### Stream F — Docker & deployment
 
-No open issues are currently assigned. #23 and #24 are complete.
+Complete. No open issues. #23 and #24 shipped; the stream plan is archived in
+[`done/stream-f-docker-deployment/`](done/stream-f-docker-deployment/).
 
 ### Stream G — Release & repo governance
 
@@ -122,7 +128,7 @@ contract documented in the Stream G README and `docs/RELEASING.md`.
 | C — Trace schema & interop | `stream-c-schema-interop/` | native schema, HTTP validation, OTLP import/export |
 | D — Analysis & reporting correctness | `stream-d-analysis-reporting/` | quality/replay gates, costs, savings and value reporting |
 | E — Dashboard robustness | `stream-e-dashboard/` | `dashboard/` (Streamlit) |
-| F — Docker & deployment | `stream-f-docker-deployment/` | Dockerfile, Compose, container CI |
+| F — Docker & deployment | `done/stream-f-docker-deployment/` | Dockerfile, Compose, container CI (complete) |
 | G — Release & repo governance | `stream-g-release-governance/` | packaging, release workflows, distribution, GitHub settings |
 
 ## Cross-stream coordination
