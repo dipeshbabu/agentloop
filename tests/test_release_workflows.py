@@ -56,6 +56,7 @@ def test_ci_builds_and_smokes_native_standalone_executables() -> None:
     assert 'report_output="$smoke_dir/report.txt"' in workflow
     assert '"$executable" report runs/research_agent_baseline.json > "$report_output"' in workflow
     assert 'test -s "$report_output"' in workflow
+    assert "test -s runs/research_agent_baseline.json" in workflow
     assert "scripts/generate_standalone_notices.py" in workflow
     assert 'test -s "$notice"' in workflow
     assert "name: standalone-${{ matrix.target }}" in workflow
