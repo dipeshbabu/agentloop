@@ -99,6 +99,10 @@ Project history from before the first public release remains available in Git.
 
 ### Fixed
 
+- Async cancellation now records model/tool and supported integration spans as
+  errors exactly once, preserves task cancellation propagation and context
+  cleanup, and retains useful `CancelledError` detail when the exception message
+  is empty (#61).
 - OpenAI Agents SDK spans now propagate failure status, messages, and safely
   normalized structured error context into AgentLoop events.
 - Quality gates now preserve exact JSON/Python value types, distinguish missing

@@ -3,6 +3,8 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
+import pytest
+
 from agentloop.integrations.langgraph import instrument_state_graph, trace_node, trace_runnable
 from agentloop.tracer import trace_agent
 
@@ -62,6 +64,26 @@ def test_trace_node_records_async_event() -> None:
         assert result["x"] == 1
         assert len(trace.events) == 1
         assert trace.events[0].name == "async_step"
+
+    asyncio.run(run())
+
+
+def test_trace_node_records_async_cancellation_once_and_propagates() -> None:
+    cancellation = asyncio.CancelledError()
+
+    @trace_node("cancelled_step")
+    async def step(state: dict[str, Any]) -> dict[str, Any]:
+        raise cancellation
+
+    async def run() -> None:
+        with trace_agent("test") as trace:
+            with pytest.raises(asyncio.CancelledError) as caught:
+                await step({})
+        assert caught.value is cancellation
+        assert len(trace.events) == 1
+        assert trace.events[0].name == "cancelled_step"
+        assert trace.events[0].status == "error"
+        assert trace.events[0].error == "CancelledError"
 
     asyncio.run(run())
 

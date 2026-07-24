@@ -45,6 +45,12 @@ Available decorators:
 For a custom Python agent, add the three decorators, run the agent once, and
 inspect or export the resulting trace.
 
+Async cancellation is recorded as a non-successful span before the original
+`asyncio.CancelledError` is re-raised unchanged. This contract also applies to
+LangGraph nodes, instrumented CrewAI task/agent methods, and OpenAI calls and
+streams. When cancellation has no message, the event error is `CancelledError`
+rather than an empty string.
+
 ## OpenAI SDK
 
 ```python

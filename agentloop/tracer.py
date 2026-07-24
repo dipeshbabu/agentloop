@@ -8,7 +8,13 @@ from pathlib import Path
 from typing import Any, Iterator
 
 from agentloop.costs import format_cost_usd
-from agentloop.events import AgentEvent, new_event_id, new_run_id, utc_now_iso
+from agentloop.events import (
+    AgentEvent,
+    format_exception_detail,
+    new_event_id,
+    new_run_id,
+    utc_now_iso,
+)
 from agentloop.metrics import build_report
 from agentloop.schema import SCHEMA_VERSION, validate_trace_dict
 
@@ -279,9 +285,9 @@ def trace_model_call(
     error = None
     try:
         yield
-    except Exception as exc:
+    except BaseException as exc:  # noqa: BLE001 - record then propagate unchanged
         status = "error"
-        error = str(exc)
+        error = format_exception_detail(exc)
         raise
     finally:
         ended_at = utc_now_iso()
@@ -319,9 +325,9 @@ def trace_tool_call(name: str, metadata: dict[str, Any] | None = None) -> Iterat
     error = None
     try:
         yield
-    except Exception as exc:
+    except BaseException as exc:  # noqa: BLE001 - record then propagate unchanged
         status = "error"
-        error = str(exc)
+        error = format_exception_detail(exc)
         raise
     finally:
         ended_at = utc_now_iso()

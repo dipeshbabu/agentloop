@@ -5,7 +5,7 @@ import time
 from functools import wraps
 from typing import Any
 
-from agentloop.events import utc_now_iso
+from agentloop.events import format_exception_detail, utc_now_iso
 from agentloop.tracer import current_event_id, current_trace, record_model_call
 
 # Marker set on wrappers so repeated instrumentation of the same callable is a
@@ -136,6 +136,11 @@ class _CallRecorder:
             trace=self._trace,
         )
 
+    def fail(self, exc: BaseException, result: Any = None) -> None:
+        """Record one failed outcome while preserving the caller's exception."""
+
+        self.finalize(result, status="error", error=format_exception_detail(exc))
+
 
 def _has_usage(obj: Any) -> bool:
     return _find_usage(obj) is not None
@@ -177,46 +182,61 @@ class _InstrumentedSyncStream:
         self._usage_source: Any = None
 
     def __iter__(self) -> _InstrumentedSyncStream:
-        self._iter = iter(self._stream)
+        try:
+            self._iter = iter(self._stream)
+        except BaseException as exc:  # noqa: BLE001 - record then propagate unchanged
+            self._recorder.fail(exc, self._usage_source)
+            raise
         return self
 
     def __next__(self) -> Any:
-        if self._iter is None:
-            self._iter = iter(self._stream)
         try:
+            if self._iter is None:
+                self._iter = iter(self._stream)
             chunk = next(self._iter)
         except StopIteration:
             self._recorder.finalize(self._usage_source)
             raise
         except BaseException as exc:  # noqa: BLE001 - record then propagate unchanged
-            self._recorder.finalize(self._usage_source, status="error", error=str(exc))
+            self._recorder.fail(exc, self._usage_source)
             raise
         if _has_usage(chunk):
             self._usage_source = chunk
         return chunk
 
     def __enter__(self) -> _InstrumentedSyncStream:
-        if hasattr(self._stream, "__enter__"):
-            self._stream.__enter__()
+        try:
+            if hasattr(self._stream, "__enter__"):
+                self._stream.__enter__()
+        except BaseException as exc:  # noqa: BLE001 - record then propagate unchanged
+            self._recorder.fail(exc, self._usage_source)
+            raise
         return self
 
     def __exit__(self, exc_type: Any, exc: Any, tb: Any) -> Any:
-        suppress = None
-        if hasattr(self._stream, "__exit__"):
-            suppress = self._stream.__exit__(exc_type, exc, tb)
-        if exc is not None:
-            self._recorder.finalize(self._usage_source, status="error", error=str(exc))
+        try:
+            suppress = (
+                self._stream.__exit__(exc_type, exc, tb)
+                if hasattr(self._stream, "__exit__")
+                else None
+            )
+        except BaseException as exit_exc:  # noqa: BLE001 - record then propagate unchanged
+            self._recorder.fail(exit_exc, self._usage_source)
+            raise
+        if exc is not None and not suppress:
+            self._recorder.fail(exc, self._usage_source)
         else:
             self._recorder.finalize(self._usage_source)
         return suppress
 
     def close(self) -> Any:
         try:
-            if hasattr(self._stream, "close"):
-                return self._stream.close()
-            return None
-        finally:
-            self._recorder.finalize(self._usage_source)
+            result = self._stream.close() if hasattr(self._stream, "close") else None
+        except BaseException as exc:  # noqa: BLE001 - record then propagate unchanged
+            self._recorder.fail(exc, self._usage_source)
+            raise
+        self._recorder.finalize(self._usage_source)
+        return result
 
     def __getattr__(self, item: str) -> Any:
         return getattr(self._stream, item)
@@ -232,50 +252,65 @@ class _InstrumentedAsyncStream:
         self._usage_source: Any = None
 
     def __aiter__(self) -> _InstrumentedAsyncStream:
-        self._iter = (
-            self._stream.__aiter__() if hasattr(self._stream, "__aiter__") else self._stream
-        )
-        return self
-
-    async def __anext__(self) -> Any:
-        if self._iter is None:
+        try:
             self._iter = (
                 self._stream.__aiter__() if hasattr(self._stream, "__aiter__") else self._stream
             )
+        except BaseException as exc:  # noqa: BLE001 - record then propagate unchanged
+            self._recorder.fail(exc, self._usage_source)
+            raise
+        return self
+
+    async def __anext__(self) -> Any:
         try:
+            if self._iter is None:
+                self._iter = (
+                    self._stream.__aiter__() if hasattr(self._stream, "__aiter__") else self._stream
+                )
             chunk = await self._iter.__anext__()
         except StopAsyncIteration:
             self._recorder.finalize(self._usage_source)
             raise
         except BaseException as exc:  # noqa: BLE001 - record then propagate unchanged
-            self._recorder.finalize(self._usage_source, status="error", error=str(exc))
+            self._recorder.fail(exc, self._usage_source)
             raise
         if _has_usage(chunk):
             self._usage_source = chunk
         return chunk
 
     async def __aenter__(self) -> _InstrumentedAsyncStream:
-        if hasattr(self._stream, "__aenter__"):
-            await self._stream.__aenter__()
+        try:
+            if hasattr(self._stream, "__aenter__"):
+                await self._stream.__aenter__()
+        except BaseException as exc:  # noqa: BLE001 - record then propagate unchanged
+            self._recorder.fail(exc, self._usage_source)
+            raise
         return self
 
     async def __aexit__(self, exc_type: Any, exc: Any, tb: Any) -> Any:
-        suppress = None
-        if hasattr(self._stream, "__aexit__"):
-            suppress = await self._stream.__aexit__(exc_type, exc, tb)
-        if exc is not None:
-            self._recorder.finalize(self._usage_source, status="error", error=str(exc))
+        try:
+            suppress = (
+                await self._stream.__aexit__(exc_type, exc, tb)
+                if hasattr(self._stream, "__aexit__")
+                else None
+            )
+        except BaseException as exit_exc:  # noqa: BLE001 - record then propagate unchanged
+            self._recorder.fail(exit_exc, self._usage_source)
+            raise
+        if exc is not None and not suppress:
+            self._recorder.fail(exc, self._usage_source)
         else:
             self._recorder.finalize(self._usage_source)
         return suppress
 
     async def aclose(self) -> Any:
         try:
-            if hasattr(self._stream, "aclose"):
-                return await self._stream.aclose()
-            return None
-        finally:
-            self._recorder.finalize(self._usage_source)
+            result = await self._stream.aclose() if hasattr(self._stream, "aclose") else None
+        except BaseException as exc:  # noqa: BLE001 - record then propagate unchanged
+            self._recorder.fail(exc, self._usage_source)
+            raise
+        self._recorder.finalize(self._usage_source)
+        return result
 
     def __getattr__(self, item: str) -> Any:
         return getattr(self._stream, item)
@@ -313,8 +348,8 @@ def instrument_callable(
             recorder = _CallRecorder(name, args, kwargs, default_model)
             try:
                 result = await fn(*args, **kwargs)
-            except Exception as exc:
-                recorder.finalize(None, status="error", error=str(exc))
+            except BaseException as exc:  # noqa: BLE001 - record then propagate unchanged
+                recorder.fail(exc)
                 raise
             if _stream_requested(kwargs) and _is_async_stream(result):
                 return _InstrumentedAsyncStream(result, recorder)
@@ -329,8 +364,8 @@ def instrument_callable(
         recorder = _CallRecorder(name, args, kwargs, default_model)
         try:
             result = fn(*args, **kwargs)
-        except Exception as exc:
-            recorder.finalize(None, status="error", error=str(exc))
+        except BaseException as exc:  # noqa: BLE001 - record then propagate unchanged
+            recorder.fail(exc)
             raise
         if _stream_requested(kwargs) and _is_sync_stream(result):
             return _InstrumentedSyncStream(result, recorder)

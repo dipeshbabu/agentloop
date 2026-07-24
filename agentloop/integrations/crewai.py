@@ -5,7 +5,7 @@ import time
 from functools import wraps
 from typing import Any
 
-from agentloop.events import utc_now_iso
+from agentloop.events import format_exception_detail, utc_now_iso
 from agentloop.tracer import record_tool_call, trace_agent
 
 
@@ -26,9 +26,9 @@ def _patch_method(obj: Any, method_name: str, span_name: str, metadata: dict[str
             error = None
             try:
                 return await method(*args, **kwargs)
-            except Exception as exc:
+            except BaseException as exc:  # noqa: BLE001 - record then propagate unchanged
                 status = "error"
-                error = str(exc)
+                error = format_exception_detail(exc)
                 raise
             finally:
                 record_tool_call(
@@ -52,9 +52,9 @@ def _patch_method(obj: Any, method_name: str, span_name: str, metadata: dict[str
         error = None
         try:
             return method(*args, **kwargs)
-        except Exception as exc:
+        except BaseException as exc:  # noqa: BLE001 - record then propagate unchanged
             status = "error"
-            error = str(exc)
+            error = format_exception_detail(exc)
             raise
         finally:
             record_tool_call(
