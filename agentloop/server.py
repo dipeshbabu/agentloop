@@ -5,7 +5,7 @@ from typing import Any
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from agentloop.config import get_admin_api_key, get_api_key, get_cors_origins, require_api_key
 from agentloop.findings import build_diagnosis
@@ -61,6 +61,13 @@ class QualityReportPayload(BaseModel):
     baseline_run_id: str | None = None
     candidate_run_id: str | None = None
     min_score: float | None = Field(default=None, ge=0, le=1)
+
+    @field_validator("min_score", mode="before")
+    @classmethod
+    def validate_min_score_type(cls, value: Any) -> Any:
+        if value is not None and (isinstance(value, bool) or not isinstance(value, int | float)):
+            raise ValueError("min_score must be a number between 0 and 1")
+        return value
 
 
 def store() -> TraceStore:
@@ -318,7 +325,7 @@ def quality_report_endpoint(
     db: TraceStore = Depends(store),
 ) -> dict[str, Any]:
     scorer_types = {
-        str(fixture["scorer"].get("type", "")).lower()
+        str(fixture["scorer"].get("type", "")).strip().lower()
         for fixture in payload.fixtures
         if isinstance(fixture.get("scorer"), dict)
     }
