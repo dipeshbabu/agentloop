@@ -305,13 +305,17 @@ or `agentloop ci --quality-fixtures`. This makes the PR proof show whether the
 candidate is faster, cheaper, and still correct.
 
 Quality suites fail closed. A suite must contain at least one fixture, and every
-scorer must include a meaningful expectation: non-empty text or patterns,
-required fields, an expected JSON subset, or a valid custom callable. Minimum
-scores and custom scores must be between `0` and `1`. When replay or CI receives
-a fixture file, any failed fixture fails the gate even when
-`--min-quality-score` is omitted. Invalid fixture files are rejected before a
-report is written; the HTTP API returns `422`, and the dashboard shows the error
-beside the quality form.
+scorer must include its required configuration. `exact_match` requires an
+explicit `expected` value and compares recursively without cross-type coercion,
+so `false`, `0`, `null`, `""`, `[]`, and `{}` remain distinct, valid
+expectations. Missing candidate output never matches an explicit empty value.
+Text and glob patterns, required-field lists, and JSON-subset objects must be
+non-empty; every JSON-subset key must be present and its value must match
+without type coercion. Minimum scores and custom scores must be between `0` and
+`1`. When replay or CI receives a fixture file, any failed fixture fails the
+gate even when `--min-quality-score` is omitted. Invalid fixture files are
+rejected before a report is written; the HTTP API returns `422`, and the
+dashboard shows the error beside the quality form.
 
 Custom scorers import and execute Python code. Use them only with trusted local
 fixture files; the HTTP `/quality-report` endpoint rejects custom scorers.

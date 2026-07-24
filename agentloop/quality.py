@@ -11,6 +11,7 @@ from agentloop.markdown import markdown_table_cell
 
 _MAX_GLOB_PATTERN_LENGTH = 256
 _MAX_GLOB_TEXT_LENGTH = 1_000_000
+_MISSING = object()
 _SCORER_TYPES = {
     "contains",
     "custom",
@@ -68,7 +69,10 @@ def validate_quality_fixtures(fixtures: Any) -> list[dict[str, Any]]:
         scorer_type = scorer.get("type", "exact_match")
         if not isinstance(scorer_type, str) or not scorer_type.strip():
             raise QualityValidationError(f"{path}.scorer.type must be a non-empty string")
-        scorer_type = scorer_type.strip()
+        if scorer_type != scorer_type.strip():
+            raise QualityValidationError(
+                f"{path}.scorer.type must not contain leading or trailing whitespace"
+            )
         if scorer_type not in _SCORER_TYPES:
             raise QualityValidationError(
                 f"{path}.scorer.type is unsupported: {scorer_type}; "
@@ -76,10 +80,10 @@ def validate_quality_fixtures(fixtures: Any) -> list[dict[str, Any]]:
             )
 
         if scorer_type == "exact_match":
-            _require_non_empty(
-                _configured_value(fixture, scorer, "expected", "expected"),
-                f"{path}.expected",
-            )
+            if not _has_configured_value(fixture, scorer, "expected", "expected"):
+                raise QualityValidationError(
+                    f"{path} exact_match scorer requires an explicit 'expected' value"
+                )
         elif scorer_type == "contains":
             value = _configured_value(fixture, scorer, "expected", "text")
             if not isinstance(value, str) or not value.strip():
@@ -175,34 +179,37 @@ def build_quality_report(
 
 def score_output(output: Any, fixture: dict[str, Any], scorer: dict[str, Any]) -> dict[str, Any]:
     scorer_type = str(scorer.get("type", "exact_match"))
+    if scorer_type == "regex":
+        return _result(
+            False,
+            "raw regular-expression scorers are disabled; use glob, contains, or exact_match",
+        )
+    if output is _MISSING:
+        return _result(False, "output is missing")
     if scorer_type == "exact_match":
-        expected = fixture.get("expected", scorer.get("expected"))
-        passed = _normalize(output) == _normalize(expected)
+        expected = _configured_value(fixture, scorer, "expected", "expected")
+        passed = _exactly_equal(output, expected)
         return _result(passed, "exact match" if passed else "output did not exactly match expected")
     if scorer_type == "contains":
-        expected = str(fixture.get("expected", scorer.get("text", "")))
-        passed = expected in str(output or "")
+        expected = str(_configured_value(fixture, scorer, "expected", "text"))
+        passed = expected in _text_output(output)
         return _result(
             passed, "required text present" if passed else f"missing required text: {expected}"
         )
     if scorer_type == "glob":
-        pattern = str(scorer.get("pattern") or fixture.get("expected") or "")
-        text = str(output or "")
+        pattern = str(_configured_value(fixture, scorer, "expected", "pattern"))
+        text = _text_output(output)
         if len(pattern) > _MAX_GLOB_PATTERN_LENGTH:
             return _result(False, "glob pattern exceeds the 256-character safety limit")
         if len(text) > _MAX_GLOB_TEXT_LENGTH:
             return _result(False, "output exceeds the 1,000,000-character glob safety limit")
         passed = fnmatch.fnmatchcase(text, pattern)
         return _result(passed, "glob matched" if passed else "glob did not match")
-    if scorer_type == "regex":
-        return _result(
-            False,
-            "raw regular-expression scorers are disabled; use glob, contains, or exact_match",
-        )
     if scorer_type in {"required_fields", "json_schema"}:
         return _score_required_fields(output, scorer)
     if scorer_type == "json_subset":
-        return _score_json_subset(output, scorer.get("expected", fixture.get("expected", {})))
+        expected = scorer["expected"] if "expected" in scorer else fixture.get("expected", {})
+        return _score_json_subset(output, expected)
     if scorer_type == "custom":
         return _score_custom(output, fixture, scorer)
     return _result(False, f"unknown scorer type: {scorer_type}")
@@ -225,10 +232,20 @@ def _score_json_subset(output: Any, expected: Any) -> dict[str, Any]:
     expected_data = _json_value(expected)
     if not isinstance(data, dict) or not isinstance(expected_data, dict):
         return _result(False, "output and expected must be JSON objects")
-    mismatches = [key for key, value in expected_data.items() if data.get(key) != value]
+    missing = [key for key in expected_data if key not in data]
+    mismatches = [
+        key
+        for key, value in expected_data.items()
+        if key in data and not _exactly_equal(data[key], value)
+    ]
+    problems = []
+    if missing:
+        problems.append(f"missing keys: {', '.join(str(key) for key in missing)}")
+    if mismatches:
+        problems.append(f"mismatched keys: {', '.join(str(key) for key in mismatches)}")
     return _result(
-        not mismatches,
-        "JSON subset matched" if not mismatches else f"mismatched keys: {', '.join(mismatches)}",
+        not problems,
+        "JSON subset matched" if not problems else "; ".join(problems),
     )
 
 
@@ -302,14 +319,15 @@ def _output_for_side(fixture: dict[str, Any], side: str, trace: Any | None) -> A
 
 def _trace_output(trace: Any | None) -> Any:
     if trace is None:
-        return ""
+        return _MISSING
     metadata = getattr(trace, "metadata", {}) or {}
     if "output" in metadata:
         return metadata["output"]
     for event in reversed(getattr(trace, "events", [])):
-        if getattr(event, "event_type", "") == "model_call" and getattr(event, "output_text", None):
-            return event.output_text
-    return ""
+        if getattr(event, "event_type", "") == "model_call":
+            output_text = getattr(event, "output_text", None)
+            return _MISSING if output_text is None else output_text
+    return _MISSING
 
 
 def _json_value(value: Any) -> Any:
@@ -321,10 +339,25 @@ def _json_value(value: Any) -> Any:
     return value
 
 
-def _normalize(value: Any) -> str:
-    if isinstance(value, dict | list):
-        return json.dumps(value, sort_keys=True)
-    return str(value or "").strip()
+def _exactly_equal(actual: Any, expected: Any) -> bool:
+    """Compare values without Python's cross-type equality coercions."""
+
+    if type(actual) is not type(expected):
+        return False
+    if isinstance(actual, dict):
+        return actual.keys() == expected.keys() and all(
+            _exactly_equal(actual[key], expected[key]) for key in actual
+        )
+    if isinstance(actual, list | tuple):
+        return len(actual) == len(expected) and all(
+            _exactly_equal(actual_item, expected_item)
+            for actual_item, expected_item in zip(actual, expected, strict=True)
+        )
+    return bool(actual == expected)
+
+
+def _text_output(value: Any) -> str:
+    return "" if value is None else str(value)
 
 
 def _average(values: Any) -> float:
@@ -341,13 +374,19 @@ def _result(passed: bool, detail: str) -> dict[str, Any]:
 def _is_empty(value: Any) -> bool:
     if isinstance(value, str):
         return not value.strip()
-    return value is None or value == [] or value == {}
+    return value is None or (isinstance(value, list | dict) and not value)
 
 
 def _configured_value(
     fixture: dict[str, Any], scorer: dict[str, Any], fixture_key: str, scorer_key: str
 ) -> Any:
     return fixture[fixture_key] if fixture_key in fixture else scorer.get(scorer_key)
+
+
+def _has_configured_value(
+    fixture: dict[str, Any], scorer: dict[str, Any], fixture_key: str, scorer_key: str
+) -> bool:
+    return fixture_key in fixture or scorer_key in scorer
 
 
 def _require_non_empty(value: Any, path: str) -> None:
