@@ -189,6 +189,35 @@ def test_exact_match_preserves_empty_model_event_output() -> None:
     assert report["passed"] is True
 
 
+def test_exact_match_does_not_fall_back_to_stale_model_event_output() -> None:
+    candidate = AgentTrace(name="candidate")
+    now = utc_now_iso()
+    for event_id, output_text in (
+        ("evt_stale_output", "stale answer"),
+        ("evt_missing_output", None),
+    ):
+        candidate.add_event(
+            AgentEvent(
+                event_id=event_id,
+                run_id=candidate.run_id,
+                event_type="model_call",
+                name="answer",
+                started_at=now,
+                ended_at=now,
+                duration_ms=0,
+                output_text=output_text,
+            )
+        )
+
+    report = build_quality_report(
+        [{"expected": "stale answer", "scorer": {"type": "exact_match"}}],
+        candidate_trace=candidate,
+    )
+
+    assert report["passed"] is False
+    assert report["cases"][0]["candidate"]["detail"] == "output is missing"
+
+
 @pytest.mark.parametrize(
     ("output", "expected", "passed", "detail"),
     [

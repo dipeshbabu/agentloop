@@ -324,11 +324,9 @@ def _trace_output(trace: Any | None) -> Any:
     if "output" in metadata:
         return metadata["output"]
     for event in reversed(getattr(trace, "events", [])):
-        if (
-            getattr(event, "event_type", "") == "model_call"
-            and getattr(event, "output_text", None) is not None
-        ):
-            return event.output_text
+        if getattr(event, "event_type", "") == "model_call":
+            output_text = getattr(event, "output_text", None)
+            return _MISSING if output_text is None else output_text
     return _MISSING
 
 
