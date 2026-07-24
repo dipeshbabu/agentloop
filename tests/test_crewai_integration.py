@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 
+import pytest
+
 from agentloop.integrations.crewai import instrument_agent, instrument_crew, instrument_task
 from agentloop.tracer import trace_agent
 
@@ -58,5 +60,29 @@ def test_instrument_crew_wraps_async_kickoff_with_trace() -> None:
 
     async def run() -> None:
         assert await crew.kickoff_async() == "started_async"
+
+    asyncio.run(run())
+
+
+def test_instrument_task_records_async_cancellation_once_and_propagates() -> None:
+    cancellation = asyncio.CancelledError()
+
+    class CancelledTask:
+        description = "cancelled"
+
+        async def execute_async(self) -> None:
+            raise cancellation
+
+    task = instrument_task(CancelledTask())
+
+    async def run() -> None:
+        with trace_agent("cancelled_task") as trace:
+            with pytest.raises(asyncio.CancelledError) as caught:
+                await task.execute_async()
+        assert caught.value is cancellation
+        assert len(trace.events) == 1
+        assert trace.events[0].name == "crewai.task.execute_async"
+        assert trace.events[0].status == "error"
+        assert trace.events[0].error == "CancelledError"
 
     asyncio.run(run())

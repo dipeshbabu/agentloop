@@ -50,6 +50,36 @@ class FakeAsyncStream:
             raise StopAsyncIteration
 
 
+class FakeCancellingAsyncStream:
+    def __init__(self, operation, cancellation):
+        self.operation = operation
+        self.cancellation = cancellation
+
+    def __aiter__(self):
+        if self.operation == "aiter":
+            raise self.cancellation
+        return self
+
+    async def __anext__(self):
+        if self.operation == "iterate":
+            raise self.cancellation
+        raise StopAsyncIteration
+
+    async def __aenter__(self):
+        if self.operation == "enter":
+            raise self.cancellation
+        return self
+
+    async def __aexit__(self, *exc):
+        if self.operation == "exit":
+            raise self.cancellation
+        return None
+
+    async def aclose(self):
+        if self.operation == "close":
+            raise self.cancellation
+
+
 class FakeResponses:
     def create(self, **kwargs):
         return SimpleNamespace(
@@ -107,6 +137,63 @@ def test_instrument_callable_records_async_call() -> None:
         assert trace.events[0].model == "gpt-async"
         assert trace.events[0].input_tokens == 2
         assert trace.events[0].output_tokens == 4
+
+    asyncio.run(run())
+
+
+def test_instrument_callable_records_async_cancellation_once_and_propagates() -> None:
+    cancellation = asyncio.CancelledError()
+
+    async def call_model(**kwargs):
+        raise cancellation
+
+    wrapped = instrument_callable(call_model, name="custom.cancelled")
+
+    async def run() -> None:
+        with trace_agent("async_cancelled") as trace:
+            with pytest.raises(asyncio.CancelledError) as caught:
+                await wrapped(model="gpt-async")
+        assert caught.value is cancellation
+        assert len(trace.events) == 1
+        assert trace.events[0].name == "custom.cancelled"
+        assert trace.events[0].status == "error"
+        assert trace.events[0].error == "CancelledError"
+
+    asyncio.run(run())
+
+
+@pytest.mark.parametrize("operation", ["aiter", "iterate", "enter", "exit", "close", "body"])
+def test_async_stream_cancellation_records_once_for_every_lifecycle_boundary(operation) -> None:
+    cancellation = asyncio.CancelledError()
+
+    async def create(**kwargs):
+        return FakeCancellingAsyncStream(operation, cancellation)
+
+    wrapped = instrument_callable(create, name=f"stream.{operation}")
+
+    async def run() -> None:
+        with trace_agent("stream_cancelled") as trace:
+            stream = await wrapped(stream=True)
+            with pytest.raises(asyncio.CancelledError) as caught:
+                if operation == "aiter":
+                    stream.__aiter__()
+                elif operation == "iterate":
+                    await stream.__anext__()
+                elif operation == "enter":
+                    await stream.__aenter__()
+                elif operation == "exit":
+                    await stream.__aenter__()
+                    await stream.__aexit__(None, None, None)
+                elif operation == "close":
+                    await stream.aclose()
+                else:
+                    async with stream:
+                        raise cancellation
+        assert caught.value is cancellation
+        assert len(trace.events) == 1
+        assert trace.events[0].name == f"stream.{operation}"
+        assert trace.events[0].status == "error"
+        assert trace.events[0].error == "CancelledError"
 
     asyncio.run(run())
 
