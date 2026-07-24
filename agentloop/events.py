@@ -18,6 +18,13 @@ def new_run_id() -> str:
     return "run_" + uuid4().hex[:16]
 
 
+def format_exception_detail(exc: BaseException) -> str:
+    """Return useful telemetry text even when an exception has no message."""
+
+    message = str(exc)
+    return message if message.strip() else type(exc).__name__
+
+
 @dataclass
 class AgentEvent:
     event_id: str
