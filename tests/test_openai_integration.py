@@ -35,6 +35,11 @@ class FakeCtxStream:
         self.closed = True
 
 
+class FakeSuppressingCtxStream(FakeCtxStream):
+    def __exit__(self, *exc):
+        return True
+
+
 class FakeAsyncStream:
     def __init__(self, chunks):
         self._chunks = chunks
@@ -73,7 +78,7 @@ class FakeCancellingAsyncStream:
     async def __aexit__(self, *exc):
         if self.operation == "exit":
             raise self.cancellation
-        return None
+        return self.operation == "suppress"
 
     async def aclose(self):
         if self.operation == "close":
@@ -310,6 +315,23 @@ def test_sync_stream_context_manager_and_early_close() -> None:
     assert len(trace.events) == 1
 
 
+def test_sync_stream_suppressed_exception_records_success() -> None:
+    stream_obj = FakeSuppressingCtxStream([SimpleNamespace(delta="unused")])
+
+    def create(**kwargs):
+        return stream_obj
+
+    wrapped = instrument_callable(create, name="suppressed")
+
+    with trace_agent("suppressed") as trace:
+        with wrapped(stream=True):
+            raise RuntimeError("suppressed")
+
+    assert len(trace.events) == 1
+    assert trace.events[0].status == "ok"
+    assert trace.events[0].error is None
+
+
 def test_async_stream_records_after_consumption() -> None:
     async def create(**kwargs):
         return FakeAsyncStream(
@@ -330,6 +352,26 @@ def test_async_stream_records_after_consumption() -> None:
         assert len(trace.events) == 1
         assert trace.events[0].input_tokens == 3
         assert trace.events[0].output_tokens == 9
+
+    asyncio.run(run())
+
+
+def test_async_stream_suppressed_cancellation_records_success() -> None:
+    cancellation = asyncio.CancelledError()
+
+    async def create(**kwargs):
+        return FakeCancellingAsyncStream("suppress", cancellation)
+
+    wrapped = instrument_callable(create, name="stream.suppressed")
+
+    async def run() -> None:
+        with trace_agent("stream_suppressed") as trace:
+            stream = await wrapped(stream=True)
+            async with stream:
+                raise cancellation
+        assert len(trace.events) == 1
+        assert trace.events[0].status == "ok"
+        assert trace.events[0].error is None
 
     asyncio.run(run())
 

@@ -223,7 +223,7 @@ class _InstrumentedSyncStream:
         except BaseException as exit_exc:  # noqa: BLE001 - record then propagate unchanged
             self._recorder.fail(exit_exc, self._usage_source)
             raise
-        if exc is not None:
+        if exc is not None and not suppress:
             self._recorder.fail(exc, self._usage_source)
         else:
             self._recorder.finalize(self._usage_source)
@@ -297,7 +297,7 @@ class _InstrumentedAsyncStream:
         except BaseException as exit_exc:  # noqa: BLE001 - record then propagate unchanged
             self._recorder.fail(exit_exc, self._usage_source)
             raise
-        if exc is not None:
+        if exc is not None and not suppress:
             self._recorder.fail(exc, self._usage_source)
         else:
             self._recorder.finalize(self._usage_source)
