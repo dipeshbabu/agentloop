@@ -191,10 +191,9 @@ def test_exact_match_preserves_empty_model_event_output() -> None:
 
 def test_exact_match_does_not_fall_back_to_stale_model_event_output() -> None:
     candidate = AgentTrace(name="candidate")
-    now = utc_now_iso()
-    for event_id, output_text in (
-        ("evt_stale_output", "stale answer"),
-        ("evt_missing_output", None),
+    for event_id, output_text, timestamp in (
+        ("evt_stale_output", "stale answer", "2026-01-01T00:00:00+00:00"),
+        ("evt_missing_output", None, "2026-01-01T00:00:01+00:00"),
     ):
         candidate.add_event(
             AgentEvent(
@@ -202,8 +201,8 @@ def test_exact_match_does_not_fall_back_to_stale_model_event_output() -> None:
                 run_id=candidate.run_id,
                 event_type="model_call",
                 name="answer",
-                started_at=now,
-                ended_at=now,
+                started_at=timestamp,
+                ended_at=timestamp,
                 duration_ms=0,
                 output_text=output_text,
             )
