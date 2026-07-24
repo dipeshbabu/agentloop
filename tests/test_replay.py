@@ -6,6 +6,7 @@ from typer.testing import CliRunner
 
 from agentloop.cli import app
 from agentloop.events import AgentEvent, utc_now_iso
+from agentloop.quality import build_quality_report
 from agentloop.replay import ReplayGates, build_replay_report, replay_report_to_markdown
 from agentloop.tracer import AgentTrace
 
@@ -214,6 +215,33 @@ def test_replay_report_fails_supplied_fixture_report_without_score_threshold() -
     assert report["gates"]["passed"] is False
     assert fixture_gate["passed"] is False
     assert "1 supplied quality fixture case(s) failed" in fixture_gate["detail"]
+
+
+def test_replay_report_fails_real_falsey_quality_regression_without_threshold() -> None:
+    baseline = _trace(
+        "baseline",
+        model_duration_ms=800,
+        tool_duration_ms=200,
+        input_tokens=1000,
+        output_tokens=200,
+    )
+    candidate = _trace(
+        "candidate",
+        model_duration_ms=400,
+        tool_duration_ms=100,
+        input_tokens=500,
+        output_tokens=100,
+    )
+    quality = build_quality_report([{"candidate_output": False, "expected": 0}])
+
+    report = build_replay_report(baseline, candidate, quality_report=quality)
+
+    assert quality["passed"] is False
+    assert report["gates"]["passed"] is False
+    fixture_gate = next(
+        item for item in report["gates"]["results"] if item["name"] == "quality_fixtures"
+    )
+    assert fixture_gate["passed"] is False
 
 
 def test_replay_markdown_contains_gate_table() -> None:

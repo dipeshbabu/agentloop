@@ -231,6 +231,32 @@ def test_quality_report_endpoint() -> None:
     assert response.json()["passed"] is True
 
 
+def test_quality_report_endpoint_fails_falsey_type_and_missing_key_cases() -> None:
+    client = TestClient(app)
+    response = client.post(
+        "/quality-report",
+        json={
+            "fixtures": [
+                {"candidate_output": False, "expected": 0},
+                {
+                    "candidate_output": {},
+                    "scorer": {
+                        "type": "json_subset",
+                        "expected": {"result": None},
+                    },
+                },
+            ],
+            "min_score": 1,
+        },
+    )
+
+    assert response.status_code == 200
+    report = response.json()
+    assert report["passed"] is False
+    assert report["candidate_score"] == 0.0
+    assert report["failed_case_count"] == 2
+
+
 def test_quality_report_endpoint_rejects_missing_or_empty_fixtures() -> None:
     client = TestClient(app)
 
@@ -256,50 +282,70 @@ def test_quality_report_endpoint_rejects_vacuous_scorer_and_invalid_score() -> N
             "min_score": 1.01,
         },
     )
+    boolean_score = client.post(
+        "/quality-report",
+        json={
+            "fixtures": [{"candidate_output": "ok", "expected": "ok"}],
+            "min_score": True,
+        },
+    )
+    string_score = client.post(
+        "/quality-report",
+        json={
+            "fixtures": [{"candidate_output": "ok", "expected": "ok"}],
+            "min_score": "1.0",
+        },
+    )
 
     assert scorer.status_code == 422
     assert "non-empty" in scorer.json()["detail"]
     assert score.status_code == 422
+    assert boolean_score.status_code == 422
+    assert string_score.status_code == 422
 
 
 def test_quality_report_endpoint_rejects_custom_python_scorers() -> None:
     client = TestClient(app)
-    response = client.post(
-        "/quality-report",
-        json={
-            "fixtures": [
-                {
-                    "id": "unsafe",
-                    "candidate_output": "ok",
-                    "scorer": {"type": "custom", "callable": "example:score"},
-                }
-            ]
-        },
-    )
+    for scorer_type in ("custom", " custom "):
+        response = client.post(
+            "/quality-report",
+            json={
+                "fixtures": [
+                    {
+                        "id": "unsafe",
+                        "candidate_output": "ok",
+                        "scorer": {"type": scorer_type, "callable": "example:score"},
+                    }
+                ]
+            },
+        )
 
-    assert response.status_code == 400
-    assert response.json()["detail"] == "custom Python scorers are not accepted by the HTTP API"
+        assert response.status_code == 400
+        assert response.json()["detail"] == (
+            "custom Python scorers are not accepted by the HTTP API"
+        )
 
 
 def test_quality_report_endpoint_rejects_raw_regex_scorers() -> None:
     client = TestClient(app)
-    response = client.post(
-        "/quality-report",
-        json={
-            "fixtures": [
-                {
-                    "id": "unsafe-regex",
-                    "candidate_output": "a" * 10_000 + "!",
-                    "scorer": {"type": "regex", "pattern": "(a+)+$"},
-                }
-            ]
-        },
-    )
+    for scorer_type in ("regex", " regex "):
+        response = client.post(
+            "/quality-report",
+            json={
+                "fixtures": [
+                    {
+                        "id": "unsafe-regex",
+                        "candidate_output": "a" * 10_000 + "!",
+                        "scorer": {"type": scorer_type, "pattern": "(a+)+$"},
+                    }
+                ]
+            },
+        )
 
-    assert response.status_code == 400
-    assert response.json()["detail"] == (
-        "raw regex scorers are not accepted; use glob, contains, or exact_match"
-    )
+        assert response.status_code == 400
+        assert response.json()["detail"] == (
+            "raw regex scorers are not accepted; use glob, contains, or exact_match"
+        )
 
 
 def test_value_report_endpoint() -> None:

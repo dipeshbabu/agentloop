@@ -101,9 +101,10 @@ Project history from before the first public release remains available in Git.
 
 - OpenAI Agents SDK spans now propagate failure status, messages, and safely
   normalized structured error context into AgentLoop events.
-- Quality fixture validation now rejects empty or vacuous suites and invalid
-  score ranges across the library, CLI, HTTP API, and dashboard. Fully
-  fail-closed replay/CI behavior remains tracked in #12.
+- Quality gates now preserve exact JSON/Python value types, distinguish missing
+  output and keys from explicit empty or `null` values, and reject coerced API
+  thresholds. Falsey scalar, nested, subset, replay/CI, CLI, API, dashboard
+  parsing, and workflow paths are covered by fail-closed regressions (#12).
 - Release-prep CI runs started through `workflow_dispatch` now upload, download,
   and byte-verify the built wheel and source archive, matching pull-request CI
   and leaving artifacts available for maintainer review.
