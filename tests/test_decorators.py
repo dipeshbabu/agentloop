@@ -138,3 +138,128 @@ def test_traceable_timeout_records_nested_cancellation_without_duplicate_events(
     assert all(event.status == "error" for event in events.values())
     assert all(event.error == "CancelledError" for event in events.values())
     assert events["inner"].parent_id == events["outer"].event_id
+
+
+def test_traceable_sync_generator_keeps_trace_active_through_iteration() -> None:
+    reset_runtime()
+
+    @agentloop.trace_tool(name="inner")
+    def inner() -> int:
+        return 1
+
+    @agentloop.traceable(root=True, name="gen")
+    def gen():
+        yield inner()
+        yield inner()
+
+    it = gen()
+    # Previously raised "No active AgentLoop trace" because the span closed before iteration.
+    assert next(it) == 1
+    assert list(it) == [1]
+
+
+def test_traceable_generator_records_span_after_exhaustion() -> None:
+    reset_runtime()
+
+    @agentloop.trace_tool(name="inner")
+    def inner() -> int:
+        return 1
+
+    with trace_agent("outer") as trace:
+
+        @agentloop.trace_tool(name="gen")
+        def gen():
+            yield inner()
+
+        assert list(gen()) == [1]
+
+    events = {event.name: event for event in trace.events}
+    assert set(events) == {"inner", "gen"}
+    assert events["gen"].status == "ok"
+    assert events["inner"].parent_id == events["gen"].event_id
+
+
+def test_traceable_generator_early_close_records_ok() -> None:
+    reset_runtime()
+
+    with trace_agent("outer") as trace:
+
+        @agentloop.trace_tool(name="gen")
+        def gen():
+            yield 1
+            yield 2
+
+        it = gen()
+        assert next(it) == 1
+        it.close()
+
+    gen_events = [event for event in trace.events if event.name == "gen"]
+    assert len(gen_events) == 1
+    assert gen_events[0].status == "ok"
+
+
+def test_traceable_generator_midway_error_records_once_and_propagates() -> None:
+    reset_runtime()
+
+    with trace_agent("outer") as trace:
+
+        @agentloop.trace_tool(name="gen")
+        def gen():
+            yield 1
+            raise ValueError("boom")
+
+        it = gen()
+        assert next(it) == 1
+        with pytest.raises(ValueError, match="boom"):
+            next(it)
+
+    gen_events = [event for event in trace.events if event.name == "gen"]
+    assert len(gen_events) == 1
+    assert gen_events[0].status == "error"
+
+
+def test_traceable_async_generator_keeps_trace_active_and_records_once() -> None:
+    reset_runtime()
+
+    @agentloop.trace_tool(name="inner")
+    async def inner() -> int:
+        return 1
+
+    async def run():
+        with trace_agent("outer") as trace:
+
+            @agentloop.trace_tool(name="agen")
+            async def agen():
+                yield await inner()
+                yield await inner()
+
+            collected = [item async for item in agen()]
+        return trace, collected
+
+    trace, collected = asyncio.run(run())
+    assert collected == [1, 1]
+    agen_events = [event for event in trace.events if event.name == "agen"]
+    assert len(agen_events) == 1
+    assert agen_events[0].status == "ok"
+
+
+def test_traceable_async_generator_early_close_records_ok() -> None:
+    reset_runtime()
+
+    async def run():
+        with trace_agent("outer") as trace:
+
+            @agentloop.trace_tool(name="agen")
+            async def agen():
+                yield 1
+                yield 2
+
+            ait = agen()
+            assert await ait.__anext__() == 1
+            await ait.aclose()
+        return trace
+
+    trace = asyncio.run(run())
+    agen_events = [event for event in trace.events if event.name == "agen"]
+    assert len(agen_events) == 1
+    assert agen_events[0].status == "ok"
