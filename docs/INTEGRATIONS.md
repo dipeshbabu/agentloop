@@ -45,6 +45,13 @@ Available decorators:
 For a custom Python agent, add the three decorators, run the agent once, and
 inspect or export the resulting trace.
 
+The three decorators also work on generator and async-generator functions. The
+trace and span stay open across iteration, so nested tracing calls made while
+the generator runs are recorded and the span reflects the work done during
+iteration (not just the time to build the generator). A mid-iteration exception
+is recorded once and re-raised unchanged; an early `close()`/`aclose()` ends the
+span cleanly.
+
 Async cancellation is recorded as a non-successful span before the original
 `asyncio.CancelledError` is re-raised unchanged. This contract also applies to
 LangGraph nodes, instrumented CrewAI task/agent methods, and OpenAI calls and

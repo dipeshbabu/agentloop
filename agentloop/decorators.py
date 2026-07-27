@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import inspect
+from contextlib import ExitStack
 from functools import wraps
 from typing import Any, Callable, TypeVar, overload
 
@@ -94,6 +95,50 @@ def traceable(
 
             return async_wrapper  # type: ignore[return-value]
 
+        if inspect.isasyncgenfunction(func):
+
+            @wraps(func)
+            async def async_gen_wrapper(*args: Any, **kwargs: Any) -> Any:
+                # Keep the root trace and span open for the whole iterator lifecycle, so nested
+                # tracing calls during iteration see an active trace and the span records the work
+                # actually done (not the near-zero time to build the generator object).
+                with ExitStack() as stack:
+                    if root and current_trace() is None:
+                        stack.enter_context(
+                            trace_agent(run_name, metadata={"entrypoint": span_name})
+                        )
+                    stack.enter_context(_span_cm(span_name, normalized_kind, model, args, kwargs))
+                    agen = func(*args, **kwargs)
+                    try:
+                        async for item in agen:
+                            yield item
+                    except GeneratorExit:
+                        # Consumer called aclose(): end the span cleanly (an early close is not a
+                        # failure) rather than letting the span context manager record an error.
+                        return
+                    finally:
+                        await agen.aclose()
+
+            return async_gen_wrapper  # type: ignore[return-value]
+
+        if inspect.isgeneratorfunction(func):
+
+            @wraps(func)
+            def gen_wrapper(*args: Any, **kwargs: Any) -> Any:
+                with ExitStack() as stack:
+                    if root and current_trace() is None:
+                        stack.enter_context(
+                            trace_agent(run_name, metadata={"entrypoint": span_name})
+                        )
+                    stack.enter_context(_span_cm(span_name, normalized_kind, model, args, kwargs))
+                    try:
+                        # `yield from` closes the underlying generator for us on early close.
+                        yield from func(*args, **kwargs)
+                    except GeneratorExit:
+                        return
+
+            return gen_wrapper  # type: ignore[return-value]
+
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             if root and current_trace() is None:
@@ -106,6 +151,20 @@ def traceable(
     if fn is not None:
         return decorator(fn)
     return decorator
+
+
+def _span_cm(
+    span_name: str,
+    kind: str,
+    model: str | None,
+    args: tuple[Any, ...],
+    kwargs: dict[str, Any],
+) -> Any:
+    """Return the span context manager for a call (model vs tool), kept open across iteration."""
+    metadata = _call_metadata(args, kwargs)
+    if kind == "model":
+        return trace_model_call(span_name, model=model, metadata=metadata)
+    return trace_tool_call(span_name, metadata=metadata)
 
 
 async def _run_async_span(

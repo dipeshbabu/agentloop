@@ -99,6 +99,13 @@ Project history from before the first public release remains available in Git.
 
 ### Fixed
 
+- `@traceable`/`@trace_tool`/`@trace_model` now support generator and
+  async-generator functions: the root trace and span stay open for the whole
+  iterator lifecycle instead of closing before the body runs. Nested tracing
+  calls made during iteration now see an active trace, spans record the work
+  actually done (not near-zero), mid-iteration failures are recorded once and
+  propagate unchanged, and an early `close()`/`aclose()` ends the span cleanly
+  (#60).
 - Async cancellation now records model/tool and supported integration spans as
   errors exactly once, preserves task cancellation propagation and context
   cleanup, and retains useful `CancelledError` detail when the exception message
