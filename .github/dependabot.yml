@@ -19,6 +19,10 @@ updates:
     schedule:
       interval: monthly
     open-pull-requests-limit: 5
+    groups:
+      codeql-action:
+        patterns:
+          - "github/codeql-action/*"
     labels: [dependencies, github-actions]
 
   - package-ecosystem: docker
