@@ -95,9 +95,8 @@ class _GeneratorSpan:
         if self._done:
             raise RuntimeError("Generator trace span is already finalized.")
         self._start()
-        assert self._trace is not None
-        assert self._event_id is not None
-        with _activate_trace_context(self._trace, self._event_id):
+        trace, event_id, _, _ = self._started_state()
+        with _activate_trace_context(trace, event_id):
             yield
 
     def finish(self) -> None:
@@ -120,6 +119,15 @@ class _GeneratorSpan:
         self._start_perf = time.perf_counter()
         self._started = True
 
+    def _started_state(self) -> tuple[AgentTrace, str, str, float]:
+        trace = self._trace
+        event_id = self._event_id
+        started_at = self._started_at
+        start_perf = self._start_perf
+        if trace is None or event_id is None or started_at is None or start_perf is None:
+            raise RuntimeError("Generator trace span failed to initialize.")
+        return trace, event_id, started_at, start_perf
+
     def _finalize(self, *, status: str, error: str | None) -> None:
         if self._done:
             return
@@ -127,45 +135,41 @@ class _GeneratorSpan:
         if not self._started:
             return
 
-        assert self._trace is not None
-        assert self._event_id is not None
-        assert self._started_at is not None
-        assert self._start_perf is not None
-
+        trace, event_id, started_at, start_perf = self._started_state()
         ended_at = utc_now_iso()
-        duration_ms = max(0.0, (time.perf_counter() - self._start_perf) * 1000)
+        duration_ms = max(0.0, (time.perf_counter() - start_perf) * 1000)
         try:
             # Bind the captured parent while adding the completed event. Binding the
             # generator's own event id here would accidentally make a root span its own parent.
-            with _activate_trace_context(self._trace, self._parent_id):
+            with _activate_trace_context(trace, self._parent_id):
                 if self._kind == "model":
                     record_model_call(
                         self._span_name,
-                        started_at=self._started_at,
+                        started_at=started_at,
                         ended_at=ended_at,
                         duration_ms=duration_ms,
                         model=self._model,
                         status=status,
                         error=error,
                         metadata=self._metadata,
-                        event_id=self._event_id,
+                        event_id=event_id,
                         parent_id=self._parent_id,
                     )
                 else:
                     record_tool_call(
                         self._span_name,
-                        started_at=self._started_at,
+                        started_at=started_at,
                         ended_at=ended_at,
                         duration_ms=duration_ms,
                         status=status,
                         error=error,
                         metadata=self._metadata,
-                        event_id=self._event_id,
+                        event_id=event_id,
                         parent_id=self._parent_id,
                     )
         finally:
             if self._owns_trace:
-                _finalize_owned_trace(self._trace)
+                _finalize_owned_trace(trace)
 
 
 def _resume_generator(
