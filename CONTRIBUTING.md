@@ -214,7 +214,7 @@ uv run --frozen pre-commit run --files CONTRIBUTING.md
 For a focused Python change:
 
 ```bash
-uv run --frozen --all-extras python -m pytest tests/test_replay.py -q
+uv run --frozen python -m pytest tests/test_replay.py -q
 uv run --frozen pre-commit run --files agentloop/replay.py tests/test_replay.py
 ```
 
