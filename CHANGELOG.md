@@ -99,6 +99,12 @@ Project history from before the first public release remains available in Git.
 
 ### Fixed
 
+- The dashboard reports invalid input inline instead of replacing the page with a
+  traceback. A repository path that does not exist or escapes the allowed root now
+  fails the Patch Plan page with a message naming the path, and an uploaded trace
+  that is malformed JSON or violates the trace schema is reported on the Ingest page
+  with the parse position. Both were raising out of page code on every Streamlit
+  rerun, so a half-finished edit destroyed the operator's view.
 - `@traceable`/`@trace_tool`/`@trace_model` now support generator and
   async-generator functions: the root trace and span stay open for the whole
   iterator lifecycle instead of closing before the body runs. Nested tracing

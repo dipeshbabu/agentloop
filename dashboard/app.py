@@ -20,6 +20,7 @@ from agentloop.quality import (
     quality_report_to_markdown,
 )
 from agentloop.replay import ReplayGates, build_replay_report
+from agentloop.schema import TraceValidationError
 from agentloop.store import (
     ALLOWED_FINDING_TRANSITIONS,
     FindingNotFoundError,
@@ -454,7 +455,13 @@ elif page == "Patch Plan":
         trace = selected_trace_from_options(traces, "Choose trace for patch planning")
         repo_path = st.text_input("Repository path", value=str(Path.cwd()))
         if trace is not None:
-            plan = build_patch_plan(trace, repo_path=repo_path)
+            try:
+                plan = build_patch_plan(trace, repo_path=repo_path)
+            except ValueError as exc:
+                # The path is free text re-read on every rerun, so a half-typed one
+                # reaches build_patch_plan before the operator has finished editing.
+                st.error(f"Fix the repository path: {exc}.")
+                st.stop()
             summary = plan["summary"]
             c1, c2, c3 = st.columns(3)
             c1.metric("Patch plans", summary["patch_count"])
@@ -736,10 +743,18 @@ elif page == "Ingest":
 
     uploaded = st.file_uploader("Upload AgentLoop trace JSON", type=["json"])
     if uploaded is not None:
-        trace = AgentTrace.from_dict(json.loads(uploaded.read().decode("utf-8")))
-        if st.button("Store uploaded trace"):
-            store.save_trace(trace, project_id=project_id)
-            st.success(f"Stored uploaded trace `{trace.run_id}` under project `{project_id}`")
+        try:
+            trace = AgentTrace.from_dict(json.loads(uploaded.read().decode("utf-8")))
+        except json.JSONDecodeError as exc:
+            st.error(
+                f"Fix the uploaded trace JSON: {exc.msg} at line {exc.lineno}, column {exc.colno}."
+            )
+        except (UnicodeError, TraceValidationError) as exc:
+            st.error(f"Fix the uploaded trace JSON: {exc}.")
+        else:
+            if st.button("Store uploaded trace"):
+                store.save_trace(trace, project_id=project_id)
+                st.success(f"Stored uploaded trace `{trace.run_id}` under project `{project_id}`")
 
     st.subheader("CLI ingest")
     st.code(
