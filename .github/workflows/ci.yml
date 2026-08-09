@@ -30,7 +30,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.13"]
+        python-version: ["3.10", "3.13", "3.14"]
 
     services:
       postgres:
@@ -290,7 +290,7 @@ jobs:
         shell: bash
         run: |
           docker compose exec -T api python -c \
-            "import sys; assert sys.version_info[:2] == (3, 13), sys.version"
+            "import sys; assert sys.version_info[:2] == (3, 14), sys.version"
           docker compose exec -T api sh -c 'test "$(id -u)" -ne 0'
           docker compose exec -T api sh -c \
             "touch /data/container-write-check && rm /data/container-write-check"
