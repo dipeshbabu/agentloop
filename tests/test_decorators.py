@@ -235,7 +235,7 @@ def test_traceable_generator_midway_error_records_once_and_propagates_identity()
     gen_events = [event for event in trace.events if event.name == "gen"]
     assert len(gen_events) == 1
     assert gen_events[0].status == "error"
-    assert gen_events[0].error == "ValueError: boom"
+    assert gen_events[0].error == "boom"
 
 
 def test_traceable_generator_preserves_send_and_return_value() -> None:
@@ -414,7 +414,7 @@ def test_traceable_async_generator_midway_error_records_once_and_propagates_iden
     agen_events = [event for event in trace.events if event.name == "agen"]
     assert len(agen_events) == 1
     assert agen_events[0].status == "error"
-    assert agen_events[0].error == "ValueError: boom"
+    assert agen_events[0].error == "boom"
 
 
 def test_traceable_async_generator_preserves_asend() -> None:
