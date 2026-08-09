@@ -10,7 +10,7 @@ def test_ci_exposes_reusable_full_validation_and_release_artifact() -> None:
     workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
 
     assert "workflow_call:" in workflow
-    assert 'python-version: ["3.10", "3.13"]' in workflow
+    assert 'python-version: ["3.10", "3.13", "3.14"]' in workflow
     assert "uv run --frozen pre-commit run --all-files" in workflow
     assert "uv run --frozen --all-extras python -m pytest -q" in workflow
     assert "Build distribution once" in workflow
