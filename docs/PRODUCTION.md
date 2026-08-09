@@ -105,10 +105,12 @@ AGENTLOOP_ADMIN_API_KEY="$AGENTLOOP_ADMIN_API_KEY" \
 uv run python scripts/smoke_api.py
 ```
 
-The official image uses Python 3.13, matching `.python-version` and the highest Python
-version exercised by the package CI matrix. The image runs as the non-root `agentloop`
-user. Application files under `/app` are read-only to that user; `/data` is the intended
-writable path for SQLite deployments.
+The official image uses Python 3.14, which is exercised by the package CI matrix and by
+the end-to-end container deployment smoke. The repository keeps Python 3.13 in
+`.python-version` for the default contributor and standalone-build environment, while the
+package remains tested across Python 3.10, 3.13, and 3.14. The image runs as the non-root
+`agentloop` user. Application files under `/app` are read-only to that user; `/data` is the
+intended writable path for SQLite deployments.
 
 Use `uv run agentloop production-check --allow-http` only for local staging URLs such as
 `http://localhost:8000`; public production traffic should use HTTPS.
