@@ -4,26 +4,39 @@
 
 ## Related issue
 
-<!-- Use "Closes #123" when applicable. -->
+<!-- Use "Closes #123" when applicable. Write "None" for a small untracked change. -->
 
 ## Validation
 
-<!-- List the exact commands run and any relevant before/after output. -->
+<!--
+List the exact commands run and their results. Focused checks are encouraged
+during development. Note any platform, optional dependency, or workflow that was
+not available locally.
+-->
 
 ```text
-uv run --frozen pre-commit run --all-files
-uv run --frozen --all-extras python -m pytest -q
+# Replace this comment with the commands and results.
 ```
 
 ## Compatibility and risk
 
-<!-- Note public API, trace schema, storage, configuration, dependency, security, or migration effects. -->
+<!--
+Note public API, trace schema, storage, configuration, dependency, security,
+migration, or deployment effects. Write "None" when the change has no such
+impact.
+-->
+
+## Before and after
+
+<!-- Add output or screenshots for CLI, report, dashboard, or behavior changes. Remove when not applicable. -->
 
 ## Checklist
 
-- [ ] The change is focused and includes tests for changed behavior.
-- [ ] Lint, tests, and relevant AgentLoop replay gates pass.
-- [ ] User-facing behavior is documented and the changelog is updated when needed.
-- [ ] Shared traces, logs, and screenshots contain no credentials or private data.
-- [ ] New dependencies are justified and compatible with Apache-2.0 distribution.
+- [ ] The change is focused and contains no unrelated formatting, generated files, or dependency upgrades.
+- [ ] Relevant tests and local checks pass; unavailable or skipped validation is stated above.
+- [ ] Changed behavior has tests when applicable, including a regression test for a bug fix.
+- [ ] User-facing behavior is documented and the changelog is updated when required.
+- [ ] Shared traces, logs, fixtures, and screenshots contain no credentials or private data.
+- [ ] New dependencies are justified, narrowly scoped, and compatible with Apache-2.0 distribution.
 - [ ] Substantial AI assistance is disclosed and the generated work was reviewed.
+- [ ] Required GitHub checks pass before merge.
