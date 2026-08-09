@@ -47,7 +47,7 @@ itself is the reason to cut that release.
    `gh workflow run bump-version.yml -f bump_type=patch`). Pick the bump type
    per the [versioning policy](#versioning-policy) above (the workflow
    defaults to `patch`), or set an explicit `version` input instead.
-2. The workflow validates `main` (the same checks as CI — lint, tests on both
+2. The workflow validates `main` (the same checks as CI — lint, tests across the
    supported Python versions against SQLite and Postgres, package build, Docker
    deployment smoke), then runs `scripts/bump_version.py`, which:
    - moves `CHANGELOG.md`'s `## [Unreleased]` content into a new dated
