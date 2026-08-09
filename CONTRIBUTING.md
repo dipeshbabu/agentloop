@@ -35,11 +35,41 @@ AgentLoop supports Python 3.10 and newer and uses
 The repository's default development interpreter is declared in
 [`.python-version`](.python-version).
 
-Install `uv`, then create a lightweight development environment:
+### Clone the repository
+
+External contributors should fork AgentLoop on GitHub and clone their fork:
+
+```bash
+git clone https://github.com/YOUR-USER/agentloop.git
+cd agentloop
+git remote add upstream https://github.com/dipeshbabu/agentloop.git
+```
+
+Contributors with write access may clone the canonical repository directly:
 
 ```bash
 git clone https://github.com/dipeshbabu/agentloop.git
 cd agentloop
+```
+
+Before starting work from a fork, update `main` from the canonical repository and
+create a focused branch:
+
+```bash
+git fetch upstream
+git switch main
+git merge --ff-only upstream/main
+git switch -c docs/improve-guide
+```
+
+Use a branch name that describes the actual change. When working from the
+canonical repository, update `main` from `origin` instead.
+
+### Create the environment
+
+Install `uv`, then create a lightweight development environment:
+
+```bash
 uv sync --locked --dev
 uv run --frozen agentloop --help
 ```
@@ -231,7 +261,14 @@ contract and project isolation.
 
 ## Open the pull request
 
-Use the repository pull request template and include:
+Push the branch to your fork or repository:
+
+```bash
+git push -u origin docs/improve-guide
+```
+
+Open a pull request against `dipeshbabu/agentloop:main`, then use the repository
+pull request template and include:
 
 - the problem and why the chosen approach is appropriate;
 - the related issue, when one exists;
