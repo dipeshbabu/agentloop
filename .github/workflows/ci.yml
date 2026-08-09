@@ -289,8 +289,18 @@ jobs:
       - name: Verify Python version and runtime filesystem posture
         shell: bash
         run: |
-          docker compose exec -T api python -c \
-            "import sys; assert sys.version_info[:2] == (3, 14), sys.version"
+          expected_python="$(
+            sed -nE 's/^FROM python:([0-9]+\.[0-9]+)-slim$/\1/p' Dockerfile
+          )"
+          if [ -z "$expected_python" ]; then
+            echo "Could not determine the Python minor version from Dockerfile" >&2
+            exit 1
+          fi
+          actual_python="$(
+            docker compose exec -T api python -c \
+              'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")'
+          )"
+          test "$actual_python" = "$expected_python"
           docker compose exec -T api sh -c 'test "$(id -u)" -ne 0'
           docker compose exec -T api sh -c \
             "touch /data/container-write-check && rm /data/container-write-check"
