@@ -45,12 +45,23 @@ Available decorators:
 For a custom Python agent, add the three decorators, run the agent once, and
 inspect or export the resulting trace.
 
-The three decorators also work on generator and async-generator functions. The
-trace and span stay open across iteration, so nested tracing calls made while
-the generator runs are recorded and the span reflects the work done during
-iteration (not just the time to build the generator). A mid-iteration exception
-is recorded once and re-raised unchanged; an early `close()`/`aclose()` ends the
-span cleanly.
+The three decorators also support generator and async-generator functions.
+AgentLoop opens the generator span on first resume and records one event when the
+iterator exhausts, closes, or fails. Nested tracing calls execute under that span,
+but its trace context is removed whenever the iterator is suspended. This keeps
+unrelated sibling or interleaved work from being mis-parented and allows an async
+generator to be closed from another task. The wrappers preserve `send()`,
+`throw()`, `asend()`, and `athrow()` behavior instead of reducing the iterator to
+plain `for` or `async for` consumption.
+
+A generator span's duration covers elapsed lifecycle time from first resume until
+exhaustion or close, including time the consumer pauses between yielded values.
+An explicit early `close()`/`aclose()` records a successful span; a propagated
+exception or cancellation records an error once. If a consumer stops iterating
+early without closing the iterator, cleanup is deferred until generator
+finalization. Code that may `break`, return, or abandon an iterator should close
+it explicitly, or use `contextlib.closing()` / `contextlib.aclosing()` so the span
+ends promptly and deterministically.
 
 Async cancellation is recorded as a non-successful span before the original
 `asyncio.CancelledError` is re-raised unchanged. This contract also applies to
