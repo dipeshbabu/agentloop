@@ -12,7 +12,7 @@ from agentloop.demo import run_baseline, run_langgraph_style, run_optimized, run
 from agentloop.findings import build_diagnosis
 from agentloop.issues import build_issue_drafts, issue_drafts_to_markdown
 from agentloop.optimizer import build_optimization_plan
-from agentloop.patches import build_patch_plan
+from agentloop.patches import RepositoryPathError, build_patch_plan
 from agentloop.quality import (
     QualityValidationError,
     build_quality_report,
@@ -20,7 +20,6 @@ from agentloop.quality import (
     quality_report_to_markdown,
 )
 from agentloop.replay import ReplayGates, build_replay_report
-from agentloop.schema import TraceValidationError
 from agentloop.store import (
     ALLOWED_FINDING_TRANSITIONS,
     FindingNotFoundError,
@@ -31,8 +30,10 @@ from agentloop.tracer import AgentTrace
 from agentloop.value import build_value_report
 
 try:
+    from dashboard.trace_upload import TraceUploadError, parse_uploaded_trace
     from dashboard.value_view import assumption_inputs, percentage, render_value_report
 except ModuleNotFoundError:
+    from trace_upload import TraceUploadError, parse_uploaded_trace
     from value_view import assumption_inputs, percentage, render_value_report
 
 st.set_page_config(page_title="AgentLoop Dashboard", layout="wide")
@@ -457,9 +458,11 @@ elif page == "Patch Plan":
         if trace is not None:
             try:
                 plan = build_patch_plan(trace, repo_path=repo_path)
-            except ValueError as exc:
+            except RepositoryPathError as exc:
                 # The path is free text re-read on every rerun, so a half-typed one
                 # reaches build_patch_plan before the operator has finished editing.
+                # Only the path error is caught: anything else planning raises is a
+                # bug in planning, and swallowing it here would hide it.
                 st.error(f"Fix the repository path: {exc}.")
                 st.stop()
             summary = plan["summary"]
@@ -744,13 +747,9 @@ elif page == "Ingest":
     uploaded = st.file_uploader("Upload AgentLoop trace JSON", type=["json"])
     if uploaded is not None:
         try:
-            trace = AgentTrace.from_dict(json.loads(uploaded.read().decode("utf-8")))
-        except json.JSONDecodeError as exc:
-            st.error(
-                f"Fix the uploaded trace JSON: {exc.msg} at line {exc.lineno}, column {exc.colno}."
-            )
-        except (UnicodeError, TraceValidationError) as exc:
-            st.error(f"Fix the uploaded trace JSON: {exc}.")
+            trace = parse_uploaded_trace(uploaded.read())
+        except TraceUploadError as exc:
+            st.error(f"Fix the uploaded trace: {exc}.")
         else:
             if st.button("Store uploaded trace"):
                 store.save_trace(trace, project_id=project_id)
