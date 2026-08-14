@@ -35,6 +35,21 @@ def test_bytes_that_are_not_utf8_name_the_offending_byte() -> None:
     assert "line" not in message
 
 
+def test_an_empty_file_is_reported_as_malformed_json() -> None:
+    """Uploading a 0-byte file is a click away in any file picker.
+
+    Empty bytes are valid UTF-8, so this falls through the decode layer and fails as
+    JSON at the first character -- which is a real position, not a fabricated one.
+    """
+
+    with pytest.raises(TraceUploadError) as caught:
+        parse_uploaded_trace(b"")
+
+    message = str(caught.value)
+    assert "line 1" in message
+    assert "column 1" in message
+
+
 def test_malformed_json_reports_line_and_column() -> None:
     with pytest.raises(TraceUploadError) as caught:
         parse_uploaded_trace(b'{\n  "name": "broken"\n')

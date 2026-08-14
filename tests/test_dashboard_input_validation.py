@@ -140,6 +140,15 @@ def test_uploaded_trace_that_is_not_utf8_is_reported(tmp_path, monkeypatch) -> N
     assert any("not UTF-8" in error.value for error in _upload_errors(app))
 
 
+def test_an_empty_uploaded_file_is_reported_inline(tmp_path, monkeypatch) -> None:
+    """A 0-byte upload is a boundary the file picker offers on every platform."""
+    app = _ingest_page(tmp_path, monkeypatch)
+    _upload(app, b"")
+
+    assert not app.exception
+    assert any("line 1, column 1" in error.value for error in _upload_errors(app))
+
+
 def test_uploaded_trace_failing_schema_validation_is_reported(tmp_path, monkeypatch) -> None:
     """Valid JSON, invalid trace -- a different exception from a different layer."""
     app = _ingest_page(tmp_path, monkeypatch)
@@ -155,6 +164,7 @@ def test_uploaded_trace_failing_schema_validation_is_reported(tmp_path, monkeypa
         ("malformed json", b'{"name": "broken"'),
         ("not utf-8", b'{"name": "\xff"}'),
         ("schema violation", b'{"not": "a trace"}'),
+        ("empty file", b""),
     ],
 )
 def test_an_invalid_upload_hides_the_store_button(label, payload, tmp_path, monkeypatch) -> None:
