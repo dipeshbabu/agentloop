@@ -7,6 +7,7 @@ from agentloop.optimizer import (
     _aggregate_savings,
     build_optimization_plan,
 )
+from agentloop.savings import SavingsItem, select_compatible
 from agentloop.tracer import AgentTrace
 
 
@@ -40,6 +41,7 @@ def test_overlapping_cards_take_best_alternative_not_sum() -> None:
     agg = _aggregate_savings(cards, current_runtime=800.0, current_cost=0.0)
     assert agg["latency_savings_ms"] == 300.0
     assert len(agg["explanation"]["selected_card_indexes"]) == 1
+    assert agg["explanation"]["selection_optimal"] is True
 
 
 def test_chain_overlap_selects_compatible_disjoint_cards() -> None:
@@ -58,8 +60,8 @@ def test_chain_overlap_selects_compatible_disjoint_cards() -> None:
 
 def test_latency_and_cost_come_from_the_same_selection() -> None:
     # Overlapping alternatives with 100 ms/$0 and 0 ms/$10: no single plan
-    # achieves both maxima, so the totals must come from one alternative —
-    # latency is the primary objective, so (100 ms, $0), never (100 ms, $10).
+    # achieves both maxima, so the totals must come from one alternative.
+    # Latency is the primary objective, so (100 ms, $0), never (100 ms, $10).
     cards = [
         _card(RecommendationType.PARALLELIZE_TOOLS, 100, 0.0, ["n1"]),
         _card(RecommendationType.ROUTE_TO_SMALLER_MODEL, 0, 10.0, ["n1"]),
@@ -79,6 +81,15 @@ def test_equal_latency_ties_break_by_cost() -> None:
     assert agg["latency_savings_ms"] == 100.0
     assert agg["cost_savings_usd"] == 5.0
     assert agg["explanation"]["selected_card_indexes"] == [1]
+
+
+def test_equal_savings_ties_are_deterministic() -> None:
+    items = [
+        SavingsItem(frozenset({"shared"}), 100.0, 1.0),
+        SavingsItem(frozenset({"shared"}), 100.0, 1.0),
+    ]
+    selections = [select_compatible(items) for _ in range(5)]
+    assert {selection.indices for selection in selections} == {(0,)}
 
 
 def test_disjoint_cards_are_additive() -> None:
@@ -123,12 +134,62 @@ def test_cards_without_affected_spans_always_count() -> None:
     assert agg["explanation"]["selected_card_indexes"] == [0, 1]
 
 
+def test_seventeen_item_star_uses_exact_optimum() -> None:
+    all_spans = [f"s{i}" for i in range(16)]
+    items = [SavingsItem(frozenset(all_spans), 100.0, 0.0)]
+    items.extend(SavingsItem(frozenset({span}), 99.0, 0.0) for span in all_spans)
+
+    selection = select_compatible(items)
+
+    assert selection.indices == tuple(range(1, 17))
+    assert selection.latency_ms == 1584.0
+    assert selection.optimal is True
+    assert selection.algorithm == "exact_branch_and_bound"
+    assert selection.exact_component_limit >= 17
+
+
+def test_large_component_fallback_is_explicitly_approximate() -> None:
+    all_spans = [f"s{i}" for i in range(24)]
+    items = [SavingsItem(frozenset(all_spans), 100.0, 0.0)]
+    items.extend(SavingsItem(frozenset({span}), 99.0, 0.0) for span in all_spans)
+
+    selection = select_compatible(items)
+
+    assert selection.indices == (0,)
+    assert selection.latency_ms == 100.0
+    assert selection.optimal is False
+    assert selection.algorithm == "hybrid_exact_greedy"
+    selected_spans: set[str] = set()
+    for index in selection.indices:
+        assert not (items[index].spans & selected_spans)
+        selected_spans.update(items[index].spans)
+
+
+def test_aggregate_exposes_approximation_metadata() -> None:
+    all_spans = [f"s{i}" for i in range(24)]
+    cards = [_card(RecommendationType.PARALLELIZE_TOOLS, 100, 0.0, all_spans)]
+    cards.extend(
+        _card(RecommendationType.PARALLELIZE_TOOLS, 99, 0.0, [span]) for span in all_spans
+    )
+
+    agg = _aggregate_savings(cards, current_runtime=5000.0, current_cost=0.0)
+    explanation = agg["explanation"]
+
+    assert explanation["selection_optimal"] is False
+    assert explanation["selection_algorithm"] == "hybrid_exact_greedy"
+    assert explanation["exact_component_limit"] == 24
+    assert "approximation" in explanation["rule"]
+    assert "maximizes" not in explanation["rule"]
+
+
 # --- end-to-end reproduction from the issue ----------------------------------
 
 
 def _alternating_tool_trace() -> AgentTrace:
-    """Eight alternating 100 ms tool events named 'a' and 'b' — reproduces the
-    two-parallelization-plus-oscillation overlap from the issue."""
+    """Eight alternating 100 ms tool events named 'a' and 'b.
+
+    Reproduces the two-parallelization-plus-oscillation overlap from the issue.
+    """
     trace = AgentTrace(name="oscillation", run_id="run_" + "a" * 16)
     t = 0
     for i in range(8):
@@ -168,3 +229,4 @@ def test_reduction_pct_never_exceeds_100() -> None:
     # The overlap is surfaced, and the naive sum is recorded for transparency.
     agg = plan["savings_aggregation"]
     assert agg["raw_latency_savings_ms"] >= agg["effective_latency_savings_ms"]
+    assert agg["selection_optimal"] is True
