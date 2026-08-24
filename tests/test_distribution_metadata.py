@@ -23,7 +23,7 @@ def test_distribution_lock_import_and_cli_metadata_agree() -> None:
 
     assert project["project"]["name"] == DIST_NAME
     assert project["project"]["version"] == __version__
-    assert project["project"]["scripts"]["agentloop"] == "agentloop.cli:app"
+    assert project["project"]["scripts"]["agentloop"] == "agentloop.entrypoint:app"
     assert editable["name"] == DIST_NAME
     assert editable["version"] == __version__
 
