@@ -28,6 +28,17 @@ SOURCE_SUFFIXES = {".py", ".js", ".jsx", ".ts", ".tsx"}
 SKIP_DIRS = {".git", ".pytest_cache", ".venv", "__pycache__", "agentloop.egg-info", "runs"}
 
 
+class RepositoryPathError(ValueError):
+    """The ``repo_path`` given to :func:`build_patch_plan` is not usable.
+
+    Raised when the path escapes the allowed root or does not identify an existing
+    directory -- both operator-fixable, unlike anything else the call can raise. It
+    subclasses :class:`ValueError` so existing ``except ValueError`` handlers keep
+    working, and it exists so a caller can catch the path problem alone rather than
+    every ``ValueError`` that planning might raise from deeper down.
+    """
+
+
 @dataclass
 class FileCandidate:
     path: str
@@ -237,9 +248,9 @@ def _resolve_repository_path(
     candidate = os.path.normcase(os.path.realpath(os.path.join(root, os.fspath(repo_path))))
     candidate_with_separator = candidate.rstrip(os.sep) + os.sep
     if not candidate_with_separator.startswith(root_prefix):
-        raise ValueError("repository path must remain within the allowed root")
+        raise RepositoryPathError("repository path must remain within the allowed root")
     if not os.path.isdir(candidate_with_separator):
-        raise ValueError("repository path must identify an existing directory")
+        raise RepositoryPathError("repository path must identify an existing directory")
     return Path(candidate_with_separator)
 
 

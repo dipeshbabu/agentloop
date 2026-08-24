@@ -9,7 +9,7 @@ from agentloop.decorators import trace_model, trace_tool, traceable
 from agentloop.doctor import run_doctor
 from agentloop.findings import build_diagnosis
 from agentloop.otel import trace_from_otel, trace_to_otel, traces_from_otel
-from agentloop.patches import build_patch_plan
+from agentloop.patches import RepositoryPathError, build_patch_plan
 from agentloop.replay import ReplayGates, build_replay_report
 from agentloop.runtime import (
     CLEAR,
@@ -41,6 +41,7 @@ __all__ = [
     "DetectionResult",
     "InstrumentationResult",
     "ReplayGates",
+    "RepositoryPathError",
     "auto_instrument",
     "detect_integrations",
     "build_value_report",
