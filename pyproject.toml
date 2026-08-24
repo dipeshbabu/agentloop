@@ -61,7 +61,7 @@ Issues = "https://github.com/dipeshbabu/agentloop/issues"
 Changelog = "https://github.com/dipeshbabu/agentloop/blob/main/CHANGELOG.md"
 
 [project.scripts]
-agentloop = "agentloop.cli:app"
+agentloop = "agentloop.entrypoint:app"
 
 [tool.setuptools.packages.find]
 include = ["agentloop*", "dashboard*"]
