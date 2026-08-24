@@ -6,6 +6,12 @@ import pytest
 
 from agentloop.autoinstrument import auto_instrument, detect_integrations
 from agentloop.doctor import run_doctor, run_production_check
+from agentloop.runtime import configure_from_env, reset_runtime
+
+
+def _reload_runtime_from_env() -> None:
+    reset_runtime()
+    configure_from_env()
 
 
 def test_run_doctor_without_api(tmp_path: Path, monkeypatch) -> None:
@@ -16,6 +22,7 @@ def test_run_doctor_without_api(tmp_path: Path, monkeypatch) -> None:
         "AGENTLOOP_REQUIRE_API_KEY",
     ]:
         monkeypatch.delenv(name, raising=False)
+    _reload_runtime_from_env()
 
     result = run_doctor(check_api=True, runs_dir=tmp_path / "runs")
 
@@ -48,6 +55,7 @@ def test_run_doctor_without_api(tmp_path: Path, monkeypatch) -> None:
 def test_run_doctor_checks_explicit_api_url(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("AGENTLOOP_API_URL", "http://127.0.0.1:9")
     monkeypatch.delenv("AGENTLOOP_AUTO_UPLOAD", raising=False)
+    _reload_runtime_from_env()
 
     result = run_doctor(check_api=True, runs_dir=tmp_path / "runs")
 
@@ -62,6 +70,7 @@ def test_run_doctor_warns_when_authenticated_auto_upload_has_no_key(
     monkeypatch.setenv("AGENTLOOP_AUTO_UPLOAD", "true")
     monkeypatch.setenv("AGENTLOOP_REQUIRE_API_KEY", "true")
     monkeypatch.delenv("AGENTLOOP_API_KEY", raising=False)
+    _reload_runtime_from_env()
 
     result = run_doctor(check_api=False, runs_dir=tmp_path / "runs")
 
