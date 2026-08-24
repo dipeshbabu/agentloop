@@ -125,15 +125,12 @@ def _aggregate_savings(
     """Combine per-card savings without double-counting overlapping spans.
 
     Cards that share any affected span compete for the same work, so their
-    estimates are mutually exclusive alternatives, not additive. The plan
-    totals come from the compatible (span-disjoint) subset of cards that
-    maximizes latency savings, breaking ties by cost savings — so the reported
-    latency and cost pair is achievable by one concrete set of changes, never a
-    mix of incompatible alternatives. The totals are finally capped at the
-    current runtime/cost, because no plan can save more wall-clock time (or
-    money) than the run actually spent. This keeps ``latency_reduction_pct`` at
-    or below 100% and internally consistent with ``runtime_ms``, while per-card
-    estimates stay untouched and explainable.
+    estimates are mutually exclusive alternatives, not additive. Small overlap
+    components are solved exactly. If an unusually large component crosses the
+    selector's exact limit, the same compatible subset still drives both
+    latency and cost totals, but the explanation marks it as an approximation
+    rather than claiming a proven maximum. Totals are capped at current runtime
+    and cost because a plan cannot save more than the run spent.
     """
     items = [
         SavingsItem(
@@ -154,18 +151,30 @@ def _aggregate_savings(
         if cost_evaluable
         else None
     )
+    if selection.optimal:
+        rule = (
+            "cards sharing affected spans are mutually exclusive alternatives; "
+            "totals come from the proven-optimal compatible (span-disjoint) subset "
+            "that maximizes latency savings, breaking ties by cost savings, capped "
+            "at current runtime/cost"
+        )
+    else:
+        rule = (
+            "cards sharing affected spans are mutually exclusive alternatives; "
+            "components above the exact selection limit use a deterministic greedy "
+            "approximation, so totals may understate achievable savings; latency and "
+            "cost still come from one compatible subset and are capped at current runtime/cost"
+        )
     return {
         "latency_savings_ms": capped_latency,
         "cost_savings_usd": capped_cost,
         "explanation": {
-            "rule": (
-                "cards sharing affected spans are mutually exclusive alternatives; "
-                "totals come from the compatible (span-disjoint) subset of cards "
-                "that maximizes latency savings, breaking ties by cost savings, "
-                "capped at current runtime/cost"
-            ),
+            "rule": rule,
             "card_count": len(cards),
             "selected_card_indexes": list(selection.indices),
+            "selection_optimal": selection.optimal,
+            "selection_algorithm": selection.algorithm,
+            "exact_component_limit": selection.exact_component_limit,
             "raw_latency_savings_ms": round(raw_latency, 3),
             "effective_latency_savings_ms": round(capped_latency, 3),
             "raw_cost_savings_usd": None if raw_cost is None else round(raw_cost, 6),
