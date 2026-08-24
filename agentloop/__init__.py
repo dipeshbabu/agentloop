@@ -32,6 +32,16 @@ from agentloop.tracer import (
 from agentloop.value import build_value_report
 from agentloop.version import __version__
 
+# Store pagination predates the shared cursor validator. Install the strict
+# decoder once at package import so every SQLite/Postgres page method and API
+# path receives the same shape/type validation without duplicating it per
+# backend. This assignment can disappear when store.py is split into smaller
+# modules; the public behavior is covered by cursor contract tests.
+from agentloop.cursor_validation import install_store_decoder as _install_store_decoder
+
+_install_store_decoder()
+del _install_store_decoder
+
 __all__ = [
     "AgentLoopClient",
     "AgentLoopClientError",
