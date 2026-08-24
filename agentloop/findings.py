@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -40,10 +42,7 @@ class OptimizationFinding:
 
 def build_diagnosis(trace: Any) -> dict[str, Any]:
     plan = build_optimization_plan(trace)
-    findings = [
-        _finding_from_card(index, card, plan)
-        for index, card in enumerate(plan.get("optimization_cards", []), start=1)
-    ]
+    findings = [_finding_from_card(card, plan) for card in plan.get("optimization_cards", [])]
     findings = [finding for finding in findings if finding is not None]
     return {
         "run_id": plan["run_id"],
@@ -109,11 +108,29 @@ def diagnosis_to_markdown(diagnosis: dict[str, Any]) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
-def _finding_from_card(
-    index: int, card: dict[str, Any], plan: dict[str, Any]
-) -> OptimizationFinding | None:
+def _stable_finding_id(finding_type: str, title: str, affected_spans: list[str]) -> str:
+    """Return an order-independent identity for one concrete detected finding.
+
+    The old IDs used a card enumeration index, so inserting or reordering an
+    unrelated card could make a human-reviewed status attach to different
+    evidence. The fingerprint is based on the finding kind, human-readable
+    title, and sorted affected span identities instead. A changed finding gets a
+    new ID; an unchanged finding keeps its ID regardless of card order.
+    """
+    identity = {
+        "type": finding_type,
+        "title": title,
+        "affected_spans": sorted(str(span) for span in affected_spans),
+    }
+    raw = json.dumps(identity, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    digest = hashlib.sha256(raw).hexdigest()[:12]
+    return f"al_{finding_type}_{digest}"
+
+
+def _finding_from_card(card: dict[str, Any], plan: dict[str, Any]) -> OptimizationFinding | None:
     affected_spans = list(card.get("affected_nodes", []))
     finding_type = str(card.get("type", "optimization"))
+    title = str(card.get("title", "Optimization opportunity"))
     latency_savings = float(card.get("estimated_latency_savings_ms", 0.0) or 0.0)
     raw_cost_savings = card.get("estimated_cost_savings_usd")
     cost_savings = None if raw_cost_savings is None else float(raw_cost_savings)
@@ -124,10 +141,10 @@ def _finding_from_card(
     ]
 
     return OptimizationFinding(
-        finding_id=f"al_{finding_type}_{index:03d}",
+        finding_id=_stable_finding_id(finding_type, title, affected_spans),
         severity=severity,
         type=finding_type,
-        title=str(card.get("title", "Optimization opportunity")),
+        title=title,
         confidence=str(card.get("confidence", "unknown")),
         affected_spans=affected_spans,
         evidence=evidence,
@@ -157,7 +174,11 @@ def _finding_from_card(
             "command": "agentloop replay",
             "acceptance_criteria": _acceptance_criteria(finding_type),
         },
-        metadata={"why": card.get("why", ""), "cost_status": plan.get("cost_status")},
+        metadata={
+            "why": card.get("why", ""),
+            "cost_status": plan.get("cost_status"),
+            "identity": "content-v1",
+        },
     )
 
 
