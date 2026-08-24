@@ -60,9 +60,7 @@ def install_store_decoder() -> None:
 
     store.decode_cursor = decode_cursor
     for store_type in (store.SQLiteTraceStore, store.PostgresTraceStore):
-        store_type.list_traces_page = _page_validator(
-            store_type.list_traces_page, expected_parts=2
-        )
+        store_type.list_traces_page = _page_validator(store_type.list_traces_page, expected_parts=2)
         store_type.list_findings_page = _page_validator(
             store_type.list_findings_page, expected_parts=3
         )
