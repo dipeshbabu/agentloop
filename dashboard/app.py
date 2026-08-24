@@ -12,7 +12,7 @@ from agentloop.demo import run_baseline, run_langgraph_style, run_optimized, run
 from agentloop.findings import build_diagnosis
 from agentloop.issues import build_issue_drafts, issue_drafts_to_markdown
 from agentloop.optimizer import build_optimization_plan
-from agentloop.patches import build_patch_plan
+from agentloop.patches import RepositoryPathError, build_patch_plan
 from agentloop.quality import (
     QualityValidationError,
     build_quality_report,
@@ -30,8 +30,10 @@ from agentloop.tracer import AgentTrace
 from agentloop.value import build_value_report
 
 try:
+    from dashboard.trace_upload import TraceUploadError, parse_uploaded_trace
     from dashboard.value_view import assumption_inputs, percentage, render_value_report
 except ModuleNotFoundError:
+    from trace_upload import TraceUploadError, parse_uploaded_trace
     from value_view import assumption_inputs, percentage, render_value_report
 
 st.set_page_config(page_title="AgentLoop Dashboard", layout="wide")
@@ -454,7 +456,15 @@ elif page == "Patch Plan":
         trace = selected_trace_from_options(traces, "Choose trace for patch planning")
         repo_path = st.text_input("Repository path", value=str(Path.cwd()))
         if trace is not None:
-            plan = build_patch_plan(trace, repo_path=repo_path)
+            try:
+                plan = build_patch_plan(trace, repo_path=repo_path)
+            except RepositoryPathError as exc:
+                # The path is free text re-read on every rerun, so a half-typed one
+                # reaches build_patch_plan before the operator has finished editing.
+                # Only the path error is caught: anything else planning raises is a
+                # bug in planning, and swallowing it here would hide it.
+                st.error(f"Fix the repository path: {exc}.")
+                st.stop()
             summary = plan["summary"]
             c1, c2, c3 = st.columns(3)
             c1.metric("Patch plans", summary["patch_count"])
@@ -736,10 +746,14 @@ elif page == "Ingest":
 
     uploaded = st.file_uploader("Upload AgentLoop trace JSON", type=["json"])
     if uploaded is not None:
-        trace = AgentTrace.from_dict(json.loads(uploaded.read().decode("utf-8")))
-        if st.button("Store uploaded trace"):
-            store.save_trace(trace, project_id=project_id)
-            st.success(f"Stored uploaded trace `{trace.run_id}` under project `{project_id}`")
+        try:
+            trace = parse_uploaded_trace(uploaded.read())
+        except TraceUploadError as exc:
+            st.error(f"Fix the uploaded trace: {exc}.")
+        else:
+            if st.button("Store uploaded trace"):
+                store.save_trace(trace, project_id=project_id)
+                st.success(f"Stored uploaded trace `{trace.run_id}` under project `{project_id}`")
 
     st.subheader("CLI ingest")
     st.code(
