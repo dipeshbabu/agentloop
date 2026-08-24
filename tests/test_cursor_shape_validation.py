@@ -43,10 +43,18 @@ def test_decode_cursor_accepts_supported_shapes(payload) -> None:
     assert decode_cursor(_cursor(payload)) == payload
 
 
-@pytest.mark.parametrize("kind", ["traces", "findings"])
 @pytest.mark.parametrize("backend", ["sqlite", "postgres"])
+@pytest.mark.parametrize(
+    ("kind", "payload"),
+    [
+        ("traces", []),
+        ("traces", ["updated", "run-1", "finding-1"]),
+        ("findings", []),
+        ("findings", ["created", "run-1"]),
+    ],
+)
 def test_store_backends_reject_wrong_cursor_arity_before_query(
-    tmp_path, kind: str, backend: str
+    tmp_path, kind: str, payload, backend: str
 ) -> None:
     if backend == "sqlite":
         store = SQLiteTraceStore(path=str(tmp_path / "cursor.db"))
@@ -55,7 +63,7 @@ def test_store_backends_reject_wrong_cursor_arity_before_query(
         # deliberately does not need a live Postgres server.
         store = PostgresTraceStore(dsn="postgresql://invalid:invalid@127.0.0.1:1/invalid")
 
-    cursor = _cursor([])
+    cursor = _cursor(payload)
     method = store.list_traces_page if kind == "traces" else store.list_findings_page
 
     with pytest.raises(InvalidCursorError, match="invalid pagination cursor"):
