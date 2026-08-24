@@ -8,14 +8,66 @@ from agentloop.autoinstrument import auto_instrument, detect_integrations
 from agentloop.doctor import run_doctor, run_production_check
 
 
-def test_run_doctor_without_api(tmp_path: Path) -> None:
+def test_run_doctor_without_api(tmp_path: Path, monkeypatch) -> None:
+    for name in [
+        "AGENTLOOP_API_URL",
+        "AGENTLOOP_API_KEY",
+        "AGENTLOOP_AUTO_UPLOAD",
+        "AGENTLOOP_REQUIRE_API_KEY",
+    ]:
+        monkeypatch.delenv(name, raising=False)
+
+    result = run_doctor(check_api=True, runs_dir=tmp_path / "runs")
+
+    assert result["ok"] is True
+    assert result["failed"] == 0
+    assert result["warnings"] == 0
+    by_name = {check["name"]: check for check in result["checks"]}
+    assert by_name["python"]["status"] == "ok"
+    assert by_name["runs_dir"]["status"] == "ok"
+    assert by_name["store"]["status"] == "ok"
+    assert by_name["api_key"] == {
+        "name": "api_key",
+        "status": "ok",
+        "detail": "not configured; not required for local-only use",
+    }
+    assert by_name["auto_upload"] == {
+        "name": "auto_upload",
+        "status": "ok",
+        "detail": "disabled; traces stay local",
+    }
+    assert by_name["api_health"] == {
+        "name": "api_health",
+        "status": "ok",
+        "detail": "skipped; no hosted API is configured",
+    }
+    dependency_names = {name for name in by_name if name.startswith("dependency:")}
+    assert dependency_names == {"dependency:typer", "dependency:rich"}
+
+
+def test_run_doctor_checks_explicit_api_url(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("AGENTLOOP_API_URL", "http://127.0.0.1:9")
+    monkeypatch.delenv("AGENTLOOP_AUTO_UPLOAD", raising=False)
+
+    result = run_doctor(check_api=True, runs_dir=tmp_path / "runs")
+
+    api_health = next(check for check in result["checks"] if check["name"] == "api_health")
+    assert api_health["status"] == "warn"
+    assert "Could not reach" in api_health["detail"]
+
+
+def test_run_doctor_warns_when_authenticated_auto_upload_has_no_key(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setenv("AGENTLOOP_AUTO_UPLOAD", "true")
+    monkeypatch.setenv("AGENTLOOP_REQUIRE_API_KEY", "true")
+    monkeypatch.delenv("AGENTLOOP_API_KEY", raising=False)
+
     result = run_doctor(check_api=False, runs_dir=tmp_path / "runs")
 
-    assert "ok" in result
-    assert result["failed"] == 0
-    assert any(check["name"] == "python" for check in result["checks"])
-    assert any(check["name"] == "runs_dir" for check in result["checks"])
-    assert any(check["name"] == "store" for check in result["checks"])
+    api_key = next(check for check in result["checks"] if check["name"] == "api_key")
+    assert api_key["status"] == "warn"
+    assert result["warnings"] == 1
 
 
 def test_detect_integrations_returns_structured_result() -> None:
