@@ -34,7 +34,7 @@ A component above that limit uses a deterministic greedy fallback so analysis re
 }
 ```
 
-An approximate result remains a valid compatible plan, but it is not a proof of the maximum achievable savings and can understate what a better compatible selection could save. AgentLoop does not present that path as optimal.
+An approximate result remains a valid compatible plan, but it is not a proof of the maximum achievable savings and can understate what a better compatible selection could save. AgentLoop does not present that path as optimal. Consumers that use optimizer output for research or capacity planning should retain these fields alongside the reported savings.
 
 The machine-readable fields live under `savings_aggregation` in optimization-plan output. Queue prioritization uses the same `select_compatible()` selection routine for per-run savings, so it does not switch to a different double-counting rule.
 
