@@ -1,0 +1,79 @@
+name: Prepare AgentLoop 0.6.0 once
+
+on:
+  push:
+    branches:
+      - release/0.6.0
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    name: Prepare 0.6.0 files
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Set up uv and Python
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.11.28"
+          python-version: "3.13"
+          enable-cache: true
+
+      - name: Add final 0.6.0 changelog entries
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("CHANGELOG.md")
+          text = path.read_text(encoding="utf-8")
+
+          added = """\
+          - Added `agentloop quickstart`, a deterministic offline path from install to\n  concrete findings with no account, API key, database, network, or paid model\n  call, plus `agentloop analyze` to combine report, diagnosis, and optimization\n  for any existing trace in one command.\n- Added first-class research workflows: paired-intervention guidance, portable\n  experiment metadata, measured-versus-estimated evidence rules, reproducibility\n  and privacy guidance, science/research package metadata, and a deterministic\n  offline research example.\n"""
+          changed = """\
+          - Added Python 3.14 to the supported CI matrix and moved the official\n  production container to Python 3.14 while retaining Python 3.10 and 3.13\n  compatibility. `agentloop doctor` now treats local-only operation as healthy,\n  checks only actual core dependencies, and probes hosted API wiring only when it\n  is configured; `production-check` remains strict.\n- Savings aggregation now solves practical overlap components exactly and reports\n  explicit `selection_optimal`, algorithm, and cutoff metadata whenever a large\n  component uses the bounded deterministic approximation, so estimated savings are\n  never presented as a proven maximum when they are not.\n"""
+          fixed = """\
+          - Finding IDs are now content-based rather than list-position-based, so\n  reordering or inserting an unrelated finding cannot transfer an accepted or\n  resolved human review decision to different evidence. Unchanged findings retain\n  their status across re-diagnosis on both SQLite and Postgres.\n- Pagination cursors now validate payload arity and scalar types before SQLite or\n  Postgres destructures them. Malformed-but-decodable cursors, including trace\n  cursors supplied to finding endpoints and vice versa, return the documented HTTP\n  400 response instead of escaping as unpacking errors and HTTP 500s (#19).\n- The dashboard now honors its declared `streamlit>=1.34.0` compatibility floor by\n  adapting modern `width=\"stretch\"` dataframe calls to the legacy container-width\n  API on Streamlit releases before 1.49.\n"""
+
+          markers = [
+              ("## [Unreleased]\n\n### Added\n", "## [Unreleased]\n\n### Added\n\n" + added),
+              ("\n### Changed\n", "\n### Changed\n\n" + changed),
+              ("\n### Fixed\n", "\n### Fixed\n\n" + fixed),
+          ]
+          for marker, replacement in markers:
+              if marker not in text:
+                  raise SystemExit(f"missing changelog marker: {marker!r}")
+              text = text.replace(marker, replacement, 1)
+
+          path.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Bump version and roll changelog
+        run: |
+          new_version="$(python scripts/bump_version.py --set 0.6.0)"
+          test "$new_version" = "0.6.0"
+
+      - name: Verify generated release diff
+        run: |
+          actual="$(git diff --name-only | sort)"
+          expected="$(printf '%s\n' CHANGELOG.md agentloop/version.py pyproject.toml uv.lock | sort)"
+          test "$actual" = "$expected"
+          grep -q '^version = "0.6.0"$' pyproject.toml
+          grep -q '^__version__ = "0.6.0"$' agentloop/version.py
+          grep -q '^## \[0.6.0\] - 2026-08-24$' CHANGELOG.md
+          grep -A2 '^name = "agentloop-profiler"$' uv.lock | grep -q '^version = "0.6.0"$'
+
+      - name: Commit generated release files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md agentloop/version.py pyproject.toml uv.lock
+          git commit -m "Prepare agentloop-profiler 0.6.0 release"
+          git push origin HEAD:release/0.6.0
