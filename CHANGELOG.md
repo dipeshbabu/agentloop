@@ -8,7 +8,18 @@ Project history from before the first public release remains available in Git.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-08-24
+
 ### Added
+
+- Added `agentloop quickstart`, a deterministic offline path from install to
+  concrete findings with no account, API key, database, network, or paid model
+  call, plus `agentloop analyze` to combine report, diagnosis, and optimization
+  for any existing trace in one command.
+- Added first-class research workflows: paired-intervention guidance, portable
+  experiment metadata, measured-versus-estimated evidence rules, reproducibility
+  and privacy guidance, science/research package metadata, and a deterministic
+  offline research example.
 
 - Added checksummed standalone AgentLoop CLI executables for Linux x86-64,
   Windows x86-64, macOS Intel, and macOS Apple silicon. Tagged release workflows
@@ -74,6 +85,16 @@ Project history from before the first public release remains available in Git.
 
 ### Changed
 
+- Added Python 3.14 to the supported CI matrix and moved the official
+  production container to Python 3.14 while retaining Python 3.10 and 3.13
+  compatibility. `agentloop doctor` now treats local-only operation as healthy,
+  checks only actual core dependencies, and probes hosted API wiring only when it
+  is configured; `production-check` remains strict.
+- Savings aggregation now solves practical overlap components exactly and reports
+  explicit `selection_optimal`, algorithm, and cutoff metadata whenever a large
+  component uses the bounded deterministic approximation, so estimated savings are
+  never presented as a proven maximum when they are not.
+
 - **Unknown model pricing is now explicit instead of a fabricated default.**
   Previously every unrecognized model was silently assigned a generic `$1/M`
   input, `$3/M` output rate, so a Claude, Gemini, local, fine-tuned, or newly
@@ -98,6 +119,18 @@ Project history from before the first public release remains available in Git.
   models via `AGENTLOOP_PRICING_FILE` to make the gates evaluable.
 
 ### Fixed
+
+- Finding IDs are now content-based rather than list-position-based, so
+  reordering or inserting an unrelated finding cannot transfer an accepted or
+  resolved human review decision to different evidence. Unchanged findings retain
+  their status across re-diagnosis on both SQLite and Postgres.
+- Pagination cursors now validate payload arity and scalar types before SQLite or
+  Postgres destructures them. Malformed-but-decodable cursors, including trace
+  cursors supplied to finding endpoints and vice versa, return the documented HTTP
+  400 response instead of escaping as unpacking errors and HTTP 500s (#19).
+- The dashboard now honors its declared `streamlit>=1.34.0` compatibility floor by
+  adapting modern `width="stretch"` dataframe calls to the legacy container-width
+  API on Streamlit releases before 1.49.
 
 - The dashboard reports invalid input inline instead of replacing the page with a
   traceback. A repository path that does not exist or escapes the allowed root now
@@ -351,6 +384,7 @@ Project history from before the first public release remains available in Git.
 - Constrained patch-plan source discovery to a normalized allowed root and
   excluded source and directory symlinks from scans.
 
-[Unreleased]: https://github.com/dipeshbabu/agentloop/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/dipeshbabu/agentloop/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/dipeshbabu/agentloop/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/dipeshbabu/agentloop/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/dipeshbabu/agentloop/releases/tag/v0.4.0
