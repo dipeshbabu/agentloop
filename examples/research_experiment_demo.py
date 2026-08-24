@@ -39,7 +39,9 @@ def _trace(condition: str, elapsed_ms: float, events: list[AgentEvent]) -> Agent
     return trace
 
 
-def _tool(event_id: str, run_id: str, name: str, start: str, end: str, duration: float) -> AgentEvent:
+def _tool(
+    event_id: str, run_id: str, name: str, start: str, end: str, duration: float
+) -> AgentEvent:
     return AgentEvent(
         event_id=event_id,
         run_id=run_id,
