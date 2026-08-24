@@ -45,7 +45,9 @@ def test_decode_cursor_accepts_supported_shapes(payload) -> None:
 
 @pytest.mark.parametrize("kind", ["traces", "findings"])
 @pytest.mark.parametrize("backend", ["sqlite", "postgres"])
-def test_store_backends_reject_wrong_cursor_arity_before_query(tmp_path, kind: str, backend: str) -> None:
+def test_store_backends_reject_wrong_cursor_arity_before_query(
+    tmp_path, kind: str, backend: str
+) -> None:
     if backend == "sqlite":
         store = SQLiteTraceStore(path=str(tmp_path / "cursor.db"))
     else:
