@@ -110,7 +110,7 @@ def _env_enabled(name: str) -> bool:
 
 
 def run_doctor(*, check_api: bool = True, runs_dir: Path | str = "runs") -> dict[str, Any]:
-    """Run local setup checks for SDK, CLI, store, and hosted API wiring."""
+    """Run local setup checks, probing hosted wiring only when it is configured."""
 
     checks: list[DoctorCheck] = []
 
@@ -126,7 +126,10 @@ def run_doctor(*, check_api: bool = True, runs_dir: Path | str = "runs") -> dict
             )
         )
 
-    for module_name in ["typer", "rich", "pydantic"]:
+    # These are the actual core runtime dependencies in pyproject.toml. Server,
+    # dashboard, Postgres, and instrumentation dependencies are checked by their
+    # corresponding modes instead of making a minimal local install look broken.
+    for module_name in ["typer", "rich"]:
         try:
             importlib.import_module(module_name)
             checks.append(_ok(f"dependency:{module_name}", "importable"))
@@ -135,7 +138,7 @@ def run_doctor(*, check_api: bool = True, runs_dir: Path | str = "runs") -> dict
                 _fail(
                     f"dependency:{module_name}",
                     "not installed",
-                    "Run: uv sync --locked --all-extras --dev",
+                    "Install the package with: python -m pip install agentloop-profiler",
                 )
             )
 
@@ -169,11 +172,10 @@ def run_doctor(*, check_api: bool = True, runs_dir: Path | str = "runs") -> dict
         )
 
     cfg = get_runtime_config()
-    if (
-        cfg.auto_upload
-        and not cfg.api_key
-        and os.getenv("AGENTLOOP_REQUIRE_API_KEY", "").lower() in {"1", "true", "yes", "on"}
-    ):
+    auth_required = _env_enabled("AGENTLOOP_REQUIRE_API_KEY")
+    explicit_api_url = os.getenv("AGENTLOOP_API_URL")
+
+    if cfg.auto_upload and auth_required and not cfg.api_key:
         checks.append(
             _warn(
                 "api_key",
@@ -184,23 +186,18 @@ def run_doctor(*, check_api: bool = True, runs_dir: Path | str = "runs") -> dict
     elif cfg.api_key:
         checks.append(_ok("api_key", "AGENTLOOP_API_KEY is configured"))
     else:
-        checks.append(
-            _warn("api_key", "no API key configured; OK for local API when auth is disabled")
-        )
+        checks.append(_ok("api_key", "not configured; not required for local-only use"))
 
     if cfg.auto_upload:
         checks.append(_ok("auto_upload", f"enabled -> {cfg.api_url}"))
     else:
-        checks.append(
-            _warn(
-                "auto_upload",
-                "disabled",
-                "Set AGENTLOOP_AUTO_UPLOAD=true to upload traces automatically.",
-            )
-        )
+        checks.append(_ok("auto_upload", "disabled; traces stay local"))
 
     if check_api:
-        checks.append(_health_check(cfg.api_url))
+        if explicit_api_url or cfg.auto_upload:
+            checks.append(_health_check(cfg.api_url))
+        else:
+            checks.append(_ok("api_health", "skipped; no hosted API is configured"))
 
     failed = sum(1 for check in checks if check.status == "fail")
     warned = sum(1 for check in checks if check.status == "warn")
