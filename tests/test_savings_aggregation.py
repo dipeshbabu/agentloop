@@ -168,9 +168,7 @@ def test_large_component_fallback_is_explicitly_approximate() -> None:
 def test_aggregate_exposes_approximation_metadata() -> None:
     all_spans = [f"s{i}" for i in range(24)]
     cards = [_card(RecommendationType.PARALLELIZE_TOOLS, 100, 0.0, all_spans)]
-    cards.extend(
-        _card(RecommendationType.PARALLELIZE_TOOLS, 99, 0.0, [span]) for span in all_spans
-    )
+    cards.extend(_card(RecommendationType.PARALLELIZE_TOOLS, 99, 0.0, [span]) for span in all_spans)
 
     agg = _aggregate_savings(cards, current_runtime=5000.0, current_cost=0.0)
     explanation = agg["explanation"]
