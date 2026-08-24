@@ -5,124 +5,81 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB.svg)](https://www.python.org/downloads/)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-AgentLoop is a profiler and optimization layer for AI agent execution graphs. It traces model calls, tool calls, retries, token usage, repeated context, and latency bottlenecks, then turns the trace into concrete workflow rewrite recommendations, patch plans, and replay proof.
+**Find slow, expensive, and repetitive steps in AI agents, then verify that your fix actually works.**
+
+AgentLoop is an open-source profiler, optimization, and intervention-evaluation layer for agentic systems. It traces model calls, tool calls, retries, tokens, context reuse, latency, errors, and execution structure. It turns those traces into evidence-backed findings and lets you compare a baseline with a changed agent under performance and quality gates.
 
 AgentLoop is not memory for agents. It is performance engineering for agent loops.
 
-The design premise is simple: agents do not execute like single prompt-response
-apps. They loop, call tools, retry, branch, summarize, and carry context.
-AgentLoop measures that loop, proposes targeted rewrites, and proves whether the
-rewrite improved the result.
+It is local-first, works without a hosted account, and can sit around an existing custom agent or framework instead of replacing it.
 
-Trace in. Rewrite plan out. Replay proof in the PR.
+## First useful result
 
-AgentLoop is under active pre-1.0 development. Public interfaces may evolve,
-with user-facing changes recorded in the [changelog](CHANGELOG.md).
-
-## Install
-
-### Standalone CLI (no Python required)
-
-New tagged releases include a self-contained `agentloop` executable for the
-following platforms. These executables bundle Python and the core CLI runtime.
-
-| Platform | Release asset |
-| --- | --- |
-| Linux x86-64 | `agentloop-vX.Y.Z-linux-x86_64` |
-| Windows x86-64 | `agentloop-vX.Y.Z-windows-x86_64.exe` |
-| macOS Intel | `agentloop-vX.Y.Z-macos-x86_64` |
-| macOS Apple silicon | `agentloop-vX.Y.Z-macos-arm64` |
-
-Download the matching file and `SHA256SUMS` from the
-[GitHub Releases page](https://github.com/dipeshbabu/agentloop/releases). For
-example, on Linux (replace `X.Y.Z` with the release version):
-
-```bash
-set -euo pipefail
-version=X.Y.Z
-asset="agentloop-v${version}-linux-x86_64"
-curl -LO "https://github.com/dipeshbabu/agentloop/releases/download/v${version}/${asset}"
-curl -LO "https://github.com/dipeshbabu/agentloop/releases/download/v${version}/SHA256SUMS"
-mapfile -t checksum_lines < <(awk -v asset="$asset" '$2 == asset { print }' SHA256SUMS)
-if [ "${#checksum_lines[@]}" -ne 1 ]; then
-  echo "Expected exactly one checksum for ${asset}" >&2
-  exit 1
-fi
-printf '%s\n' "${checksum_lines[0]}" | sha256sum --check --strict
-chmod +x "$asset"
-mkdir -p "$HOME/.local/bin"
-mv "$asset" "$HOME/.local/bin/agentloop"
-agentloop --help
-```
-
-On Windows PowerShell:
-
-```powershell
-$Version = "X.Y.Z"
-$Asset = "agentloop-v$Version-windows-x86_64.exe"
-Invoke-WebRequest "https://github.com/dipeshbabu/agentloop/releases/download/v$Version/$Asset" -OutFile agentloop.exe
-Invoke-WebRequest "https://github.com/dipeshbabu/agentloop/releases/download/v$Version/SHA256SUMS" -OutFile SHA256SUMS
-$ChecksumLines = @(Get-Content SHA256SUMS | Where-Object {
-    $_ -match "^[0-9a-fA-F]{64}  $([regex]::Escape($Asset))$"
-})
-if ($ChecksumLines.Count -ne 1) { throw "Expected exactly one checksum for $Asset" }
-$ExpectedHash = ($ChecksumLines[0] -split "  ", 2)[0]
-$ActualHash = (Get-FileHash .\agentloop.exe -Algorithm SHA256).Hash
-if ($ActualHash -ne $ExpectedHash) { throw "Checksum verification failed for $Asset" }
-.\agentloop.exe --help
-```
-
-Each release also includes a platform-specific `THIRD_PARTY_NOTICES-*.txt` with
-the exact CPython and bundled-dependency license and attribution texts. The macOS
-executables are ad-hoc signed but not notarized; depending on local Gatekeeper
-policy, the first launch may require explicit approval in
-**System Settings → Privacy & Security**.
-
-The standalone executable targets the core profiling CLI. Optional server,
-Postgres, dashboard, and Python SDK integration dependencies remain available
-through the Python package and Docker deployment.
-
-### Python package
-
-The PyPI distribution is named `agentloop-profiler`. The Python import package
-and command-line program remain `agentloop`:
+Install the Python package:
 
 ```bash
 python -m pip install agentloop-profiler
-agentloop --help
 ```
 
-For an isolated CLI installation that avoids modifying the system Python
-environment, use [`pipx`](https://pipx.pypa.io/). `pipx` still requires Python
-to be installed; use a standalone executable above when no Python runtime is
-available.
-
-```bash
-pipx install agentloop-profiler
-agentloop --help
-```
+The distribution is `agentloop-profiler`; the import and CLI are `agentloop`:
 
 ```python
 import agentloop
 ```
 
-For a source checkout, use [`uv`](https://docs.astral.sh/uv/):
+Verify the install and get a real finding without an account, API key, database, network call, or paid model API:
 
 ```bash
-git clone https://github.com/dipeshbabu/agentloop.git
-cd agentloop
-uv sync --locked --all-extras --no-dev
-uv run agentloop --help
+agentloop quickstart
 ```
 
-Shell examples below assume a source checkout and use `uv run` so they execute
-inside the locked project environment. The prefix is optional only when that
-environment is already active.
+`quickstart` writes a deterministic trace marked as synthetic and prints concrete bottlenecks. Then analyze any AgentLoop trace with one command:
 
-For a development installation, local quality checks, and pull request guidance,
-see [CONTRIBUTING.md](CONTRIBUTING.md).
+```bash
+agentloop analyze runs/agentloop_quickstart.json
+agentloop analyze runs/my_agent.json --json-out runs/my_agent_analysis.json
+```
 
-## Quickstart
+See [First useful result](docs/FIRST_USE.md) for the full beginner path.
+
+## What people use AgentLoop for
+
+| Use case | What AgentLoop provides |
+| --- | --- |
+| Coding agents | Find repeated tool/file operations, retry loops, unnecessary model calls, context growth, and regressions after workflow changes. |
+| Research agents | Measure retrieval, synthesis, tool, model, and retry behavior; compare sequential and parallel designs; verify quality after optimization. |
+| Customer or operations agents | Compare routing, tool sequences, structured-output reliability, latency, retries, and model cost. |
+| Multi-agent systems | Inspect execution structure, duplicated work, serial coordination, repeated handoffs, and recurring findings. |
+| Platform teams | Import or export OpenTelemetry traces, persist findings in SQLite/Postgres, and gate agent changes in CI. |
+| Researchers | Run paired agent interventions with trace-level experiment metadata and retain execution evidence alongside task evaluation. |
+
+## The workflow
+
+### 1. Trace an existing agent
+
+For custom Python agents:
+
+```python
+import agentloop
+
+@agentloop.trace_model(name="planner", model="gpt-4.1-mini")
+def plan(question: str) -> str:
+    return call_model(question)
+
+@agentloop.trace_tool(name="web_search")
+def search(query: str) -> list[str]:
+    return search_web(query)
+
+@agentloop.traceable(root=True, agent_name="research_agent")
+def run_agent(question: str) -> str:
+    plan_text = plan(question)
+    results = search(question)
+    return synthesize(plan_text, results)
+
+run_agent("Compare three vector databases")
+```
+
+You can also use the lower-level context managers directly:
 
 ```python
 from agentloop import trace_agent, trace_model_call, trace_tool_call
@@ -133,43 +90,85 @@ with trace_agent("research_agent") as trace:
     with trace_tool_call("search_web"):
         pass
 
-trace.print_report()
 trace.export_json("runs/research_agent.json")
 ```
 
-### Timing semantics
+### 2. Find the bottleneck
 
-`total_runtime_ms` is the end-to-end elapsed duration of a trace, including work
-that was not wrapped in an event. `cumulative_span_time_ms` is the sum of all
-instrumented event durations, so it can exceed elapsed runtime when spans overlap
-or are nested. Native trace JSON stores `ended_at` and the monotonic-clock
-`elapsed_ms`. Timestamped imports use the earliest span start and latest span end.
-Legacy traces without trustworthy end-time metadata fall back to their cumulative
-event duration for compatibility.
+```bash
+agentloop analyze runs/research_agent.json
+```
 
-### Markdown export safety
+Or use individual stages when you need more control:
 
-AgentLoop treats trace-derived values as untrusted in every Markdown exporter.
-Names, findings, recommendations, statuses, paths, and other captured strings are
-rendered as escaped single-line text in headings and prose, and table values cannot
-add rows or columns. Inline and fenced code use delimiters longer than any backtick
-run in their content. Raw HTML is escaped in prose and tables and remains literal
-inside code spans and fences. Exporters do not turn trace values into Markdown links.
+```bash
+agentloop report runs/research_agent.json
+agentloop diagnose --path runs/research_agent.json --json-out runs/diagnosis.json
+agentloop optimize --path runs/research_agent.json --json-out runs/optimization.json
+agentloop patch --path runs/research_agent.json --repo . --json-out runs/patch_plan.json
+```
 
-Keep the Markdown renderer's normal safe mode or HTML sanitizer enabled when reports
-are converted to HTML. These guarantees protect AgentLoop's generated structure;
-they do not make separately appended Markdown or renderer extensions trusted.
+AgentLoop currently detects patterns such as:
+
+- independent tool calls that may be parallelized;
+- repeated prompt/context prefixes;
+- repeated model calls that may be batched;
+- small model steps that may be routed to a cheaper model;
+- retry loops that may benefit from structured outputs;
+- oversized reasoning/context steps;
+- runaway loops;
+- tool oscillation.
+
+Recommendations are hypotheses to test, not proof that the proposed rewrite is better.
+
+### 3. Change the agent
+
+Apply one focused intervention such as parallel retrieval, context compression, a schema validator, a loop guard, or model routing. AgentLoop's patch command produces dry-run plans; it does not silently modify source code.
+
+### 4. Prove the change
+
+```bash
+agentloop replay \
+  --baseline runs/baseline.json \
+  --candidate runs/candidate.json \
+  --min-latency-improvement-pct 10 \
+  --max-cost-regression-pct 0
+```
+
+When faster or cheaper is not sufficient evidence, add task-grounded quality fixtures:
+
+```bash
+agentloop replay \
+  --baseline runs/baseline.json \
+  --candidate runs/candidate.json \
+  --quality-fixtures evaluation/fixtures.json \
+  --min-quality-score 0.9
+```
+
+Replay can compare runtime, cost, tokens, retries, model/tool calls, schema validity, and configured quality evidence.
+
+For pull-request gating:
+
+```bash
+agentloop ci \
+  --baseline artifacts/agentloop/baseline.json \
+  --candidate artifacts/agentloop/candidate.json \
+  --quality-fixtures evaluation/fixtures.json
+```
 
 ## Framework integrations
 
-AgentLoop now includes dependency-free wrappers for the agent frameworks and SDKs teams are already using:
+AgentLoop includes instrumentation for existing agent stacks:
 
-- OpenAI SDK: `instrument_openai_client(...)` records model latency and usage from `responses.create` and `chat.completions.create`.
-- LangGraph: `instrument_state_graph(...)` and `trace_runnable(...)` trace graph nodes and compiled runnables.
-- CrewAI: `instrument_crew(...)`, `instrument_agent(...)`, and `instrument_task(...)` trace crew, agent, and task execution methods.
-- Vercel AI SDK / JS agents: export telemetry dictionaries and convert them with `trace_from_vercel_ai_events(...)`.
+- OpenAI SDK
+- OpenAI Agents SDK
+- LangGraph
+- CrewAI
+- Vercel AI SDK telemetry
+- OpenTelemetry GenAI-style traces
+- custom Python agents through decorators and context managers
 
-See `docs/INTEGRATIONS.md` for copy-paste examples.
+For copy-paste examples and streaming/cancellation semantics, see [Framework integrations](docs/INTEGRATIONS.md).
 
 OpenAI example:
 
@@ -186,463 +185,193 @@ with trace_agent("research_agent") as trace:
 trace.export_json("runs/openai_agent.json")
 ```
 
-## Run the end-to-end demo
+## Research use
+
+AgentLoop can be used as execution-level instrumentation and intervention evidence for agent-systems research.
+
+Good fits include:
+
+- ReAct versus planner-executor comparisons;
+- single-agent versus multi-agent workflows;
+- sequential versus parallel tool execution;
+- reflection and retry strategies;
+- context compression/caching;
+- model routing;
+- loop/tool-oscillation guardrails;
+- execution signals associated with success or failure;
+- quality, latency, cost, token, and reliability tradeoffs.
+
+One trace should represent one task attempt under one condition. Use trace metadata for experiment, condition, task, dataset, seed, prompt/config version, model, and source commit. Run enough tasks or repetitions to characterize variability and aggregate results according to the study design.
+
+AgentLoop deliberately does not choose a statistical test for a paper and does not replace model-training frameworks, mechanistic interpretability tooling, benchmark dataset management, or human evaluation systems.
+
+See [Using AgentLoop for research](docs/RESEARCH.md). The repository also includes a deterministic offline paired-intervention example:
 
 ```bash
-uv run agentloop demo-all
-uv run agentloop compare
-uv run agentloop demo --kind proof
-uv run agentloop diagnose --path runs/agentloop_proof_baseline.json --out runs/diagnosis.md --json-out runs/diagnosis.json
-uv run agentloop patch --path runs/agentloop_proof_baseline.json --repo . --out runs/patch_plan.md --json-out runs/patch_plan.json
-uv run agentloop replay --baseline runs/research_agent_baseline.json --candidate runs/research_agent_optimized.json --out runs/replay_report.md --json-out runs/replay_report.json
-uv run agentloop quality-report examples/quality_fixtures.json --out runs/quality_report.md --json-out runs/quality_report.json --min-score 0.9
-uv run agentloop audit --out runs/audit.md
-uv run agentloop optimize --out runs/optimization_plan.md --json-out runs/optimization_plan.json
-uv run agentloop ci --out runs/agentloop_ci.md --json-out runs/agentloop_ci.json
-uv run agentloop value-report --out runs/value_report.json --runs-per-month 5000
-uv run agentloop init-store
-uv run agentloop store-trace --path runs/research_agent_baseline.json --project-id demo
-uv run streamlit run dashboard/app.py
+python examples/research_experiment_demo.py
 ```
 
-The dashboard is a local-first control panel backed by the same persistent store
-used by the API server. It includes:
+## Measured evidence versus estimates
 
-- project overview and usage metering
-- stored traces
-- trace event timelines
-- graph-aware optimization plans
-- machine-actionable diagnosis findings
-- persistent optimization queue across stored traces
-- trace-to-patch dry-run plans
-- before/after replay proof and PR comment previews
-- operational value and pricing-scenario reports
-- API key creation
-- trace ingest and upload flow
-- local, HTTP API, and Postgres setup commands
+Keep these separate when using AgentLoop for engineering decisions or research.
 
-You can still run individual demos:
+**Measured** evidence includes observed runtime, tokens, model/tool/retry counts, status/errors, task quality, and complete/provider-reported cost.
 
-```bash
-uv run agentloop demo --kind baseline
-uv run agentloop demo --kind optimized
-uv run agentloop demo --kind langgraph
-uv run agentloop demo --kind proof
-uv run python examples/langgraph_auto_instrumentation_demo.py
-```
+**Estimated** evidence includes optimizer savings, rewrite recommendations, priority scores, and modeled value/pricing scenarios.
 
-Only `agentloop demo` and `agentloop demo-all` generate synthetic traces. Their
-output is labeled as synthetic in the terminal and carries
-`metadata.synthetic = true` with `metadata.source = "agentloop_demo"`.
+Optimization cards are useful hypotheses. A proposed saving is not an experimental result until the change is implemented and measured on a candidate run.
 
-Commands that load a trace require the supplied path to be an existing,
-readable regular file containing a valid trace. Missing, unreadable, or malformed
-inputs produce a clear error and a non-zero exit code; they are never replaced
-with demo data. The former `--autogen` fallback has been removed. Run one of the
-demo commands explicitly before using the generated paths in the examples above.
-
-## Replay gates
-
-```bash
-uv run agentloop replay \
-  --baseline runs/research_agent_baseline.json \
-  --candidate runs/research_agent_optimized.json \
-  --out runs/replay_report.md \
-  --json-out runs/replay_report.json \
-  --min-latency-improvement-pct 20 \
-  --min-cost-improvement-pct 5 \
-  --max-latency-regression-pct 0 \
-  --max-cost-regression-pct 0 \
-  --require-retry-non-increase \
-  --quality-fixtures examples/quality_fixtures.json \
-  --min-quality-score 0.9
-```
-
-`agentloop replay` compares a baseline trace with a candidate trace and turns the
-result into pass/fail gates for CI and PR comments. It reports latency, cost,
-token, retry, tool-call, model-call, schema, and quality deltas, then exits
-non-zero when gates fail unless `--no-fail-on-gate` is used.
-
-Cost estimates are provider-aware and offline. A model with a known rate is
-calculated (with the pricing `source`/`as_of` recorded in the report), a
-provider-reported cost is used verbatim, and a model with no known rate is
-reported as **unknown** rather than assigned a fabricated fallback rate. Configure
-rates for your own or newer models with `AGENTLOOP_PRICING_FILE` — see the
-[pricing guide](docs/PRICING.md).
-
-Reports persist a `cost_status` (`complete`, `partial`, `unknown`, or `empty`).
-Partial totals are labeled as known lower bounds, while savings, comparisons,
-modeled total value, and suggested pricing remain unavailable until every model
-call has a valid rate or provider-reported cost.
+Savings aggregation also records whether compatible-card selection was proven exact or used the documented bounded approximation. See [Savings selection accuracy](docs/SAVINGS_SELECTION.md).
 
 ## Quality gates
-
-```json
-{
-  "fixtures": [
-    {
-      "id": "required_summary_fields",
-      "input": "Summarize one source.",
-      "baseline_output": {"summary": "AgentLoop proves rewrites.", "sources": ["source-a"]},
-      "candidate_output": {"summary": "AgentLoop proves rewrites.", "sources": ["source-a"]},
-      "scorer": {"type": "required_fields", "required": ["summary", "sources"]}
-    }
-  ]
-}
-```
 
 Quality fixtures support dependency-free scorers:
 
 - `exact_match`
 - `contains`
-- `glob` with a maximum 256-character pattern
+- bounded `glob`
 - `required_fields` / `json_schema`
 - `json_subset`
-- `custom` with `module:function`
+- trusted local `custom` scorers with `module:function`
 
-Use fixtures with `agentloop quality-report`, `agentloop replay --quality-fixtures`,
-or `agentloop ci --quality-fixtures`. This makes the PR proof show whether the
-candidate is faster, cheaper, and still correct.
+Use them with `agentloop quality-report`, `agentloop replay`, or `agentloop ci`. Invalid suites fail closed. Custom Python scorers are for trusted local fixture files and are rejected by the HTTP quality endpoint.
 
-Quality suites fail closed. A suite must contain at least one fixture, and every
-scorer must include its required configuration. `exact_match` requires an
-explicit `expected` value and compares recursively without cross-type coercion,
-so `false`, `0`, `null`, `""`, `[]`, and `{}` remain distinct, valid
-expectations. Missing candidate output never matches an explicit empty value.
-Text and glob patterns, required-field lists, and JSON-subset objects must be
-non-empty; every JSON-subset key must be present and its value must match
-without type coercion. Minimum scores and custom scores must be between `0` and
-`1`. When replay or CI receives a fixture file, any failed fixture fails the
-gate even when `--min-quality-score` is omitted. Invalid fixture files are
-rejected before a report is written; the HTTP API returns `422`, and the
-dashboard shows the error beside the quality form.
+## Trace and data compatibility
 
-Custom scorers import and execute Python code. Use them only with trusted local
-fixture files; the HTTP `/quality-report` endpoint rejects custom scorers.
-Raw regular-expression scorers are also rejected because caller-controlled
-patterns can cause regular-expression denial of service. Use `glob` or
-`contains` for untrusted pattern matching.
+AgentLoop's native trace JSON is a public versioned compatibility surface used by the CLI, API, stores, and telemetry adapters. Custom metadata is preserved through native serialization and supported OpenTelemetry round trips.
 
-## Value reports
+See [Native trace schema and compatibility](docs/TRACE_SCHEMA.md).
+
+Timing note: `total_runtime_ms` is end-to-end elapsed duration. `cumulative_span_time_ms` sums instrumented spans and can exceed elapsed time when spans overlap or nest.
+
+Trace-derived values are treated as untrusted in AgentLoop Markdown exporters. Keep the downstream renderer's normal safe mode or HTML sanitizer enabled.
+
+## Dashboard and persistence
+
+Run the local dashboard:
 
 ```bash
-uv run agentloop value-report --path runs/research_agent_baseline.json \
-  --out runs/value_report.json \
-  --runs-per-month 5000 \
-  --engineer-hourly-rate-usd 150 \
-  --incident-cost-usd 500
+python -m pip install "agentloop-profiler[dashboard]"
+streamlit run dashboard/app.py
 ```
 
-A value report converts trace data into operational ROI metrics:
+The dashboard covers stored traces, event timelines, optimization findings, patch plans, replay proof, quality gates, value reports, and setup guidance. See [Dashboard guide](docs/DASHBOARD.md).
 
-- direct model-cost savings per month
-- latency saved per run and per month
-- engineering hours saved from removing repeated bottlenecks
-- reliability risk score based on retries, context duplication, and optimization opportunities
-- optional pricing scenarios and modeled value-to-price ratios
-- a concise summary of measured savings and reliability impact
+AgentLoop uses SQLite by default and also supports Postgres for shared/self-hosted use. The HTTP API provides project-scoped trace storage, diagnosis, findings, optimization queues, quality reports, value reports, and usage summaries.
 
-The pricing scenario is intentionally conservative. It maps measured
-monthly value into one of `free`, `pro`, `team`, `growth`, or `enterprise`, then
-shows the suggested monthly price and modeled value-to-price ratio. Treat this
-as a configurable planning estimate rather than a billing or procurement source
-of truth.
+For deployment details, see [Production deployment](docs/PRODUCTION.md). For pricing-data semantics, see [Pricing guide](docs/PRICING.md).
 
-The Streamlit dashboard includes a dedicated `Value & Pricing` page. Select a
-stored trace, adjust assumptions such as monthly run volume and engineering
-rate, then download the value report JSON for capacity planning or optimization
-prioritization. The Optimization page also has an expandable value estimate so
-the same trace can connect a technical bottleneck to its estimated operational
-impact.
+## Advanced CLI
 
-Remote value reports are available through both API and CLI:
+Useful commands include:
+
+```text
+quickstart
+analyze
+report
+diagnose
+optimize
+patch
+replay
+quality-report
+ci
+value-report
+export-otel
+import-otel
+init-store
+store-trace
+list-stored-traces
+list-findings
+optimization-queue
+server
+doctor
+production-check
+```
+
+Run:
 
 ```bash
-uv run agentloop remote-value-report RUN_ID --api-url http://127.0.0.1:8000 --api-key al_xxx
-curl --fail --header "X-AgentLoop-Key: al_xxx" \
-  "http://127.0.0.1:8000/traces/RUN_ID/value?runs_per_month=5000"
+agentloop --help
 ```
 
-## Optimization plans
+for the current command surface.
+
+## Standalone CLI
+
+Tagged releases also include self-contained executables for Linux x86-64, Windows x86-64, macOS Intel, and macOS Apple silicon. These bundle Python and the core CLI runtime. Optional dashboard, server, Postgres, and Python-SDK integrations use the Python package.
+
+Download the matching file and `SHA256SUMS` from the [GitHub Releases page](https://github.com/dipeshbabu/agentloop/releases).
+
+Linux example, replacing `X.Y.Z` with the release version:
 
 ```bash
-uv run agentloop optimize --path runs/research_agent_baseline.json --out runs/optimization_plan.md --json-out runs/optimization_plan.json
+set -euo pipefail
+version=X.Y.Z
+asset="agentloop-v${version}-linux-x86_64"
+curl -LO "https://github.com/dipeshbabu/agentloop/releases/download/v${version}/${asset}"
+curl -LO "https://github.com/dipeshbabu/agentloop/releases/download/v${version}/SHA256SUMS"
+mapfile -t checksum_lines < <(awk -v asset="$asset" '$2 == asset { print }' SHA256SUMS)
+if [ "${#checksum_lines[@]}" -ne 1 ]; then
+  echo "Expected exactly one checksum for ${asset}" >&2
+  exit 1
+fi
+printf '%s\n' "${checksum_lines[0]}" | sha256sum --check --strict
+chmod +x "$asset"
 ```
 
-AgentLoop reconstructs an execution graph, identifies bottlenecks, and emits optimization cards such as:
+Windows PowerShell:
 
-- parallelize independent tool calls
-- cache repeated prompt/context prefixes
-- batch repeated model calls
-- route small steps to cheaper models
-- reduce retry loops with structured outputs
-- split or compress oversized reasoning steps
+```powershell
+$Version = "X.Y.Z"
+$Asset = "agentloop-v$Version-windows-x86_64.exe"
+Invoke-WebRequest "https://github.com/dipeshbabu/agentloop/releases/download/v$Version/$Asset" -OutFile agentloop.exe
+Invoke-WebRequest "https://github.com/dipeshbabu/agentloop/releases/download/v$Version/SHA256SUMS" -OutFile SHA256SUMS
+$ChecksumLines = @(Get-Content SHA256SUMS | Where-Object {
+    $_ -match "^[0-9a-fA-F]{64}  $([regex]::Escape($Asset))$"
+})
+if ($ChecksumLines.Count -ne 1) { throw "Expected exactly one checksum for $Asset" }
+$ExpectedHash = ($ChecksumLines[0] -split "  ", 2)[0]
+$ActualHash = (Get-FileHash .\agentloop.exe -Algorithm SHA256).Hash
+if ($ActualHash -ne $ExpectedHash) { throw "Checksum verification failed for $Asset" }
+.\agentloop.exe --help
+```
 
-Each card includes a reason, affected nodes, confidence, rewrite hint, and estimated latency or cost savings.
+Each standalone release includes platform-specific third-party notices. macOS executables are ad-hoc signed but not notarized, so local Gatekeeper policy may require explicit first-launch approval.
 
-Cards that touch the same spans compete for the same work, so their estimates are
-alternatives rather than additive. The plan's projected totals come from the
-compatible (span-disjoint) subset of cards that maximizes latency savings, with
-ties broken by cost savings, capped at the run's actual runtime and cost — so the
-reported latency/cost pair is always achievable by one concrete set of changes.
-The plan's `savings_aggregation` block records the rule, the selected card
-indexes, and the raw versus effective totals.
+## Source checkout and contribution
 
-## Diagnosis and OpenTelemetry interop
+For a source checkout:
 
 ```bash
-uv run agentloop diagnose --path runs/research_agent_baseline.json --out runs/diagnosis.md --json-out runs/diagnosis.json
-uv run agentloop patch --path runs/research_agent_baseline.json --repo . --out runs/patch_plan.md --json-out runs/patch_plan.json
-uv run agentloop list-findings --project-id demo
-uv run agentloop optimization-queue --project-id demo --json-out runs/optimization_queue.json
-uv run agentloop github-issue-drafts --project-id demo --out runs/agentloop_issue_drafts.md
-uv run agentloop export-otel runs/research_agent_baseline.json runs/research_agent_baseline.otel.json
-uv run agentloop import-otel runs/research_agent_baseline.otel.json runs/imported_trace.json --name imported_agent
-uv run agentloop diagnose --path runs/research_agent_baseline.otel.json --otel --out runs/otel_diagnosis.md
+git clone https://github.com/dipeshbabu/agentloop.git
+cd agentloop
+uv sync --locked --all-extras --no-dev
+uv run agentloop quickstart
 ```
 
-`agentloop diagnose` turns optimization opportunities into machine-actionable findings:
-stable finding IDs, affected spans, evidence rows, savings formulas, patchability, and
-replay acceptance criteria. `export-otel` and `import-otel` let AgentLoop sit above
-OpenTelemetry GenAI-style spans instead of requiring a proprietary trace source.
-`agentloop patch --dry-run` turns supported findings into framework-aware patch
-plans for parallel tool execution, context caching, structured-output repair,
-batching, model routing, split/compress rewrites, runaway-loop guardrails, and
-tool-oscillation guards without modifying source files.
-When traces are stored through the local or deployed API, AgentLoop persists the
-diagnosis findings and clusters them into an optimization queue ranked by
-severity, frequency, patchability, and estimated savings. Queue savings use the
-same overlap rule as optimization plans: within one run, findings of the same
-type and title that share affected spans count once (the best compatible
-selection), so repeated detections of the same problem do not inflate
-`priority_score`.
-`agentloop github-issue-drafts` turns the top patchable queue items into
-GitHub-ready issue titles, labels, bodies, and acceptance criteria.
+For development setup, architecture boundaries, validation commands, review expectations, security/privacy guidance, and contribution policy, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## CI and PR performance gates
+Project direction and non-goals are in [docs/ROADMAP.md](docs/ROADMAP.md).
 
-```bash
-uv run agentloop ci \
-  --baseline runs/research_agent_baseline.json \
-  --candidate runs/research_agent_optimized.json \
-  --out runs/agentloop_ci.md \
-  --json-out runs/agentloop_ci.json \
-  --min-latency-improvement-pct 20 \
-  --min-cost-improvement-pct 5 \
-  --max-latency-regression-pct 0 \
-  --max-cost-regression-pct 0 \
-  --quality-fixtures examples/quality_fixtures.json \
-  --min-quality-score 0.9
-```
+## Project status
 
-`agentloop ci` combines replay gates with candidate diagnosis findings. It emits
-Markdown for PR summaries and JSON for automation, then exits non-zero when the
-configured cost, latency, or retry gates fail. The included GitHub Actions
-workflow runs this against the demo baseline and optimized traces and appends
-the report to the workflow step summary and pull request comments.
+AgentLoop is under active pre-1.0 development. Public interfaces may evolve, with user-facing changes recorded in [CHANGELOG.md](CHANGELOG.md).
 
-For a real repository, have your agent test job write trace artifacts, then point
-the workflow at those paths:
-
-```bash
-uv run agentloop ci --baseline artifacts/agentloop/baseline.json --candidate artifacts/agentloop/candidate.json
-```
-
-The workflow also supports manual inputs for baseline path, candidate path, and
-gate thresholds. Use `examples/ci_pr_trace_demo.py` to generate a local trace
-artifact pair and preview the PR report.
-
-## Dashboard
-
-```bash
-uv run streamlit run dashboard/app.py
-```
-
-Dashboard pages:
-
-- `Overview`: usage, run count, runtime, cost, token volume, model/tool calls, retry count, recent runs, runtime chart
-- `Traces`: stored trace table, event timeline, trace JSON download
-- `Optimization Queue`: ranked recurring findings across stored traces
-- `Optimization`: optimization cards, bottlenecks, parallelizable groups, value estimate, plan JSON download
-- `Diagnosis`: evidence-backed findings with severity, affected spans, savings, and validation criteria
-- `Patch Plan`: framework-aware dry-run rewrite plans tied to likely files and replay gates
-- `Replay Proof`: before/after metrics, quality/schema gates, and PR comment preview
-- `Quality Gates`: fixture scoring for exact match, bounded glob matching, JSON fields, JSON subset, and custom scorers
-- `Value & Pricing`: operational ROI, reliability risk, pricing scenarios, and value report JSON download
-- `API Keys`: project-scoped API key creation
-- `Ingest`: generate demo traces, upload trace JSON, store traces under a project
-- `Setup`: local, HTTP API, and Postgres deployment commands
-
-See the [dashboard guide](docs/DASHBOARD.md) for setup and operating details.
-
-## Local API server
-
-```bash
-uv run agentloop server --host 127.0.0.1 --port 8000
-```
-
-Endpoints:
-
-- `GET /health`
-- `GET /readyz`
-- `POST /api-keys`
-- `POST /traces`
-- `GET /traces`
-- `GET /traces/{run_id}/report`
-- `GET /traces/{run_id}/optimize`
-- `GET /traces/{run_id}/diagnose`
-- `GET /findings`
-- `GET /optimization-queue`
-- `GET /optimization-queue/github-issues`
-- `POST /quality-report`
-- `GET /traces/{run_id}/value`
-- `GET /usage`
-
-This is the HTTP API path: SDK traces can be sent to an API, stored, metered,
-and turned into optimization plans and value reports.
-
-For production deployment, use Postgres, API-key auth, an admin key for API-key
-creation, and the Docker/Compose scaffolding in `docs/PRODUCTION.md`.
-
-```bash
-uv run agentloop production-check
-uv run python scripts/smoke_api.py
-```
-
-## Persistent store and metering
-
-AgentLoop supports a local SQLite store and a Postgres store for shared or
-self-hosted deployments.
-
-SQLite is the default:
-
-```bash
-uv run agentloop init-store
-uv run agentloop demo-all
-uv run agentloop store-trace --path runs/research_agent_baseline.json --project-id demo
-uv run agentloop list-stored-traces --project-id demo
-uv run agentloop usage-summary --project-id demo
-```
-
-Postgres mode:
-
-```bash
-uv sync --locked --extra server --extra postgres --no-dev
-export AGENTLOOP_STORE_BACKEND=postgres
-export AGENTLOOP_DATABASE_URL=postgresql://agentloop:agentloop@localhost:5432/agentloop
-uv run agentloop init-store
-uv run agentloop create-api-key --project-id acme --name local-dev
-uv run agentloop server --host 0.0.0.0 --port 8000
-```
-
-Then upload traces with the project API key:
-
-```bash
-uv run agentloop upload --path runs/research_agent_baseline.json --api-url http://127.0.0.1:8000 --api-key al_xxx
-uv run agentloop remote-usage --api-url http://127.0.0.1:8000 --api-key al_xxx
-uv run agentloop remote-value-report RUN_ID --api-url http://127.0.0.1:8000 --api-key al_xxx
-```
-
-### Optional single-secret API key protection
-
-For simple local demos, you can still use one static key:
-
-```bash
-export AGENTLOOP_REQUIRE_API_KEY=true
-export AGENTLOOP_API_KEY=dev-secret
-uv run agentloop server --host 127.0.0.1 --port 8000
-```
-
-Then upload with:
-
-```bash
-uv run agentloop upload --path runs/research_agent_baseline.json --api-url http://127.0.0.1:8000 --api-key dev-secret
-```
-
-### Upload traces from Python
-
-```python
-from agentloop import AgentLoopClient
-
-client = AgentLoopClient(base_url="http://127.0.0.1:8000", api_key="al_xxx")
-response = client.upload_trace("runs/research_agent_baseline.json")
-plan = client.get_optimization_plan(response["run_id"])
-value = client.get_value_report(response["run_id"], runs_per_month=5000)
-usage = client.usage_summary()
-```
-
-Or use environment variables:
-
-```bash
-export AGENTLOOP_API_URL=http://127.0.0.1:8000
-export AGENTLOOP_API_KEY=al_xxx
-uv run python examples/upload_trace_demo.py
-```
-
-## LangGraph usage
-
-### Decorate individual nodes
-
-```python
-from agentloop import trace_agent
-from agentloop.integrations.langgraph import trace_node
-
-@trace_node("retrieve_sources")
-def retrieve_sources(state):
-    return state
-
-with trace_agent("research_graph") as trace:
-    retrieve_sources({})
-
-trace.export_json("runs/research_graph.json")
-```
-
-### Auto-instrument a StateGraph builder
-
-```python
-from agentloop.integrations.langgraph import instrument_state_graph, trace_runnable
-
-builder = StateGraph(State)
-instrument_state_graph(builder)
-
-builder.add_node("retrieve", retrieve)
-builder.add_node("synthesize", synthesize)
-
-app = trace_runnable(builder.compile(), name="research_graph")
-app.invoke({"question": "What is agent profiling?"})
-app.export_last_trace("runs/research_graph.json")
-```
-
-This integration is dependency-free. AgentLoop does not import LangGraph directly; it wraps StateGraph-like builders and compiled runnable-style objects.
-
-## Project direction
-
-Profiler -> Execution graph -> Optimization findings -> Replay proof -> Reliable deployment
-
-The core scope is cost, latency, and reliability engineering for multi-step
-agent workflows. AgentLoop remains local-first and self-hostable while keeping
-its trace, analysis, and replay formats useful in CI and deployed environments.
-
-See the contributor-facing [roadmap](docs/ROADMAP.md) for current capabilities,
-priorities, and non-goals.
+Core scope: trace agent execution, find evidence-backed optimization opportunities, and verify interventions against performance and quality evidence.
 
 ## Community
 
-- Read [CONTRIBUTING.md](CONTRIBUTING.md) before proposing or submitting a
-  change.
-- Use the structured [issue forms](https://github.com/dipeshbabu/agentloop/issues/new/choose)
-  for bugs, feature requests, and usage questions.
-- Follow [SUPPORT.md](SUPPORT.md) for usage help and
-  [SECURITY.md](SECURITY.md) for private vulnerability reports.
-- Project decisions follow [GOVERNANCE.md](GOVERNANCE.md), and all participation
-  is covered by the [Code of Conduct](CODE_OF_CONDUCT.md).
-- Repository owners should complete the
-  [open-source launch checklist](docs/OPEN_SOURCE_CHECKLIST.md) before announcing
-  the public launch.
+- Use the structured [issue forms](https://github.com/dipeshbabu/agentloop/issues/new/choose) for bugs, feature requests, and usage questions.
+- Follow [SUPPORT.md](SUPPORT.md) for usage help.
+- Follow [SECURITY.md](SECURITY.md) for private vulnerability reports.
+- Project decisions follow [GOVERNANCE.md](GOVERNANCE.md).
+- Participation is covered by the [Code of Conduct](CODE_OF_CONDUCT.md).
+- Repository owners should complete the [open-source launch checklist](docs/OPEN_SOURCE_CHECKLIST.md) before announcing a public launch.
 
 ## License
 
 Copyright 2026 Dipesh Tharu Mahato and AgentLoop contributors.
 
-AgentLoop is licensed under the [Apache License 2.0](LICENSE). Dependencies keep
-their own terms; see the [third-party software inventory](THIRD_PARTY_LICENSES.md).
+AgentLoop is licensed under the [Apache License 2.0](LICENSE). Dependencies retain their own terms; see [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
+
+PyPI: https://pypi.org/project/agentloop-profiler/
