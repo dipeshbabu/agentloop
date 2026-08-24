@@ -39,6 +39,14 @@ The repository already provides:
 - Make recommendation ordering stable across storage backends.
 - Expand regression fixtures for boundary values and ambiguous execution graphs.
 
+### Research and reproducibility
+
+- Keep experiment metadata portable in the public trace schema.
+- Add task-focused examples for paired interventions and agent-architecture comparisons.
+- Separate measured trace evidence from optimizer estimates in research-facing reports.
+- Add optional batch aggregation helpers without choosing a statistical test on behalf of the study.
+- Publish reproducibility guidance for task IDs, conditions, seeds, model/config versions, source commits, and evaluation fixtures.
+
 ### Safe rewrite assistance
 
 - Keep generated patch plans reviewable and evidence-linked.
@@ -69,6 +77,12 @@ prompt-management, or evaluation platform. Core tracing and analysis must remain
 usable locally without a hosted service or live model provider. Broad autonomous
 code editing is also out of scope until changes can be constrained, reviewed,
 and verified reliably.
+
+AgentLoop also does not aim to replace model-training frameworks, mechanistic
+interpretability tooling, benchmark dataset management, or experiment-specific
+statistical analysis. Research workflows can use AgentLoop as the execution and
+intervention-evidence layer while keeping those responsibilities in dedicated
+tools.
 
 ## Proposing roadmap work
 
