@@ -7,9 +7,7 @@ from dashboard import streamlit_compat
 
 
 def test_stretch_width_normalizes_to_legacy_container_width() -> None:
-    result = streamlit_compat._normalize_dataframe_kwargs(
-        {"width": "stretch", "hide_index": True}
-    )
+    result = streamlit_compat._normalize_dataframe_kwargs({"width": "stretch", "hide_index": True})
 
     assert result == {"width": None, "use_container_width": True, "hide_index": True}
 
