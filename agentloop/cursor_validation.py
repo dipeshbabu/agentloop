@@ -21,7 +21,13 @@ def decode_cursor(cursor: str) -> list[str]:
         padded = cursor + "=" * (-len(cursor) % 4)
         raw = base64.urlsafe_b64decode(padded.encode("ascii"))
         parts: Any = json.loads(raw)
-    except (binascii.Error, UnicodeDecodeError, UnicodeEncodeError, ValueError, json.JSONDecodeError) as exc:
+    except (
+        binascii.Error,
+        UnicodeDecodeError,
+        UnicodeEncodeError,
+        ValueError,
+        json.JSONDecodeError,
+    ) as exc:
         raise InvalidCursorError(f"invalid pagination cursor: {cursor!r}") from exc
 
     if not isinstance(parts, list) or len(parts) not in _VALID_CURSOR_ARITIES:
