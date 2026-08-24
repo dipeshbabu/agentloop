@@ -11,10 +11,11 @@ requires-python = ">=3.10"
 license = "Apache-2.0"
 license-files = ["LICENSE", "THIRD_PARTY_LICENSES.md"]
 authors = [{ name = "Dipesh Babu" }]
-keywords = ["ai-agents", "observability", "optimization", "profiling", "tracing"]
+keywords = ["ai-agents", "agent-evaluation", "observability", "optimization", "profiling", "research", "tracing"]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
@@ -23,6 +24,7 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
   "Topic :: Software Development :: Debuggers",
   "Topic :: Software Development :: Testing",
 ]
