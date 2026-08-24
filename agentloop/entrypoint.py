@@ -32,9 +32,15 @@ def _quickstart_trace() -> AgentTrace:
         ("model_call", "summarize", 760.0, 870.0, "gpt-4.1", 700, 80),
         ("retry", "repair_json", 870.0, 930.0, None, 0, 0),
     ]
-    for index, (event_type, name, start_ms, end_ms, model, input_tokens, output_tokens) in enumerate(
-        events, start=1
-    ):
+    for index, (
+        event_type,
+        name,
+        start_ms,
+        end_ms,
+        model,
+        input_tokens,
+        output_tokens,
+    ) in enumerate(events, start=1):
         start_seconds = start_ms / 1000
         end_seconds = end_ms / 1000
         trace.add_event(
@@ -76,8 +82,7 @@ def _print_analysis(trace: AgentTrace, diagnosis: dict, plan: dict) -> None:
     console.print("\nTop findings:")
     for finding in findings[:5]:
         console.print(
-            f"- [{finding['severity']}] {finding['title']} "
-            f"({finding['confidence']} confidence)"
+            f"- [{finding['severity']}] {finding['title']} ({finding['confidence']} confidence)"
         )
     aggregation = plan.get("savings_aggregation", {})
     if aggregation.get("selection_optimal") is False:
@@ -88,7 +93,12 @@ def _analysis_payload(trace: AgentTrace) -> dict:
     report = trace.report()
     diagnosis = build_diagnosis(trace)
     plan = build_optimization_plan(trace, report=report)
-    return {"trace": trace.to_dict(), "report": report, "diagnosis": diagnosis, "optimization": plan}
+    return {
+        "trace": trace.to_dict(),
+        "report": report,
+        "diagnosis": diagnosis,
+        "optimization": plan,
+    }
 
 
 @app.command("quickstart")
