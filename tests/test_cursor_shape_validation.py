@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import base64
 import json
+import subprocess
+import sys
+from pathlib import Path
 
 import pytest
 
@@ -68,3 +71,35 @@ def test_store_backends_reject_wrong_cursor_arity_before_query(
 
     with pytest.raises(InvalidCursorError, match="invalid pagination cursor"):
         method(limit=1, cursor=cursor)
+
+
+@pytest.mark.parametrize("import_first", ["agentloop", "agentloop.store"])
+def test_store_cursor_validation_survives_module_reload(import_first: str) -> None:
+    # Re-importing storage must not depend on an earlier package initializer
+    # mutating its functions or classes. Keep reload isolated from other tests.
+    script = f"""
+import importlib
+importlib.import_module({import_first!r})
+store = importlib.reload(importlib.import_module('agentloop.store'))
+for backend in (store.SQLiteTraceStore, store.PostgresTraceStore):
+    instance = backend()
+    for method, parts in (
+        (instance.list_traces_page, ['updated', 'run', 'finding']),
+        (instance.list_findings_page, ['created', 'run']),
+    ):
+        try:
+            method(cursor=store.encode_cursor(parts))
+        except store.InvalidCursorError:
+            pass
+        else:
+            raise AssertionError('cross-endpoint cursor accepted')
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=Path(__file__).resolve().parents[1],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
