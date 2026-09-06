@@ -230,11 +230,11 @@ Quality fixtures support dependency-free scorers:
 - `exact_match`
 - `contains`
 - bounded `glob`
-- `required_fields` / `json_schema`
+- `required_fields`
 - `json_subset`
 - trusted local `custom` scorers with `module:function`
 
-Use them with `agentloop quality-report`, `agentloop replay`, or `agentloop ci`. Invalid suites fail closed. Custom Python scorers are for trusted local fixture files and are rejected by the HTTP quality endpoint.
+Use them with `agentloop quality-report`, `agentloop replay`, or `agentloop ci`. Invalid suites fail closed. Custom Python scorers are for trusted local fixture files and are rejected by the HTTP quality endpoint. The removed `regex` scorer should be migrated to bounded `glob`, `contains`, or `exact_match`; `json_schema` was never a JSON Schema implementation and should be migrated to `required_fields` or `json_subset`.
 
 ## Trace and data compatibility
 

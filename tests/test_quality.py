@@ -46,20 +46,23 @@ def test_quality_report_scores_required_fields_and_glob(tmp_path) -> None:
     assert "AgentLoop Quality Report" in markdown
 
 
-def test_quality_report_rejects_raw_regex_scorers() -> None:
-    report = build_quality_report(
-        [
-            {
-                "id": "unsafe-regex",
-                "candidate_output": "a" * 10_000 + "!",
-                "baseline_output": "unused",
-                "scorer": {"type": "regex", "pattern": "(a+)+$"},
-            }
-        ]
-    )
-
-    assert report["passed"] is False
-    assert "disabled" in report["cases"][0]["candidate"]["detail"]
+@pytest.mark.parametrize(
+    ("scorer_type", "migration"),
+    [
+        ("regex", "bounded 'glob'"),
+        ("json_schema", "'required_fields'"),
+    ],
+)
+def test_quality_report_rejects_removed_scorers(scorer_type, migration) -> None:
+    with pytest.raises(QualityValidationError, match=rf"no longer supported.*{migration}"):
+        build_quality_report(
+            [
+                {
+                    "candidate_output": {},
+                    "scorer": {"type": scorer_type, "required": ["result"]},
+                }
+            ]
+        )
 
 
 def test_quality_report_bounds_glob_inputs() -> None:

@@ -12,15 +12,21 @@ from agentloop.markdown import markdown_table_cell
 _MAX_GLOB_PATTERN_LENGTH = 256
 _MAX_GLOB_TEXT_LENGTH = 1_000_000
 _MISSING = object()
-_SCORER_TYPES = {
+SUPPORTED_SCORER_TYPES = (
     "contains",
     "custom",
     "exact_match",
     "glob",
-    "json_schema",
     "json_subset",
-    "regex",
     "required_fields",
+)
+_SCORER_TYPES = set(SUPPORTED_SCORER_TYPES)
+_REMOVED_SCORER_MIGRATIONS = {
+    "json_schema": (
+        "use 'required_fields' for dependency-free object-field checks or 'json_subset' "
+        "for expected JSON values; full JSON Schema is not implemented"
+    ),
+    "regex": "use bounded 'glob', 'contains', or 'exact_match' instead",
 }
 
 
@@ -74,6 +80,11 @@ def validate_quality_fixtures(fixtures: Any) -> list[dict[str, Any]]:
                 f"{path}.scorer.type must not contain leading or trailing whitespace"
             )
         if scorer_type not in _SCORER_TYPES:
+            migration = _REMOVED_SCORER_MIGRATIONS.get(scorer_type)
+            if migration:
+                raise QualityValidationError(
+                    f"{path}.scorer.type '{scorer_type}' is no longer supported; {migration}"
+                )
             raise QualityValidationError(
                 f"{path}.scorer.type is unsupported: {scorer_type}; "
                 f"expected one of {', '.join(sorted(_SCORER_TYPES))}"
@@ -90,13 +101,13 @@ def validate_quality_fixtures(fixtures: Any) -> list[dict[str, Any]]:
                 raise QualityValidationError(
                     f"{path} contains scorer requires non-empty 'expected' or 'scorer.text'"
                 )
-        elif scorer_type in {"glob", "regex"}:
+        elif scorer_type == "glob":
             value = _configured_value(fixture, scorer, "expected", "pattern")
             if not isinstance(value, str) or not value:
                 raise QualityValidationError(
                     f"{path} {scorer_type} scorer requires a non-empty pattern"
                 )
-        elif scorer_type in {"required_fields", "json_schema"}:
+        elif scorer_type == "required_fields":
             required = scorer.get("required", scorer.get("required_fields"))
             if not isinstance(required, list) or not required:
                 raise QualityValidationError(
@@ -179,11 +190,6 @@ def build_quality_report(
 
 def score_output(output: Any, fixture: dict[str, Any], scorer: dict[str, Any]) -> dict[str, Any]:
     scorer_type = str(scorer.get("type", "exact_match"))
-    if scorer_type == "regex":
-        return _result(
-            False,
-            "raw regular-expression scorers are disabled; use glob, contains, or exact_match",
-        )
     if output is _MISSING:
         return _result(False, "output is missing")
     if scorer_type == "exact_match":
@@ -205,7 +211,7 @@ def score_output(output: Any, fixture: dict[str, Any], scorer: dict[str, Any]) -
             return _result(False, "output exceeds the 1,000,000-character glob safety limit")
         passed = fnmatch.fnmatchcase(text, pattern)
         return _result(passed, "glob matched" if passed else "glob did not match")
-    if scorer_type in {"required_fields", "json_schema"}:
+    if scorer_type == "required_fields":
         return _score_required_fields(output, scorer)
     if scorer_type == "json_subset":
         expected = scorer["expected"] if "expected" in scorer else fixture.get("expected", {})
