@@ -574,7 +574,8 @@ elif page == "Quality Gates":
     traces = store.list_traces(project_id=project_id)
     st.subheader("Quality gates")
     st.caption(
-        "Score production-derived fixtures so replay proof can show faster, cheaper, and still correct."
+        "Score production-derived fixtures so replay proof can show faster, cheaper, and still correct. "
+        "Supported scorers: exact_match, contains, bounded glob, required_fields, json_subset, and trusted local custom."
     )
     if len(traces) < 2:
         st.info("Store at least two traces to score baseline and candidate quality.")

@@ -334,11 +334,6 @@ def quality_report_endpoint(
             status_code=400,
             detail="custom Python scorers are not accepted by the HTTP API",
         )
-    if "regex" in scorer_types:
-        raise HTTPException(
-            status_code=400,
-            detail="raw regex scorers are not accepted; use glob, contains, or exact_match",
-        )
     baseline_trace = (
         _load_trace_or_404(db, payload.baseline_run_id, project_id)
         if payload.baseline_run_id

@@ -79,6 +79,9 @@ Quality fixture validation runs only when the Quality Gates form is submitted.
 Empty suites, missing scorer requirements, and malformed JSON are shown beside
 the form and do not produce a passing report.
 
-Custom quality scorers import Python code and must be used only with trusted
-local fixtures. The HTTP API rejects custom scorers and raw regular-expression
-scorers; use bounded `glob` or `contains` matching for untrusted input.
+The dashboard accepts `exact_match`, `contains`, bounded `glob`,
+`required_fields`, and `json_subset` scorers. Custom quality scorers import
+Python code and must be used only with trusted local fixtures. The HTTP API
+rejects custom scorers. Migrate removed `regex` fixtures to bounded `glob`,
+`contains`, or `exact_match`; migrate `json_schema` fixtures to
+`required_fields` or `json_subset`.

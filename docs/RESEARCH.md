@@ -83,7 +83,7 @@ AgentLoop directly reports execution measurements such as:
 - event status and errors;
 - execution graph structure and affected spans.
 
-Quality fixtures can add task-grounded pass/fail or scalar evidence. Built-in scorers support exact matching, containment, bounded glob matching, required fields / JSON schema, and JSON subsets. Trusted local experiments can also use custom Python scorers.
+Quality fixtures can add task-grounded pass/fail or scalar evidence. Built-in scorers support exact matching, containment, bounded glob matching, required fields, and JSON subsets. Trusted local experiments can also use custom Python scorers. The removed `regex` name must be migrated to a bounded text scorer; `json_schema` was only a required-field alias and must be migrated to `required_fields` or `json_subset`.
 
 ## Measured versus estimated results
 
