@@ -8,6 +8,13 @@ Project history from before the first public release remains available in Git.
 
 ## [Unreleased]
 
+- Diagnosis GET requests no longer persist or supersede findings. Use
+  `POST /traces/{run_id}/diagnosis`, `AgentLoopClient.save_diagnosis(run_id)`, or
+  `remote-diagnose` to recompute and persist them. `GET /traces/{run_id}/diagnosis`
+  and `get_diagnosis()` compute without writing. The old GET `/diagnose` route
+  is a deprecated read-only alias retained throughout 0.x; removal will be
+  announced before a 1.0-or-later release. Upgrade the server before the client.
+
 - Storage methods now validate pagination cursors directly, without package-import
   patches or duplicate decoding. Existing cursor formats and HTTP errors are unchanged.
 

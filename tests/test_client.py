@@ -88,13 +88,15 @@ def test_client_quotes_run_ids_in_request_paths() -> None:
     client.get_report("team/run ?1")
     client.get_optimization_plan("team/run ?1")
     client.get_diagnosis("team/run ?1")
+    client.save_diagnosis("team/run ?1")
     client.get_value_report("team/run ?1")
     client.update_finding_status("team/run ?1", "finding/1", "accepted")
 
     assert routes == [
         "/traces/team%2Frun%20%3F1/report",
         "/traces/team%2Frun%20%3F1/optimize",
-        "/traces/team%2Frun%20%3F1/diagnose",
+        "/traces/team%2Frun%20%3F1/diagnosis",
+        "/traces/team%2Frun%20%3F1/diagnosis",
         "/traces/team%2Frun%20%3F1/value",
         "/findings/team%2Frun%20%3F1/finding%2F1/status",
     ]
@@ -149,6 +151,7 @@ def test_client_rejects_non_http_api_urls() -> None:
         pytest.param(lambda client: client.get_report("run"), id="report"),
         pytest.param(lambda client: client.get_optimization_plan("run"), id="optimize"),
         pytest.param(lambda client: client.get_diagnosis("run"), id="diagnose"),
+        pytest.param(lambda client: client.save_diagnosis("run"), id="persist-diagnosis"),
         pytest.param(lambda client: client.list_findings(), id="list-findings"),
         pytest.param(
             lambda client: client.update_finding_status("run", "finding", "accepted"),

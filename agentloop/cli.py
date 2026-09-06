@@ -846,7 +846,7 @@ def remote_optimize(
     console.print(f"Wrote remote optimization plan to {out}")
 
 
-@app.command("remote-diagnose")
+@app.command("remote-diagnose", help="Recompute and persist findings for a stored remote trace.")
 def remote_diagnose(
     run_id: str,
     api_url: str = typer.Option("http://127.0.0.1:8000", help="AgentLoop API base URL."),
@@ -856,7 +856,7 @@ def remote_diagnose(
     out: Path = Path("runs/remote_diagnosis.json"),
 ) -> None:
     client = _remote_client(api_url, api_key)
-    diagnosis = client.get_diagnosis(run_id)
+    diagnosis = client.save_diagnosis(run_id)
     _write_json(out, diagnosis)
     console.print(f"Wrote remote diagnosis to {out}")
 
