@@ -18,6 +18,8 @@ from agentloop.config import (
     get_postgres_password_file,
     postgres_connection_source,
 )
+from agentloop.cursor_validation import InvalidCursorError as InvalidCursorError
+from agentloop.cursor_validation import decode_cursor, encode_cursor
 from agentloop.findings import build_diagnosis
 from agentloop.migrations import apply_postgres_migrations, apply_sqlite_migrations
 from agentloop.savings import SavingsItem, select_compatible
@@ -79,10 +81,6 @@ class FindingTransitionError(ValueError):
         self.current_status = current_status
         self.new_status = new_status
         super().__init__(f"cannot transition finding from {current_status!r} to {new_status!r}")
-
-
-class InvalidCursorError(ValueError):
-    """Raised when a pagination cursor cannot be decoded."""
 
 
 class TraceStore(Protocol):
@@ -181,23 +179,6 @@ def _decode_hash_bytes(value: str) -> bytes:
 
 def new_api_key() -> str:
     return "al_" + secrets.token_urlsafe(32)
-
-
-def encode_cursor(parts: list[Any]) -> str:
-    raw = json.dumps(parts, separators=(",", ":")).encode("utf-8")
-    return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
-
-
-def decode_cursor(cursor: str) -> list[Any]:
-    try:
-        padded = cursor + "=" * (-len(cursor) % 4)
-        raw = base64.urlsafe_b64decode(padded.encode("ascii"))
-        parts = json.loads(raw)
-    except (binascii.Error, UnicodeDecodeError, ValueError, json.JSONDecodeError) as exc:
-        raise InvalidCursorError(f"invalid pagination cursor: {cursor!r}") from exc
-    if not isinstance(parts, list):
-        raise InvalidCursorError(f"invalid pagination cursor: {cursor!r}")
-    return parts
 
 
 def _validate_page_limit(limit: int) -> int:
@@ -669,8 +650,10 @@ class SQLiteTraceStore:
         limit: int = DEFAULT_PAGE_SIZE,
         cursor: str | None = None,
     ) -> dict[str, Any]:
+        after_created_at, after_run_id = (
+            decode_cursor(cursor, expected_parts=2) if cursor else (None, None)
+        )
         limit = _validate_page_limit(limit)
-        after_created_at, after_run_id = decode_cursor(cursor) if cursor else (None, None)
         self.init()
         with self._connect() as conn:
             rows = conn.execute(
@@ -751,10 +734,10 @@ class SQLiteTraceStore:
         with independent directions, which keyset pagination can't compare
         against a single cursor tuple.
         """
-        limit = _validate_page_limit(limit)
         after_updated_at, after_run_id, after_finding_id = (
-            decode_cursor(cursor) if cursor else (None, None, None)
+            decode_cursor(cursor, expected_parts=3) if cursor else (None, None, None)
         )
+        limit = _validate_page_limit(limit)
         self.init()
         with self._connect() as conn:
             rows = conn.execute(
@@ -1107,8 +1090,10 @@ class PostgresTraceStore:
         limit: int = DEFAULT_PAGE_SIZE,
         cursor: str | None = None,
     ) -> dict[str, Any]:
+        after_created_at, after_run_id = (
+            decode_cursor(cursor, expected_parts=2) if cursor else (None, None)
+        )
         limit = _validate_page_limit(limit)
-        after_created_at, after_run_id = decode_cursor(cursor) if cursor else (None, None)
         keys = [
             "run_id",
             "project_id",
@@ -1213,10 +1198,10 @@ class PostgresTraceStore:
         limit: int = DEFAULT_PAGE_SIZE,
         cursor: str | None = None,
     ) -> dict[str, Any]:
-        limit = _validate_page_limit(limit)
         after_updated_at, after_run_id, after_finding_id = (
-            decode_cursor(cursor) if cursor else (None, None, None)
+            decode_cursor(cursor, expected_parts=3) if cursor else (None, None, None)
         )
+        limit = _validate_page_limit(limit)
         keys = [
             "project_id",
             "run_id",
