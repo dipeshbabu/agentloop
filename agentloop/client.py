@@ -90,8 +90,14 @@ class AgentLoopClient:
         return self._request("GET", f"/traces/{encoded_run_id}/optimize")
 
     def get_diagnosis(self, run_id: str) -> dict[str, Any]:
+        """Compute a diagnosis without changing the server's stored findings."""
         encoded_run_id = urllib.parse.quote(run_id, safe="")
-        return self._request("GET", f"/traces/{encoded_run_id}/diagnose")
+        return self._request("GET", f"/traces/{encoded_run_id}/diagnosis")
+
+    def save_diagnosis(self, run_id: str) -> dict[str, Any]:
+        """Recompute and persist a stored trace's diagnosis on the server."""
+        encoded_run_id = urllib.parse.quote(run_id, safe="")
+        return self._request("POST", f"/traces/{encoded_run_id}/diagnosis")
 
     def list_findings(
         self,
