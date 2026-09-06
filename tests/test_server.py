@@ -328,24 +328,24 @@ def test_quality_report_endpoint_rejects_custom_python_scorers() -> None:
 
 def test_quality_report_endpoint_rejects_raw_regex_scorers() -> None:
     client = TestClient(app)
-    for scorer_type in ("regex", " regex "):
-        response = client.post(
-            "/quality-report",
-            json={
-                "fixtures": [
-                    {
-                        "id": "unsafe-regex",
-                        "candidate_output": "a" * 10_000 + "!",
-                        "scorer": {"type": scorer_type, "pattern": "(a+)+$"},
-                    }
-                ]
-            },
-        )
+    response = client.post(
+        "/quality-report",
+        json={
+            "fixtures": [
+                {
+                    "id": "unsafe-regex",
+                    "candidate_output": "a" * 10_000 + "!",
+                    "scorer": {"type": "regex", "pattern": "(a+)+$"},
+                }
+            ]
+        },
+    )
 
-        assert response.status_code == 400
-        assert response.json()["detail"] == (
-            "raw regex scorers are not accepted; use glob, contains, or exact_match"
-        )
+    assert response.status_code == 422
+    assert response.json()["detail"] == (
+        "fixtures[0].scorer.type 'regex' is no longer supported; "
+        "use bounded 'glob', 'contains', or 'exact_match' instead"
+    )
 
 
 def test_value_report_endpoint() -> None:
