@@ -220,12 +220,29 @@ def optimize_trace(
     return build_optimization_plan(_load_trace_or_404(db, run_id, project_id))
 
 
-@app.get("/traces/{run_id}/diagnose")
+@app.get(
+    "/traces/{run_id}/diagnose",
+    deprecated=True,
+    description="Read-only compatibility alias for GET /traces/{run_id}/diagnosis. "
+    "Available throughout 0.x; use POST /traces/{run_id}/diagnosis to persist findings.",
+)
+@app.get("/traces/{run_id}/diagnosis")
 def diagnose_trace(
     run_id: str,
     project_id: str = Depends(resolve_project),
     db: TraceStore = Depends(store),
 ) -> dict[str, Any]:
+    """Compute current diagnosis without changing persisted findings."""
+    return build_diagnosis(_load_trace_or_404(db, run_id, project_id))
+
+
+@app.post("/traces/{run_id}/diagnosis")
+def persist_trace_diagnosis(
+    run_id: str,
+    project_id: str = Depends(resolve_project),
+    db: TraceStore = Depends(store),
+) -> dict[str, Any]:
+    """Recompute and persist findings, preserving existing lifecycle decisions."""
     diagnosis = build_diagnosis(_load_trace_or_404(db, run_id, project_id))
     db.save_diagnosis(diagnosis, project_id=project_id)
     return diagnosis

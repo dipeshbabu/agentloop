@@ -35,7 +35,7 @@ def _capture_clients(monkeypatch) -> list[dict[str, Any]]:
         def get_optimization_plan(self, run_id):  # type: ignore[no-untyped-def]
             return {"run_id": run_id, "optimization_cards": []}
 
-        def get_diagnosis(self, run_id):  # type: ignore[no-untyped-def]
+        def save_diagnosis(self, run_id):  # type: ignore[no-untyped-def]
             return {"run_id": run_id, "findings": []}
 
         def list_findings(self, **kwargs):  # type: ignore[no-untyped-def]

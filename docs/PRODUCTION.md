@@ -115,6 +115,36 @@ intended writable path for SQLite deployments.
 Use `uv run agentloop production-check --allow-http` only for local staging URLs such as
 `http://localhost:8000`; public production traffic should use HTTPS.
 
+## Diagnosis reads and writes
+
+| Operation | Behavior |
+|---|---|
+| `GET /traces/{run_id}/diagnosis` | Compute the current diagnosis without changing stored findings. |
+| `POST /traces/{run_id}/diagnosis` | Recompute and persist findings, including lifecycle updates. No request body is required. |
+| `GET /traces/{run_id}/diagnose` | Deprecated read-only alias of the GET operation. |
+
+All three operations require the same project API key and return `404` for a
+trace outside that project. Repeated GET requests cannot insert, update, or
+supersede findings. POST preserves accepted/resolved/dismissed decisions for
+unchanged findings and supersedes active findings no longer emitted by diagnosis.
+
+```python
+from agentloop import AgentLoopClient
+
+client = AgentLoopClient.from_env()
+preview = client.get_diagnosis("run_id")     # Compute without persisting.
+saved = client.save_diagnosis("run_id")      # Explicitly recompute and persist.
+```
+
+`agentloop remote-diagnose RUN_ID` uses POST and retains its existing persistence
+behavior. The local `diagnose` command and dashboard diagnosis view compute
+reports; trace ingestion continues to persist initial findings.
+
+Upgrade the server before upgrading remote clients. Existing callers of GET
+`/diagnose` still receive a diagnosis but must switch to POST if they depended on
+its former write side effects. The deprecated alias is available throughout 0.x;
+removal will be announced before a 1.0-or-later release.
+
 ## Health Checks
 
 Use these probes in hosting platforms:

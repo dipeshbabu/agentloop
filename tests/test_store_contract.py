@@ -89,7 +89,7 @@ def _seed_trace(store, project_id: str, name: str = "seed") -> str:
     """Save a minimal trace and return its run_id.
 
     `save_diagnosis()` is only ever called (in `save_trace()` and the real
-    `/diagnose` endpoint) for a run_id that already has a `traces` row —
+    `POST /traces/{run_id}/diagnosis` endpoint) for a run_id that already has a `traces` row —
     Postgres enforces that via a foreign key. Tests that call `save_diagnosis`
     directly with a synthetic finding list must seed that row first so both
     backends see the same, realistic precondition.
