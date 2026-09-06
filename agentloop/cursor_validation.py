@@ -1,15 +1,22 @@
+"""Cursor encoding and validation shared by the storage backends."""
+
 from __future__ import annotations
 
 import base64
 import binascii
 import json
-from functools import wraps
-from inspect import signature
 from typing import Any
 
-from agentloop.store import InvalidCursorError
-
 _VALID_CURSOR_ARITIES = frozenset({2, 3})
+
+
+class InvalidCursorError(ValueError):
+    """Raised when a pagination cursor cannot be decoded."""
+
+
+def encode_cursor(parts: list[Any]) -> str:
+    raw = json.dumps(parts, separators=(",", ":")).encode("utf-8")
+    return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
 
 
 def decode_cursor(cursor: str, *, expected_parts: int | None = None) -> list[str]:
@@ -27,40 +34,15 @@ def decode_cursor(cursor: str, *, expected_parts: int | None = None) -> list[str
     ) as exc:
         raise InvalidCursorError(f"invalid pagination cursor: {cursor!r}") from exc
 
-    allowed_arities = (
-        frozenset({expected_parts}) if expected_parts is not None else _VALID_CURSOR_ARITIES
+    if not isinstance(parts, list):
+        raise InvalidCursorError(f"invalid pagination cursor: {cursor!r}")
+    valid_arity = (
+        len(parts) == expected_parts
+        if expected_parts is not None
+        else len(parts) in _VALID_CURSOR_ARITIES
     )
-    if not isinstance(parts, list) or len(parts) not in allowed_arities:
+    if not valid_arity:
         raise InvalidCursorError(f"invalid pagination cursor: {cursor!r}")
     if any(not isinstance(part, str) or not part for part in parts):
         raise InvalidCursorError(f"invalid pagination cursor: {cursor!r}")
     return parts
-
-
-def _page_validator(method, *, expected_parts: int):
-    if getattr(method, "__agentloop_cursor_validation__", False):
-        return method
-    method_signature = signature(method)
-
-    @wraps(method)
-    def wrapper(self, *args, **kwargs):
-        bound = method_signature.bind_partial(self, *args, **kwargs)
-        cursor = bound.arguments.get("cursor")
-        if cursor:
-            decode_cursor(cursor, expected_parts=expected_parts)
-        return method(self, *args, **kwargs)
-
-    wrapper.__agentloop_cursor_validation__ = True
-    return wrapper
-
-
-def install_store_decoder() -> None:
-    """Install strict decoder and endpoint-specific arity validation."""
-    import agentloop.store as store
-
-    store.decode_cursor = decode_cursor
-    for store_type in (store.SQLiteTraceStore, store.PostgresTraceStore):
-        store_type.list_traces_page = _page_validator(store_type.list_traces_page, expected_parts=2)
-        store_type.list_findings_page = _page_validator(
-            store_type.list_findings_page, expected_parts=3
-        )

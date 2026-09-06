@@ -8,6 +8,9 @@ Project history from before the first public release remains available in Git.
 
 ## [Unreleased]
 
+- Storage methods now validate pagination cursors directly, without package-import
+  patches or duplicate decoding. Existing cursor formats and HTTP errors are unchanged.
+
 - Removed the misleading `regex` and `json_schema` quality scorer names from
   validation. Migrate `regex` to bounded `glob`, `contains`, or `exact_match`,
   and migrate `json_schema` to `required_fields` or `json_subset`.
