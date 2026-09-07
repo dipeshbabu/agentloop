@@ -10,8 +10,7 @@ from typing import Any, TypeVar, overload
 from agentloop.events import format_exception_detail, new_event_id, utc_now_iso
 from agentloop.tracer import (
     AgentTrace,
-    _current_event_id,
-    _current_trace,
+    bind_trace_context,
     current_event_id,
     current_trace,
     record_model_call,
@@ -31,19 +30,6 @@ def _call_metadata(args: tuple[Any, ...], kwargs: dict[str, Any]) -> dict[str, A
     if kwargs:
         metadata["kwarg_keys"] = sorted(str(key) for key in kwargs.keys())
     return metadata
-
-
-@contextmanager
-def _activate_trace_context(trace: AgentTrace, event_id: str | None) -> Iterator[None]:
-    """Bind a captured trace/span only while a generator operation is executing."""
-
-    trace_token = _current_trace.set(trace)
-    event_token = _current_event_id.set(event_id)
-    try:
-        yield
-    finally:
-        _current_event_id.reset(event_token)
-        _current_trace.reset(trace_token)
 
 
 def _finalize_owned_trace(trace: AgentTrace) -> None:
@@ -96,7 +82,7 @@ class _GeneratorSpan:
             raise RuntimeError("Generator trace span is already finalized.")
         self._start()
         trace, event_id, _, _ = self._started_state()
-        with _activate_trace_context(trace, event_id):
+        with bind_trace_context(trace, event_id):
             yield
 
     def finish(self) -> None:
@@ -139,34 +125,33 @@ class _GeneratorSpan:
         ended_at = utc_now_iso()
         duration_ms = max(0.0, (time.perf_counter() - start_perf) * 1000)
         try:
-            # Bind the captured parent while adding the completed event. Binding the
-            # generator's own event id here would accidentally make a root span its own parent.
-            with _activate_trace_context(trace, self._parent_id):
-                if self._kind == "model":
-                    record_model_call(
-                        self._span_name,
-                        started_at=started_at,
-                        ended_at=ended_at,
-                        duration_ms=duration_ms,
-                        model=self._model,
-                        status=status,
-                        error=error,
-                        metadata=self._metadata,
-                        event_id=event_id,
-                        parent_id=self._parent_id,
-                    )
-                else:
-                    record_tool_call(
-                        self._span_name,
-                        started_at=started_at,
-                        ended_at=ended_at,
-                        duration_ms=duration_ms,
-                        status=status,
-                        error=error,
-                        metadata=self._metadata,
-                        event_id=event_id,
-                        parent_id=self._parent_id,
-                    )
+            if self._kind == "model":
+                record_model_call(
+                    self._span_name,
+                    started_at=started_at,
+                    ended_at=ended_at,
+                    duration_ms=duration_ms,
+                    model=self._model,
+                    status=status,
+                    error=error,
+                    metadata=self._metadata,
+                    event_id=event_id,
+                    parent_id=self._parent_id,
+                    trace=trace,
+                )
+            else:
+                record_tool_call(
+                    self._span_name,
+                    started_at=started_at,
+                    ended_at=ended_at,
+                    duration_ms=duration_ms,
+                    status=status,
+                    error=error,
+                    metadata=self._metadata,
+                    event_id=event_id,
+                    parent_id=self._parent_id,
+                    trace=trace,
+                )
         finally:
             if self._owns_trace:
                 _finalize_owned_trace(trace)
