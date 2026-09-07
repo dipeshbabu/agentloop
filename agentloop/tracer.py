@@ -158,6 +158,27 @@ def current_event_id() -> str | None:
 
 
 @contextmanager
+def bind_trace_context(trace: AgentTrace, event_id: str | None = None) -> Iterator[None]:
+    """Temporarily bind a captured trace and parent event in the current context.
+
+    ``event_id=None`` clears the ambient parent. On exit, both previous bindings
+    are restored, including when an exception or cancellation propagates. This
+    helper does not create events, start timers, finish traces, or export them.
+    Enter and exit each binding in the same execution context; generator adapters
+    should use a fresh binding for each resume/close operation, ending it before
+    yielding to their caller.
+    """
+
+    trace_token = _current_trace.set(trace)
+    event_token = _current_event_id.set(event_id)
+    try:
+        yield
+    finally:
+        _current_event_id.reset(event_token)
+        _current_trace.reset(trace_token)
+
+
+@contextmanager
 def trace_agent(name: str, metadata: dict[str, Any] | None = None) -> Iterator[AgentTrace]:
     trace = AgentTrace(name=name, metadata=metadata)
     trace._timing_active = True
@@ -244,20 +265,32 @@ def record_tool_call(
     metadata: dict[str, Any] | None = None,
     event_id: str | None = None,
     parent_id: str | None = None,
+    trace: AgentTrace | None = None,
 ) -> None:
-    """Record a completed tool/framework step into the active trace."""
+    """Record a completed tool/framework step into a trace.
 
-    trace = _require_trace()
-    trace.add_event(
+    Without ``trace``, use the active trace and inherit its current parent unless
+    ``parent_id`` is supplied. An explicit ``trace`` ignores the ambient parent:
+    pass a captured ``parent_id`` to attach the event, or omit it for a root event.
+    This matches ``record_model_call`` and never changes the active context.
+    """
+
+    target = trace if trace is not None else _require_trace()
+    resolved_parent = (
+        parent_id
+        if parent_id is not None
+        else (None if trace is not None else _current_event_id.get())
+    )
+    target.add_event(
         AgentEvent(
             event_id=event_id or new_event_id(),
-            run_id=trace.run_id,
+            run_id=target.run_id,
             event_type="tool_call",
             name=name,
             started_at=started_at,
             ended_at=ended_at or utc_now_iso(),
             duration_ms=duration_ms,
-            parent_id=parent_id if parent_id is not None else _current_event_id.get(),
+            parent_id=resolved_parent,
             status=status,
             error=error,
             metadata=metadata or {},

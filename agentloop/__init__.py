@@ -21,6 +21,7 @@ from agentloop.runtime import (
 )
 from agentloop.tracer import (
     AgentTrace,
+    bind_trace_context,
     current_trace,
     record_model_call,
     record_tool_call,
@@ -43,6 +44,7 @@ __all__ = [
     "ReplayGates",
     "RepositoryPathError",
     "auto_instrument",
+    "bind_trace_context",
     "detect_integrations",
     "build_value_report",
     "build_diagnosis",

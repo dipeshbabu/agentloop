@@ -8,6 +8,11 @@ Project history from before the first public release remains available in Git.
 
 ## [Unreleased]
 
+- Added `bind_trace_context(trace, event_id=None)` and explicit `trace=` targeting
+  for `record_tool_call`, matching model-event parent handling. Generator decorators
+  now use the tracer-owned context helper and record completion into their captured
+  trace without changing the caller's active context.
+
 - Diagnosis GET requests no longer persist or supersede findings. Use
   `POST /traces/{run_id}/diagnosis`, `AgentLoopClient.save_diagnosis(run_id)`, or
   `remote-diagnose` to recompute and persist them. `GET /traces/{run_id}/diagnosis`

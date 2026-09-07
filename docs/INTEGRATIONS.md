@@ -69,6 +69,55 @@ LangGraph nodes, instrumented CrewAI task/agent methods, and OpenAI calls and
 streams. When cancellation has no message, the event error is `CancelledError`
 rather than an empty string.
 
+## Captured trace ownership and context
+
+Adapters that finish work in a different callback or task can pass a captured
+`AgentTrace` to `record_model_call(..., trace=trace)` or
+`record_tool_call(..., trace=trace)`. Capture `current_trace()` and
+`agentloop.tracer.current_event_id()` when the operation starts. Both completed
+event recorders use the same parent rules:
+
+| Arguments | Trace and parent used |
+|---|---|
+| Omit `trace` or pass `trace=None` | Active trace; inherit its current event ID unless a non-`None` `parent_id` is supplied. |
+| Explicit `trace`, omitted/`None` `parent_id` | Supplied trace; record a root event, ignoring the ambient parent even when that trace is active. |
+| Explicit `trace` and `parent_id` | Supplied trace and captured parent ID. |
+
+An explicit target works without an active trace and does not change the caller's
+context. Without one, recording still requires an active trace. The caller is
+responsible for supplying a parent ID from the target trace.
+
+```python
+from agentloop import bind_trace_context, record_tool_call
+
+
+def record_completed_tool(trace, parent_id, started_at, duration_ms):
+    record_tool_call(
+        "search",
+        trace=trace,
+        parent_id=parent_id,
+        started_at=started_at,
+        duration_ms=duration_ms,
+    )
+
+
+def run_callback(trace, parent_id, callback):
+    with bind_trace_context(trace, parent_id):
+        return callback()
+```
+
+Use `bind_trace_context(trace, event_id=None)` when nested instrumentation needs
+an ambient trace while the callback runs. Omitting `event_id` clears the ambient
+parent. The helper restores both previous bindings after success, exceptions,
+or cancellation; bindings are local to the current execution context. It does
+not emit events, start timers, finish traces, or export them.
+
+Enter and exit a binding in the same execution context. Generator adapters must
+create a fresh binding around each resume/close operation and exit it before
+yielding a value to their caller. A `with` block spanning a generator's `yield`
+does not automatically unbind on suspension. AgentLoop's decorators handle these
+boundaries and retain their existing elapsed lifecycle duration semantics.
+
 ## OpenAI SDK
 
 ```python

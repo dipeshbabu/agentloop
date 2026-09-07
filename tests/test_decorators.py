@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import AsyncGenerator, Generator
+from contextlib import nullcontext
 from typing import Any
 
 import pytest
@@ -471,14 +472,15 @@ def test_traceable_async_generator_forwards_athrow() -> None:
     assert agen_events[0].status == "ok"
 
 
-def test_traceable_async_generator_cancellation_records_once_and_cleans_context() -> None:
+@pytest.mark.parametrize("kind", ["tool", "model"])
+def test_traceable_async_generator_cancellation_records_once_and_cleans_context(kind) -> None:
     reset_runtime()
     captured: dict[str, Any] = {}
 
     async def run() -> None:
         started = asyncio.Event()
 
-        @agentloop.traceable(root=True, name="agen")
+        @agentloop.traceable(root=True, name="agen", kind=kind)
         async def agen() -> AsyncGenerator[int, None]:
             captured["trace"] = agentloop.current_trace()
             started.set()
@@ -503,7 +505,8 @@ def test_traceable_async_generator_cancellation_records_once_and_cleans_context(
     assert agen_events[0].error == "CancelledError"
 
 
-def test_traceable_async_generator_cancelled_aclose_records_once() -> None:
+@pytest.mark.parametrize("kind", ["tool", "model"])
+def test_traceable_async_generator_cancelled_aclose_records_once(kind) -> None:
     reset_runtime()
 
     async def run() -> Any:
@@ -511,7 +514,7 @@ def test_traceable_async_generator_cancelled_aclose_records_once() -> None:
 
         with trace_agent("outer") as trace:
 
-            @agentloop.trace_tool(name="agen")
+            @agentloop.traceable(name="agen", kind=kind)
             async def agen() -> AsyncGenerator[int, None]:
                 try:
                     yield 1
@@ -534,3 +537,92 @@ def test_traceable_async_generator_cancelled_aclose_records_once() -> None:
     assert len(agen_events) == 1
     assert agen_events[0].status == "error"
     assert agen_events[0].error == "CancelledError"
+
+
+@pytest.mark.parametrize("kind", ["tool", "model"])
+@pytest.mark.parametrize("nested", [False, True])
+def test_generator_keeps_captured_owner_and_parent_when_closed_in_another_trace(kind, nested):
+    reset_runtime()
+
+    @agentloop.traceable(name="generator", kind=kind, model="test-model")
+    def generate():
+        try:
+            yield 1
+        finally:
+            with agentloop.trace_tool_call("cleanup"):
+                pass
+
+    with trace_agent("owner") as owner:
+        with agentloop.trace_tool_call("owner-parent") if nested else nullcontext():
+            captured_parent = current_event_id()
+            iterator = generate()
+
+    with trace_agent("consumer") as consumer:
+        with agentloop.trace_tool_call("consumer-parent"):
+            consumer_parent = current_event_id()
+            assert next(iterator) == 1
+            assert agentloop.current_trace() is consumer
+            assert current_event_id() == consumer_parent
+            iterator.close()
+            iterator.close()
+            assert agentloop.current_trace() is consumer
+            assert current_event_id() == consumer_parent
+
+    events = {event.name: event for event in owner.events}
+    assert len(owner.events) == (3 if nested else 2)
+    assert events["generator"].parent_id == captured_parent
+    assert events["generator"].event_type == f"{kind}_call"
+    assert events["generator"].model == ("test-model" if kind == "model" else None)
+    assert events["generator"].status == "ok"
+    assert events["cleanup"].parent_id == events["generator"].event_id
+    assert all(event.run_id == owner.run_id for event in owner.events)
+    assert [event.name for event in consumer.events] == ["consumer-parent"]
+
+
+@pytest.mark.parametrize("kind", ["tool", "model"])
+@pytest.mark.parametrize("nested", [False, True])
+def test_async_generator_cross_task_close_preserves_owner_and_caller_context(kind, nested):
+    reset_runtime()
+
+    @agentloop.traceable(name="generator", kind=kind)
+    async def generate():
+        try:
+            yield 1
+        finally:
+            await asyncio.sleep(0)
+            with agentloop.trace_tool_call("cleanup"):
+                pass
+
+    async def run():
+        with trace_agent("owner") as owner:
+            with agentloop.trace_tool_call("owner-parent") if nested else nullcontext():
+                captured_parent = current_event_id()
+                iterator = generate()
+
+        with trace_agent("consumer") as consumer:
+            with agentloop.trace_tool_call("consumer-parent"):
+                consumer_parent = current_event_id()
+                assert await iterator.__anext__() == 1
+                assert agentloop.current_trace() is consumer
+                assert current_event_id() == consumer_parent
+
+                async def close():
+                    await iterator.aclose()
+                    await iterator.aclose()
+                    assert agentloop.current_trace() is consumer
+                    assert current_event_id() == consumer_parent
+
+                await asyncio.create_task(close())
+                assert agentloop.current_trace() is consumer
+                assert current_event_id() == consumer_parent
+        return owner, consumer, captured_parent
+
+    owner, consumer, captured_parent = asyncio.run(run())
+    events = {event.name: event for event in owner.events}
+    assert len(owner.events) == (3 if nested else 2)
+    assert events["generator"].parent_id == captured_parent
+    assert events["generator"].event_type == f"{kind}_call"
+    assert events["generator"].status == "ok"
+    assert events["cleanup"].parent_id == events["generator"].event_id
+    assert all(event.run_id == owner.run_id for event in owner.events)
+    assert [event.name for event in consumer.events] == ["consumer-parent"]
