@@ -370,7 +370,7 @@ Core scope: trace agent execution, find evidence-backed optimization opportuniti
 
 ## License
 
-Copyright 2026 Dipesh Tharu Mahato and AgentLoop contributors.
+Copyright 2026 Dipesh Tharu Mahato.
 
 AgentLoop is licensed under the [Apache License 2.0](LICENSE). Dependencies retain their own terms; see [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
 
