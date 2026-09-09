@@ -8,6 +8,11 @@ Project history from before the first public release remains available in Git.
 
 ## [Unreleased]
 
+- Raised the HTTPX2 development dependency minimum to 2.12.0 and updated the
+  locked HTTPX2/HTTPCore2 packages to resolve six dependency alerts covering
+  SOCKS WebSocket TLS, SSE buffering, multipart header injection, request framing,
+  and response decompression amplification.
+
 - Token counts now carry their provenance, so a word-count approximation no
   longer reads as exact provider usage. Trace schema is **1.1**: model events
   gain an optional `token_provenance` field (`provider`, `tokenizer`,
