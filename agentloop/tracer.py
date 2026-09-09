@@ -17,6 +17,14 @@ from agentloop.events import (
 )
 from agentloop.metrics import build_report
 from agentloop.schema import SCHEMA_VERSION, validate_trace_dict
+from agentloop.tokens import (
+    ESTIMATED_WORDS,
+    UNAVAILABLE,
+    USER_SUPPLIED,
+    describe_token_status,
+    is_token_basis_exact,
+    validate_provenance,
+)
 
 _current_trace: ContextVar["AgentTrace | None"] = ContextVar(
     "agentloop_current_trace", default=None
@@ -25,9 +33,46 @@ _current_event_id: ContextVar[str | None] = ContextVar("agentloop_current_event_
 
 
 def _count_tokens(text: str | None) -> int:
+    """Approximate a token count from whitespace words.
+
+    This is a proxy, not a token count. Every caller must record
+    :data:`agentloop.tokens.ESTIMATED_WORDS` provenance alongside the number so
+    downstream cost, replay, and research output never present it as exact usage.
+    """
+
     if not text:
         return 0
     return max(1, len(text.split()))
+
+
+def _resolve_token_counts(
+    input_tokens: int | None,
+    output_tokens: int | None,
+    input_text: str | None,
+    output_text: str | None,
+) -> tuple[int, int, str]:
+    """Resolve a model call's token counts and record where they came from.
+
+    Explicit counts are used verbatim and marked ``user_supplied``. A side with no
+    explicit count falls back to the word-count proxy; if that proxy actually
+    contributes a number, the whole event is marked ``estimated_words`` — the
+    weaker of the two provenances, because a total mixing a real count with an
+    approximation is itself an approximation. With neither counts nor text there
+    is nothing to report, which is ``unavailable`` rather than a confident zero.
+    """
+
+    resolved_input = input_tokens if input_tokens is not None else _count_tokens(input_text)
+    resolved_output = output_tokens if output_tokens is not None else _count_tokens(output_text)
+    estimated = (input_tokens is None and resolved_input > 0) or (
+        output_tokens is None and resolved_output > 0
+    )
+    if estimated:
+        provenance = ESTIMATED_WORDS
+    elif input_tokens is None and output_tokens is None:
+        provenance = UNAVAILABLE
+    else:
+        provenance = USER_SUPPLIED
+    return resolved_input, resolved_output, provenance
 
 
 class AgentTrace:
@@ -128,17 +173,23 @@ class AgentTrace:
         print(f"AgentLoop Report: {self.name}")
         print(f"Run ID: {self.run_id}")
         print(f"Total runtime: {report['total_runtime_ms'] / 1000:.2f}s")
+        token_status = report.get("token_status", "unspecified")
         print(
             "Estimated cost: "
             + format_cost_usd(
-                report.get("estimated_cost_usd"), report.get("cost_status", "complete")
+                report.get("estimated_cost_usd"),
+                report.get("cost_status", "complete"),
+                token_status=token_status,
             )
         )
         print(f"Model time: {report['model_time_ms'] / 1000:.2f}s")
         print(f"Tool time: {report['tool_time_ms'] / 1000:.2f}s")
         print(f"Retry time: {report['retry_time_ms'] / 1000:.2f}s")
-        print(f"Input tokens: {report['input_tokens']}")
-        print(f"Output tokens: {report['output_tokens']}")
+        token_note = "" if is_token_basis_exact(token_status) else f"  [{token_status}]"
+        print(f"Input tokens: {report['input_tokens']}{token_note}")
+        print(f"Output tokens: {report['output_tokens']}{token_note}")
+        if not is_token_basis_exact(token_status):
+            print(f"  Token basis: {describe_token_status(token_status)}")
         print(f"Repeated context ratio: {report['repeated_context_ratio']:.1%}")
         print("\nRecommendations:")
         for rec in report["recommendations"]:
@@ -205,6 +256,7 @@ def record_model_call(
     model: str | None = None,
     input_tokens: int = 0,
     output_tokens: int = 0,
+    token_provenance: str | None = None,
     input_text: str | None = None,
     output_text: str | None = None,
     status: str = "ok",
@@ -219,6 +271,15 @@ def record_model_call(
     Integrations use this when token counts are only known after a framework call
     returns. User code should usually prefer `trace_model_call(...)`.
 
+    ``token_provenance`` records where the token counts came from; an integration
+    that read a provider usage object should pass
+    :data:`agentloop.tokens.PROVIDER`. When omitted it is inferred from the counts
+    themselves: any non-zero count is treated as ``user_supplied`` (this entry
+    point takes explicit integers, so a caller passing one is supplying it), and
+    an all-zero call is recorded as ``unavailable`` rather than as a confident
+    zero. Passing a value AgentLoop does not define raises
+    :class:`agentloop.tokens.TokenProvenanceError`.
+
     By default the event is recorded into the trace active in the current context.
     Pass ``trace`` to record into a specific trace instead — for example an
     integration that captured trace ownership when a streaming call was invoked and
@@ -232,6 +293,10 @@ def record_model_call(
         if parent_id is not None
         else (None if trace is not None else _current_event_id.get())
     )
+    if token_provenance is None:
+        resolved_provenance = USER_SUPPLIED if (input_tokens or output_tokens) else UNAVAILABLE
+    else:
+        resolved_provenance = validate_provenance(token_provenance)
     target.add_event(
         AgentEvent(
             event_id=event_id or new_event_id(),
@@ -245,6 +310,7 @@ def record_model_call(
             model=model,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
+            token_provenance=resolved_provenance,
             input_text=input_text,
             output_text=output_text,
             status=status,
@@ -326,16 +392,18 @@ def trace_model_call(
         ended_at = utc_now_iso()
         duration_ms = (time.perf_counter() - start) * 1000
         _current_event_id.reset(event_token)
+        resolved_input, resolved_output, provenance = _resolve_token_counts(
+            input_tokens, output_tokens, input_text, output_text
+        )
         record_model_call(
             name,
             started_at=started_at,
             ended_at=ended_at,
             duration_ms=duration_ms,
             model=model,
-            input_tokens=input_tokens if input_tokens is not None else _count_tokens(input_text),
-            output_tokens=output_tokens
-            if output_tokens is not None
-            else _count_tokens(output_text),
+            input_tokens=resolved_input,
+            output_tokens=resolved_output,
+            token_provenance=provenance,
             input_text=input_text,
             output_text=output_text,
             status=status,

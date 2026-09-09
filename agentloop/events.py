@@ -38,6 +38,10 @@ class AgentEvent:
     model: str | None = None
     input_tokens: int = 0
     output_tokens: int = 0
+    # Where input_tokens/output_tokens came from. ``None`` means the trace was
+    # written before this field existed, which reads back as "unspecified" — not
+    # as exact. See agentloop.tokens and docs/TRACE_SCHEMA.md.
+    token_provenance: str | None = None
     input_text: str | None = None
     output_text: str | None = None
     status: str = "ok"
