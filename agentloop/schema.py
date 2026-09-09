@@ -20,7 +20,10 @@ from typing import Any
 # ``schema_version``. Bump the MAJOR component only for a breaking change to the
 # serialized shape; readers accept an equal-or-lower MAJOR and tolerate a missing
 # value (0.4-era traces predate the field). See ``docs/TRACE_SCHEMA.md``.
-SCHEMA_VERSION = "1.0"
+#
+# 1.1 added the optional event field ``token_provenance`` (a backward-compatible
+# addition: 1.0 traces omit it and read back as provenance "unspecified").
+SCHEMA_VERSION = "1.1"
 
 # Statuses AgentLoop records on an event.
 _VALID_STATUSES = frozenset({"ok", "error"})
@@ -41,6 +44,7 @@ _KNOWN_EVENT_FIELDS = frozenset(
         "model",
         "input_tokens",
         "output_tokens",
+        "token_provenance",
         "input_text",
         "output_text",
         "status",
@@ -75,6 +79,11 @@ _OPTIONAL_STRING_EVENT_FIELDS = (
     "input_text",
     "output_text",
     "error",
+    # Deliberately validated as a free string rather than a closed enum: a value
+    # this build does not recognize must not make a trace from a newer MINOR
+    # version unreadable. agentloop.tokens.provenance_grade() grades anything
+    # unrecognized as "unspecified", so an unknown value is never read as exact.
+    "token_provenance",
 )
 
 _NON_NEGATIVE_INT_EVENT_FIELDS = ("input_tokens", "output_tokens")

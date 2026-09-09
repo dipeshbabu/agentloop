@@ -207,12 +207,14 @@ input tokens. Invalid metadata makes that call `unknown` with
 `unknown_reason: invalid_metadata`; values are never clamped into a plausible
 measurement.
 
-## Replay gates and unknown cost
+## Replay gates and unevaluable cost
 
-Replay/CI compares baseline and candidate cost. When **either** side has an
-unknown model cost, the cost gates cannot be computed from the partial numbers,
-so they are marked **indeterminate** rather than silently compared against
-coerced zeros:
+Replay/CI compares baseline and candidate cost. That comparison has two inputs,
+and both must hold up: every model call needs a **known rate**, and the **token
+counts** those rates multiply must have been counted rather than approximated
+from word counts. When either is missing on either side, the cost gates cannot be
+computed from the numbers available, so they are marked **indeterminate** rather
+than silently compared against coerced zeros:
 
 - By default (no cost threshold required), an indeterminate cost gate is
   reported but does **not** fail the replay — a latency-only optimization that
@@ -220,8 +222,18 @@ coerced zeros:
   `gates.cost_evaluable` is `false` and `gates.indeterminate` lists the affected
   gates, so the gap is visible.
 - If you **require** a cost improvement (`min_cost_improvement_pct > 0`) and the
-  cost is unknown, the `cost_improvement` gate **fails** — AgentLoop will not
-  claim an improvement it cannot verify.
+  cost cannot be evaluated, the `cost_improvement` gate **fails** — AgentLoop will
+  not claim an improvement it cannot verify.
 
-To get evaluable cost gates for models outside the built-in table, price them via
-`AGENTLOOP_PRICING_FILE`.
+The report says which input was missing: `gates.pricing_known` is `false` for an
+unpriced model, and `gates.token_basis_evaluable` is `false` when a side's token
+counts were only approximated (`gates.baseline_token_status` /
+`gates.candidate_token_status` carry the detail). The gate's `detail` string names
+the same reason.
+
+To get evaluable cost gates: price models outside the built-in table via
+`AGENTLOOP_PRICING_FILE`, and record real token counts — instrument through an
+integration that reads provider usage, or pass `input_tokens=` / `output_tokens=`
+to `trace_model_call(...)` instead of relying on the word-count fallback. Traces
+written before schema 1.1 carry no provenance and still gate; see
+[Token provenance](TRACE_SCHEMA.md#token-provenance).
