@@ -89,15 +89,42 @@ Quality fixtures can add task-grounded pass/fail or scalar evidence. Built-in sc
 
 Keep these categories separate in papers and reports.
 
-**Measured evidence** comes from observed traces or task evaluation: runtime, tokens, calls, retries, failures, quality scores, and complete/provider-reported cost.
+**Measured evidence** comes from observed traces or task evaluation: runtime, tokens, calls, retries, failures, quality scores, and complete/provider-reported cost. Token counts qualify only when their provenance says they were counted — see [Token measurements](#token-measurements) below.
 
 **Estimated evidence** comes from optimization analysis: proposed latency savings, proposed cost savings, rewrite recommendations, value scenarios, and priority scores.
 
 Optimization cards are useful hypotheses for interventions. They are not experimental results until the proposed change is implemented and measured on a candidate condition.
 
+## Token measurements
+
+Not every token number in a trace is a token count. When a caller supplies text
+but no counts, AgentLoop approximates with `len(text.split())`, which is a proxy
+for tokens, not a measurement of them. Every model call therefore records a
+`token_provenance`, and each trace reports an aggregate `token_status`:
+
+| `token_status` | Suitable to report as a token measurement? |
+|---|---|
+| `exact` | Yes — every model call counted tokens (provider, tokenizer, or caller-supplied). |
+| `empty` | Not applicable — the run made no model calls. |
+| `partial` | No — some calls counted tokens and some did not. Report the split, or restrict the analysis to the exact subset. |
+| `estimated` | No — word approximations. Usable for relative structure, not for reported token or cost figures. |
+| `unavailable` | No — the run recorded no token counts at all. |
+| `unspecified` | No — the trace predates provenance, so exactness cannot be established. Re-record it. |
+
+For a published token or cost figure, collect traces whose `token_status` is
+`exact`. In practice that means instrumenting through an integration that reads
+provider usage (`agentloop.integrations.openai`), importing OTLP spans that carry
+`gen_ai.usage.*` attributes, or passing `input_tokens=` / `output_tokens=`
+explicitly to `trace_model_call(...)`.
+
+Because a calculated cost is a rate multiplied by a token count, a cost figure is
+never more exact than the tokens behind it. `cost_breakdown.token_status` carries
+that basis alongside `cost_status`, and replay cost gates go indeterminate when
+the token basis is only estimated — see [Cost completeness](#cost-completeness).
+
 ## Cost completeness
 
-Do not treat unknown model prices as zero. AgentLoop records `cost_status` as `complete`, `partial`, `unknown`, or `empty`. Cost comparisons and modeled value are only fully evaluable when all relevant calls have known or provider-reported cost. See `docs/PRICING.md`.
+Do not treat unknown model prices as zero. AgentLoop records `cost_status` as `complete`, `partial`, `unknown`, or `empty`. Cost comparisons and modeled value are only fully evaluable when all relevant calls have known or provider-reported cost **and** the token counts those rates multiply were counted rather than approximated. A replay report reports both inputs separately as `gates.pricing_known` and `gates.token_basis_evaluable`. See `docs/PRICING.md`.
 
 ## Reproducibility checklist
 

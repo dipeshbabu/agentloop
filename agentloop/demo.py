@@ -6,6 +6,12 @@ from pathlib import Path
 
 from agentloop import trace_agent, trace_model_call, trace_retry, trace_tool_call
 
+# Every model call below declares both token counts explicitly. These traces are
+# synthetic fixtures, so their counts are declared fixture values the way a real
+# integration declares provider-reported usage — not measurements of the prompt
+# text. Leaving a count off would make AgentLoop fall back to a whitespace word
+# estimate, which records `estimated_words` provenance and correctly turns the
+# demo's cost gates indeterminate (issue #133).
 SYSTEM_LONG = (
     "You are a careful research agent. Use evidence, verify claims, and write concise reports. "
     * 20
@@ -47,6 +53,7 @@ def run_baseline(out_dir: str | Path = "runs") -> Path:
             "plan",
             model="gpt-4.1",
             input_text=SYSTEM_LONG + "Plan research on agent inference runtimes.",
+            input_tokens=286,
             output_tokens=220,
         ):
             sleep_ms(400)
@@ -62,6 +69,7 @@ def run_baseline(out_dir: str | Path = "runs") -> Path:
                 "summarize_source",
                 model="gpt-4.1",
                 input_text=SYSTEM_LONG + content,
+                input_tokens=430,
                 output_tokens=350,
             ):
                 sleep_ms(350)
@@ -74,6 +82,7 @@ def run_baseline(out_dir: str | Path = "runs") -> Path:
             "verify_claims",
             model="gpt-4.1",
             input_text=SYSTEM_LONG + "\n".join(summaries),
+            input_tokens=305,
             output_tokens=450,
         ):
             sleep_ms(450)
@@ -82,6 +91,7 @@ def run_baseline(out_dir: str | Path = "runs") -> Path:
             "write_report",
             model="gpt-4.1",
             input_text=SYSTEM_LONG + "\n".join(summaries),
+            input_tokens=305,
             output_tokens=800,
         ):
             sleep_ms(550)
@@ -108,6 +118,7 @@ def run_proof_baseline(out_dir: str | Path = "runs") -> Path:
             "classify_intent",
             model="gpt-4.1",
             input_text="Classify this simple support request.",
+            input_tokens=5,
             output_tokens=40,
         ):
             sleep_ms(220)
@@ -173,6 +184,7 @@ def run_proof_candidate(out_dir: str | Path = "runs") -> Path:
             "classify_intent",
             model="gpt-4.1-mini",
             input_text="Classify this simple support request.",
+            input_tokens=5,
             output_tokens=30,
         ):
             sleep_ms(90)
@@ -188,6 +200,7 @@ def run_proof_candidate(out_dir: str | Path = "runs") -> Path:
             "summarize_batch",
             model="gpt-4.1-mini",
             input_text=compact_context + "\n".join(content[:220] for content in contents),
+            input_tokens=136,
             output_tokens=280,
         ):
             sleep_ms(170)
@@ -201,6 +214,7 @@ def run_proof_candidate(out_dir: str | Path = "runs") -> Path:
             "final_answer",
             model="gpt-4.1-mini",
             input_text=compact_context + " Compressed evidence with source ids.",
+            input_tokens=70,
             output_tokens=420,
         ):
             sleep_ms(220)
@@ -217,6 +231,7 @@ def run_optimized(out_dir: str | Path = "runs") -> Path:
             "plan",
             model="gpt-4.1-mini",
             input_text=SYSTEM_SHORT + "Plan research on agent inference runtimes.",
+            input_tokens=62,
             output_tokens=120,
         ):
             sleep_ms(200)
@@ -233,6 +248,7 @@ def run_optimized(out_dir: str | Path = "runs") -> Path:
             "summarize_batch",
             model="gpt-4.1-mini",
             input_text=SYSTEM_SHORT + compact_context,
+            input_tokens=221,
             output_tokens=500,
         ):
             sleep_ms(300)
@@ -241,6 +257,7 @@ def run_optimized(out_dir: str | Path = "runs") -> Path:
             "verify_and_write",
             model="gpt-4.1",
             input_text=SYSTEM_SHORT + compact_context,
+            input_tokens=221,
             output_tokens=650,
         ):
             sleep_ms(450)

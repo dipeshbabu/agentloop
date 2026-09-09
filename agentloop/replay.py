@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from agentloop.markdown import markdown_code_span, markdown_table_cell
+from agentloop.tokens import is_token_basis_evaluable
 
 
 @dataclass(frozen=True)
@@ -24,6 +25,16 @@ def build_replay_report(
     gates: ReplayGates | None = None,
     quality_report: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    """Compare a baseline and candidate trace and evaluate the configured gates.
+
+    A cost gate is only evaluated when both its inputs are trustworthy: every
+    model call has a known rate, *and* the token counts those rates multiply were
+    counted rather than approximated. When either is missing the cost gates go
+    indeterminate instead of comparing numbers that cannot support the comparison
+    (issue #133); ``gates.pricing_known`` and ``gates.token_basis_evaluable`` say
+    which input was missing.
+    """
+
     gates = gates or ReplayGates()
     baseline_report = baseline_trace.report()
     candidate_report = candidate_trace.report()
@@ -32,15 +43,20 @@ def build_replay_report(
     if quality_report is not None:
         baseline["quality_score"] = float(quality_report.get("baseline_score", 0.0))
         candidate["quality_score"] = float(quality_report.get("candidate_score", 0.0))
-    cost_evaluable = not (
+    pricing_known = not (
         bool(baseline.get("has_unknown_cost")) or bool(candidate.get("has_unknown_cost"))
     )
+    token_basis_evaluable = is_token_basis_evaluable(
+        baseline.get("token_status")
+    ) and is_token_basis_evaluable(candidate.get("token_status"))
+    cost_evaluable = pricing_known and token_basis_evaluable
     deltas = _deltas(baseline, candidate)
     if not cost_evaluable:
-        # The cost totals are lower bounds when a model is unpriced, so their
-        # delta and percentages are not a valid comparison — expose them as
-        # unavailable (None) rather than let a consumer read lower-bound
-        # arithmetic as a real number. The gate stays indeterminate below.
+        # The cost totals are lower bounds when a model is unpriced, and a rate
+        # times a word estimate when the token basis is approximate. Either way
+        # their delta and percentages are not a valid comparison — expose them as
+        # unavailable (None) rather than let a consumer read that arithmetic as a
+        # real number. The gates stay indeterminate below.
         deltas["cost_usd_delta"] = None
         deltas["cost_improvement_pct"] = None
         deltas["cost_regression_pct"] = None
@@ -51,6 +67,7 @@ def build_replay_report(
         gates,
         quality_report=quality_report,
         cost_evaluable=cost_evaluable,
+        pricing_known=pricing_known,
     )
     passed = all(item["passed"] for item in gate_results)
     indeterminate_gates = [item["name"] for item in gate_results if item.get("indeterminate")]
@@ -62,6 +79,13 @@ def build_replay_report(
         "gates": {
             "passed": passed,
             "cost_evaluable": cost_evaluable,
+            # Split out so a failing/indeterminate cost gate says *which* input
+            # was missing: an unpriced model, or token counts that were only
+            # approximated (issue #133).
+            "pricing_known": pricing_known,
+            "token_basis_evaluable": token_basis_evaluable,
+            "baseline_token_status": baseline.get("token_status"),
+            "candidate_token_status": candidate.get("token_status"),
             "indeterminate": indeterminate_gates,
             "config": {
                 "max_cost_regression_pct": gates.max_cost_regression_pct,
@@ -75,7 +99,9 @@ def build_replay_report(
             "results": gate_results,
         },
         "quality": quality_report,
-        "summary": _summary(deltas, passed, cost_evaluable=cost_evaluable),
+        "summary": _summary(
+            deltas, passed, cost_evaluable=cost_evaluable, pricing_known=pricing_known
+        ),
     }
 
 
@@ -222,6 +248,11 @@ def _trace_summary(trace: Any, report: dict[str, Any]) -> dict[str, Any]:
         # completeness (see costs.py / metrics.py).
         "has_unknown_cost": bool(cost.get("has_unknown_cost", False)),
         "cost_status": report.get("cost_status", cost.get("cost_status", "complete")),
+        # How exact the token totals below are, and therefore how exact any cost
+        # calculated from them is. "unspecified" means the trace predates token
+        # provenance; agentloop.tokens.is_token_basis_evaluable() explains why
+        # that still gates.
+        "token_status": report.get("token_status", cost.get("token_status", "unspecified")),
         "input_tokens": int(report.get("input_tokens", 0) or 0),
         "output_tokens": int(report.get("output_tokens", 0) or 0),
         "retry_count": int(report.get("retry_count", 0) or 0),
@@ -301,6 +332,7 @@ def _gate_results(
     *,
     quality_report: dict[str, Any] | None = None,
     cost_evaluable: bool = True,
+    pricing_known: bool = True,
 ) -> list[dict[str, Any]]:
     if cost_evaluable:
         cost_regression_gate = _gate(
@@ -316,14 +348,18 @@ def _gate_results(
             f">= {gates.min_cost_improvement_pct:.2f}% required",
         )
     else:
-        # A missing rate is not itself evidence of a regression, so the
-        # regression gate stays non-failing rather than blocking every
-        # latency-only optimization that uses an unpriced model. But a *required*
-        # cost improvement can't be verified, so it must fail — we won't claim an
-        # improvement we can't compute.
-        cost_regression_gate = _indeterminate_cost_gate("cost_regression", fail=False)
+        # A missing rate — or a token count that was only approximated — is not
+        # itself evidence of a regression, so the regression gate stays
+        # non-failing rather than blocking every latency-only optimization that
+        # uses an unpriced model. But a *required* cost improvement can't be
+        # verified, so it must fail — we won't claim an improvement we can't
+        # compute.
+        reason = _cost_indeterminate_reason(pricing_known)
+        cost_regression_gate = _indeterminate_cost_gate(
+            "cost_regression", fail=False, reason=reason
+        )
         cost_improvement_gate = _indeterminate_cost_gate(
-            "cost_improvement", fail=gates.min_cost_improvement_pct > 0
+            "cost_improvement", fail=gates.min_cost_improvement_pct > 0, reason=reason
         )
     results = [
         _gate(
@@ -388,29 +424,49 @@ def _gate(name: str, passed: bool, detail: str, *, indeterminate: bool = False) 
     return {"name": name, "passed": passed, "detail": detail, "indeterminate": indeterminate}
 
 
-def _indeterminate_cost_gate(name: str, *, fail: bool) -> dict[str, Any]:
-    """A cost gate that couldn't be evaluated because a model cost is unknown.
+def _cost_indeterminate_reason(pricing_known: bool) -> str:
+    """Explain which missing input made a cost comparison indeterminate."""
 
-    Rather than silently comparing coerced/lower-bound numbers, the gate is
-    marked ``indeterminate``. It fails only when the caller explicitly required a
-    cost outcome (``fail``) that therefore can't be verified; otherwise it is a
-    non-failing informational gate.
+    if not pricing_known:
+        return "a model call has no known pricing (see cost_breakdown.unknown_models)"
+    return (
+        "token counts were approximated from word counts, so any cost derived "
+        "from them is not a measurement (see token_status)"
+    )
+
+
+def _indeterminate_cost_gate(
+    name: str, *, fail: bool, reason: str = "a model call has no known pricing"
+) -> dict[str, Any]:
+    """A cost gate that couldn't be evaluated from the evidence available.
+
+    Two things can make a cost comparison meaningless: an unpriced model (the
+    totals are lower bounds) or token counts that were only approximated (the
+    totals are a rate times a guess). Rather than silently comparing those
+    numbers, the gate is marked ``indeterminate``. It fails only when the caller
+    explicitly required a cost outcome (``fail``) that therefore can't be
+    verified; otherwise it is a non-failing informational gate.
     """
-    detail = (
-        "cost could not be evaluated: a model call has no known pricing "
-        "(see cost_breakdown.unknown_models). "
-        + ("failing because a cost outcome was required." if fail else "not gating.")
+    detail = f"cost could not be evaluated: {reason}. " + (
+        "failing because a cost outcome was required." if fail else "not gating."
     )
     return _gate(name, passed=not fail, detail=detail, indeterminate=True)
 
 
-def _summary(deltas: dict[str, Any], passed: bool, *, cost_evaluable: bool = True) -> str:
+def _summary(
+    deltas: dict[str, Any],
+    passed: bool,
+    *,
+    cost_evaluable: bool = True,
+    pricing_known: bool = True,
+) -> str:
     status = "passed" if passed else "failed"
-    cost_phrase = (
-        f"cost improvement {deltas['cost_improvement_pct']:.2f}%"
-        if cost_evaluable
-        else "cost improvement unavailable (unknown model pricing)"
-    )
+    if cost_evaluable:
+        cost_phrase = f"cost improvement {deltas['cost_improvement_pct']:.2f}%"
+    elif not pricing_known:
+        cost_phrase = "cost improvement unavailable (unknown model pricing)"
+    else:
+        cost_phrase = "cost improvement unavailable (token counts are estimates)"
     return (
         f"Replay {status}: latency improvement {deltas['latency_improvement_pct']:.2f}%, "
         f"{cost_phrase}, "

@@ -6,6 +6,12 @@ from typing import Any
 
 from agentloop.costs import CostEstimate, PricingTable, estimate_cost, load_pricing_table
 from agentloop.timing import cumulative_span_time_ms, elapsed_runtime_ms
+from agentloop.tokens import (
+    describe_token_status,
+    provenance_counts,
+    provenance_grade,
+    token_status,
+)
 
 
 def build_report(trace: Any) -> dict[str, Any]:
@@ -18,6 +24,7 @@ def build_report(trace: Any) -> dict[str, Any]:
     parallel = parallelism_opportunities(tool_events)
     cumulative_time = cumulative_span_time_ms(events)
     cost = cost_breakdown(model_events)
+    tokens = token_breakdown(model_events)
 
     return {
         "run_id": trace.run_id,
@@ -33,6 +40,12 @@ def build_report(trace: Any) -> dict[str, Any]:
         "retry_time_ms": round(sum(e.duration_ms for e in retry_events), 3),
         "input_tokens": sum(e.input_tokens for e in model_events),
         "output_tokens": sum(e.output_tokens for e in model_events),
+        # How exact those two totals are. Only trust them as a measurement when
+        # `token_status` is "exact" (or "empty") — anything else means at least
+        # one model call approximated its counts, did not have them, or predates
+        # provenance. See agentloop/tokens.py and docs/TRACE_SCHEMA.md.
+        "token_status": tokens["token_status"],
+        "token_provenance_counts": tokens["token_provenance_counts"],
         # Sum of *known* costs only (calculated + provider-reported). A model with
         # no known rate contributes nothing here rather than a fabricated rate.
         # `cost_status` and `cost_breakdown` record whether that number is a
@@ -136,6 +149,11 @@ def cost_breakdown(model_events: list[Any], pricing: PricingTable | None = None)
 
     return {
         "cost_status": _cost_status(len(estimates), len(unknown)),
+        # A calculated cost is a rate multiplied by a token count, so it is only
+        # as exact as that count. Carrying the token basis alongside the cost
+        # stops a dollar amount derived from word estimates from reading as an
+        # exact calculated cost (issue #133).
+        "token_status": token_status(model_events),
         "known_cost_usd": round(calculated + provider_reported, 6),
         "calculated_usd": calculated,
         "provider_reported_usd": provider_reported,
@@ -147,6 +165,34 @@ def cost_breakdown(model_events: list[Any], pricing: PricingTable | None = None)
         "unknown_models": unknown_models,
         "unknown_reasons": unknown_reasons,
         "model_calls": [e.to_dict() for e in estimates],
+    }
+
+
+def token_breakdown(model_events: list[Any]) -> dict[str, Any]:
+    """Summarize how exact a trace's token counts are, and why.
+
+    The counts in ``input_tokens``/``output_tokens`` mix provider-reported usage
+    with a whitespace word-count fallback, so a total on its own cannot say
+    whether it is a measurement. This returns the aggregate
+    :func:`agentloop.tokens.token_status` plus the per-provenance call counts
+    behind it, so a report can show exactly how its token number was obtained.
+    """
+
+    status = token_status(model_events)
+    return {
+        "token_status": status,
+        "token_status_detail": describe_token_status(status),
+        "token_provenance_counts": provenance_counts(model_events),
+        "exact_token_call_count": sum(
+            1
+            for e in model_events
+            if provenance_grade(getattr(e, "token_provenance", None)) == "exact"
+        ),
+        "estimated_token_call_count": sum(
+            1
+            for e in model_events
+            if provenance_grade(getattr(e, "token_provenance", None)) == "estimated"
+        ),
     }
 
 

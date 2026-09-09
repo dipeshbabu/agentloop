@@ -8,6 +8,31 @@ Project history from before the first public release remains available in Git.
 
 ## [Unreleased]
 
+- Token counts now carry their provenance, so a word-count approximation no
+  longer reads as exact provider usage. Trace schema is **1.1**: model events
+  gain an optional `token_provenance` field (`provider`, `tokenizer`,
+  `user_supplied`, `estimated_words`, or `unavailable`), and reports gain a
+  `token_status` aggregate (`exact`, `partial`, `estimated`, `unavailable`,
+  `unspecified`, `empty`) alongside the existing `cost_status`.
+  `cost_breakdown.token_status` records the basis behind a calculated cost, and
+  `format_cost_usd(...)` accepts an optional `token_status=` that qualifies the
+  rendered amount (`$0.0004 (from estimated tokens)`) so a dollar figure built on
+  word estimates no longer reads as an exact calculated cost. Omitting the
+  argument keeps the previous pricing-only rendering.
+
+  Replay cost gates now require both a known rate **and** an exact token basis;
+  when the counts were only approximated the cost gates go **indeterminate**
+  with the same semantics as unknown pricing (non-failing by default, failing
+  when `min_cost_improvement_pct > 0`). `gates.pricing_known` and
+  `gates.token_basis_evaluable` say which input was missing.
+
+  Compatibility: 1.0 traces stay readable with no migration, report
+  `token_status` as `unspecified`, and **continue to evaluate cost gates** so
+  existing CI does not break on upgrade. Provenance survives native JSON and
+  OTLP round trips; third-party OTLP spans carrying `gen_ai`/`llm` usage
+  attributes import as `provider`, and spans without usage as `unavailable`.
+  See [docs/TRACE_SCHEMA.md](docs/TRACE_SCHEMA.md#token-provenance).
+
 - Added `bind_trace_context(trace, event_id=None)` and explicit `trace=` targeting
   for `record_tool_call`, matching model-event parent handling. Generator decorators
   now use the tracer-owned context helper and record completion into their captured

@@ -6,6 +6,7 @@ from functools import wraps
 from typing import Any
 
 from agentloop.events import format_exception_detail, utc_now_iso
+from agentloop.tokens import PROVIDER, UNAVAILABLE
 from agentloop.tracer import current_event_id, current_trace, record_model_call
 
 # Marker set on wrappers so repeated instrumentation of the same callable is a
@@ -52,11 +53,20 @@ def _find_usage(obj: Any) -> Any:
     return nested
 
 
-def _extract_usage(result: Any) -> tuple[int, int]:
+def _extract_usage(result: Any) -> tuple[int, int, str]:
+    """Return token counts and the provenance that justifies them.
+
+    A response carrying a usage object gives provider-reported counts. Without
+    one there is nothing to count, and AgentLoop records ``unavailable`` rather
+    than a zero that would later read as a real measurement of zero tokens.
+    """
+
     usage = _find_usage(result)
+    if usage is None:
+        return 0, 0, UNAVAILABLE
     input_tokens = _usage_get(usage, "input_tokens", "prompt_tokens")
     output_tokens = _usage_get(usage, "output_tokens", "completion_tokens")
-    return input_tokens, output_tokens
+    return input_tokens, output_tokens, PROVIDER
 
 
 def _metadata_from_call(args: tuple[Any, ...], kwargs: dict[str, Any]) -> dict[str, Any]:
@@ -121,7 +131,7 @@ class _CallRecorder:
             # No trace was active when the call was invoked: never record, and do
             # not turn the caller's successful application call into an error.
             return
-        input_tokens, output_tokens = _extract_usage(result)
+        input_tokens, output_tokens, token_provenance = _extract_usage(result)
         record_model_call(
             self._name,
             started_at=self._started_at,
@@ -129,6 +139,7 @@ class _CallRecorder:
             model=_model_from_call(self._kwargs, self._default_model),
             input_tokens=input_tokens,
             output_tokens=output_tokens,
+            token_provenance=token_provenance,
             status=status,
             error=error,
             metadata=_metadata_from_call(self._args, self._kwargs),

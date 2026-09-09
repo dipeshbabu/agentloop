@@ -147,9 +147,16 @@ AgentLoop records:
 - model name
 - input tokens
 - output tokens
+- token provenance
 - status/error
 - message count
 - tool count
+
+Token counts come from the SDK's `usage` object, so they are recorded as
+`provider` provenance and a trace made only of these calls reports
+`token_status: exact`. A response that carries no usage records `unavailable`
+rather than a zero that would later read as a measurement of zero tokens. See
+[Token provenance](TRACE_SCHEMA.md#token-provenance).
 
 You can also wrap any OpenAI-like callable directly:
 

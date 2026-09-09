@@ -6,6 +6,7 @@ from typing import Any
 from agentloop.events import AgentEvent
 from agentloop.otel_ids import to_span_id, to_trace_id
 from agentloop.schema import TraceValidationError
+from agentloop.tokens import PROVIDER, UNAVAILABLE
 from agentloop.tracer import AgentTrace
 from agentloop.version import __version__
 
@@ -227,6 +228,7 @@ def _event_from_span(span: dict[str, Any], run_id: str) -> AgentEvent:
         output_tokens=int(
             attrs.get("gen_ai.usage.output_tokens") or attrs.get("llm.usage.completion_tokens") or 0
         ),
+        token_provenance=_token_provenance(attrs),
         status=status,
         error=error,
         metadata=metadata,
@@ -246,6 +248,8 @@ def _span_from_event(trace: AgentTrace, event: AgentEvent) -> dict[str, Any]:
     ]
     if event.model:
         attrs.append(_attribute("gen_ai.request.model", event.model))
+    if event.token_provenance:
+        attrs.append(_attribute("agentloop.token_provenance", event.token_provenance))
     for key, value in sorted((event.metadata or {}).items()):
         if key in _reserved_metadata_keys():
             # Transport diagnostics (otel_span_id/otel_trace_id) are re-derived on
@@ -428,10 +432,36 @@ def _error(span: dict[str, Any]) -> str | None:
     return None
 
 
+_USAGE_ATTRIBUTE_KEYS = (
+    "gen_ai.usage.input_tokens",
+    "gen_ai.usage.output_tokens",
+    "llm.usage.prompt_tokens",
+    "llm.usage.completion_tokens",
+)
+
+
+def _token_provenance(attrs: dict[str, Any]) -> str:
+    """Resolve a span's token provenance on import.
+
+    An AgentLoop-produced span carries its native provenance verbatim, so a round
+    trip preserves it. A third-party span does not, and is classified from what
+    it actually carried: standard ``gen_ai``/``llm`` usage attributes are emitted
+    by the instrumented SDK from provider usage, so they count as
+    ``provider``-reported; a span with no usage attributes has no counts to
+    report, which is ``unavailable`` rather than a measured zero.
+    """
+
+    native = attrs.get("agentloop.token_provenance")
+    if isinstance(native, str) and native:
+        return native
+    return PROVIDER if any(key in attrs for key in _USAGE_ATTRIBUTE_KEYS) else UNAVAILABLE
+
+
 def _direct_attribute_keys() -> set[str]:
     return {
         "agentloop.event_type",
         "agentloop.name",
+        "agentloop.token_provenance",
         "agentloop.trace.name",
         "gen_ai.operation.name",
         "gen_ai.request.model",

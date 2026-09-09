@@ -31,7 +31,10 @@ The version is `MAJOR.MINOR`:
 - **MINOR** increments for backward-compatible additions. Older readers keep
   working because unknown fields are ignored (see below).
 
-Current version: **`1.0`**.
+Current version: **`1.1`**.
+
+`1.1` added the optional event field `token_provenance` (see below). It is a
+backward-compatible addition: `1.0` traces omit it and stay readable.
 
 ## Event fields
 
@@ -46,6 +49,7 @@ Each event object has these fields. Required fields must be present and non-null
 | `started_at` / `ended_at` | string | required, non-empty (ISO-8601) |
 | `duration_ms` | number | required, finite, ≥ 0 |
 | `input_tokens` / `output_tokens` | integer | ≥ 0 |
+| `token_provenance` | string \| null | optional; where the token counts came from (see below) |
 | `status` | string | one of `ok`, `error` |
 | `parent_id`, `model`, `input_text`, `output_text`, `error` | string \| null | optional |
 | `metadata` | object | JSON object |
@@ -54,6 +58,54 @@ Validation failures raise `agentloop.schema.TraceValidationError`, which carries
 the offending `field` path (for example `events[2].duration_ms`) and a `reason`.
 Core code stays framework-free; the HTTP server maps this error to a `422`
 response `{"detail": {"field": …, "reason": …}}`.
+
+## Token provenance
+
+`input_tokens` / `output_tokens` carry both provider-reported usage and, when a
+caller supplies text but no counts, a whitespace word-count approximation.
+The two are not interchangeable, so each model call records where its numbers
+came from in `token_provenance`:
+
+| Value | Meaning | Exact? |
+|---|---|---|
+| `provider` | the provider reported usage (e.g. an OpenAI `usage` object) | yes |
+| `tokenizer` | counted with a real tokenizer for the target model | yes |
+| `user_supplied` | explicit counts passed by the calling application | yes |
+| `estimated_words` | the `len(text.split())` fallback; an approximation | no |
+| `unavailable` | no counts were available and none could be estimated | no |
+
+A sixth value, `unspecified`, is a **read result only** — it is what a reader
+reports for an event that has no `token_provenance` (a `1.0` trace) or one whose
+value this build does not recognize. Producers never write it.
+
+Aggregating those per-event values over a trace's model calls gives the
+`token_status` reported in `report()["token_status"]` and in
+`cost_breakdown.token_status`: one of `exact`, `partial`, `estimated`,
+`unavailable`, `unspecified`, or `empty`. Only treat token totals — and any cost
+calculated from them — as a measurement when `token_status` is `exact` or
+`empty`. See [`agentloop/tokens.py`](../agentloop/tokens.py).
+
+### Compatibility path for 1.0 traces
+
+A trace written before `1.1` has no provenance to read, so AgentLoop cannot tell
+whether its counts were provider usage or word estimates. Such traces:
+
+- **stay readable**, unchanged, with no migration step;
+- report `token_status` as `unspecified`, so nothing presents them as exact; but
+- **still evaluate cost gates**, because turning every configured cost gate
+  indeterminate on upgrade would break existing CI for traces that may well have
+  carried real usage. A trace that *positively* declares `estimated_words` does
+  not gate on cost — there the producer told us the number is a proxy.
+
+Re-record a trace with the current version to get an exact classification.
+
+### Unknown provenance values
+
+Unlike `status`, `token_provenance` is validated only as "a string or null", not
+as a closed enum. A value from a newer MINOR version must not make a trace
+unreadable, so an unrecognized value is preserved verbatim and graded
+`unspecified` — never silently read as exact. Producers are held to the closed
+set: passing an undefined value to the tracer raises `TokenProvenanceError`.
 
 ## Compatibility policy
 
@@ -99,7 +151,11 @@ attributes (`agentloop.trace.name`, `agentloop.run_id`) and the native
 event/parent ids as span attributes (`agentloop.native_event_id`,
 `agentloop.native_parent_id`). On import, `trace_from_otel()` reads these back to
 restore AgentLoop-native identity, so a native trace preserves its name, run id,
-event ids, parent structure, and event metadata across one **and repeated** OTLP
-round trips. Event metadata is exported under the `agentloop.metadata.` namespace
+event ids, parent structure, token provenance, and event metadata across one
+**and repeated** OTLP round trips. Provenance rides as the span attribute
+`agentloop.token_provenance`; on a third-party span that has none, AgentLoop
+classifies from what the span actually carried — standard `gen_ai`/`llm` usage
+attributes come from provider usage and read as `provider`, and a span with no
+usage attributes reads as `unavailable` rather than a measured zero. Event metadata is exported under the `agentloop.metadata.` namespace
 and decoded exactly once on import. Third-party resource/span attributes on a
 non-AgentLoop OTLP payload are preserved as event metadata without collision.

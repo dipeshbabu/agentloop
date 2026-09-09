@@ -48,9 +48,22 @@ def is_cost_evaluable(status: str | None) -> bool:
 
 
 def format_cost_usd(
-    amount_usd: float | None, status: str | None = "complete", *, decimals: int = 4
+    amount_usd: float | None,
+    status: str | None = "complete",
+    *,
+    decimals: int = 4,
+    token_status: str | None = None,
 ) -> str:
-    """Format a cost without presenting unknown totals as exact amounts."""
+    """Format a cost without presenting an inexact total as an exact amount.
+
+    Two things can make a cost inexact, and both are qualified in the rendered
+    string. ``status`` covers pricing completeness: a ``partial`` total is a known
+    lower bound. ``token_status`` covers the basis underneath — a calculated cost
+    is a rate multiplied by a token count, so a count that was approximated from
+    word counts yields an approximate cost, however precise the arithmetic looks.
+    Pass the report's ``token_status`` to have that qualified too; omitting it
+    keeps the pricing-only behavior callers had before.
+    """
 
     status = "complete" if status is None else status
     if (
@@ -61,7 +74,11 @@ def format_cost_usd(
     ):
         return "unavailable"
     rendered = f"${float(amount_usd):,.{decimals}f}"
-    return f"{rendered} (known lower bound)" if status == "partial" else rendered
+    if status == "partial":
+        rendered = f"{rendered} (known lower bound)"
+    if token_status is not None and token_status not in {"exact", "empty"}:
+        rendered = f"{rendered} (from {token_status} tokens)"
+    return rendered
 
 
 def _is_finite_number(value: Any) -> bool:
