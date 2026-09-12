@@ -1,5 +1,9 @@
 # Dashboard guide
 
+Parallelization candidates display their evidence level and assumptions in both
+Optimization and Diagnosis. See [parallelization evidence](PARALLELIZATION.md)
+for the distinction between observed timing, declarations, and inferred actionability.
+
 AgentLoop includes a local-first Streamlit dashboard backed by the same trace
 store used by the CLI and API server. It can run with local SQLite data or a
 shared Postgres database.

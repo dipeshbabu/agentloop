@@ -377,6 +377,10 @@ elif page == "Optimization":
                     f"{card['title']} · confidence: {card['confidence']}", expanded=True
                 ):
                     st.write(card["why"])
+                    if card.get("evidence_level"):
+                        st.write(f"Evidence level: {card['evidence_level']}")
+                        st.write("Assumptions: " + "; ".join(card["assumptions"]))
+                        st.caption(card["estimate_formula"])
                     st.code(card["rewrite_hint"])
                     st.write(
                         f"Estimated latency savings: {seconds(card['estimated_latency_savings_ms'])}"
@@ -387,11 +391,13 @@ elif page == "Optimization":
             graph = plan["graph"]
             st.write("Bottlenecks")
             st.dataframe(pd.DataFrame(graph["bottlenecks"]), width="stretch")
-            st.write("Parallelizable groups")
+            st.write("Parallelization candidates")
             if graph["parallelizable_groups"]:
                 st.dataframe(pd.DataFrame(graph["parallelizable_groups"]), width="stretch")
             else:
-                st.info("No obvious repeated independent tool-call groups found yet.")
+                st.info(
+                    "No repeated tool-call groups currently qualify as parallelization candidates."
+                )
             st.write("Edges")
             st.dataframe(pd.DataFrame(graph["edges"]), width="stretch")
 
@@ -425,6 +431,10 @@ elif page == "Diagnosis":
                 label = f"{finding['severity'].upper()} - {finding['title']} ({finding['type']})"
                 with st.expander(label, expanded=finding["severity"] == "high"):
                     st.write(finding["metadata"].get("why", ""))
+                    if finding.get("evidence_level"):
+                        st.write(f"Evidence level: {finding['evidence_level']}")
+                        st.write("Assumptions: " + "; ".join(finding["assumptions"]))
+                        st.caption(finding["savings"]["formula"])
                     st.write(f"Finding ID: `{finding['finding_id']}`")
                     st.write(f"Confidence: `{finding['confidence']}`")
                     st.write(f"Affected spans: `{', '.join(finding['affected_spans'])}`")

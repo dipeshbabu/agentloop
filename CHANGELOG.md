@@ -8,6 +8,12 @@ Project history from before the first public release remains available in Git.
 
 ## [Unreleased]
 
+- Parallelization suggestions now separate observed timing from inferred or
+  declared concurrency safety and expose their assumptions across reports,
+  findings, exports, and the dashboard. Known dependency conflicts and already
+  overlapping calls are excluded; missing timing retains a qualified low-confidence
+  candidate. See [parallelization evidence](docs/PARALLELIZATION.md).
+
 - LangGraph builder instrumentation now rejects pre-added nodes before modifying
   the builder, with instructions to instrument before `add_node()`. Unsupported
   node registries fail explicitly; repeated instrumentation remains a no-op.

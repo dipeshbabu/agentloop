@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from agentloop.parallelism import parallelization_candidates
 from agentloop.timing import (
     cumulative_span_time_ms,
     elapsed_runtime_ms,
@@ -171,29 +172,14 @@ class ExecutionGraph:
         return CriticalPath(best.node_ids, best.duration_ms)
 
     def parallelizable_groups(self) -> list[dict[str, Any]]:
-        groups: dict[tuple[str, str], list[ExecutionNode]] = {}
-        for node in self.nodes:
-            key = (node.event_type, node.name)
-            groups.setdefault(key, []).append(node)
-
-        out: list[dict[str, Any]] = []
-        for (event_type, name), items in groups.items():
-            if event_type != "tool_call" or len(items) < 3:
-                continue
-            sequential = sum(item.duration_ms for item in items)
-            parallel = max(item.duration_ms for item in items)
-            out.append(
-                {
-                    "name": name,
-                    "event_type": event_type,
-                    "count": len(items),
-                    "node_ids": [item.node_id for item in items],
-                    "sequential_time_ms": round(sequential, 3),
-                    "estimated_parallel_time_ms": round(parallel, 3),
-                    "estimated_savings_ms": round(max(0.0, sequential - parallel), 3),
-                }
-            )
-        return sorted(out, key=lambda item: item["estimated_savings_ms"], reverse=True)
+        return parallelization_candidates(
+            self.nodes,
+            dependency_edges=(
+                (edge.source, edge.target)
+                for edge in self.edges
+                if edge.kind in {"dependency", "depends_on"}
+            ),
+        )
 
     def bottlenecks(self, limit: int = 5) -> list[dict[str, Any]]:
         total = self.total_runtime_ms() or 1.0

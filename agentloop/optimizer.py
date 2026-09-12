@@ -6,6 +6,7 @@ from typing import Any
 
 from agentloop.costs import is_cost_evaluable
 from agentloop.graph import ExecutionGraph
+from agentloop.parallelism import PARALLELISM_REWRITE
 from agentloop.savings import SavingsItem, select_compatible
 
 
@@ -31,9 +32,13 @@ class OptimizationCard:
     estimated_latency_savings_ms: float = 0.0
     estimated_cost_savings_usd: float | None = 0.0
     affected_nodes: list[str] | None = None
+    evidence_level: str | None = None
+    assumptions: list[str] | None = None
+    observations: dict[str, Any] | None = None
+    estimate_formula: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        result = {
             "type": self.type.value,
             "title": self.title,
             "why": self.why,
@@ -47,6 +52,14 @@ class OptimizationCard:
             ),
             "affected_nodes": self.affected_nodes or [],
         }
+        if self.evidence_level is not None:
+            result.update(
+                evidence_level=self.evidence_level,
+                assumptions=self.assumptions or [],
+                observations=self.observations or {},
+                estimate_formula=self.estimate_formula,
+            )
+        return result
 
 
 def build_optimization_plan(trace: Any, report: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -190,11 +203,15 @@ def _parallelization_cards(graph: ExecutionGraph) -> list[OptimizationCard]:
             OptimizationCard(
                 type=RecommendationType.PARALLELIZE_TOOLS,
                 title=f"Parallelize repeated `{group['name']}` tool calls",
-                why=f"{group['count']} `{group['name']}` calls appear serial and independent.",
-                rewrite_hint="Use asyncio.gather or ThreadPoolExecutor around independent tool calls.",
-                confidence="medium",
+                why=f"{group['count']} repeated calls. {group['description']}",
+                rewrite_hint=PARALLELISM_REWRITE,
+                confidence=group["confidence"],
                 estimated_latency_savings_ms=group["estimated_savings_ms"],
                 affected_nodes=group["node_ids"],
+                evidence_level=group["evidence_level"],
+                assumptions=group["assumptions"],
+                observations=group["observations"],
+                estimate_formula=group["estimate_formula"],
             )
         )
     return cards
