@@ -600,6 +600,8 @@ class SQLiteTraceStore:
                     json.dumps(finding),
                 ),
             )
+        if not diagnosis.get("analysis_complete", True):
+            return  # Failed rules cannot establish that old findings disappeared.
         # Findings from a prior diagnosis of this run that did not reappear are
         # superseded rather than deleted, unless a human already made a
         # terminal decision (resolved/dismissed) about them — that decision is
@@ -1039,6 +1041,8 @@ class PostgresTraceStore:
                     json.dumps(finding),
                 ),
             )
+        if not diagnosis.get("analysis_complete", True):
+            return
         conn.execute(
             """
             UPDATE trace_findings

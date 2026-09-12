@@ -26,6 +26,8 @@ class OptimizationFinding:
     evidence_level: str | None = None
     assumptions: list[str] = field(default_factory=list)
     observations: dict[str, Any] = field(default_factory=dict)
+    rule_id: str | None = None
+    rule_version: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         result = {
@@ -47,6 +49,8 @@ class OptimizationFinding:
                 assumptions=self.assumptions,
                 observations=self.observations,
             )
+        if self.rule_id is not None:
+            result.update(rule_id=self.rule_id, rule_version=self.rule_version)
         return result
 
 
@@ -63,6 +67,8 @@ def build_diagnosis(trace: Any) -> dict[str, Any]:
         "summary": _summary(plan, findings),
         "findings": [finding.to_dict() for finding in findings],
         "graph": plan["graph"],
+        "rule_errors": plan.get("rule_errors", []),
+        "analysis_complete": plan.get("analysis_complete", True),
     }
 
 
@@ -91,6 +97,13 @@ def diagnosis_to_markdown(diagnosis: dict[str, Any]) -> str:
         "",
     ]
     findings = diagnosis.get("findings", [])
+    if diagnosis.get("rule_errors"):
+        lines.extend(["Analysis incomplete; some finding rules failed:", ""])
+        for error in diagnosis["rule_errors"]:
+            lines.append(
+                f"- {markdown_code_span(error['rule_id'])}: {markdown_text(error['message'])}"
+            )
+        lines.append("")
     if not findings:
         lines.append("No machine-actionable optimization findings detected.")
     for finding in findings:
@@ -115,6 +128,10 @@ def diagnosis_to_markdown(diagnosis: dict[str, Any]) -> str:
                 "",
             ]
         )
+        if finding.get("rule_id"):
+            lines.append(
+                f"- Rule: {markdown_code_span(finding['rule_id'])} version {markdown_text(finding['rule_version'])}"
+            )
         if finding.get("evidence_level"):
             lines.extend(
                 [
@@ -202,6 +219,8 @@ def _finding_from_card(card: dict[str, Any], plan: dict[str, Any]) -> Optimizati
         evidence_level=card.get("evidence_level"),
         assumptions=list(card.get("assumptions", [])),
         observations=dict(card.get("observations", {})),
+        rule_id=card.get("rule_id"),
+        rule_version=card.get("rule_version"),
     )
 
 

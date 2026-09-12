@@ -49,6 +49,13 @@ def export_optimization_markdown(plan: dict[str, Any], path: str | Path) -> Path
         "",
     ]
     cards = plan.get("optimization_cards", [])
+    if plan.get("rule_errors"):
+        lines.extend(["Analysis incomplete; some finding rules failed:", ""])
+        for error in plan["rule_errors"]:
+            lines.append(
+                f"- {markdown_code_span(error['rule_id'])}: {markdown_text(error['message'])}"
+            )
+        lines.append("")
     if not cards:
         lines.append(
             "No major optimization opportunities detected yet. Collect more traces for stronger recommendations."
@@ -68,6 +75,10 @@ def export_optimization_markdown(plan: dict[str, Any], path: str | Path) -> Path
                 "",
             ]
         )
+        if card.get("rule_id"):
+            lines.append(
+                f"- Rule: {markdown_code_span(card['rule_id'])} version {markdown_text(card['rule_version'])}"
+            )
         if card.get("evidence_level"):
             lines.extend(
                 [

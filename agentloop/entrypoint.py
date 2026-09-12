@@ -75,6 +75,13 @@ def _print_analysis(trace: AgentTrace, diagnosis: dict, plan: dict) -> None:
     table.add_row("Input tokens", str(report["input_tokens"]))
     console.print(table)
 
+    if report.get("rule_errors"):
+        console.print(
+            "Analysis incomplete; failed rules: "
+            + ", ".join(error["rule_id"] for error in report["rule_errors"]),
+            markup=False,
+        )
+
     findings = diagnosis.get("findings", [])
     if not findings:
         console.print("No optimization findings detected.")

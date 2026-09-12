@@ -366,6 +366,22 @@ def test_findings_filter_by_project_and_status(store):
 # --- finding lifecycle (#31) ---------------------------------------------
 
 
+def test_incomplete_diagnosis_does_not_supersede_historical_findings(store):
+    run_id = _seed_trace(store, "proj_a")
+    store.save_diagnosis(
+        {"run_id": run_id, "findings": [_diagnosis_finding("f1", ["n1"])]}, project_id="proj_a"
+    )
+    store.update_finding_status("proj_a", run_id, "f1", "accepted")
+    store.save_diagnosis(
+        {"run_id": run_id, "findings": [], "analysis_complete": False}, project_id="proj_a"
+    )
+    assert store.list_findings(project_id="proj_a")[0]["status"] == "accepted"
+    store.save_diagnosis(
+        {"run_id": run_id, "findings": [], "analysis_complete": True}, project_id="proj_a"
+    )
+    assert store.list_findings(project_id="proj_a")[0]["status"] == "superseded"
+
+
 def test_finding_lifecycle_valid_and_invalid_transitions(store):
     run_id = _seed_trace(store, "proj_a")
     store.save_diagnosis(
