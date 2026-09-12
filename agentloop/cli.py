@@ -42,11 +42,36 @@ from agentloop.store import (
     FindingTransitionError,
     get_store,
 )
+from agentloop.studies import StudyValidationError, study_to_markdown, summarize_study
 from agentloop.tracer import AgentTrace
 from agentloop.value import build_value_report
 
 app = typer.Typer(help="AgentLoop profiler CLI")
 console = Console()
+study_app = typer.Typer(help="Summarize paired experiments from offline traces.")
+app.add_typer(study_app, name="study")
+
+
+@study_app.command("summarize")
+def study_summarize_command(
+    manifest: Path,
+    out: Path = typer.Option(Path("runs/study.md"), help="Human-readable study report."),
+    json_out: Path = typer.Option(
+        Path("runs/study.json"), help="Full study results and unmatched runs."
+    ),
+) -> None:
+    try:
+        report = summarize_study(manifest)
+    except StudyValidationError as exc:
+        raise typer.BadParameter(str(exc), param_hint="manifest") from None
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(study_to_markdown(report), encoding="utf-8")
+    _write_json(json_out, report)
+    console.print(f"Wrote study reports to {out} and {json_out}")
+    for name, comparison in report["comparisons"].items():
+        console.print(
+            f"{name}: {comparison['pair_count']} paired runs, {len(comparison['unmatched'])} unmatched runs"
+        )
 
 
 def _remote_client(api_url: str, api_key: str | None) -> AgentLoopClient:

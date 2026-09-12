@@ -113,6 +113,13 @@ replay deltas, and quality/gate results in one exportable artifact. Record task
 IDs, seeds, and source revisions in its metadata and retain failed comparisons
 alongside successful ones.
 
+Use [paired study summaries](STUDIES.md) to aggregate multiple tasks and
+repetitions. A versioned JSON manifest defines conditions and pairing keys;
+reports retain unmatched cases, unknown costs, and metric denominators. Optional
+seeded bootstrap intervals describe paired mean deltas under an independence
+assumption. Repeated tasks may require cluster-aware analysis; the command does
+not decide statistical significance for your research design.
+
 ## Token measurements
 
 Not every token number in a trace is a token count. When a caller supplies text
