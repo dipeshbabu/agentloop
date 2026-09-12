@@ -5,10 +5,12 @@ from pathlib import Path
 import typer
 from rich.table import Table
 
-from agentloop.cli import _load_trace, _write_json, app, console
+from agentloop.cli import _build_quality_report_from_file, _load_trace, _write_json, app, console
 from agentloop.events import AgentEvent
 from agentloop.findings import build_diagnosis
+from agentloop.html_report import analysis_to_html
 from agentloop.optimizer import build_optimization_plan
+from agentloop.replay import ReplayGates, build_replay_report
 from agentloop.tracer import AgentTrace
 
 
@@ -136,11 +138,53 @@ def analyze_command(
     json_out: Path | None = typer.Option(
         None, help="Optional path for report, diagnosis, and optimization JSON."
     ),
+    html_out: Path | None = typer.Option(
+        None, "--html", help="Write a single offline HTML report."
+    ),
+    baseline: Path | None = typer.Option(
+        None, help="Optional baseline trace; the positional trace is the candidate."
+    ),
+    quality_fixtures: Path | None = typer.Option(
+        None, help="Quality fixtures for the optional baseline comparison."
+    ),
+    min_quality_score: float | None = typer.Option(None, min=0, max=1),
+    include_content: bool = typer.Option(
+        False, help="Include raw event text and full event metadata in HTML."
+    ),
 ) -> None:
     """Analyze one existing AgentLoop trace in a single command."""
     trace = _load_trace(path, param_hint="path")
+    if (quality_fixtures is not None or min_quality_score is not None) and baseline is None:
+        raise typer.BadParameter("quality comparison options require --baseline")
+    if include_content and html_out is None:
+        raise typer.BadParameter("--include-content requires --html")
     payload = _analysis_payload(trace)
+    if baseline is not None:
+        baseline_trace = _load_trace(baseline, param_hint="--baseline")
+        quality = (
+            _build_quality_report_from_file(
+                quality_fixtures,
+                param_hint="--quality-fixtures",
+                baseline_trace=baseline_trace,
+                candidate_trace=trace,
+                min_score=min_quality_score,
+            )
+            if quality_fixtures is not None
+            else None
+        )
+        payload["replay"] = build_replay_report(
+            baseline_trace,
+            trace,
+            gates=ReplayGates(min_quality_score=min_quality_score),
+            quality_report=quality,
+        )
     _print_analysis(trace, payload["diagnosis"], payload["optimization"])
     if json_out is not None:
         _write_json(json_out, payload)
         console.print(f"Wrote analysis JSON to {json_out}")
+    if html_out is not None:
+        html_out.parent.mkdir(parents=True, exist_ok=True)
+        html_out.write_text(
+            analysis_to_html(payload, include_content=include_content), encoding="utf-8"
+        )
+        console.print(f"Wrote HTML report to {html_out}")

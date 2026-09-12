@@ -40,6 +40,9 @@ agentloop analyze runs/agentloop_quickstart.json --json-out runs/quickstart_anal
 The analysis JSON contains the trace, its metrics, findings, and optimization
 suggestions. See [First useful result](docs/FIRST_USE.md) for more options.
 
+Add `--html runs/report.html` to `analyze` for a single offline report with a
+timeline and linked finding evidence. See [HTML reports](docs/HTML_REPORTS.md).
+
 ## Record your own run
 
 Save this complete example as `example_agent.py`. It traces a few local function

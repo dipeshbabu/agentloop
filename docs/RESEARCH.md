@@ -120,6 +120,11 @@ seeded bootstrap intervals describe paired mean deltas under an independence
 assumption. Repeated tasks may require cluster-aware analysis; the command does
 not decide statistical significance for your research design.
 
+For a readable supplement, [export one HTML report](HTML_REPORTS.md) with its
+timeline, finding evidence, estimator assumptions, and optional baseline/quality
+comparison. Keep the source JSON artifacts alongside it and review included
+metadata and task content before sharing.
+
 ## Token measurements
 
 Not every token number in a trace is a token count. When a caller supplies text
