@@ -379,6 +379,8 @@ def ci_command(
         ),
         quality_report=quality,
     )
+    report_data["trace_inputs"]["baseline"]["path"] = str(baseline)
+    report_data["trace_inputs"]["candidate"]["path"] = str(candidate)
     markdown = ci_report_to_markdown(report_data)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(markdown, encoding="utf-8")
