@@ -13,6 +13,10 @@ Project history from before the first public release remains available in Git.
   metadata, and MCP relationships. Native round trips retain nested metadata,
   timing, error details, and legacy token provenance without promotion.
 
+- `agentloop analyze --html report.html` now exports a single offline report
+  with escaped trace text, timeline/evidence links, estimator/selection metadata,
+  and optional baseline/quality comparisons. Raw event content is opt-in.
+
 - Added an intervention ledger linking baseline findings and estimator snapshots
   to candidate runs, measured replay deltas, and quality/gate results. Offline
   replay export, CLI/API creation and retrieval, and project-scoped idempotent
