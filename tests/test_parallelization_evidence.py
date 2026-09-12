@@ -196,8 +196,21 @@ def test_malformed_concurrency_declarations_are_not_trusted(declaration):
     )
 
 
+@pytest.fixture
+def isolated_dashboard_cache():
+    import streamlit as st
+
+    # load_store() is cached across AppTest instances. Each test must use its
+    # own database rather than whichever fixture populated the cache first.
+    st.cache_resource.clear()
+    yield
+    st.cache_resource.clear()
+
+
 @pytest.mark.parametrize("page", ["Optimization", "Diagnosis"])
-def test_dashboard_shows_parallelization_evidence_and_assumptions(tmp_path, monkeypatch, page):
+def test_dashboard_shows_parallelization_evidence_and_assumptions(
+    tmp_path, monkeypatch, page, isolated_dashboard_cache
+):
     from pathlib import Path
 
     from streamlit.testing.v1 import AppTest
