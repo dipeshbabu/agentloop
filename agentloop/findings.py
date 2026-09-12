@@ -23,9 +23,12 @@ class OptimizationFinding:
     rewrite: dict[str, Any]
     validation: dict[str, Any]
     metadata: dict[str, Any] = field(default_factory=dict)
+    evidence_level: str | None = None
+    assumptions: list[str] = field(default_factory=list)
+    observations: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        result = {
             "finding_id": self.finding_id,
             "severity": self.severity,
             "type": self.type,
@@ -38,6 +41,13 @@ class OptimizationFinding:
             "validation": self.validation,
             "metadata": self.metadata,
         }
+        if self.evidence_level is not None:
+            result.update(
+                evidence_level=self.evidence_level,
+                assumptions=self.assumptions,
+                observations=self.observations,
+            )
+        return result
 
 
 def build_diagnosis(trace: Any) -> dict[str, Any]:
@@ -105,6 +115,16 @@ def diagnosis_to_markdown(diagnosis: dict[str, Any]) -> str:
                 "",
             ]
         )
+        if finding.get("evidence_level"):
+            lines.extend(
+                [
+                    f"- Evidence level: {markdown_text(finding['evidence_level'])}",
+                    "- Assumptions: "
+                    + "; ".join(markdown_text(value) for value in finding.get("assumptions", [])),
+                    f"- Savings formula: {markdown_text(savings.get('formula', ''))}",
+                    "",
+                ]
+            )
     return "\n".join(lines).rstrip() + "\n"
 
 
@@ -153,7 +173,7 @@ def _finding_from_card(card: dict[str, Any], plan: dict[str, Any]) -> Optimizati
             "estimated_cost_savings_usd": (
                 None if cost_savings is None else round(cost_savings, 6)
             ),
-            "formula": _savings_formula(finding_type),
+            "formula": card.get("estimate_formula") or _savings_formula(finding_type),
         },
         rewrite={
             "kind": finding_type,
@@ -179,6 +199,9 @@ def _finding_from_card(card: dict[str, Any], plan: dict[str, Any]) -> Optimizati
             "cost_status": plan.get("cost_status"),
             "identity": "content-v1",
         },
+        evidence_level=card.get("evidence_level"),
+        assumptions=list(card.get("assumptions", [])),
+        observations=dict(card.get("observations", {})),
     )
 
 

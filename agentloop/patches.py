@@ -424,8 +424,8 @@ def _parallelize_template(framework: str) -> dict[str, str]:
         suggested = "Before: for item in items: results.append(tool(item))\nAfter: results = await asyncio.gather(*(tool(item) for item in items))"
     return {
         "risk": "medium",
-        "before_pattern": "Three or more same-name tool calls appear serial and independent in the trace.",
-        "proposed_rewrite": rewrite,
+        "before_pattern": "Repeated tool calls are candidates for concurrency; output independence and shared-state safety require validation.",
+        "proposed_rewrite": "After validating concurrency safety: " + rewrite,
         "suggested_diff": suggested,
     }
 

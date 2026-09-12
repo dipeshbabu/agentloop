@@ -87,6 +87,12 @@ Quality fixtures can add task-grounded pass/fail or scalar evidence. Built-in sc
 
 ## Measured versus estimated results
 
+Parallelization suggestions distinguish observed timing from inferred or declared
+concurrency safety. Same-named calls alone do not prove independence. Their output
+includes assumptions, and known dependencies or observed overlap exclude the group.
+See [parallelization evidence](PARALLELIZATION.md) for metadata, confidence, and
+savings semantics; use replay to measure the effect of a proposed intervention.
+
 Keep these categories separate in papers and reports.
 
 **Measured evidence** comes from observed traces or task evaluation: runtime, tokens, calls, retries, failures, quality scores, and complete/provider-reported cost. Token counts qualify only when their provenance says they were counted — see [Token measurements](#token-measurements) below.
