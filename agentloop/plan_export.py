@@ -68,6 +68,16 @@ def export_optimization_markdown(plan: dict[str, Any], path: str | Path) -> Path
                 "",
             ]
         )
+        if card.get("evidence_level"):
+            lines.extend(
+                [
+                    f"- Evidence level: {markdown_text(card['evidence_level'])}",
+                    "- Assumptions: "
+                    + "; ".join(markdown_text(value) for value in card.get("assumptions", [])),
+                    f"- Savings formula: {markdown_text(card.get('estimate_formula', ''))}",
+                    "",
+                ]
+            )
     lines.extend(
         ["## Bottlenecks", "", "| Name | Type | Duration | Runtime share |", "|---|---|---:|---:|"]
     )

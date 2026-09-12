@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from collections import Counter, defaultdict
+from collections import Counter
 from collections.abc import Mapping
 from typing import Any
 
 from agentloop.costs import CostEstimate, PricingTable, estimate_cost, load_pricing_table
+from agentloop.parallelism import PARALLELISM_NOTICE, parallelization_candidates
 from agentloop.timing import cumulative_span_time_ms, elapsed_runtime_ms
 from agentloop.tokens import (
     describe_token_status,
@@ -21,7 +22,7 @@ def build_report(trace: Any) -> dict[str, Any]:
     retry_events = [e for e in events if e.event_type == "retry"]
 
     repeated = repeated_context_stats(model_events)
-    parallel = parallelism_opportunities(tool_events)
+    parallel = parallelism_opportunities(events)
     cumulative_time = cumulative_span_time_ms(events)
     cost = cost_breakdown(model_events)
     tokens = token_breakdown(model_events)
@@ -231,24 +232,9 @@ def repeated_context_stats(model_events: list[Any]) -> dict[str, Any]:
 
 
 def parallelism_opportunities(tool_events: list[Any]) -> list[dict[str, Any]]:
-    grouped: dict[str, list[Any]] = defaultdict(list)
-    for event in tool_events:
-        grouped[event.name].append(event)
-    out = []
-    for name, items in grouped.items():
-        if len(items) >= 3:
-            sequential = sum(item.duration_ms for item in items)
-            parallel = max(item.duration_ms for item in items)
-            out.append(
-                {
-                    "tool_name": name,
-                    "count": len(items),
-                    "sequential_time_ms": round(sequential, 3),
-                    "estimated_parallel_time_ms": round(parallel, 3),
-                    "estimated_savings_ms": round(max(0.0, sequential - parallel), 3),
-                }
-            )
-    return out
+    return [
+        {"tool_name": group["name"], **group} for group in parallelization_candidates(tool_events)
+    ]
 
 
 def build_recommendations(
@@ -268,8 +254,8 @@ def build_recommendations(
     if parallel:
         recs.append(
             {
-                "title": "Parallelize tool calls",
-                "description": "Repeated tool calls appear independent. Run them concurrently to lower end-to-end latency.",
+                "title": "Review tool-call parallelization",
+                "description": PARALLELISM_NOTICE,
             }
         )
     if retry_events:
