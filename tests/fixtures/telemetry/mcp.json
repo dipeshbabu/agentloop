@@ -1,0 +1,194 @@
+{
+  "fixture_schema_version": "1.0",
+  "upstream": {
+    "convention": "OpenTelemetry MCP development; protocol 2025-06-18",
+    "revision": "0c87594975195608dc91b3f702e250a7b240c151",
+    "source": "https://github.com/open-telemetry/semantic-conventions-genai/blob/0c87594975195608dc91b3f702e250a7b240c151/docs/gen-ai/mcp.md"
+  },
+  "synthetic": true,
+  "payload": {
+    "resourceSpans": [
+      {
+        "resource": {
+          "attributes": [
+            {
+              "key": "service.name",
+              "value": {
+                "stringValue": "mcp"
+              }
+            }
+          ]
+        },
+        "scopeSpans": [
+          {
+            "scope": {
+              "name": "synthetic-conformance",
+              "version": "1.0"
+            },
+            "spans": [
+              {
+                "traceId": "dddddddddddddddddddddddddddddddd",
+                "spanId": "0000000000000001",
+                "name": "tools/call search",
+                "kind": 3,
+                "startTimeUnixNano": "1000000000",
+                "endTimeUnixNano": "1100000000",
+                "attributes": [
+                  {
+                    "key": "mcp.method.name",
+                    "value": {
+                      "stringValue": "tools/call"
+                    }
+                  },
+                  {
+                    "key": "mcp.protocol.version",
+                    "value": {
+                      "stringValue": "2025-06-18"
+                    }
+                  },
+                  {
+                    "key": "mcp.session.id",
+                    "value": {
+                      "stringValue": "mcp-session-1"
+                    }
+                  },
+                  {
+                    "key": "jsonrpc.request.id",
+                    "value": {
+                      "stringValue": "request-1"
+                    }
+                  },
+                  {
+                    "key": "gen_ai.tool.name",
+                    "value": {
+                      "stringValue": "search"
+                    }
+                  }
+                ],
+                "status": {
+                  "code": 1
+                }
+              },
+              {
+                "traceId": "dddddddddddddddddddddddddddddddd",
+                "spanId": "0000000000000002",
+                "name": "POST",
+                "kind": 3,
+                "startTimeUnixNano": "1000000000",
+                "endTimeUnixNano": "1100000000",
+                "attributes": [
+                  {
+                    "key": "http.request.method",
+                    "value": {
+                      "stringValue": "POST"
+                    }
+                  },
+                  {
+                    "key": "network.transport",
+                    "value": {
+                      "stringValue": "tcp"
+                    }
+                  }
+                ],
+                "status": {
+                  "code": 1
+                },
+                "parentSpanId": "0000000000000001"
+              },
+              {
+                "traceId": "dddddddddddddddddddddddddddddddd",
+                "spanId": "0000000000000003",
+                "name": "tools/call search",
+                "kind": 2,
+                "startTimeUnixNano": "1000000000",
+                "endTimeUnixNano": "1100000000",
+                "attributes": [
+                  {
+                    "key": "mcp.method.name",
+                    "value": {
+                      "stringValue": "tools/call"
+                    }
+                  },
+                  {
+                    "key": "mcp.session.id",
+                    "value": {
+                      "stringValue": "mcp-session-1"
+                    }
+                  },
+                  {
+                    "key": "jsonrpc.request.id",
+                    "value": {
+                      "stringValue": "request-1"
+                    }
+                  }
+                ],
+                "status": {
+                  "code": 1
+                },
+                "parentSpanId": "0000000000000002"
+              },
+              {
+                "traceId": "dddddddddddddddddddddddddddddddd",
+                "spanId": "0000000000000004",
+                "name": "search",
+                "kind": 1,
+                "startTimeUnixNano": "1000000000",
+                "endTimeUnixNano": "1100000000",
+                "attributes": [
+                  {
+                    "key": "gen_ai.operation.name",
+                    "value": {
+                      "stringValue": "execute_tool"
+                    }
+                  },
+                  {
+                    "key": "gen_ai.tool.name",
+                    "value": {
+                      "stringValue": "search"
+                    }
+                  },
+                  {
+                    "key": "gen_ai.tool.call.id",
+                    "value": {
+                      "stringValue": "call-mcp"
+                    }
+                  },
+                  {
+                    "key": "error.type",
+                    "value": {
+                      "stringValue": "tool_error"
+                    }
+                  }
+                ],
+                "status": {
+                  "code": 2
+                },
+                "parentSpanId": "0000000000000003",
+                "events": [
+                  {
+                    "timeUnixNano": "1090000000",
+                    "name": "exception",
+                    "attributes": [
+                      {
+                        "key": "exception.type",
+                        "value": {
+                          "stringValue": "ToolError"
+                        }
+                      },
+                      {
+                        "key": "exception.message",
+                        "value": {
+                          "stringValue": "synthetic failure"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

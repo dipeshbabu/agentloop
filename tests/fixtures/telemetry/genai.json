@@ -1,0 +1,340 @@
+{
+  "fixture_schema_version": "1.0",
+  "upstream": {
+    "convention": "OpenTelemetry GenAI development",
+    "revision": "0c87594975195608dc91b3f702e250a7b240c151",
+    "source": "https://github.com/open-telemetry/semantic-conventions-genai/blob/0c87594975195608dc91b3f702e250a7b240c151/docs/gen-ai/gen-ai-spans.md"
+  },
+  "synthetic": true,
+  "payload": {
+    "resourceSpans": [
+      {
+        "resource": {
+          "attributes": [
+            {
+              "key": "service.name",
+              "value": {
+                "stringValue": "genai"
+              }
+            }
+          ]
+        },
+        "scopeSpans": [
+          {
+            "scope": {
+              "name": "synthetic-conformance",
+              "version": "1.0"
+            },
+            "spans": [
+              {
+                "traceId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "spanId": "0000000000000001",
+                "name": "workflow",
+                "kind": 1,
+                "startTimeUnixNano": "1000000000",
+                "endTimeUnixNano": "1100000000",
+                "attributes": [
+                  {
+                    "key": "gen_ai.operation.name",
+                    "value": {
+                      "stringValue": "invoke_workflow"
+                    }
+                  }
+                ],
+                "status": {
+                  "code": 1
+                }
+              },
+              {
+                "traceId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "spanId": "0000000000000002",
+                "name": "agent",
+                "kind": 1,
+                "startTimeUnixNano": "1000000000",
+                "endTimeUnixNano": "1100000000",
+                "attributes": [
+                  {
+                    "key": "gen_ai.operation.name",
+                    "value": {
+                      "stringValue": "invoke_agent"
+                    }
+                  },
+                  {
+                    "key": "gen_ai.conversation.id",
+                    "value": {
+                      "stringValue": "conversation-1"
+                    }
+                  }
+                ],
+                "status": {
+                  "code": 1
+                },
+                "parentSpanId": "0000000000000001"
+              },
+              {
+                "traceId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "spanId": "0000000000000003",
+                "name": "chat",
+                "kind": 1,
+                "startTimeUnixNano": "1000000000",
+                "endTimeUnixNano": "1100000000",
+                "attributes": [
+                  {
+                    "key": "gen_ai.operation.name",
+                    "value": {
+                      "stringValue": "chat"
+                    }
+                  },
+                  {
+                    "key": "gen_ai.request.model",
+                    "value": {
+                      "stringValue": "requested-model"
+                    }
+                  },
+                  {
+                    "key": "gen_ai.response.model",
+                    "value": {
+                      "stringValue": "gpt-4o"
+                    }
+                  },
+                  {
+                    "key": "gen_ai.provider.name",
+                    "value": {
+                      "stringValue": "openai"
+                    }
+                  },
+                  {
+                    "key": "gen_ai.usage.input_tokens",
+                    "value": {
+                      "intValue": "100"
+                    }
+                  },
+                  {
+                    "key": "gen_ai.usage.output_tokens",
+                    "value": {
+                      "intValue": "20"
+                    }
+                  },
+                  {
+                    "key": "gen_ai.usage.cache_read.input_tokens",
+                    "value": {
+                      "intValue": "40"
+                    }
+                  },
+                  {
+                    "key": "gen_ai.usage.cache_write.input_tokens",
+                    "value": {
+                      "intValue": "5"
+                    }
+                  },
+                  {
+                    "key": "gen_ai.usage.reasoning.output_tokens",
+                    "value": {
+                      "intValue": "8"
+                    }
+                  },
+                  {
+                    "key": "gen_ai.usage.future_modality_tokens",
+                    "value": {
+                      "intValue": "3"
+                    }
+                  },
+                  {
+                    "key": "vendor.structured",
+                    "value": {
+                      "kvlistValue": {
+                        "values": [
+                          {
+                            "key": "items",
+                            "value": {
+                              "arrayValue": {
+                                "values": [
+                                  {
+                                    "intValue": "1"
+                                  },
+                                  {
+                                    "boolValue": true
+                                  },
+                                  {
+                                    "stringValue": "synthetic"
+                                  }
+                                ]
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ],
+                "status": {
+                  "code": 1
+                },
+                "parentSpanId": "0000000000000002",
+                "links": [
+                  {
+                    "traceId": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                    "spanId": "0000000000000006",
+                    "traceState": "vendor=state",
+                    "flags": 1,
+                    "attributes": [
+                      {
+                        "key": "link.role",
+                        "value": {
+                          "stringValue": "context"
+                        }
+                      }
+                    ]
+                  }
+                ],
+                "events": [
+                  {
+                    "timeUnixNano": "1090000000",
+                    "name": "gen_ai.evaluation.result",
+                    "attributes": [
+                      {
+                        "key": "gen_ai.evaluation.name",
+                        "value": {
+                          "stringValue": "relevance"
+                        }
+                      },
+                      {
+                        "key": "gen_ai.evaluation.score.value",
+                        "value": {
+                          "doubleValue": 4.0
+                        }
+                      },
+                      {
+                        "key": "gen_ai.evaluation.score.label",
+                        "value": {
+                          "stringValue": "relevant"
+                        }
+                      }
+                    ]
+                  }
+                ],
+                "traceState": "vendor=state",
+                "flags": 1
+              },
+              {
+                "traceId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "spanId": "0000000000000004",
+                "name": "lookup",
+                "kind": 1,
+                "startTimeUnixNano": "1000000000",
+                "endTimeUnixNano": "1100000000",
+                "attributes": [
+                  {
+                    "key": "gen_ai.operation.name",
+                    "value": {
+                      "stringValue": "execute_tool"
+                    }
+                  },
+                  {
+                    "key": "gen_ai.tool.name",
+                    "value": {
+                      "stringValue": "lookup"
+                    }
+                  },
+                  {
+                    "key": "gen_ai.tool.call.id",
+                    "value": {
+                      "stringValue": "call-1"
+                    }
+                  }
+                ],
+                "status": {
+                  "code": 1
+                },
+                "parentSpanId": "0000000000000002"
+              },
+              {
+                "traceId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "spanId": "0000000000000005",
+                "name": "memory",
+                "kind": 1,
+                "startTimeUnixNano": "1000000000",
+                "endTimeUnixNano": "1100000000",
+                "attributes": [
+                  {
+                    "key": "gen_ai.operation.name",
+                    "value": {
+                      "stringValue": "search_memory"
+                    }
+                  }
+                ],
+                "status": {
+                  "code": 1
+                },
+                "parentSpanId": "0000000000000002"
+              },
+              {
+                "traceId": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "spanId": "0000000000000006",
+                "name": "separate trace",
+                "kind": 1,
+                "startTimeUnixNano": "1000000000",
+                "endTimeUnixNano": "1100000000",
+                "attributes": [
+                  {
+                    "key": "gen_ai.operation.name",
+                    "value": {
+                      "stringValue": "retrieval"
+                    }
+                  }
+                ],
+                "status": {
+                  "code": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "resourceLogs": [
+      {
+        "resource": {
+          "attributes": [
+            {
+              "key": "service.name",
+              "value": {
+                "stringValue": "evaluation"
+              }
+            }
+          ]
+        },
+        "scopeLogs": [
+          {
+            "scope": {
+              "name": "synthetic-evaluation",
+              "version": "1.0"
+            },
+            "logRecords": [
+              {
+                "traceId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "spanId": "0000000000000003",
+                "eventName": "gen_ai.evaluation.result",
+                "timeUnixNano": "1200000000",
+                "attributes": [
+                  {
+                    "key": "gen_ai.evaluation.name",
+                    "value": {
+                      "stringValue": "correctness"
+                    }
+                  },
+                  {
+                    "key": "gen_ai.evaluation.score.value",
+                    "value": {
+                      "doubleValue": 0.9
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -8,6 +8,11 @@ Project history from before the first public release remains available in Git.
 
 ## [Unreleased]
 
+- Added pinned OpenTelemetry GenAI, OpenInference, and MCP conformance fixtures.
+  Imports preserve usage details, external evaluations/logs, links, resource/scope
+  metadata, and MCP relationships. Native round trips retain nested metadata,
+  timing, error details, and legacy token provenance without promotion.
+
 - Added an intervention ledger linking baseline findings and estimator snapshots
   to candidate runs, measured replay deltas, and quality/gate results. Offline
   replay export, CLI/API creation and retrieval, and project-scoped idempotent

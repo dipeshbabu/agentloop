@@ -132,6 +132,9 @@ not re-exported as user metadata.
 
 ## OTLP interop
 
+See [telemetry conformance](TELEMETRY_CONFORMANCE.md) for pinned GenAI,
+OpenInference, and MCP fixtures, supported fields, evaluation logs, and known gaps.
+
 The OTLP adapter ([`agentloop/otel.py`](../agentloop/otel.py)) exposes two import
 entry points with an explicit single-vs-batch contract:
 

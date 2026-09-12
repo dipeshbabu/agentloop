@@ -221,6 +221,9 @@ reports from untrusted traces.
 
 ## Framework integrations
 
+For existing telemetry, [OTLP conformance](docs/TELEMETRY_CONFORMANCE.md) covers
+GenAI, OpenInference, and MCP JSON, including operation kinds and evidence metadata.
+
 | Integration | How it connects |
 |---|---|
 | Custom Python agents | Decorators and context managers around your functions. |
