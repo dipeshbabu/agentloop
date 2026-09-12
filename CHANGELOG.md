@@ -8,6 +8,10 @@ Project history from before the first public release remains available in Git.
 
 ## [Unreleased]
 
+- LangGraph builder instrumentation now rejects pre-added nodes before modifying
+  the builder, with instructions to instrument before `add_node()`. Unsupported
+  node registries fail explicitly; repeated instrumentation remains a no-op.
+
 - Raised the HTTPX2 development dependency minimum to 2.12.0 and updated the
   locked HTTPX2/HTTPCore2 packages to resolve six dependency alerts covering
   SOCKS WebSocket TLS, SSE buffering, multipart header injection, request framing,
