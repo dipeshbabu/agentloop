@@ -180,6 +180,10 @@ agentloop ci --baseline runs/baseline.json --candidate runs/candidate.json --qua
 `ci` writes a Markdown report suitable for a pull request and exits nonzero when
 a required gate fails. It evaluates the traces your application supplies.
 
+The repository's required replay check uses synthetic demos to test AgentLoop's
+CI machinery. For comparisons using your application's artifacts, see
+[CI self-tests and application comparisons](docs/CI.md).
+
 ## Understand the results
 
 These notes describe the current `main` branch. Check [Unreleased changes](CHANGELOG.md#unreleased)
