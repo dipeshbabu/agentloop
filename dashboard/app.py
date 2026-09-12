@@ -369,6 +369,11 @@ elif page == "Optimization":
                 render_value_report(value, show_download=False)
 
             st.subheader("Optimization cards")
+            if plan.get("rule_errors"):
+                st.warning(
+                    "Analysis incomplete; failed rules: "
+                    + ", ".join(error["rule_id"] for error in plan["rule_errors"])
+                )
             cards = plan["optimization_cards"]
             if not cards:
                 st.info("No major optimization cards detected yet.")
@@ -417,6 +422,11 @@ elif page == "Diagnosis":
         trace = selected_trace_from_options(traces, "Choose trace for diagnosis")
         if trace is not None:
             diagnosis = build_diagnosis(trace)
+            if diagnosis.get("rule_errors"):
+                st.warning(
+                    "Analysis incomplete; failed rules: "
+                    + ", ".join(error["rule_id"] for error in diagnosis["rule_errors"])
+                )
             summary = diagnosis["summary"]
             c1, c2, c3, c4 = st.columns(4)
             c1.metric("Findings", summary["finding_count"])

@@ -8,6 +8,11 @@ Project history from before the first public release remains available in Git.
 
 ## [Unreleased]
 
+- Unified report recommendations and optimizer findings behind versioned local
+  rules. Reports retain canonical candidates and expose rule failures; incomplete
+  analysis fails CI and cannot supersede missing historical findings. Existing
+  finding identities and optimizer import names remain compatible.
+
 - CI reports now identify trace inputs and synthetic data. The repository workflow
   is labeled as a replay self-test; a separate reusable workflow compares supplied
   application artifacts without generating replacement demo traces.

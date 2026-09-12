@@ -25,18 +25,26 @@ def build_ci_report(
         "candidate": _trace_input(candidate_trace),
     }
     synthetic = any(item["synthetic"] is True for item in trace_inputs.values())
+    analysis_complete = diagnosis.get("analysis_complete", True)
     if synthetic:
         summary["merge_recommendation"] = (
             "synthetic self-test only; assess application traces before merge"
         )
+    if not analysis_complete:
+        summary["merge_recommendation"] = (
+            "analysis incomplete; inspect failed finding rules before merge"
+        )
+    passed = replay["gates"]["passed"] and analysis_complete
     return {
-        "passed": replay["gates"]["passed"],
-        "status": "passed" if replay["gates"]["passed"] else "failed",
+        "passed": passed,
+        "status": "passed" if passed else "failed",
         "summary": summary,
         "replay": replay,
         "diagnosis": diagnosis,
         "trace_inputs": trace_inputs,
         "evidence_scope": "includes_synthetic_data" if synthetic else "supplied_trace_comparison",
+        "analysis_complete": analysis_complete,
+        "rule_errors": diagnosis.get("rule_errors", []),
     }
 
 
@@ -44,7 +52,7 @@ def ci_report_to_markdown(report: dict[str, Any]) -> str:
     summary = report["summary"]
     replay = report["replay"]
     diagnosis = report["diagnosis"]
-    gate_status = "passed" if replay["gates"]["passed"] else "failed"
+    gate_status = report.get("status", "passed" if replay["gates"]["passed"] else "failed")
 
     lines = [
         "# AgentLoop CI Report",
@@ -69,6 +77,10 @@ def ci_report_to_markdown(report: dict[str, Any]) -> str:
             f"| {markdown_table_cell(gate['name'])} | {status} | "
             f"{markdown_table_cell(gate['detail'])} |"
         )
+    if report.get("rule_errors"):
+        lines.extend(["", "## Incomplete analysis", ""])
+        for error in report["rule_errors"]:
+            lines.append(f"- {markdown_text(error['rule_id'])}: {markdown_text(error['message'])}")
 
     if report.get("trace_inputs"):
         lines.extend(["", "## Trace inputs", ""])
