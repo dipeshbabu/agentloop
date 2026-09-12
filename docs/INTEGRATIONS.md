@@ -191,6 +191,25 @@ app.export_last_trace("runs/langgraph_agent.json")
 
 AgentLoop wraps nodes added after `instrument_state_graph(...)` and records each node as a tool-call span.
 
+Call `instrument_state_graph(builder)` before the first `add_node()`. If a builder
+already contains nodes, instrumentation raises `ValueError` before modifying it;
+it cannot silently report only the nodes added later. Repeated instrumentation of
+an already instrumented builder is a no-op, including after nodes have been added.
+Compatible builders must expose a callable `add_node` and an inspectable `nodes`
+mapping or sequence; unsupported shapes raise `TypeError`.
+
+For a graph whose construction you cannot change, decorate its node functions
+with `trace_node(...)` before registering them. `trace_runnable(compiled_app)`
+provides the root trace for `invoke`, `ainvoke`, `stream`, and `astream`, but does
+not retrofit node instrumentation into an already compiled graph. Node-level
+visibility requires the builder instrumentation or explicit node decorators.
+The optional conformance tests cover LangGraph 1.2.11 without making LangGraph a
+core dependency:
+
+```bash
+uv run --frozen --with langgraph==1.2.11 python -m pytest tests/test_langgraph_conformance.py -q
+```
+
 ## CrewAI
 
 ```python

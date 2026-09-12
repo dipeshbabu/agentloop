@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import inspect
-from collections.abc import Callable
+from collections.abc import Callable, Mapping, Sequence
 from functools import wraps
 from typing import Any, TypeVar
 
@@ -61,7 +61,8 @@ def instrument_state_graph(graph: Any, metadata: dict[str, Any] | None = None) -
 
     The function intentionally accepts `Any` so AgentLoop does not need LangGraph
     as a dependency. It expects the object to expose an `add_node(name, action, ...)`
-    method, which matches LangGraph's builder style.
+    method and an empty `nodes` mapping or sequence. Call this before adding any
+    nodes; late instrumentation raises instead of silently producing partial traces.
     """
 
     if getattr(graph, "_agentloop_instrumented", False):
@@ -69,6 +70,15 @@ def instrument_state_graph(graph: Any, metadata: dict[str, Any] | None = None) -
     original_add_node = getattr(graph, "add_node", None)
     if original_add_node is None or not callable(original_add_node):
         raise TypeError("Expected a LangGraph-like object with callable add_node(...).")
+    nodes = getattr(graph, "nodes", None)
+    if not isinstance(nodes, Mapping | Sequence) or isinstance(nodes, str | bytes | bytearray):
+        raise TypeError("Expected a LangGraph-like builder with a nodes mapping or sequence.")
+    if nodes:
+        raise ValueError(
+            "Call instrument_state_graph() before add_node(); this builder already contains "
+            "nodes. Create a new builder and instrument it before adding nodes, or wrap node "
+            "functions with trace_node() explicitly before registering them."
+        )
 
     @wraps(original_add_node)
     def add_node(name: str, action: Any = None, *args: Any, **kwargs: Any) -> Any:
