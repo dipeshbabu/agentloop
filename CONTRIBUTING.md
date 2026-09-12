@@ -149,6 +149,11 @@ to 100 characters.
 
 ### Integration changes
 
+Use the [shared integration conformance harness](docs/INTEGRATION_CONFORMANCE.md)
+for common call and stream behavior. Add a protocol factory and explicit
+capability declarations; run its named unsupported cases with `pytest -ra`.
+Retain adapter-specific tests for SDK details outside the shared protocol.
+
 An integration should:
 
 - import its third-party SDK only when the integration is used;
