@@ -107,6 +107,12 @@ report `method: "heuristic"` and `calibrated: false`. Preserve the full `estimat
 object alongside exported results to interpret a prediction after a rule changes.
 See [Estimator provenance](ESTIMATORS.md) for the models and historical-record policy.
 
+For linked before/after evidence, use the [intervention ledger](INTERVENTIONS.md).
+It preserves the finding predictions, exact source-trace fingerprints, measured
+replay deltas, and quality/gate results in one exportable artifact. Record task
+IDs, seeds, and source revisions in its metadata and retain failed comparisons
+alongside successful ones.
+
 ## Token measurements
 
 Not every token number in a trace is a token count. When a caller supplies text

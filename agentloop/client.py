@@ -182,6 +182,13 @@ class AgentLoopClient:
             route += "?" + urllib.parse.urlencode(params)
         return self._request("GET", route)
 
+    def create_intervention(self, request: dict[str, Any]) -> dict[str, Any]:
+        return self._request("POST", "/interventions", request)
+
+    def get_intervention(self, intervention_id: str) -> dict[str, Any]:
+        encoded_id = urllib.parse.quote(intervention_id, safe="")
+        return self._request("GET", f"/interventions/{encoded_id}")
+
     def _request(
         self,
         method: str,

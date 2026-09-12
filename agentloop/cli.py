@@ -11,12 +11,19 @@ from rich.table import Table
 from agentloop.audit import estimate_improvement
 from agentloop.autoinstrument import detect_integrations
 from agentloop.ci import build_ci_report, ci_report_to_markdown
-from agentloop.client import AgentLoopClient
+from agentloop.client import AgentLoopClient, AgentLoopClientError
 from agentloop.costs import format_cost_usd, is_cost_evaluable
 from agentloop.demo import run_baseline, run_langgraph_style, run_optimized, run_proof_pair
 from agentloop.doctor import run_doctor, run_production_check
 from agentloop.exporters import export_report_markdown
 from agentloop.findings import build_diagnosis, diagnosis_to_markdown
+from agentloop.intervention_service import create_stored_intervention
+from agentloop.interventions import (
+    InterventionConflictError,
+    InterventionReferenceError,
+    InterventionValidationError,
+    build_intervention,
+)
 from agentloop.issues import build_issue_drafts, issue_drafts_to_markdown
 from agentloop.optimizer import build_optimization_plan
 from agentloop.otel import trace_from_otel, trace_to_otel
@@ -255,6 +262,24 @@ def replay_command(
     ),
     quality_fixtures: Path | None = typer.Option(None, help="Optional quality fixture JSON file."),
     fail_on_gate: bool = typer.Option(True, help="Exit non-zero when replay gates fail."),
+    intervention_out: Path | None = typer.Option(
+        None, help="Export linked intervention evidence, including failed gates."
+    ),
+    target_finding: list[str] | None = typer.Option(
+        None, help="Baseline finding ID; repeat for multiple targets."
+    ),
+    intervention_type: str | None = typer.Option(
+        None, help="Applied change, such as context_compression."
+    ),
+    intervention_config: Path | None = typer.Option(
+        None, help="JSON object describing the applied change."
+    ),
+    intervention_metadata: Path | None = typer.Option(
+        None, help="JSON object with task, seed, or experiment metadata."
+    ),
+    baseline_diagnosis: Path | None = typer.Option(
+        None, help="Optional saved baseline diagnosis for historical prediction snapshots."
+    ),
 ) -> None:
     baseline_trace = _load_trace(baseline, param_hint="--baseline")
     candidate_trace = _load_trace(candidate, param_hint="--candidate")
@@ -283,8 +308,37 @@ def replay_command(
         ),
         quality_report=quality,
     )
+    intervention = None
+    if intervention_out is not None:
+        try:
+            intervention = build_intervention(
+                baseline_trace,
+                candidate_trace,
+                target_finding_ids=target_finding or [],
+                intervention_type=intervention_type,
+                configuration=_json_object_input(intervention_config, "--intervention-config"),
+                metadata=_json_object_input(intervention_metadata, "--intervention-metadata"),
+                diagnosis=_json_object_input(baseline_diagnosis, "--baseline-diagnosis")
+                if baseline_diagnosis
+                else None,
+                replay_report=report_data,
+            ).to_dict()
+        except (InterventionValidationError, InterventionReferenceError) as exc:
+            raise typer.BadParameter(str(exc), param_hint="--intervention-out") from None
+    elif any(
+        (
+            target_finding,
+            intervention_type,
+            intervention_config,
+            intervention_metadata,
+            baseline_diagnosis,
+        )
+    ):
+        raise typer.BadParameter("intervention options require --intervention-out")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(replay_report_to_markdown(report_data), encoding="utf-8")
+    if intervention is not None:
+        _write_json(intervention_out, intervention)
     if json_out is not None:
         _write_json(json_out, report_data)
     console.print(f"Wrote replay report to {out}")
@@ -293,6 +347,74 @@ def replay_command(
     console.print(report_data["summary"])
     if fail_on_gate and not report_data["gates"]["passed"]:
         raise typer.Exit(1)
+
+
+def _json_object_input(path: Path | None, param_hint: str) -> dict:
+    if path is None:
+        return {}
+    payload = _read_json_input(path, param_hint=param_hint)
+    if not isinstance(payload, dict):
+        raise typer.BadParameter("expected a JSON object", param_hint=param_hint)
+    return payload
+
+
+@app.command("intervention-create")
+def intervention_create_command(
+    request: Path,
+    out: Path = typer.Option(
+        Path("runs/intervention.json"), help="Export the stored evidence as JSON."
+    ),
+    project_id: str = typer.Option(
+        "default", help="Project for a local store; remote API keys determine their project."
+    ),
+    api_url: str | None = typer.Option(
+        None, help="Use a remote API instead of the configured local store."
+    ),
+    api_key: str | None = typer.Option(
+        None, help="Remote project API key; defaults to AGENTLOOP_API_KEY."
+    ),
+) -> None:
+    payload = _json_object_input(request, "request")
+    try:
+        record = (
+            _remote_client(api_url, api_key).create_intervention(payload)
+            if api_url
+            else create_stored_intervention(get_store(), payload, project_id)
+        )
+    except (
+        InterventionValidationError,
+        InterventionReferenceError,
+        InterventionConflictError,
+        QualityValidationError,
+        AgentLoopClientError,
+    ) as exc:
+        raise typer.BadParameter(str(exc), param_hint="request") from None
+    _write_json(out, record)
+    console.print(f"Wrote intervention {record['intervention_id']} to {out}")
+
+
+@app.command("intervention-get")
+def intervention_get_command(
+    intervention_id: str,
+    out: Path = typer.Option(Path("runs/intervention.json")),
+    project_id: str = typer.Option(
+        "default", help="Local project; remote API keys determine their project."
+    ),
+    api_url: str | None = typer.Option(None),
+    api_key: str | None = typer.Option(None),
+) -> None:
+    try:
+        record = (
+            _remote_client(api_url, api_key).get_intervention(intervention_id)
+            if api_url
+            else get_store().get_intervention(intervention_id, project_id=project_id)
+        )
+    except AgentLoopClientError as exc:
+        raise typer.BadParameter(str(exc), param_hint="intervention_id") from None
+    if record is None:
+        raise typer.BadParameter("intervention not found", param_hint="intervention_id")
+    _write_json(out, record)
+    console.print(f"Wrote intervention to {out}")
 
 
 @app.command("quality-report")

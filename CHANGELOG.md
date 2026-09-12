@@ -8,6 +8,11 @@ Project history from before the first public release remains available in Git.
 
 ## [Unreleased]
 
+- Added an intervention ledger linking baseline findings and estimator snapshots
+  to candidate runs, measured replay deltas, and quality/gate results. Offline
+  replay export, CLI/API creation and retrieval, and project-scoped idempotent
+  SQLite/Postgres persistence are available through an additive migration.
+
 - Every built-in optimization estimate now includes versioned provenance,
   explicit coefficients, input snapshots, and assumptions. Human reports mark
   predictions as uncalibrated; persisted findings retain their estimator metadata.
