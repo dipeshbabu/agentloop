@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from agentloop.events import AgentEvent
+from agentloop.operations import LEGACY_OPERATION_KINDS, normalize_operation_kind
 from agentloop.otel_ids import to_span_id, to_trace_id
 from agentloop.schema import TraceValidationError
 from agentloop.tokens import PROVIDER, UNAVAILABLE
@@ -183,7 +184,7 @@ def _trace_name(spans: list[dict[str, Any]]) -> str:
 def _event_from_span(span: dict[str, Any], run_id: str) -> AgentEvent:
     attrs = _attributes(span)
     operation = str(attrs.get("gen_ai.operation.name") or attrs.get("agentloop.event_type") or "")
-    event_type = _event_type(operation, span.get("name"))
+    event_type = str(attrs.get("agentloop.event_type") or _event_type(operation, span.get("name")))
     started_ns = _int_or_none(span.get("startTimeUnixNano") or span.get("start_time_unix_nano"))
     ended_ns = _int_or_none(span.get("endTimeUnixNano") or span.get("end_time_unix_nano"))
     duration_ms = _duration_ms(started_ns, ended_ns, span)
@@ -193,6 +194,11 @@ def _event_from_span(span: dict[str, Any], run_id: str) -> AgentEvent:
     error = _error(span)
 
     metadata = _user_metadata(attrs, span, span_id)
+    if "operation_kind" not in metadata:
+        if "agentloop.operation_kind" in attrs:
+            metadata["operation_kind"] = attrs["agentloop.operation_kind"]
+        elif "agentloop.event_type" not in attrs:
+            metadata["operation_kind"] = _import_operation_kind(operation, event_type)
 
     # Restore AgentLoop-native ids when the exporter preserved them, so repeated
     # round trips keep stable event and parent identity (issue #63). Fall back to
@@ -239,13 +245,17 @@ def _span_from_event(trace: AgentTrace, event: AgentEvent) -> dict[str, Any]:
     start_ns = _ns_from_iso(event.started_at)
     end_ns = _ns_from_iso(event.ended_at)
     attrs = [
-        _attribute("gen_ai.operation.name", _operation_name(event.event_type)),
+        _attribute(
+            "gen_ai.operation.name", _operation_name(event.event_type, event.operation_kind)
+        ),
         _attribute("agentloop.event_type", event.event_type),
         _attribute("agentloop.name", event.name),
         _attribute("agentloop.run_id", trace.run_id),
         _attribute("gen_ai.usage.input_tokens", event.input_tokens),
         _attribute("gen_ai.usage.output_tokens", event.output_tokens),
     ]
+    if "operation_kind" in event.metadata:
+        attrs.append(_attribute("agentloop.operation_kind", event.metadata["operation_kind"]))
     if event.model:
         attrs.append(_attribute("gen_ai.request.model", event.model))
     if event.token_provenance:
@@ -323,14 +333,45 @@ def _event_type(operation: str, name: Any) -> str:
     span_name = str(name or "").lower()
     if op in {"chat", "text_completion", "embeddings", "generate_content"}:
         return "model_call"
-    if op in {"execute_tool"} or "tool" in span_name:
+    if op in {"execute_tool", "invoke_agent", "create_agent", "invoke_workflow", "retrieval"}:
+        return "tool_call"
+    if op in LEGACY_OPERATION_KINDS:
+        return op
+    if "tool" in span_name:
         return "tool_call"
     if op == "retry" or "retry" in span_name:
         return "retry"
     return "tool_call" if op in {"invoke_agent", "invoke_workflow"} else "model_call"
 
 
-def _operation_name(event_type: str) -> str:
+def _import_operation_kind(operation: str, event_type: str) -> str:
+    mapping = {
+        "chat": "model",
+        "text_completion": "model",
+        "embeddings": "model",
+        "generate_content": "model",
+        "execute_tool": "tool",
+        "invoke_agent": "agent",
+        "create_agent": "agent",
+        "invoke_workflow": "workflow",
+        "retrieval": "retriever",
+        **LEGACY_OPERATION_KINDS,
+    }
+    if not operation:
+        return LEGACY_OPERATION_KINDS.get(event_type, "unknown")
+    normalized = normalize_operation_kind(operation)
+    return mapping.get(
+        operation.strip().lower(), operation if normalized == "unknown" else normalized
+    )
+
+
+def _operation_name(event_type: str, kind: str) -> str:
+    if kind in {"agent", "workflow", "retriever"}:
+        return {"agent": "invoke_agent", "workflow": "invoke_workflow", "retriever": "retrieval"}[
+            kind
+        ]
+    if kind in {"memory", "reranker", "guardrail", "evaluator", "retry"}:
+        return kind
     if event_type == "model_call":
         return "chat"
     if event_type == "tool_call":
@@ -460,6 +501,7 @@ def _token_provenance(attrs: dict[str, Any]) -> str:
 def _direct_attribute_keys() -> set[str]:
     return {
         "agentloop.event_type",
+        "agentloop.operation_kind",
         "agentloop.name",
         "agentloop.token_provenance",
         "agentloop.trace.name",

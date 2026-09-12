@@ -59,6 +59,10 @@ the offending `field` path (for example `events[2].duration_ms`) and a `reason`.
 Core code stays framework-free; the HTTP server maps this error to a `422`
 response `{"detail": {"field": …, "reason": …}}`.
 
+Operation semantics are carried in `metadata.operation_kind`, without changing
+the serialized event fields or schema version. See [Operation kinds](OPERATIONS.md)
+for the taxonomy, legacy defaults, unknown-label policy, and OTLP mapping.
+
 ## Token provenance
 
 `input_tokens` / `output_tokens` carry both provider-reported usage and, when a

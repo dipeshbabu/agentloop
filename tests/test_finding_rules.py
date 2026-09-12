@@ -19,7 +19,8 @@ def test_report_optimizer_and_diagnosis_share_rule_identity_and_findings():
     assert [item["rule_id"] for item in candidates] == [
         item["rule_id"] for item in diagnosis["findings"]
     ]
-    assert all(item["rule_version"] == "1.0" for item in candidates)
+    versions = {rule.rule_id: rule.version for rule in BUILTIN_RULES}
+    assert all(item["rule_version"] == versions[item["rule_id"]] for item in candidates)
     assert (
         report["analysis_complete"]
         is plan["analysis_complete"]

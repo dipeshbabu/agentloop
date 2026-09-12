@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from agentloop.operations import operation_kind
 from agentloop.parallelism import parallelization_candidates
 from agentloop.timing import (
     cumulative_span_time_ms,
@@ -30,6 +31,10 @@ class ExecutionNode:
     parent_id: str | None = None
 
     @property
+    def operation_kind(self) -> str:
+        return operation_kind(self)
+
+    @property
     def total_tokens(self) -> int:
         return self.input_tokens + self.output_tokens
 
@@ -38,6 +43,7 @@ class ExecutionNode:
             "node_id": self.node_id,
             "name": self.name,
             "event_type": self.event_type,
+            "operation_kind": self.operation_kind,
             "duration_ms": round(self.duration_ms, 3),
             "started_at": self.started_at,
             "ended_at": self.ended_at,

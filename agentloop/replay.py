@@ -253,6 +253,7 @@ def _trace_summary(trace: Any, report: dict[str, Any]) -> dict[str, Any]:
         # provenance; agentloop.tokens.is_token_basis_evaluable() explains why
         # that still gates.
         "token_status": report.get("token_status", cost.get("token_status", "unspecified")),
+        "operation_counts": report.get("operation_counts", {}),
         "input_tokens": int(report.get("input_tokens", 0) or 0),
         "output_tokens": int(report.get("output_tokens", 0) or 0),
         "retry_count": int(report.get("retry_count", 0) or 0),

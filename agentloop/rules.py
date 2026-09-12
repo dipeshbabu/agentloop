@@ -148,7 +148,9 @@ def _context_cache_cards(report: dict[str, Any], graph: ExecutionGraph) -> list[
     ratio = report.get("repeated_context_ratio", 0.0)
     if ratio < 0.10:
         return []
-    model_nodes = [node.node_id for node in graph.nodes if node.event_type == "model_call"]
+    model_nodes = [node.node_id for node in graph.nodes if node.operation_kind == "model"]
+    if not model_nodes:
+        return []
     current_cost = report.get("estimated_cost_usd", 0.0)
     cost_evaluable = is_cost_evaluable(report.get("cost_status", "complete"))
     return [
@@ -170,7 +172,7 @@ def _context_cache_cards(report: dict[str, Any], graph: ExecutionGraph) -> list[
 
 
 def _retry_cards(graph: ExecutionGraph) -> list[FindingCandidate]:
-    retry_nodes = [node for node in graph.nodes if node.event_type == "retry"]
+    retry_nodes = [node for node in graph.nodes if node.operation_kind == "retry"]
     if not retry_nodes:
         return []
     retry_time = sum(node.duration_ms for node in retry_nodes)
@@ -191,7 +193,7 @@ def _retry_cards(graph: ExecutionGraph) -> list[FindingCandidate]:
 def _batch_model_cards(graph: ExecutionGraph) -> list[FindingCandidate]:
     groups: dict[str, list[Any]] = {}
     for node in graph.nodes:
-        if node.event_type == "model_call":
+        if node.operation_kind == "model":
             groups.setdefault(node.name, []).append(node)
     cards = []
     for name, nodes in groups.items():
@@ -216,7 +218,7 @@ def _batch_model_cards(graph: ExecutionGraph) -> list[FindingCandidate]:
 def _routing_cards(graph: ExecutionGraph) -> list[FindingCandidate]:
     cards = []
     for node in graph.nodes:
-        if node.event_type != "model_call" or not node.model:
+        if node.operation_kind != "model" or not node.model:
             continue
         if "mini" in node.model.lower():
             continue
@@ -239,7 +241,7 @@ def _routing_cards(graph: ExecutionGraph) -> list[FindingCandidate]:
 def _split_large_step_cards(graph: ExecutionGraph) -> list[FindingCandidate]:
     cards = []
     for node in graph.nodes:
-        if node.event_type == "model_call" and node.total_tokens >= 4000:
+        if node.operation_kind == "model" and node.total_tokens >= 4000:
             cards.append(
                 FindingCandidate(
                     type=RecommendationType.SPLIT_LARGE_STEP,
@@ -259,7 +261,7 @@ def _runaway_loop_cards(graph: ExecutionGraph) -> list[FindingCandidate]:
     cards = []
     groups: dict[tuple[str, str], list[Any]] = {}
     for node in graph.nodes:
-        groups.setdefault((node.event_type, node.name), []).append(node)
+        groups.setdefault((node.operation_kind, node.name), []).append(node)
 
     for (event_type, name), nodes in groups.items():
         if len(nodes) < 8:
@@ -281,7 +283,7 @@ def _runaway_loop_cards(graph: ExecutionGraph) -> list[FindingCandidate]:
 
 
 def _tool_oscillation_cards(graph: ExecutionGraph) -> list[FindingCandidate]:
-    tool_nodes = [node for node in graph.nodes if node.event_type == "tool_call"]
+    tool_nodes = [node for node in graph.nodes if node.operation_kind == "tool"]
     if len(tool_nodes) < 4:
         return []
 
@@ -324,12 +326,12 @@ def _tool_oscillation_cards(graph: ExecutionGraph) -> list[FindingCandidate]:
 
 
 BUILTIN_RULES = (
-    FindingRule("parallelize_tools", "1.0", lambda ctx: _parallelization_cards(ctx.graph)),
-    FindingRule("cache_context", "1.0", lambda ctx: _context_cache_cards(ctx.report, ctx.graph)),
-    FindingRule("add_schema_validation", "1.0", lambda ctx: _retry_cards(ctx.graph)),
-    FindingRule("batch_model_calls", "1.0", lambda ctx: _batch_model_cards(ctx.graph)),
-    FindingRule("route_to_smaller_model", "1.0", lambda ctx: _routing_cards(ctx.graph)),
-    FindingRule("split_large_step", "1.0", lambda ctx: _split_large_step_cards(ctx.graph)),
-    FindingRule("runaway_loop", "1.0", lambda ctx: _runaway_loop_cards(ctx.graph)),
-    FindingRule("tool_oscillation", "1.0", lambda ctx: _tool_oscillation_cards(ctx.graph)),
+    FindingRule("parallelize_tools", "1.1", lambda ctx: _parallelization_cards(ctx.graph)),
+    FindingRule("cache_context", "1.1", lambda ctx: _context_cache_cards(ctx.report, ctx.graph)),
+    FindingRule("add_schema_validation", "1.1", lambda ctx: _retry_cards(ctx.graph)),
+    FindingRule("batch_model_calls", "1.1", lambda ctx: _batch_model_cards(ctx.graph)),
+    FindingRule("route_to_smaller_model", "1.1", lambda ctx: _routing_cards(ctx.graph)),
+    FindingRule("split_large_step", "1.1", lambda ctx: _split_large_step_cards(ctx.graph)),
+    FindingRule("runaway_loop", "1.1", lambda ctx: _runaway_loop_cards(ctx.graph)),
+    FindingRule("tool_oscillation", "1.1", lambda ctx: _tool_oscillation_cards(ctx.graph)),
 )
