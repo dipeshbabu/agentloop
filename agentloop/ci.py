@@ -20,12 +20,23 @@ def build_ci_report(
     )
     diagnosis = build_diagnosis(candidate_trace)
     summary = _summary(replay, diagnosis)
+    trace_inputs = {
+        "baseline": _trace_input(baseline_trace),
+        "candidate": _trace_input(candidate_trace),
+    }
+    synthetic = any(item["synthetic"] is True for item in trace_inputs.values())
+    if synthetic:
+        summary["merge_recommendation"] = (
+            "synthetic self-test only; assess application traces before merge"
+        )
     return {
         "passed": replay["gates"]["passed"],
         "status": "passed" if replay["gates"]["passed"] else "failed",
         "summary": summary,
         "replay": replay,
         "diagnosis": diagnosis,
+        "trace_inputs": trace_inputs,
+        "evidence_scope": "includes_synthetic_data" if synthetic else "supplied_trace_comparison",
     }
 
 
@@ -58,6 +69,34 @@ def ci_report_to_markdown(report: dict[str, Any]) -> str:
             f"| {markdown_table_cell(gate['name'])} | {status} | "
             f"{markdown_table_cell(gate['detail'])} |"
         )
+
+    if report.get("trace_inputs"):
+        lines.extend(["", "## Trace inputs", ""])
+        if report.get("evidence_scope") == "includes_synthetic_data":
+            lines.append(
+                "This comparison includes synthetic data. It does not establish application performance gains from a pull request."
+            )
+        else:
+            lines.append(
+                "Results apply to the supplied traces and configured gates. Trace provenance is supplied by the producer."
+            )
+        lines.extend(
+            ["", "| Side | Run ID | Path | Synthetic marker | Source |", "|---|---|---|---|---|"]
+        )
+        for side, item in report["trace_inputs"].items():
+            marker = (
+                "yes"
+                if item["synthetic"] is True
+                else ("no" if item["synthetic"] is False else "not supplied")
+            )
+            cells = (
+                side,
+                item["run_id"],
+                item.get("path", "in-memory trace"),
+                marker,
+                item["source"],
+            )
+            lines.append("| " + " | ".join(markdown_table_cell(value) for value in cells) + " |")
 
     lines.extend(
         [
@@ -139,3 +178,13 @@ def _format_optional(value: Any, suffix: str = "") -> str:
     if isinstance(value, float):
         return f"{value:.4f}{suffix}"
     return f"{value}{suffix}"
+
+
+def _trace_input(trace: Any) -> dict[str, Any]:
+    metadata = getattr(trace, "metadata", {}) or {}
+    marker = metadata.get("synthetic")
+    return {
+        "run_id": str(trace.run_id),
+        "synthetic": marker if isinstance(marker, bool) else None,
+        "source": str(metadata.get("source") or "not supplied"),
+    }

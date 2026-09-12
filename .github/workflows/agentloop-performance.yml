@@ -1,4 +1,4 @@
-name: AgentLoop Performance
+name: AgentLoop replay self-test
 
 on:
   pull_request:
@@ -40,6 +40,7 @@ permissions:
 
 jobs:
   agentloop-ci:
+    # Preserve the required-check context; the workflow and report identify its scope.
     name: Replay and optimization gates
     runs-on: ubuntu-latest
     env:
@@ -111,9 +112,9 @@ jobs:
               ? fs.readFileSync(reportPath, 'utf8')
               : 'AgentLoop CI report was not generated. Check the workflow logs.';
             const intro = [
-              '## AgentLoop Performance Proof',
+              '## AgentLoop replay self-test',
               '',
-              'Trace in. Rewrite plan out. Replay proof in the PR.',
+              'This required repository check evaluates generated synthetic demo traces. It tests the replay and CI machinery; it does not show that this PR improves application performance.',
               '',
             ].join('\n');
             const body = `${marker}\n${intro}${report}`;

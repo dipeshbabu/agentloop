@@ -1,0 +1,95 @@
+name: Application trace comparison
+
+on:
+  workflow_call:
+    inputs:
+      trace_artifact:
+        description: Artifact from this workflow run containing baseline/candidate JSON and optional fixtures.
+        required: true
+        type: string
+      baseline_trace:
+        default: baseline.json
+        type: string
+      candidate_trace:
+        default: candidate.json
+        type: string
+      quality_fixtures:
+        default: ""
+        type: string
+      min_latency_improvement_pct:
+        default: 0
+        type: number
+      min_cost_improvement_pct:
+        default: 0
+        type: number
+      min_quality_score:
+        default: ""
+        type: string
+      agentloop_ref:
+        description: AgentLoop commit or tag to run. Pin a reviewed commit for repeatability.
+        default: main
+        type: string
+      report_artifact:
+        default: agentloop-application-reports
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    name: Supplied application trace gates
+    runs-on: ubuntu-latest
+    env:
+      BASELINE: ${{ inputs.baseline_trace }}
+      CANDIDATE: ${{ inputs.candidate_trace }}
+      QUALITY: ${{ inputs.quality_fixtures }}
+      MIN_LATENCY: ${{ inputs.min_latency_improvement_pct }}
+      MIN_COST: ${{ inputs.min_cost_improvement_pct }}
+      MIN_QUALITY: ${{ inputs.min_quality_score }}
+    steps:
+      - name: Check out the selected AgentLoop version
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: dipeshbabu/agentloop
+          ref: ${{ inputs.agentloop_ref }}
+          path: .agentloop
+          persist-credentials: false
+      - name: Download caller-supplied traces
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ inputs.trace_artifact }}
+          path: inputs
+      - name: Set up uv and Python
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          version: "0.11.28"
+          python-version: "3.13"
+      - name: Compare supplied artifacts without generating demo data
+        run: |
+          test -f "inputs/$BASELINE"
+          test -f "inputs/$CANDIDATE"
+          QUALITY_ARGS=()
+          if [ -n "$QUALITY" ]; then
+            test -f "inputs/$QUALITY"
+            QUALITY_ARGS+=(--quality-fixtures "$GITHUB_WORKSPACE/inputs/$QUALITY")
+          fi
+          if [ -n "$MIN_QUALITY" ]; then
+            QUALITY_ARGS+=(--min-quality-score "$MIN_QUALITY")
+          fi
+          uv run --project .agentloop --frozen --no-dev agentloop ci \
+            --baseline "$GITHUB_WORKSPACE/inputs/$BASELINE" \
+            --candidate "$GITHUB_WORKSPACE/inputs/$CANDIDATE" \
+            --out "$GITHUB_WORKSPACE/reports/agentloop_ci.md" \
+            --json-out "$GITHUB_WORKSPACE/reports/agentloop_ci.json" \
+            --min-latency-improvement-pct "$MIN_LATENCY" \
+            --min-cost-improvement-pct "$MIN_COST" \
+            --github-step-summary \
+            "${QUALITY_ARGS[@]}"
+      - name: Upload comparison reports
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ inputs.report_artifact }}
+          path: reports/
+          if-no-files-found: warn

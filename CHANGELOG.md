@@ -8,6 +8,10 @@ Project history from before the first public release remains available in Git.
 
 ## [Unreleased]
 
+- CI reports now identify trace inputs and synthetic data. The repository workflow
+  is labeled as a replay self-test; a separate reusable workflow compares supplied
+  application artifacts without generating replacement demo traces.
+
 - Parallelization suggestions now separate observed timing from inferred or
   declared concurrency safety and expose their assumptions across reports,
   findings, exports, and the dashboard. Known dependency conflicts and already
