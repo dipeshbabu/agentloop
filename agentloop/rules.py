@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import dataclass, fields
@@ -10,6 +11,21 @@ from agentloop.costs import is_cost_evaluable
 from agentloop.estimates import ESTIMATORS, estimate_snapshot
 from agentloop.graph import ExecutionGraph
 from agentloop.parallelism import PARALLELISM_REWRITE
+
+_LOGGER = logging.getLogger(__name__)
+
+
+def _safe_error_type(error: Exception) -> str:
+    """Use public categories rather than exposing arbitrary implementation class names."""
+    for kind, label in (
+        (TypeError, "TypeError"),
+        (ValueError, "ValueError"),
+        (LookupError, "LookupError"),
+        (ArithmeticError, "ArithmeticError"),
+    ):
+        if isinstance(error, kind):
+            return label
+    return "RuleError"
 
 
 class RecommendationType(str, Enum):
@@ -109,12 +125,13 @@ def run_rules(
                     item.estimate = estimate_snapshot(item, context.report, context.graph.nodes)
             candidates.extend(detected)
         except Exception as exc:
+            _LOGGER.debug("Finding rule %s failed", rule.rule_id, exc_info=True)
             errors.append(
                 {
                     "rule_id": rule.rule_id,
                     "rule_version": rule.version,
-                    "error_type": type(exc).__name__,
-                    "message": str(exc)[:500],
+                    "error_type": _safe_error_type(exc),
+                    "message": "Rule evaluation failed; see local debug logs.",
                 }
             )
     if not is_cost_evaluable(context.report.get("cost_status", "complete")):

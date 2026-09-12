@@ -60,7 +60,7 @@ def test_one_rule_failure_is_isolated_and_observable(monkeypatch):
             "rule_id": "broken",
             "rule_version": "2.0",
             "error_type": "ValueError",
-            "message": "bad <input>|row",
+            "message": "Rule evaluation failed; see local debug logs.",
         }
     ]
     assert [item["rule_id"] for item in report["finding_candidates"]] == ["parallelize_tools"]
