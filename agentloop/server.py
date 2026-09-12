@@ -5,10 +5,16 @@ from typing import Any
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from agentloop.config import get_admin_api_key, get_api_key, get_cors_origins, require_api_key
 from agentloop.findings import build_diagnosis
+from agentloop.intervention_service import create_stored_intervention
+from agentloop.interventions import (
+    InterventionConflictError,
+    InterventionReferenceError,
+    InterventionValidationError,
+)
 from agentloop.issues import build_issue_drafts
 from agentloop.optimizer import build_optimization_plan
 from agentloop.quality import QualityValidationError, build_quality_report
@@ -54,6 +60,18 @@ class TracePayload(BaseModel):
 class CreateApiKeyPayload(BaseModel):
     project_id: str = "default"
     name: str = "default"
+
+
+class InterventionPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    baseline_run_id: str
+    candidate_run_id: str
+    target_finding_ids: list[str]
+    intervention_type: str
+    configuration: dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    gates: dict[str, Any] = Field(default_factory=dict)
+    quality_fixtures: list[dict[str, Any]] | None = None
 
 
 class QualityReportPayload(BaseModel):
@@ -246,6 +264,35 @@ def persist_trace_diagnosis(
     diagnosis = build_diagnosis(_load_trace_or_404(db, run_id, project_id))
     db.save_diagnosis(diagnosis, project_id=project_id)
     return diagnosis
+
+
+@app.post("/interventions")
+def create_intervention_endpoint(
+    payload: InterventionPayload,
+    project_id: str = Depends(resolve_project),
+    db: TraceStore = Depends(store),
+) -> dict[str, Any]:
+    """Snapshot persisted findings and compare stored traces in the authenticated project."""
+    try:
+        return create_stored_intervention(db, payload.model_dump(exclude_none=True), project_id)
+    except InterventionReferenceError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from None
+    except InterventionConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from None
+    except (InterventionValidationError, QualityValidationError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
+
+
+@app.get("/interventions/{intervention_id}")
+def get_intervention_endpoint(
+    intervention_id: str,
+    project_id: str = Depends(resolve_project),
+    db: TraceStore = Depends(store),
+) -> dict[str, Any]:
+    record = db.get_intervention(intervention_id, project_id=project_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="intervention not found")
+    return record
 
 
 @app.get("/findings")

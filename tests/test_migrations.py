@@ -62,7 +62,7 @@ def test_sqlite_fresh_install_and_upgraded_database_reach_equivalent_schema(tmp_
             "SELECT cost_status, priced_model_call_count, unavailable_model_call_count "
             "FROM usage_events WHERE run_id = 'legacy'"
         ).fetchone()
-    assert versions == {1, 2, 3, 4}
+    assert versions == {1, 2, 3, 4, 5}
     assert trace_cost == ("complete", 2, 0)
     assert usage_cost == ("complete", 2, 0)
 
@@ -162,7 +162,7 @@ def test_postgres_fresh_install_and_upgraded_database_reach_equivalent_schema():
                 "SELECT cost_status, priced_model_call_count, unavailable_model_call_count "
                 "FROM usage_events WHERE run_id = 'legacy'"
             ).fetchone()
-        assert versions == {1, 2, 3, 4}
+        assert versions == {1, 2, 3, 4, 5}
         assert trace_cost == ("complete", 2, 0)
         assert usage_cost == ("complete", 2, 0)
     finally:

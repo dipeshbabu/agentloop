@@ -212,6 +212,8 @@ The optimizer avoids double-counting suggestions that affect the same spans.
 Reports say whether the chosen combination is exact or approximate. See
 [Savings selection](docs/SAVINGS_SELECTION.md).
 For individual predictions, see [Estimator provenance](docs/ESTIMATORS.md).
+The [intervention ledger](docs/INTERVENTIONS.md) links finding predictions to
+measured candidate results and preserves quality checks in an exportable record.
 
 Keep your Markdown renderer's safe mode or HTML sanitizer enabled when viewing
 reports from untrusted traces.

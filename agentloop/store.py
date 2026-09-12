@@ -21,6 +21,8 @@ from agentloop.config import (
 from agentloop.cursor_validation import InvalidCursorError as InvalidCursorError
 from agentloop.cursor_validation import decode_cursor, encode_cursor
 from agentloop.findings import build_diagnosis
+from agentloop.intervention_store import InterventionStoreMixin
+from agentloop.interventions import InterventionRecord
 from agentloop.migrations import apply_postgres_migrations, apply_sqlite_migrations
 from agentloop.savings import SavingsItem, select_compatible
 from agentloop.tracer import AgentTrace
@@ -85,6 +87,18 @@ class FindingTransitionError(ValueError):
 
 class TraceStore(Protocol):
     def init(self) -> None: ...
+
+    def get_finding_snapshot(
+        self, run_id: str, finding_id: str, project_id: str = "default"
+    ) -> dict[str, Any] | None: ...
+
+    def save_intervention(
+        self, record: InterventionRecord | dict[str, Any], project_id: str = "default"
+    ) -> dict[str, Any]: ...
+
+    def get_intervention(
+        self, intervention_id: str, project_id: str = "default"
+    ) -> dict[str, Any] | None: ...
 
     def create_api_key(self, project_id: str, name: str) -> dict[str, Any]: ...
 
@@ -413,7 +427,7 @@ def _quality_risk(finding_type: str) -> str:
 
 
 @dataclass
-class SQLiteTraceStore:
+class SQLiteTraceStore(InterventionStoreMixin):
     path: str = "runs/agentloop.db"
 
     def _connect(self) -> sqlite3.Connection:
@@ -868,7 +882,8 @@ class SQLiteTraceStore:
 
 
 @dataclass
-class PostgresTraceStore:
+class PostgresTraceStore(InterventionStoreMixin):
+    _postgres_interventions = True
     dsn: str | None = None
     password_file: str | None = None
 

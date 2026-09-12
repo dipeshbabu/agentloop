@@ -166,6 +166,8 @@ def test_client_rejects_non_http_api_urls() -> None:
             id="quality-report",
         ),
         pytest.param(lambda client: client.get_value_report("run"), id="value-report"),
+        pytest.param(lambda client: client.create_intervention({}), id="create-intervention"),
+        pytest.param(lambda client: client.get_intervention("int_1"), id="get-intervention"),
     ],
 )
 def test_client_sends_only_project_key_on_ordinary_requests(monkeypatch, operation) -> None:

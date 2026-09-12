@@ -201,6 +201,24 @@ MIGRATIONS: tuple[Migration, ...] = (
         sqlite_statements=_COST_COMPLETENESS_SQLITE,
         postgres_statements=_COST_COMPLETENESS_POSTGRES,
     ),
+    Migration(
+        version=5,
+        name="intervention_ledger",
+        sqlite_statements=(
+            "CREATE TABLE IF NOT EXISTS interventions ("
+            "project_id TEXT NOT NULL REFERENCES projects(project_id), "
+            "intervention_id TEXT NOT NULL, baseline_run_id TEXT NOT NULL REFERENCES traces(run_id), "
+            "candidate_run_id TEXT NOT NULL REFERENCES traces(run_id), payload_json TEXT NOT NULL, "
+            "PRIMARY KEY(project_id, intervention_id))",
+        ),
+        postgres_statements=(
+            "CREATE TABLE IF NOT EXISTS interventions ("
+            "project_id TEXT NOT NULL REFERENCES projects(project_id), "
+            "intervention_id TEXT NOT NULL, baseline_run_id TEXT NOT NULL REFERENCES traces(run_id), "
+            "candidate_run_id TEXT NOT NULL REFERENCES traces(run_id), payload_json TEXT NOT NULL, "
+            "PRIMARY KEY(project_id, intervention_id))",
+        ),
+    ),
 )
 
 

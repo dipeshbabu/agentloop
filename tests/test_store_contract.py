@@ -6,6 +6,7 @@ so `pytest` stays usable with SQLite-only local setups; CI provides Postgres.
 
 from __future__ import annotations
 
+import copy
 import os
 import threading
 
@@ -380,6 +381,119 @@ def test_persisted_estimator_snapshot_survives_future_rule_changes(store, monkey
     for finding in expected["findings"]:
         assert by_id[finding["finding_id"]]["estimate"] == finding["estimate"]
     assert store.list_findings(project_id="another") == []
+
+
+@pytest.fixture
+def intervention_evidence(store):
+    from agentloop.entrypoint import _quickstart_trace
+    from agentloop.findings import build_diagnosis
+    from agentloop.interventions import build_intervention
+
+    baseline = _quickstart_trace()
+    candidate = copy.deepcopy(baseline)
+    candidate.run_id = "ledger-candidate"
+    for event in candidate.events:
+        event.run_id = candidate.run_id
+    store.save_trace(baseline, project_id="ledger")
+    store.save_trace(candidate, project_id="ledger")
+    diagnosis = build_diagnosis(baseline)
+    record = build_intervention(
+        baseline,
+        candidate,
+        target_finding_ids=[finding["finding_id"] for finding in diagnosis["findings"]],
+        intervention_type="context_compression",
+        diagnosis=diagnosis,
+    )
+    return baseline, candidate, diagnosis, record
+
+
+def test_intervention_persistence_is_idempotent_immutable_and_project_scoped(
+    store, intervention_evidence
+):
+    from agentloop.interventions import InterventionConflictError, InterventionReferenceError
+
+    baseline, _, diagnosis, record = intervention_evidence
+    assert store.save_intervention(record, project_id="ledger") == record.to_dict()
+    assert store.save_intervention(record, project_id="ledger") == record.to_dict()
+    assert store.get_intervention(record.intervention_id, project_id="other") is None
+    with pytest.raises(InterventionReferenceError):
+        store.save_intervention(record, project_id="other")
+    changed = record.to_dict()
+    changed["metadata"]["experiment"] = "different evidence"
+    with pytest.raises(InterventionConflictError):
+        store.save_intervention(changed, project_id="ledger")
+    diagnosis["findings"][0]["estimate"]["estimator_version"] = "next-version"
+    store.save_diagnosis(diagnosis, project_id="ledger")
+    assert (
+        store.get_finding_snapshot(
+            baseline.run_id, diagnosis["findings"][0]["finding_id"], project_id="ledger"
+        )["estimate"]["estimator_version"]
+        == "next-version"
+    )
+    assert store.get_intervention(record.intervention_id, project_id="ledger") == record.to_dict()
+
+
+def test_intervention_rejects_changed_traces_and_missing_findings(store, intervention_evidence):
+    from agentloop.interventions import (
+        InterventionConflictError,
+        InterventionReferenceError,
+        build_intervention,
+    )
+
+    baseline, candidate, diagnosis, record = intervention_evidence
+    candidate.metadata["modified"] = True
+    store.save_trace(candidate, project_id="ledger")
+    with pytest.raises(InterventionConflictError, match="source trace"):
+        store.save_intervention(record, project_id="ledger")
+    diagnosis["findings"][0]["finding_id"] = "missing-finding"
+    missing = build_intervention(
+        baseline,
+        candidate,
+        target_finding_ids=["missing-finding"],
+        intervention_type="change",
+        diagnosis=diagnosis,
+    )
+    with pytest.raises(InterventionReferenceError, match="finding"):
+        store.save_intervention(missing, project_id="ledger")
+    assert store.get_intervention(missing.intervention_id, project_id="ledger") is None
+
+
+def test_concurrent_intervention_retries_have_one_evidence_result(store, intervention_evidence):
+    from concurrent.futures import ThreadPoolExecutor
+
+    _, _, _, record = intervention_evidence
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        results = list(
+            executor.map(lambda _: store.save_intervention(record, project_id="ledger"), range(4))
+        )
+    assert results == [record.to_dict()] * 4
+
+
+def test_intervention_preserves_failed_quality_and_indeterminate_cost(store, intervention_evidence):
+    from agentloop.interventions import build_intervention
+    from agentloop.quality import build_quality_report
+
+    baseline, candidate, diagnosis, _ = intervention_evidence
+    for trace in (baseline, candidate):
+        for event in trace.events:
+            if event.event_type == "model_call":
+                event.model = "unknown-model"
+        store.save_trace(trace, project_id="ledger")
+    quality = build_quality_report(
+        [{"expected": "ok", "baseline_output": "ok", "candidate_output": "bad"}]
+    )
+    record = build_intervention(
+        baseline,
+        candidate,
+        target_finding_ids=[finding["finding_id"] for finding in diagnosis["findings"]],
+        intervention_type="change",
+        diagnosis=diagnosis,
+        quality_report=quality,
+    )
+    stored = store.save_intervention(record, project_id="ledger")
+    assert stored["gates_passed"] is False
+    assert stored["measured"]["quality"]["failed_case_count"] == 1
+    assert stored["measured"]["deltas"]["cost_usd_delta"] is None
 
 
 def test_incomplete_diagnosis_does_not_supersede_historical_findings(store):
