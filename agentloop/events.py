@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
+from agentloop.operations import operation_kind
+
 
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -47,6 +49,10 @@ class AgentEvent:
     status: str = "ok"
     error: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def operation_kind(self) -> str:
+        return operation_kind(self)
 
     @property
     def total_tokens(self) -> int:
