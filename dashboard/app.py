@@ -57,6 +57,26 @@ def seconds(ms: float) -> str:
     return f"{float(ms) / 1000:,.2f}s"
 
 
+def render_estimate_details(item: dict) -> None:
+    if item.get("evidence_level"):
+        st.write(f"Evidence level: {item['evidence_level']}")
+    estimate = item.get("estimate")
+    if estimate:
+        calibration = "calibrated" if estimate.get("calibrated") is True else "uncalibrated"
+        st.write(
+            f"Estimator: {estimate['estimator_id']} version {estimate['estimator_version']} "
+            f"({estimate['method']}, {calibration}; predicted savings)"
+        )
+        st.write("Assumptions: " + "; ".join(estimate.get("assumptions", [])))
+        st.caption(estimate["formula"])
+        st.json(
+            {"parameters": estimate.get("parameters", {}), "inputs": estimate.get("inputs", {})}
+        )
+    elif item.get("evidence_level"):
+        st.write("Assumptions: " + "; ".join(item.get("assumptions", [])))
+        st.caption(item.get("estimate_formula") or item.get("savings", {}).get("formula", ""))
+
+
 def load_trace_for_project(run_id: str, project_id: str) -> AgentTrace | None:
     return load_store().get_trace(run_id=run_id, project_id=project_id)
 
@@ -382,10 +402,7 @@ elif page == "Optimization":
                     f"{card['title']} · confidence: {card['confidence']}", expanded=True
                 ):
                     st.write(card["why"])
-                    if card.get("evidence_level"):
-                        st.write(f"Evidence level: {card['evidence_level']}")
-                        st.write("Assumptions: " + "; ".join(card["assumptions"]))
-                        st.caption(card["estimate_formula"])
+                    render_estimate_details(card)
                     st.code(card["rewrite_hint"])
                     st.write(
                         f"Estimated latency savings: {seconds(card['estimated_latency_savings_ms'])}"
@@ -441,10 +458,7 @@ elif page == "Diagnosis":
                 label = f"{finding['severity'].upper()} - {finding['title']} ({finding['type']})"
                 with st.expander(label, expanded=finding["severity"] == "high"):
                     st.write(finding["metadata"].get("why", ""))
-                    if finding.get("evidence_level"):
-                        st.write(f"Evidence level: {finding['evidence_level']}")
-                        st.write("Assumptions: " + "; ".join(finding["assumptions"]))
-                        st.caption(finding["savings"]["formula"])
+                    render_estimate_details(finding)
                     st.write(f"Finding ID: `{finding['finding_id']}`")
                     st.write(f"Confidence: `{finding['confidence']}`")
                     st.write(f"Affected spans: `{', '.join(finding['affected_spans'])}`")

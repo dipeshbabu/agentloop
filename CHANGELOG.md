@@ -8,6 +8,11 @@ Project history from before the first public release remains available in Git.
 
 ## [Unreleased]
 
+- Every built-in optimization estimate now includes versioned provenance,
+  explicit coefficients, input snapshots, and assumptions. Human reports mark
+  predictions as uncalibrated; persisted findings retain their estimator metadata.
+  See [Estimator provenance](docs/ESTIMATORS.md).
+
 - Unified report recommendations and optimizer findings behind versioned local
   rules. Reports retain canonical candidates and expose rule failures; incomplete
   analysis fails CI and cannot supersede missing historical findings. Existing

@@ -228,3 +228,4 @@ def test_dashboard_shows_parallelization_evidence_and_assumptions(
     assert not app.exception
     assert any("Evidence level: inferred" in item.value for item in app.markdown)
     assert any("shared mutable state" in item.value for item in app.markdown)
+    assert any("uncalibrated; predicted savings" in item.value for item in app.markdown)

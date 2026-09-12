@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from agentloop.costs import format_cost_usd
+from agentloop.estimates import estimate_markdown
 from agentloop.markdown import (
     markdown_code_span,
     markdown_heading,
@@ -79,7 +80,10 @@ def export_optimization_markdown(plan: dict[str, Any], path: str | Path) -> Path
             lines.append(
                 f"- Rule: {markdown_code_span(card['rule_id'])} version {markdown_text(card['rule_version'])}"
             )
-        if card.get("evidence_level"):
+        if card.get("evidence_level") and card.get("estimate"):
+            lines.append(f"- Evidence level: {markdown_text(card['evidence_level'])}")
+        lines.extend(estimate_markdown(card.get("estimate")))
+        if card.get("evidence_level") and not card.get("estimate"):
             lines.extend(
                 [
                     f"- Evidence level: {markdown_text(card['evidence_level'])}",

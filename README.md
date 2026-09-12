@@ -198,7 +198,7 @@ for behavior that has not yet shipped in the published package.
 | Runtime and call counts | Recorded execution data. `total_runtime_ms` is elapsed time; `cumulative_span_time_ms` sums spans and can be larger when calls overlap or nest. |
 | Token counts | Counts identify their source: a provider, a tokenizer, user code, or a word-count estimate. Missing usage is marked unavailable. |
 | Model cost | A calculation from token counts and configured pricing. Unknown prices or estimated usage limit the comparisons you can make. |
-| Optimization savings | Estimates with assumptions. Measure a candidate run to establish the actual effect. |
+| Optimization savings | Uncalibrated predictions with versioned formulas, coefficients, and assumptions. Measure a candidate run to establish the actual effect. |
 | Quality scores | Results of the checks you supplied. Their coverage depends on your fixtures. |
 
 Cost gates can be marked `indeterminate` when pricing or usable token counts are
@@ -210,6 +210,7 @@ the details, including how older traces are handled.
 The optimizer avoids double-counting suggestions that affect the same spans.
 Reports say whether the chosen combination is exact or approximate. See
 [Savings selection](docs/SAVINGS_SELECTION.md).
+For individual predictions, see [Estimator provenance](docs/ESTIMATORS.md).
 
 Keep your Markdown renderer's safe mode or HTML sanitizer enabled when viewing
 reports from untrusted traces.
