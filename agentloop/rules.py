@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from copy import deepcopy
 from dataclasses import dataclass, fields
 from enum import Enum
 from typing import Any
 
 from agentloop.costs import is_cost_evaluable
+from agentloop.estimates import ESTIMATORS, estimate_snapshot
 from agentloop.graph import ExecutionGraph
 from agentloop.parallelism import PARALLELISM_REWRITE
 
@@ -39,6 +41,7 @@ class FindingCandidate:
 
     rule_id: str | None = None
     rule_version: str | None = None
+    estimate: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         result = {
@@ -64,11 +67,13 @@ class FindingCandidate:
             )
         if self.rule_id is not None:
             result.update(rule_id=self.rule_id, rule_version=self.rule_version)
+        if self.estimate is not None:
+            result["estimate"] = deepcopy(self.estimate)
         return result
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> FindingCandidate:
-        values = {item.name: data[item.name] for item in fields(cls) if item.name in data}
+        values = {item.name: deepcopy(data[item.name]) for item in fields(cls) if item.name in data}
         values["type"] = RecommendationType(values["type"])
         return cls(**values)
 
@@ -100,6 +105,8 @@ def run_rules(
             for item in detected:
                 item.rule_id = rule.rule_id
                 item.rule_version = rule.version
+                if rule in BUILTIN_RULES:
+                    item.estimate = estimate_snapshot(item, context.report, context.graph.nodes)
             candidates.extend(detected)
         except Exception as exc:
             errors.append(
@@ -151,7 +158,12 @@ def _context_cache_cards(report: dict[str, Any], graph: ExecutionGraph) -> list[
             why=f"Repeated context ratio is {ratio:.1%}, which suggests stable instructions or source text are being resent.",
             rewrite_hint="Move stable instructions into cached prefixes, summaries, or framework-level memory instead of resending full text.",
             confidence="high" if ratio >= 0.20 else "medium",
-            estimated_cost_savings_usd=(current_cost * min(0.5, ratio) if cost_evaluable else None),
+            estimated_cost_savings_usd=(
+                current_cost
+                * min(ESTIMATORS["cache_context"].parameter("max_cost_fraction"), ratio)
+                if cost_evaluable
+                else None
+            ),
             affected_nodes=model_nodes,
         )
     ]
@@ -169,7 +181,8 @@ def _retry_cards(graph: ExecutionGraph) -> list[FindingCandidate]:
             why=f"Observed {len(retry_nodes)} retry span(s), costing {retry_time / 1000:.2f}s.",
             rewrite_hint="Add schema validation, JSON mode, constrained decoding, or a cheap repair prompt before rerunning a full step.",
             confidence="high",
-            estimated_latency_savings_ms=retry_time * 0.8,
+            estimated_latency_savings_ms=retry_time
+            * ESTIMATORS["add_schema_validation"].parameter("latency_fraction"),
             affected_nodes=[node.node_id for node in retry_nodes],
         )
     ]
@@ -192,7 +205,8 @@ def _batch_model_cards(graph: ExecutionGraph) -> list[FindingCandidate]:
                 why=f"{len(nodes)} `{name}` calls have the same role and may be batchable.",
                 rewrite_hint="Batch documents/items into one prompt or use map-reduce only when outputs truly need independent reasoning.",
                 confidence="medium",
-                estimated_latency_savings_ms=duration * 0.35,
+                estimated_latency_savings_ms=duration
+                * ESTIMATORS["batch_model_calls"].parameter("latency_fraction"),
                 affected_nodes=[node.node_id for node in nodes],
             )
         )
@@ -214,7 +228,8 @@ def _routing_cards(graph: ExecutionGraph) -> list[FindingCandidate]:
                     why=f"`{node.name}` is a relatively small model step using {node.total_tokens} tokens on {node.model}.",
                     rewrite_hint="Try a smaller model for planning, summarization, extraction, or verification steps and keep the larger model for final synthesis.",
                     confidence="low",
-                    estimated_latency_savings_ms=node.duration_ms * 0.25,
+                    estimated_latency_savings_ms=node.duration_ms
+                    * ESTIMATORS["route_to_smaller_model"].parameter("latency_fraction"),
                     affected_nodes=[node.node_id],
                 )
             )
@@ -232,7 +247,8 @@ def _split_large_step_cards(graph: ExecutionGraph) -> list[FindingCandidate]:
                     why=f"`{node.name}` used {node.total_tokens} tokens, making it a large and fragile step.",
                     rewrite_hint="Split into retrieve-filter-summarize or compress the context before the final reasoning call.",
                     confidence="medium",
-                    estimated_latency_savings_ms=node.duration_ms * 0.20,
+                    estimated_latency_savings_ms=node.duration_ms
+                    * ESTIMATORS["split_large_step"].parameter("latency_fraction"),
                     affected_nodes=[node.node_id],
                 )
             )
@@ -256,7 +272,8 @@ def _runaway_loop_cards(graph: ExecutionGraph) -> list[FindingCandidate]:
                 why=f"`{name}` ran {len(nodes)} times in one trace, which suggests an unbounded or weakly bounded agent loop.",
                 rewrite_hint="Add max-iteration, max-cost, and unchanged-state guards before the workflow can keep looping.",
                 confidence="high" if len(nodes) >= 12 else "medium",
-                estimated_latency_savings_ms=duration * 0.30,
+                estimated_latency_savings_ms=duration
+                * ESTIMATORS["runaway_loop"].parameter("latency_fraction"),
                 affected_nodes=[node.node_id for node in nodes],
             )
         )
@@ -296,7 +313,8 @@ def _tool_oscillation_cards(graph: ExecutionGraph) -> list[FindingCandidate]:
                 why=f"Observed {len(oscillating)} alternating `{first}` and `{second}` tool calls.",
                 rewrite_hint="Add a state-change check or decision memo so the agent does not repeat equivalent tool transitions.",
                 confidence="medium",
-                estimated_latency_savings_ms=duration * 0.40,
+                estimated_latency_savings_ms=duration
+                * ESTIMATORS["tool_oscillation"].parameter("latency_fraction"),
                 affected_nodes=[node.node_id for node in oscillating],
             )
         )

@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import hashlib
 import json
+from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Any
 
 from agentloop.costs import format_cost_usd
+from agentloop.estimates import estimate_markdown
 from agentloop.markdown import markdown_code_span, markdown_heading, markdown_text
 from agentloop.optimizer import build_optimization_plan
 
@@ -28,6 +30,7 @@ class OptimizationFinding:
     observations: dict[str, Any] = field(default_factory=dict)
     rule_id: str | None = None
     rule_version: str | None = None
+    estimate: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         result = {
@@ -51,6 +54,8 @@ class OptimizationFinding:
             )
         if self.rule_id is not None:
             result.update(rule_id=self.rule_id, rule_version=self.rule_version)
+        if self.estimate is not None:
+            result["estimate"] = deepcopy(self.estimate)
         return result
 
 
@@ -132,7 +137,10 @@ def diagnosis_to_markdown(diagnosis: dict[str, Any]) -> str:
             lines.append(
                 f"- Rule: {markdown_code_span(finding['rule_id'])} version {markdown_text(finding['rule_version'])}"
             )
-        if finding.get("evidence_level"):
+        if finding.get("evidence_level") and finding.get("estimate"):
+            lines.append(f"- Evidence level: {markdown_text(finding['evidence_level'])}")
+        lines.extend(estimate_markdown(finding.get("estimate")))
+        if finding.get("evidence_level") and not finding.get("estimate"):
             lines.extend(
                 [
                     f"- Evidence level: {markdown_text(finding['evidence_level'])}",
@@ -190,7 +198,9 @@ def _finding_from_card(card: dict[str, Any], plan: dict[str, Any]) -> Optimizati
             "estimated_cost_savings_usd": (
                 None if cost_savings is None else round(cost_savings, 6)
             ),
-            "formula": card.get("estimate_formula") or _savings_formula(finding_type),
+            "formula": (card.get("estimate") or {}).get("formula")
+            or card.get("estimate_formula")
+            or _savings_formula(finding_type),
         },
         rewrite={
             "kind": finding_type,
@@ -221,6 +231,7 @@ def _finding_from_card(card: dict[str, Any], plan: dict[str, Any]) -> Optimizati
         observations=dict(card.get("observations", {})),
         rule_id=card.get("rule_id"),
         rule_version=card.get("rule_version"),
+        estimate=deepcopy(card.get("estimate")),
     )
 
 
