@@ -196,6 +196,7 @@ for behavior that has not yet shipped in the published package.
 | Result | How to interpret it |
 |---|---|
 | Runtime and call counts | Recorded execution data. `total_runtime_ms` is elapsed time; `cumulative_span_time_ms` sums spans and can be larger when calls overlap or nest. |
+| Operation kinds | Agent, workflow, model, tool, retrieval, and other roles recorded alongside legacy event categories. See [Operation kinds](docs/OPERATIONS.md). |
 | Token counts | Counts identify their source: a provider, a tokenizer, user code, or a word-count estimate. Missing usage is marked unavailable. |
 | Model cost | A calculation from token counts and configured pricing. Unknown prices or estimated usage limit the comparisons you can make. |
 | Optimization savings | Uncalibrated predictions with versioned formulas, coefficients, and assumptions. Measure a candidate run to establish the actual effect. |

@@ -267,6 +267,7 @@ def _evidence_row(node: dict[str, Any]) -> dict[str, Any]:
         "span_id": node["node_id"],
         "name": node["name"],
         "event_type": node["event_type"],
+        "operation_kind": node.get("operation_kind", "unknown"),
         "duration_ms": node["duration_ms"],
         "input_tokens": node.get("input_tokens", 0),
         "output_tokens": node.get("output_tokens", 0),

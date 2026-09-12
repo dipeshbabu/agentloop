@@ -6,6 +6,7 @@ from typing import Any
 
 from agentloop.costs import CostEstimate, PricingTable, estimate_cost, load_pricing_table
 from agentloop.graph import ExecutionGraph
+from agentloop.operations import operation_counts, operation_kind
 from agentloop.parallelism import parallelization_candidates
 from agentloop.rules import AnalysisContext, run_rules
 from agentloop.timing import cumulative_span_time_ms, elapsed_runtime_ms
@@ -23,7 +24,7 @@ def build_report(trace: Any) -> dict[str, Any]:
     tool_events = [e for e in events if e.event_type == "tool_call"]
     retry_events = [e for e in events if e.event_type == "retry"]
 
-    repeated = repeated_context_stats(model_events)
+    repeated = repeated_context_stats([e for e in model_events if operation_kind(e) == "model"])
     parallel = parallelism_opportunities(events)
     cumulative_time = cumulative_span_time_ms(events)
     cost = cost_breakdown(model_events)
@@ -33,6 +34,7 @@ def build_report(trace: Any) -> dict[str, Any]:
         "run_id": trace.run_id,
         "name": trace.name,
         "event_count": len(events),
+        "operation_counts": operation_counts(events),
         "model_call_count": len(model_events),
         "tool_call_count": len(tool_events),
         "retry_count": len(retry_events),

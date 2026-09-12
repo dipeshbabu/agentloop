@@ -13,6 +13,11 @@ Project history from before the first public release remains available in Git.
   predictions as uncalibrated; persisted findings retain their estimator metadata.
   See [Estimator provenance](docs/ESTIMATORS.md).
 
+- Added normalized operation kinds in event metadata, graph and finding evidence,
+  report counts, and replay summaries. OTLP agent/workflow spans retain their
+  distinct roles and are excluded from tool-specific savings. Legacy event
+  categories and schema 1.0/1.1 readability remain compatible.
+
 - Unified report recommendations and optimizer findings behind versioned local
   rules. Reports retain canonical candidates and expose rule failures; incomplete
   analysis fails CI and cannot supersede missing historical findings. Existing

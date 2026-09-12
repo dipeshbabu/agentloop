@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from typing import Any
 
+from agentloop.operations import operation_kind
 from agentloop.timing import duration_ms, event_interval_ms
 
 PARALLELISM_NOTICE = (
@@ -61,7 +62,7 @@ def parallelization_candidates(
                 declarations.add(span_id)
             else:
                 unsafe.add(span_id)
-        if getattr(event, "event_type", "tool_call") == "tool_call":
+        if operation_kind(event) == "tool":
             groups.setdefault((event.name, getattr(event, "parent_id", None)), []).append(span_id)
     for span_id, event in by_id.items():
         parent_id = getattr(event, "parent_id", None)
