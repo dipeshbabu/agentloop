@@ -1,0 +1,266 @@
+{
+  "fixture_schema_version": "1.0",
+  "upstream": {
+    "convention": "OpenInference semantic conventions",
+    "revision": "a332a5ca8f271356b48d450220e3cf364e45ccac",
+    "source": "https://github.com/Arize-ai/openinference/blob/a332a5ca8f271356b48d450220e3cf364e45ccac/spec/semantic_conventions.md"
+  },
+  "synthetic": true,
+  "payload": {
+    "resourceSpans": [
+      {
+        "resource": {
+          "attributes": [
+            {
+              "key": "service.name",
+              "value": {
+                "stringValue": "openinference"
+              }
+            }
+          ]
+        },
+        "scopeSpans": [
+          {
+            "scope": {
+              "name": "synthetic-conformance",
+              "version": "1.0"
+            },
+            "spans": [
+              {
+                "traceId": "cccccccccccccccccccccccccccccccc",
+                "spanId": "0000000000000001",
+                "name": "chain",
+                "kind": 1,
+                "startTimeUnixNano": "1000000000",
+                "endTimeUnixNano": "1100000000",
+                "attributes": [
+                  {
+                    "key": "openinference.span.kind",
+                    "value": {
+                      "stringValue": "CHAIN"
+                    }
+                  },
+                  {
+                    "key": "session.id",
+                    "value": {
+                      "stringValue": "session-1"
+                    }
+                  }
+                ],
+                "status": {
+                  "code": 1
+                }
+              },
+              {
+                "traceId": "cccccccccccccccccccccccccccccccc",
+                "spanId": "0000000000000002",
+                "name": "agent",
+                "kind": 1,
+                "startTimeUnixNano": "1000000000",
+                "endTimeUnixNano": "1100000000",
+                "attributes": [
+                  {
+                    "key": "openinference.span.kind",
+                    "value": {
+                      "stringValue": "AGENT"
+                    }
+                  }
+                ],
+                "status": {
+                  "code": 1
+                },
+                "parentSpanId": "0000000000000001"
+              },
+              {
+                "traceId": "cccccccccccccccccccccccccccccccc",
+                "spanId": "0000000000000003",
+                "name": "model",
+                "kind": 1,
+                "startTimeUnixNano": "1000000000",
+                "endTimeUnixNano": "1100000000",
+                "attributes": [
+                  {
+                    "key": "openinference.span.kind",
+                    "value": {
+                      "stringValue": "LLM"
+                    }
+                  },
+                  {
+                    "key": "llm.model_name",
+                    "value": {
+                      "stringValue": "gpt-4o"
+                    }
+                  },
+                  {
+                    "key": "llm.provider",
+                    "value": {
+                      "stringValue": "openai"
+                    }
+                  },
+                  {
+                    "key": "llm.token_count.prompt",
+                    "value": {
+                      "intValue": "200"
+                    }
+                  },
+                  {
+                    "key": "llm.token_count.completion",
+                    "value": {
+                      "intValue": "30"
+                    }
+                  },
+                  {
+                    "key": "llm.token_count.prompt_details.cache_read",
+                    "value": {
+                      "intValue": "50"
+                    }
+                  },
+                  {
+                    "key": "llm.token_count.completion_details.reasoning",
+                    "value": {
+                      "intValue": "10"
+                    }
+                  },
+                  {
+                    "key": "llm.cost.total",
+                    "value": {
+                      "doubleValue": 0.004
+                    }
+                  }
+                ],
+                "status": {
+                  "code": 1
+                },
+                "parentSpanId": "0000000000000002"
+              },
+              {
+                "traceId": "cccccccccccccccccccccccccccccccc",
+                "spanId": "0000000000000004",
+                "name": "tool",
+                "kind": 1,
+                "startTimeUnixNano": "1000000000",
+                "endTimeUnixNano": "1100000000",
+                "attributes": [
+                  {
+                    "key": "openinference.span.kind",
+                    "value": {
+                      "stringValue": "TOOL"
+                    }
+                  },
+                  {
+                    "key": "tool.name",
+                    "value": {
+                      "stringValue": "search"
+                    }
+                  },
+                  {
+                    "key": "tool.id",
+                    "value": {
+                      "stringValue": "call-oi"
+                    }
+                  }
+                ],
+                "status": {
+                  "code": 1
+                },
+                "parentSpanId": "0000000000000002"
+              },
+              {
+                "traceId": "cccccccccccccccccccccccccccccccc",
+                "spanId": "0000000000000005",
+                "name": "evaluate",
+                "kind": 1,
+                "startTimeUnixNano": "1000000000",
+                "endTimeUnixNano": "1100000000",
+                "attributes": [
+                  {
+                    "key": "openinference.span.kind",
+                    "value": {
+                      "stringValue": "EVALUATOR"
+                    }
+                  },
+                  {
+                    "key": "evaluation.name",
+                    "value": {
+                      "stringValue": "relevance"
+                    }
+                  },
+                  {
+                    "key": "evaluation.score",
+                    "value": {
+                      "doubleValue": 0.8
+                    }
+                  }
+                ],
+                "status": {
+                  "code": 1
+                },
+                "parentSpanId": "0000000000000002"
+              },
+              {
+                "traceId": "cccccccccccccccccccccccccccccccc",
+                "spanId": "0000000000000006",
+                "name": "guardrail",
+                "kind": 1,
+                "startTimeUnixNano": "1000000000",
+                "endTimeUnixNano": "1100000000",
+                "attributes": [
+                  {
+                    "key": "openinference.span.kind",
+                    "value": {
+                      "stringValue": "GUARDRAIL"
+                    }
+                  }
+                ],
+                "status": {
+                  "code": 1
+                },
+                "parentSpanId": "0000000000000002"
+              },
+              {
+                "traceId": "cccccccccccccccccccccccccccccccc",
+                "spanId": "0000000000000007",
+                "name": "retriever",
+                "kind": 1,
+                "startTimeUnixNano": "1000000000",
+                "endTimeUnixNano": "1100000000",
+                "attributes": [
+                  {
+                    "key": "openinference.span.kind",
+                    "value": {
+                      "stringValue": "RETRIEVER"
+                    }
+                  }
+                ],
+                "status": {
+                  "code": 1
+                },
+                "parentSpanId": "0000000000000002"
+              },
+              {
+                "traceId": "cccccccccccccccccccccccccccccccc",
+                "spanId": "0000000000000008",
+                "name": "reranker",
+                "kind": 1,
+                "startTimeUnixNano": "1000000000",
+                "endTimeUnixNano": "1100000000",
+                "attributes": [
+                  {
+                    "key": "openinference.span.kind",
+                    "value": {
+                      "stringValue": "RERANKER"
+                    }
+                  }
+                ],
+                "status": {
+                  "code": 1
+                },
+                "parentSpanId": "0000000000000002"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

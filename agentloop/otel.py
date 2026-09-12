@@ -1,11 +1,21 @@
 from __future__ import annotations
 
+import math
+from copy import deepcopy
 from datetime import datetime, timezone
 from typing import Any
 
 from agentloop.events import AgentEvent
 from agentloop.operations import LEGACY_OPERATION_KINDS, normalize_operation_kind
 from agentloop.otel_ids import to_span_id, to_trace_id
+from agentloop.otel_semantics import (
+    INPUT_USAGE,
+    OUTPUT_USAGE,
+    evaluation_result,
+    extended_kind,
+    normalize_metadata,
+    usage_count,
+)
 from agentloop.schema import TraceValidationError
 from agentloop.tokens import PROVIDER, UNAVAILABLE
 from agentloop.tracer import AgentTrace
@@ -59,6 +69,10 @@ def traces_from_otel(
     groups: dict[str, list[dict[str, Any]]] = {}
     group_resource: dict[str, dict[str, Any]] = {}
     for resource_attrs, spans in _iter_resource_blocks(payload):
+        if not spans and _native_run_id(resource_attrs):
+            key = to_trace_id(_native_run_id(resource_attrs))
+            groups.setdefault(key, [])
+            group_resource[key] = resource_attrs
         block_trace_keys = {_trace_key(span) for span in spans}
         block_is_single_trace = len(block_trace_keys) == 1
         for span in spans:
@@ -70,9 +84,44 @@ def traces_from_otel(
                 group_resource[key] = resource_attrs if block_is_single_trace else {}
             elif not block_is_single_trace or group_resource[key] != resource_attrs:
                 group_resource[key] = {}
-    return [
+    traces = [
         _build_trace(spans, group_resource.get(key, {}), name=name) for key, spans in groups.items()
     ]
+    by_id = dict(zip(groups, traces))
+    events_by_trace = {
+        key: {event.metadata.get("otel_span_id"): event for event in trace.events}
+        for key, trace in by_id.items()
+    }
+    if isinstance(payload, dict):
+        for resource in payload.get("resourceLogs", []):
+            for scope in resource.get("scopeLogs", []):
+                for record in scope.get("logRecords", []):
+                    key = _trace_key(record)
+                    if key not in by_id:
+                        trace = AgentTrace(
+                            name=name or "otel_log_trace",
+                            run_id="run_" + key if key else "run_otel_logs",
+                            metadata={"source": "otel", "execution_data_present": False},
+                            elapsed_ms=0,
+                        )
+                        by_id[key] = trace
+                        traces.append(trace)
+                    trace = by_id[key]
+                    event = events_by_trace.get(key, {}).get(record.get("spanId"))
+                    metadata = event.metadata if event is not None else trace.metadata
+                    metadata.setdefault("otel_log_records", []).append(
+                        {
+                            "record": deepcopy(record),
+                            "resource": deepcopy(resource.get("resource", {})),
+                            "scope": deepcopy(scope.get("scope", {})),
+                        }
+                    )
+                    result = evaluation_result(
+                        _attributes(record), source=str(record.get("eventName") or "otel_log")
+                    )
+                    if result:
+                        metadata.setdefault("evaluation_results", []).append(result)
+    return traces
 
 
 def _build_trace(
@@ -80,7 +129,14 @@ def _build_trace(
 ) -> AgentTrace:
     run_id = _native_run_id(resource_attrs) or _run_id_from_spans(spans)
     trace_name = name or _native_trace_name(resource_attrs) or _trace_name(spans)
-    trace = AgentTrace(name=trace_name, run_id=run_id, metadata={"source": "otel"})
+    native_metadata = resource_attrs.get("agentloop.trace.metadata")
+    trace = AgentTrace(
+        name=trace_name,
+        run_id=run_id,
+        metadata=deepcopy(native_metadata)
+        if isinstance(native_metadata, dict)
+        else {"source": "otel"},
+    )
     for span in spans:
         trace.add_event(_event_from_span(span, run_id))
     bounds = _trace_bounds_ns(spans)
@@ -89,6 +145,12 @@ def _build_trace(
         trace.started_at = _iso_from_ns(started_ns)
         trace.ended_at = _iso_from_ns(ended_ns)
         trace.elapsed_ms = (ended_ns - started_ns) / _NANOSECONDS_PER_MILLISECOND
+    if "agentloop.trace.started_at" in resource_attrs:
+        trace.started_at = resource_attrs["agentloop.trace.started_at"]
+        trace.ended_at = resource_attrs.get("agentloop.trace.ended_at")
+        trace.elapsed_ms = resource_attrs.get("agentloop.trace.elapsed_ms")
+        if trace.elapsed_ms is not None:
+            trace.elapsed_ms = _nonnegative_timing(trace.elapsed_ms, "agentloop.trace.elapsed_ms")
     return trace
 
 
@@ -104,6 +166,10 @@ def trace_to_otel(trace: AgentTrace) -> dict[str, Any]:
                         _attribute("service.name", "agentloop"),
                         _attribute("agentloop.trace.name", trace.name),
                         _attribute("agentloop.run_id", trace.run_id),
+                        _attribute("agentloop.trace.metadata", trace.metadata),
+                        _attribute("agentloop.trace.started_at", trace.started_at),
+                        _attribute("agentloop.trace.ended_at", trace.ended_at),
+                        _attribute("agentloop.trace.elapsed_ms", trace.elapsed_ms),
                     ]
                 },
                 "scopeSpans": [
@@ -137,7 +203,15 @@ def _iter_resource_blocks(
         resource_attrs = _resource_attributes(resource_span.get("resource"))
         spans: list[dict[str, Any]] = []
         for scope_span in resource_span.get("scopeSpans", []):
-            spans.extend(scope_span.get("spans", []))
+            for span in scope_span.get("spans", []):
+                spans.append(
+                    {
+                        **span,
+                        "_resource_attributes": resource_attrs,
+                        "_scope": scope_span.get("scope", {}),
+                        "_schema_url": scope_span.get("schemaUrl", resource_span.get("schemaUrl")),
+                    }
+                )
         blocks.append((resource_attrs, spans))
     return blocks
 
@@ -185,9 +259,14 @@ def _event_from_span(span: dict[str, Any], run_id: str) -> AgentEvent:
     attrs = _attributes(span)
     operation = str(attrs.get("gen_ai.operation.name") or attrs.get("agentloop.event_type") or "")
     event_type = str(attrs.get("agentloop.event_type") or _event_type(operation, span.get("name")))
+    kind = extended_kind(attrs)
+    if kind is not None and "agentloop.event_type" not in attrs:
+        event_type = "model_call" if kind == "model" else "tool_call"
     started_ns = _int_or_none(span.get("startTimeUnixNano") or span.get("start_time_unix_nano"))
     ended_ns = _int_or_none(span.get("endTimeUnixNano") or span.get("end_time_unix_nano"))
     duration_ms = _duration_ms(started_ns, ended_ns, span)
+    if "agentloop.duration_ms" in attrs:
+        duration_ms = _nonnegative_timing(attrs["agentloop.duration_ms"], "agentloop.duration_ms")
     span_id = str(span.get("spanId") or span.get("span_id") or "")
     parent_span_id = str(span.get("parentSpanId") or span.get("parent_span_id") or "") or None
     status = _status(span)
@@ -198,7 +277,9 @@ def _event_from_span(span: dict[str, Any], run_id: str) -> AgentEvent:
         if "agentloop.operation_kind" in attrs:
             metadata["operation_kind"] = attrs["agentloop.operation_kind"]
         elif "agentloop.event_type" not in attrs:
-            metadata["operation_kind"] = _import_operation_kind(operation, event_type)
+            metadata["operation_kind"] = kind or _import_operation_kind(operation, event_type)
+    normalize_metadata(attrs, metadata)
+    _preserve_span_details(span, attrs, metadata)
 
     # Restore AgentLoop-native ids when the exporter preserved them, so repeated
     # round trips keep stable event and parent identity (issue #63). Fall back to
@@ -219,6 +300,7 @@ def _event_from_span(span: dict[str, Any], run_id: str) -> AgentEvent:
         event_type=event_type,
         name=str(
             attrs.get("gen_ai.tool.name")
+            or attrs.get("tool.name")
             or attrs.get("agentloop.name")
             or span.get("name")
             or event_type
@@ -227,13 +309,17 @@ def _event_from_span(span: dict[str, Any], run_id: str) -> AgentEvent:
         ended_at=_iso_from_ns(ended_ns),
         duration_ms=duration_ms,
         parent_id=parent_id,
-        model=_first_string(attrs, "gen_ai.request.model", "gen_ai.response.model"),
-        input_tokens=int(
-            attrs.get("gen_ai.usage.input_tokens") or attrs.get("llm.usage.prompt_tokens") or 0
+        model=_first_string(
+            attrs,
+            "gen_ai.response.model",
+            "gen_ai.request.model",
+            "llm.response.model_name",
+            "llm.model_name",
+            "llm.request.model_name",
+            "embedding.model_name",
         ),
-        output_tokens=int(
-            attrs.get("gen_ai.usage.output_tokens") or attrs.get("llm.usage.completion_tokens") or 0
-        ),
+        input_tokens=usage_count(attrs, INPUT_USAGE),
+        output_tokens=usage_count(attrs, OUTPUT_USAGE),
         token_provenance=_token_provenance(attrs),
         status=status,
         error=error,
@@ -250,23 +336,27 @@ def _span_from_event(trace: AgentTrace, event: AgentEvent) -> dict[str, Any]:
         ),
         _attribute("agentloop.event_type", event.event_type),
         _attribute("agentloop.name", event.name),
+        _attribute("agentloop.duration_ms", event.duration_ms),
         _attribute("agentloop.run_id", trace.run_id),
         _attribute("gen_ai.usage.input_tokens", event.input_tokens),
         _attribute("gen_ai.usage.output_tokens", event.output_tokens),
     ]
     if "operation_kind" in event.metadata:
         attrs.append(_attribute("agentloop.operation_kind", event.metadata["operation_kind"]))
+    preserved_fields = sorted(
+        set(event.metadata) & (_reserved_metadata_keys() - {"otel_span_id", "otel_trace_id"})
+    )
+    if preserved_fields:
+        attrs.append(_attribute("agentloop.preserved_span_fields", preserved_fields))
     if event.model:
         attrs.append(_attribute("gen_ai.request.model", event.model))
-    if event.token_provenance:
-        attrs.append(_attribute("agentloop.token_provenance", event.token_provenance))
+    attrs.append(_attribute("agentloop.token_provenance", event.token_provenance))
     for key, value in sorted((event.metadata or {}).items()):
         if key in _reserved_metadata_keys():
             # Transport diagnostics (otel_span_id/otel_trace_id) are re-derived on
             # import; re-exporting them would let user metadata grow each round trip.
             continue
-        if isinstance(value, str | int | float | bool):
-            attrs.append(_attribute(f"{_METADATA_PREFIX}{key}", value))
+        attrs.append(_attribute(f"{_METADATA_PREFIX}{key}", value))
 
     # Keep the original native ids in attributes so a remapped (non-hex/custom)
     # id stays diagnosable; the run id is already carried as agentloop.run_id.
@@ -278,7 +368,7 @@ def _span_from_event(trace: AgentTrace, event: AgentEvent) -> dict[str, Any]:
         "traceId": to_trace_id(trace.run_id),
         "spanId": to_span_id(event.event_id),
         "name": event.name,
-        "kind": "SPAN_KIND_INTERNAL",
+        "kind": event.metadata.get("otel_span_kind", "SPAN_KIND_INTERNAL"),
         "startTimeUnixNano": str(start_ns),
         "endTimeUnixNano": str(end_ns),
         "attributes": attrs,
@@ -286,6 +376,16 @@ def _span_from_event(trace: AgentTrace, event: AgentEvent) -> dict[str, Any]:
     }
     if event.parent_id:
         span["parentSpanId"] = to_span_id(event.parent_id)
+    if event.error:
+        span["status"]["message"] = event.error
+    for source, target in (
+        ("otel_links", "links"),
+        ("otel_events", "events"),
+        ("otel_trace_state", "traceState"),
+        ("otel_span_flags", "flags"),
+    ):
+        if source in event.metadata:
+            span[target] = deepcopy(event.metadata[source])
     return span
 
 
@@ -302,7 +402,9 @@ def _user_metadata(attrs: dict[str, Any], span: dict[str, Any], span_id: str) ->
     for key, value in attrs.items():
         if key.startswith(_METADATA_PREFIX):
             decoded[key[len(_METADATA_PREFIX) :]] = value
-        elif key.startswith("gen_ai.usage."):
+        elif "agentloop.event_type" not in attrs and key == "gen_ai.operation.name":
+            passthrough[key] = value
+        elif "agentloop.event_type" in attrs and key in _USAGE_ATTRIBUTE_KEYS:
             continue
         elif key in _direct_attribute_keys() or key in _transport_attribute_keys():
             continue
@@ -316,16 +418,59 @@ def _user_metadata(attrs: dict[str, Any], span: dict[str, Any], span_id: str) ->
     return metadata
 
 
+def _preserve_span_details(
+    span: dict[str, Any], attrs: dict[str, Any], metadata: dict[str, Any]
+) -> None:
+    native = "agentloop.event_type" in attrs
+    preserved = attrs.get("agentloop.preserved_span_fields", [])
+    for source, target in (
+        ("links", "otel_links"),
+        ("events", "otel_events"),
+        ("traceState", "otel_trace_state"),
+        ("flags", "otel_span_flags"),
+        ("kind", "otel_span_kind"),
+    ):
+        if source in span and (not native or target in preserved):
+            metadata.setdefault(target, deepcopy(span[source]))
+    if not native:
+        resource = span.get("_resource_attributes")
+        if resource:
+            metadata.setdefault("otel_resource_attributes", deepcopy(resource))
+        if span.get("_scope"):
+            metadata.setdefault("otel_scope", deepcopy(span["_scope"]))
+        if span.get("_schema_url"):
+            metadata.setdefault("otel_schema_url", span["_schema_url"])
+    evaluations = []
+    result = evaluation_result(attrs, source="span_attributes")
+    if result:
+        evaluations.append(result)
+    for event in span.get("events", []):
+        result = evaluation_result(_attributes(event), source=str(event.get("name", "span_event")))
+        if result:
+            evaluations.append(result)
+    if evaluations:
+        metadata.setdefault("evaluation_results", evaluations)
+
+
 def _transport_attribute_keys() -> set[str]:
     return {
         "agentloop.run_id",
         "agentloop.native_event_id",
         "agentloop.native_parent_id",
+        "agentloop.preserved_span_fields",
     }
 
 
 def _reserved_metadata_keys() -> set[str]:
-    return {"otel_span_id", "otel_trace_id"}
+    return {
+        "otel_span_id",
+        "otel_trace_id",
+        "otel_links",
+        "otel_events",
+        "otel_trace_state",
+        "otel_span_flags",
+        "otel_span_kind",
+    }
 
 
 def _event_type(operation: str, name: Any) -> str:
@@ -394,25 +539,63 @@ def _attributes(span: dict[str, Any]) -> dict[str, Any]:
 def _attribute_value(value: dict[str, Any]) -> Any:
     if not isinstance(value, dict):
         return value
-    for key in ("stringValue", "intValue", "doubleValue", "boolValue"):
+    if "intValue" in value:
+        raw = value["intValue"]
+        if isinstance(raw, bool) or not isinstance(raw, int | str):
+            raise TraceValidationError("intValue", "must be an integer or decimal integer string")
+        try:
+            return int(raw)
+        except ValueError as exc:
+            raise TraceValidationError(
+                "intValue", "must be an integer or decimal integer string"
+            ) from exc
+    for key in ("stringValue", "doubleValue", "boolValue"):
         if key in value:
             return value[key]
     if "arrayValue" in value:
         values = value.get("arrayValue", {}).get("values", [])
         return [_attribute_value(item) for item in values]
+    if "kvlistValue" in value:
+        return {
+            item["key"]: _attribute_value(item.get("value", {}))
+            for item in value["kvlistValue"].get("values", [])
+        }
+    if "bytesValue" in value:
+        return {"otel_bytes_base64": value["bytesValue"]}
+    if value:
+        return {"otel_unrecognized_value": deepcopy(value)}
     return None
 
 
 def _attribute(key: str, value: Any) -> dict[str, Any]:
-    if isinstance(value, bool):
+    if value is None:
+        encoded = {}
+    elif isinstance(value, dict):
+        encoded = {
+            "kvlistValue": {"values": [_attribute(str(name), item) for name, item in value.items()]}
+        }
+    elif isinstance(value, list):
+        encoded = {"arrayValue": {"values": [_attribute("", item)["value"] for item in value]}}
+    elif isinstance(value, bool):
         encoded = {"boolValue": value}
     elif isinstance(value, int):
-        encoded = {"intValue": value}
+        encoded = {"intValue": str(value)}
     elif isinstance(value, float):
         encoded = {"doubleValue": value}
     else:
         encoded = {"stringValue": str(value)}
     return {"key": key, "value": encoded}
+
+
+def _nonnegative_timing(value: Any, field: str) -> float:
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, int | float)
+        or not math.isfinite(value)
+        or value < 0
+    ):
+        raise TraceValidationError(field, "must be a finite nonnegative number")
+    return float(value)
 
 
 def _duration_ms(started_ns: int | None, ended_ns: int | None, span: dict[str, Any]) -> float:
@@ -461,7 +644,9 @@ def _first_string(attrs: dict[str, Any], *keys: str) -> str | None:
 
 def _status(span: dict[str, Any]) -> str:
     status = span.get("status", {})
-    if isinstance(status, dict) and str(status.get("code", "")).endswith("ERROR"):
+    if isinstance(status, dict) and (
+        status.get("code") in (2, "2") or str(status.get("code", "")).endswith("ERROR")
+    ):
         return "error"
     return "ok"
 
@@ -469,19 +654,18 @@ def _status(span: dict[str, Any]) -> str:
 def _error(span: dict[str, Any]) -> str | None:
     status = span.get("status", {})
     if isinstance(status, dict):
-        return status.get("message")
+        if status.get("message"):
+            return str(status["message"])
+    for event in span.get("events", []):
+        if event.get("name") == "exception":
+            return _first_string(_attributes(event), "exception.message", "exception.type")
     return None
 
 
-_USAGE_ATTRIBUTE_KEYS = (
-    "gen_ai.usage.input_tokens",
-    "gen_ai.usage.output_tokens",
-    "llm.usage.prompt_tokens",
-    "llm.usage.completion_tokens",
-)
+_USAGE_ATTRIBUTE_KEYS = INPUT_USAGE + OUTPUT_USAGE
 
 
-def _token_provenance(attrs: dict[str, Any]) -> str:
+def _token_provenance(attrs: dict[str, Any]) -> str | None:
     """Resolve a span's token provenance on import.
 
     An AgentLoop-produced span carries its native provenance verbatim, so a round
@@ -493,7 +677,7 @@ def _token_provenance(attrs: dict[str, Any]) -> str:
     """
 
     native = attrs.get("agentloop.token_provenance")
-    if isinstance(native, str) and native:
+    if "agentloop.token_provenance" in attrs and (native is None or isinstance(native, str)):
         return native
     return PROVIDER if any(key in attrs for key in _USAGE_ATTRIBUTE_KEYS) else UNAVAILABLE
 
@@ -503,8 +687,10 @@ def _direct_attribute_keys() -> set[str]:
         "agentloop.event_type",
         "agentloop.operation_kind",
         "agentloop.name",
+        "agentloop.duration_ms",
         "agentloop.token_provenance",
         "agentloop.trace.name",
+        "agentloop.trace.metadata",
         "gen_ai.operation.name",
         "gen_ai.request.model",
         "gen_ai.response.model",
