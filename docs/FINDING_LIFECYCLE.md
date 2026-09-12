@@ -2,9 +2,9 @@
 
 AgentLoop stores diagnosis findings so operators can review recurring optimization work without losing decisions when a trace is analyzed again.
 
-Reading a diagnosis with `GET /traces/{run_id}/diagnosis` (or the deprecated
-`/diagnose` alias) does not persist findings or change their lifecycle. Use
-`POST /traces/{run_id}/diagnosis`, `AgentLoopClient.save_diagnosis(run_id)`, or
+Reading a diagnosis with `GET /v1/traces/{run_id}/diagnosis` (or the deprecated
+`GET /traces/{run_id}/diagnose` alias) does not persist findings or change their lifecycle. Use
+`POST /v1/traces/{run_id}/diagnosis`, `AgentLoopClient.save_diagnosis(run_id)`, or
 `agentloop remote-diagnose RUN_ID` to explicitly recompute and persist findings.
 Trace ingestion also persists initial findings. See the
 [production guide](PRODUCTION.md#diagnosis-reads-and-writes) for migration details.

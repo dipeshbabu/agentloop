@@ -20,7 +20,7 @@ class AgentLoopClientError(RuntimeError):
 
 @dataclass
 class AgentLoopClient:
-    """Tiny dependency-free client for sending traces to an AgentLoop API server."""
+    """Dependency-free API v1 client; base_url is the origin or mount path, without /v1."""
 
     base_url: str = "http://127.0.0.1:8000"
     api_key: str | None = None
@@ -87,7 +87,7 @@ class AgentLoopClient:
 
     def get_optimization_plan(self, run_id: str) -> dict[str, Any]:
         encoded_run_id = urllib.parse.quote(run_id, safe="")
-        return self._request("GET", f"/traces/{encoded_run_id}/optimize")
+        return self._request("GET", f"/traces/{encoded_run_id}/optimization")
 
     def get_diagnosis(self, run_id: str) -> dict[str, Any]:
         """Compute a diagnosis without changing the server's stored findings."""
@@ -152,7 +152,7 @@ class AgentLoopClient:
     ) -> dict[str, Any]:
         return self._request(
             "POST",
-            "/quality-report",
+            "/quality-reports",
             {
                 "fixtures": fixtures,
                 "baseline_run_id": baseline_run_id,
@@ -200,7 +200,7 @@ class AgentLoopClient:
         parsed_base_url = urllib.parse.urlsplit(self.base_url)
         if parsed_base_url.scheme not in {"http", "https"} or not parsed_base_url.netloc:
             raise AgentLoopClientError("AgentLoop API URL must use http:// or https://")
-        url = self.base_url.rstrip("/") + path
+        url = self.base_url.rstrip("/") + "/v1" + path
         body = None if payload is None else json.dumps(payload).encode("utf-8")
         headers = {"Accept": "application/json"}
         if payload is not None:
