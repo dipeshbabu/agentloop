@@ -366,6 +366,22 @@ def test_findings_filter_by_project_and_status(store):
 # --- finding lifecycle (#31) ---------------------------------------------
 
 
+def test_persisted_estimator_snapshot_survives_future_rule_changes(store, monkeypatch):
+    from agentloop.entrypoint import _quickstart_trace
+    from agentloop.estimates import ESTIMATORS
+    from agentloop.findings import build_diagnosis
+
+    trace = _quickstart_trace()
+    expected = build_diagnosis(trace)
+    store.save_trace(trace, project_id="historical")
+    monkeypatch.setitem(ESTIMATORS, "parallelize_tools", None)
+    stored = store.list_findings(project_id="historical")
+    by_id = {row["finding_id"]: row["finding"] for row in stored}
+    for finding in expected["findings"]:
+        assert by_id[finding["finding_id"]]["estimate"] == finding["estimate"]
+    assert store.list_findings(project_id="another") == []
+
+
 def test_incomplete_diagnosis_does_not_supersede_historical_findings(store):
     run_id = _seed_trace(store, "proj_a")
     store.save_diagnosis(

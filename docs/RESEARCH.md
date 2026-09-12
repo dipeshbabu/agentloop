@@ -101,6 +101,12 @@ Keep these categories separate in papers and reports.
 
 Optimization cards are useful hypotheses for interventions. They are not experimental results until the proposed change is implemented and measured on a candidate condition.
 
+Every built-in card and finding records an estimator ID/version, formula,
+coefficients, observed inputs, and assumptions. All current models explicitly
+report `method: "heuristic"` and `calibrated: false`. Preserve the full `estimate`
+object alongside exported results to interpret a prediction after a rule changes.
+See [Estimator provenance](ESTIMATORS.md) for the models and historical-record policy.
+
 ## Token measurements
 
 Not every token number in a trace is a token count. When a caller supplies text
