@@ -1,0 +1,50 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+<title>empty — AgentLoop analysis</title><style>
+:root{color-scheme:light;--ink:#172c37;--muted:#526675;--line:#d6e1e6;--accent:#086d79;--paper:#f4f7f8}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.55 system-ui,sans-serif}
+main{max-width:1160px;margin:auto;padding:36px 24px 80px}header{border-bottom:3px solid var(--accent);padding-bottom:24px}
+h1{font-size:2rem;line-height:1.2;overflow-wrap:anywhere}h2{margin-top:38px}h3{margin:0 0 12px}p{max-width:90ch}
+a{color:#075b86}a:focus-visible,summary:focus-visible{outline:3px solid #b76308;outline-offset:4px}
+nav{display:flex;flex-wrap:wrap;gap:18px;margin-top:18px}.eyebrow{letter-spacing:.09em;text-transform:uppercase;font-size:.8rem;color:var(--accent);font-weight:700}
+.muted{color:var(--muted)}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+.metric,article,details.panel{background:white;border:1px solid var(--line);border-radius:9px;padding:18px}.metric strong{display:block;font-size:1.6rem}
+.badge{display:inline-block;background:#e4eef2;padding:2px 8px;border-radius:4px;font-size:.8rem;margin-right:6px}
+.prediction{border-left:4px solid #8a6200}.notice{padding:12px 16px;background:#fff2d8;border-left:4px solid #9c6800}
+.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;background:white}th,td{text-align:left;padding:11px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:#eaf0f3}caption{text-align:left;color:var(--muted);padding:8px 0}code,pre{font: .88rem/1.5 ui-monospace,monospace}code{overflow-wrap:anywhere}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#edf2f4;padding:14px;border-radius:6px}summary{cursor:pointer;font-weight:600}details{margin:12px 0}
+article{margin:14px 0;scroll-margin-top:20px}tr:target{background:#fff2d8}.track{min-width:180px;background:#e8eff2;height:12px;border-radius:6px}.bar{height:12px;background:var(--accent);border-radius:6px}
+dl{display:grid;grid-template-columns:minmax(140px,1fr) 3fr;gap:7px 16px}dt{color:var(--muted)}dd{margin:0;overflow-wrap:anywhere}
+footer{margin-top:45px;padding-top:16px;border-top:1px solid var(--line);font-size:.85rem;color:var(--muted)}
+@media(max-width:600px){main{padding:20px 12px}h1{font-size:1.65rem}dl{display:block}dd{margin-bottom:10px}}
+@media print{body{background:white}main{max-width:none;padding:0}nav{display:none}article,.metric{break-inside:avoid}a{color:inherit}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style></head><body><main>
+<header><div class="eyebrow">AgentLoop · analysis artifact</div><h1>empty</h1>
+<p class="muted">Run <code>empty-run</code></p>
+<nav aria-label="Report sections"><a href="#overview">Overview</a><a href="#timeline">Timeline</a><a href="#findings">Findings</a><a href="#comparison">Comparison</a><a href="#metadata">Metadata</a></nav></header>
+<section id="overview"><h2>Recorded execution</h2>
+<div class="cards"><div class="metric"><span>Elapsed runtime</span><strong>0.000s</strong></div><div class="metric"><span>Recorded spans</span><strong>0</strong></div><div class="metric"><span>Input / output tokens</span><strong>0 / 0</strong></div><div class="metric"><span>Cost from supplied pricing/usage</span><strong>$0.0000</strong></div></div>
+<dl><dt>Token basis</dt><dd>empty</dd><dt>Cost completeness</dt><dd>empty</dd><dt>Cumulative span time</dt><dd>0.000s; overlapping/nested work may exceed elapsed runtime</dd></dl>
+</section><section id="timeline"><h2>Execution timeline</h2><div class="table-wrap"><table><caption>Recorded span timing and parent structure. Bars show relative timestamps, not predicted savings.</caption><thead><tr><th scope="col">Span</th><th scope="col">Operation</th><th scope="col">Duration</th><th scope="col">Relative timing</th><th scope="col">Parent</th></tr></thead><tbody></tbody></table></div><p>No execution spans.</p></section>
+<section id="findings"><h2>Predicted improvements</h2><p>Optimizer savings are uncalibrated hypotheses. Validate a candidate run and its quality before accepting a change.</p>
+<article class="prediction"><h3>Predicted outcome</h3><dl><dt>Estimated runtime</dt><dd>0.000s</dd><dt>Estimated latency reduction</dt><dd>0.00%</dd><dt>Estimated cost</dt><dd>$0.0000</dd></dl><details><summary>Compatible finding selection</summary><p>Exact selection describes the chosen combination; it does not calibrate the savings predictions.</p><pre>{
+  &quot;card_count&quot;: 0,
+  &quot;effective_cost_savings_usd&quot;: 0.0,
+  &quot;effective_latency_savings_ms&quot;: 0.0,
+  &quot;exact_component_limit&quot;: 24,
+  &quot;raw_cost_savings_usd&quot;: 0,
+  &quot;raw_latency_savings_ms&quot;: 0,
+  &quot;rule&quot;: &quot;cards sharing affected spans are mutually exclusive alternatives; totals come from the proven-optimal compatible (span-disjoint) subset that maximizes latency savings, breaking ties by cost savings, capped at current runtime/cost&quot;,
+  &quot;selected_card_indexes&quot;: [],
+  &quot;selection_algorithm&quot;: &quot;exact_branch_and_bound&quot;,
+  &quot;selection_optimal&quot;: true
+}</pre></details></article>
+<p>No optimization findings were detected.</p>
+</section><section id="comparison"><h2>Observed baseline / candidate comparison</h2>
+<p>No baseline was supplied. Predicted improvements above have not been verified by this report.</p>
+</section><section id="metadata"><h2>Trace and research metadata</h2><p class="notice">Metadata may contain private text or identifiers. Review it before sharing this file.</p><pre>{}</pre>
+<p>Raw event text and full event metadata are omitted. Finding evidence and trace metadata remain included.</p>
+</section><footer>Generated by AgentLoop. This file contains embedded styles and requires no network connection.</footer></main></body></html>

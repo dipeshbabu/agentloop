@@ -49,6 +49,15 @@ agentloop analyze runs/my_agent.json
 
 This one command combines the existing report, diagnosis, and optimization analysis and prints the most useful findings first.
 
+For an offline report you can open in a browser or attach to a review:
+
+```bash
+agentloop analyze runs/my_agent.json --html runs/my_agent_report.html
+```
+
+See [HTML reports](HTML_REPORTS.md) for baseline comparisons, content controls,
+and CI artifacts.
+
 To retain the complete structured output:
 
 ```bash
