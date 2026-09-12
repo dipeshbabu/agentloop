@@ -202,6 +202,10 @@ Dependabot handles routine uv, pre-commit, action, and container updates.
 
 ## Validate efficiently
 
+Optimization detectors belong in the [canonical finding registry](docs/FINDING_RULES.md).
+Add focused behavior tests and retain stable rule IDs; reports and optimization
+plans must consume the same candidates instead of introducing separate thresholds.
+
 Start with the smallest check that can disprove the change, then expand before
 final review.
 

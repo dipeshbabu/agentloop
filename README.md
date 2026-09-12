@@ -91,6 +91,10 @@ Start with `analyze`. It combines metrics, findings, and proposed optimizations
 in one report. AgentLoop looks for patterns such as repeated context, retry loops,
 repeated model calls, large steps, and recurring tool calls.
 
+On `main`, reports and optimization use the same [versioned finding rules](docs/FINDING_RULES.md).
+If a rule fails, its diagnostics remain visible and analysis is marked incomplete.
+CI requires complete analysis before recommending a merge.
+
 Treat a suggestion as a change to investigate. For example, repeated tool names
 alone do not establish that calls are safe to run concurrently. The development
 version on `main` exposes the evidence and assumptions behind

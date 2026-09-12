@@ -5,7 +5,9 @@ from collections.abc import Mapping
 from typing import Any
 
 from agentloop.costs import CostEstimate, PricingTable, estimate_cost, load_pricing_table
-from agentloop.parallelism import PARALLELISM_NOTICE, parallelization_candidates
+from agentloop.graph import ExecutionGraph
+from agentloop.parallelism import parallelization_candidates
+from agentloop.rules import AnalysisContext, run_rules
 from agentloop.timing import cumulative_span_time_ms, elapsed_runtime_ms
 from agentloop.tokens import (
     describe_token_status,
@@ -27,7 +29,7 @@ def build_report(trace: Any) -> dict[str, Any]:
     cost = cost_breakdown(model_events)
     tokens = token_breakdown(model_events)
 
-    return {
+    report = {
         "run_id": trace.run_id,
         "name": trace.name,
         "event_count": len(events),
@@ -59,9 +61,40 @@ def build_report(trace: Any) -> dict[str, Any]:
         "repeated_context_tokens": repeated["repeated_context_tokens"],
         "repeated_context_ratio": repeated["repeated_context_ratio"],
         "parallelism_opportunities": parallel,
-        "recommendations": build_recommendations(model_events, retry_events, repeated, parallel),
+        "recommendations": [],
         "events": [e.to_dict() for e in events],
     }
+    candidates, errors = run_rules(
+        AnalysisContext(report=report, graph=ExecutionGraph.from_trace(trace))
+    )
+    report["finding_candidates"] = [candidate.to_dict() for candidate in candidates]
+    report["rule_errors"] = errors
+    report["analysis_complete"] = not errors
+    report["recommendations"] = [
+        {
+            "title": item.title,
+            "description": item.why,
+            "rule_id": item.rule_id,
+            "rule_version": item.rule_version,
+        }
+        for item in candidates
+    ]
+    if errors:
+        report["recommendations"].append(
+            {
+                "title": "Analysis incomplete",
+                "description": "Some finding rules failed: "
+                + ", ".join(item["rule_id"] for item in errors),
+            }
+        )
+    if not report["recommendations"]:
+        report["recommendations"] = [
+            {
+                "title": "No major pattern detected",
+                "description": "Collect more traces for stronger recommendations.",
+            }
+        ]
+    return report
 
 
 def _event_cost_estimate(event: Any, pricing: PricingTable) -> CostEstimate:
@@ -234,49 +267,4 @@ def repeated_context_stats(model_events: list[Any]) -> dict[str, Any]:
 def parallelism_opportunities(tool_events: list[Any]) -> list[dict[str, Any]]:
     return [
         {"tool_name": group["name"], **group} for group in parallelization_candidates(tool_events)
-    ]
-
-
-def build_recommendations(
-    model_events: list[Any],
-    retry_events: list[Any],
-    repeated: dict[str, Any],
-    parallel: list[dict[str, Any]],
-) -> list[dict[str, str]]:
-    recs = []
-    if repeated["repeated_context_ratio"] >= 0.10:
-        recs.append(
-            {
-                "title": "Cache repeated context",
-                "description": "Stable instructions appear across multiple model calls. Use cached prefixes or reusable summaries.",
-            }
-        )
-    if parallel:
-        recs.append(
-            {
-                "title": "Review tool-call parallelization",
-                "description": PARALLELISM_NOTICE,
-            }
-        )
-    if retry_events:
-        recs.append(
-            {
-                "title": "Use structured outputs",
-                "description": "Retries were recorded. Add schema validation or smaller repair prompts.",
-            }
-        )
-    if model_events:
-        largest = max(model_events, key=lambda e: e.input_tokens + e.output_tokens)
-        if largest.total_tokens >= 4000:
-            recs.append(
-                {
-                    "title": "Compress largest model step",
-                    "description": f"The {largest.name} step used {largest.total_tokens} tokens. Consider staged summarization.",
-                }
-            )
-    return recs or [
-        {
-            "title": "No major pattern detected",
-            "description": "Collect more traces for stronger recommendations.",
-        }
     ]

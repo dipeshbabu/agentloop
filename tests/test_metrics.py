@@ -101,7 +101,7 @@ def test_repeated_context_recommendation() -> None:
             pass
 
     titles = [rec["title"] for rec in trace.report()["recommendations"]]
-    assert "Cache repeated context" in titles
+    assert "Cache repeated prompt/context prefix" in titles
 
 
 def test_cost_status_reflects_completeness() -> None:

@@ -132,6 +132,8 @@ def build_patch_plan(
         },
         "patch_plans": [plan.to_dict() for plan in plans],
         "unsupported_findings": unsupported,
+        "rule_errors": diagnosis.get("rule_errors", []),
+        "analysis_complete": diagnosis.get("analysis_complete", True),
     }
 
 
@@ -152,6 +154,13 @@ def patch_plan_to_markdown(plan: dict[str, Any]) -> str:
         "",
     ]
     patch_plans = plan.get("patch_plans", [])
+    if plan.get("rule_errors"):
+        lines.extend(["Analysis incomplete; some finding rules failed:", ""])
+        for error in plan["rule_errors"]:
+            lines.append(
+                f"- {markdown_code_span(error['rule_id'])}: {markdown_text(error['message'])}"
+            )
+        lines.append("")
     if not patch_plans:
         lines.append("No supported patch plans were generated.")
     for item in patch_plans:
