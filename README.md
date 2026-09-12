@@ -214,6 +214,7 @@ Reports say whether the chosen combination is exact or approximate. See
 For individual predictions, see [Estimator provenance](docs/ESTIMATORS.md).
 The [intervention ledger](docs/INTERVENTIONS.md) links finding predictions to
 measured candidate results and preserves quality checks in an exportable record.
+For experiments across tasks and repetitions, use [paired study summaries](docs/STUDIES.md).
 
 Keep your Markdown renderer's safe mode or HTML sanitizer enabled when viewing
 reports from untrusted traces.

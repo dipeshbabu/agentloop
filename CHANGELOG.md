@@ -13,6 +13,11 @@ Project history from before the first public release remains available in Git.
   replay export, CLI/API creation and retrieval, and project-scoped idempotent
   SQLite/Postgres persistence are available through an additive migration.
 
+- Added dependency-free paired study summaries with a versioned JSON manifest,
+  condition statistics, explicit unmatched/ambiguous pairs, cost completeness,
+  and optional seeded bootstrap intervals. JSON/Markdown exports and a
+  deterministic offline example support repeated experiments.
+
 - Every built-in optimization estimate now includes versioned provenance,
   explicit coefficients, input snapshots, and assumptions. Human reports mark
   predictions as uncalibrated; persisted findings retain their estimator metadata.
