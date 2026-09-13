@@ -1,99 +1,58 @@
 # AgentLoop roadmap
 
-AgentLoop's goal is to make AI agent workflows measurable and optimizable: ingest
-an execution trace, identify waste, propose a focused workflow change, and prove
-the result against performance and quality gates.
+AgentLoop connects recorded execution, optimization findings, applied
+interventions, and measured outcomes. Core analysis stays local and framework
+neutral. This roadmap describes work on `main`; it does not announce a release
+or change the published package version. See [Unreleased changes](../CHANGELOG.md#unreleased).
 
-This roadmap communicates project direction rather than promising release dates.
-Priorities may change as maintainers learn from issues, integrations, and real
-workloads. Open an issue before starting a substantial roadmap item so its scope
-and compatibility impact can be agreed on first.
+## Completed evidence workflow
 
-## Current foundation
+The [0.7 evidence roadmap](https://github.com/dipeshbabu/agentloop/issues/145)
+is implemented on `main`:
 
-The repository already provides:
+| Area | Available behavior |
+| --- | --- |
+| Measurement correctness | Token provenance, qualified parallelization evidence, validated storage pagination, read-only diagnosis GETs, precise scorer names, and explicit trace ownership |
+| Canonical findings | One versioned finding registry used by reports, plans, diagnosis, dashboard, and CI, with explicit incomplete-analysis diagnostics |
+| Estimator provenance | Versioned formulas, coefficients, assumptions, input snapshots, and uncalibrated labels retained in persisted findings |
+| Operation semantics | Framework-neutral operation kinds alongside legacy event categories |
+| Intervention evidence | Immutable project-scoped records linking original findings to baseline/candidate outcomes and quality/gate results |
+| Repeated studies | Deterministic pairing, explicit unmatched cases, condition/paired statistics, cost completeness, and optional seeded intervals |
+| Interoperability | Pinned GenAI/OpenInference/MCP fixtures, preserved telemetry evidence, and a shared integration conformance harness |
+| Sharing and compatibility | Single-file offline HTML reports and an API v1 namespace with documented pre-1.0 aliases |
+| CI evidence | Explicit separation of synthetic repository self-tests from supplied application trace comparisons |
 
-- native tracing for model, tool, retry, and workflow events;
-- adapters for OpenAI, OpenAI Agents, LangGraph, CrewAI, Vercel AI SDK events,
-  and OpenTelemetry-style traces;
-- evidence-backed diagnosis and optimization findings;
-- dry-run patch plans tied to replay acceptance criteria;
-- before-and-after replay, schema, quality, cost, latency, and retry gates;
-- CLI, local dashboard, SQLite, Postgres, and HTTP API surfaces; and
-- pull-request reports and GitHub Actions performance gates.
+Run the [complete artifact workflow](EVIDENCE_WORKFLOW.md) to see how the outputs
+answer the roadmap's nine evidence questions. The example includes successful,
+failed-quality, and unknown-cost cases. Its fixture outcomes demonstrate the
+contracts and are not empirical performance claims.
 
-## Near-term priorities
+## Future work to scope separately
 
-### Trace interoperability
+- Calibrate estimator families using accumulated real intervention evidence and
+  suitable research designs.
+- Track changing telemetry conventions and expand SDK/framework conformance
+  coverage with pinned, reproducible inputs.
+- Consider splitting storage behind a compatibility facade and organizing
+  CLI/dashboard features without changing their contracts.
+- Refine impact scenarios, retention, and operational tooling based on concrete
+  workload requirements.
+- Add constrained rewrite guidance where recorded evidence and task-specific
+  quality gates can validate it.
 
-- Track stable OpenTelemetry GenAI conventions as they evolve.
-- Preserve unknown fields during import and export where practical.
-- Add conformance fixtures for supported framework and SDK versions.
-- Improve diagnostics for incomplete, malformed, or unsupported traces.
+These directions need focused issues and compatibility decisions before
+implementation. They are not implicit additions to the completed evidence backlog.
 
-### Optimization evidence
+## Boundaries
 
-- Improve confidence explanations and savings estimates.
-- Add deterministic findings for context growth, runaway loops, and tool
-  oscillation.
-- Make recommendation ordering stable across storage backends.
-- Expand regression fixtures for boundary values and ambiguous execution graphs.
+AgentLoop does not replace dataset hosting, annotation assignment, prompt
+management, model-training tools, general observability, or experiment-specific
+statistical analysis. It does not require autonomous source-code editing or a
+hosted service. Heuristic optimizer estimates remain hypotheses until an applied
+change is measured, and a passing fixture does not establish real-world value.
 
-### Research and reproducibility
+## Proposing work
 
-- Keep experiment metadata portable in the public trace schema.
-- Add task-focused examples for paired interventions and agent-architecture comparisons.
-- Separate measured trace evidence from optimizer estimates in research-facing reports.
-- Add optional batch aggregation helpers without choosing a statistical test on behalf of the study.
-- Publish reproducibility guidance for task IDs, conditions, seeds, model/config versions, source commits, and evaluation fixtures.
-
-### Safe rewrite assistance
-
-- Keep generated patch plans reviewable and evidence-linked.
-- Expand constrained rewrite templates only when replay gates can validate them.
-- Add framework-specific guidance without making core analysis depend on those
-  frameworks.
-- Avoid automatic source modification where confidence or quality risk is too
-  high.
-
-### Reliability and self-hosting
-
-- Strengthen Postgres parity, migrations, backup guidance, and retention tools.
-- Add deployment observability and clearer readiness diagnostics.
-- Continue hardening project isolation and API authorization boundaries.
-- Publish reproducible container and upgrade procedures.
-
-### Contributor experience
-
-- Grow small, well-scoped issues suitable for first-time contributors.
-- Add architecture decision records for consequential compatibility choices.
-- Improve API examples and task-focused documentation.
-- Keep setup and checks reproducible through uv and pre-commit.
-
-## Non-goals
-
-AgentLoop does not currently aim to replace a general-purpose observability,
-prompt-management, or evaluation platform. Core tracing and analysis must remain
-usable locally without a hosted service or live model provider. Broad autonomous
-code editing is also out of scope until changes can be constrained, reviewed,
-and verified reliably.
-
-AgentLoop also does not aim to replace model-training frameworks, mechanistic
-interpretability tooling, benchmark dataset management, or experiment-specific
-statistical analysis. Research workflows can use AgentLoop as the execution and
-intervention-evidence layer while keeping those responsibilities in dedicated
-tools.
-
-## Proposing roadmap work
-
-Use the feature-request issue form and include:
-
-- the workflow or compatibility problem;
-- a representative synthetic trace or minimal reproduction;
-- the proposed public API or data-model impact;
-- expected performance or quality evidence; and
-- a testing and migration approach.
-
-Roadmap work follows the same review, compatibility, and changelog requirements
-as other contributions. See [CONTRIBUTING.md](../CONTRIBUTING.md) for the full
-process.
+Use the feature-request form with a concrete workflow problem, a synthetic trace
+or reproduction, expected evidence, compatibility effects, and validation plan.
+Follow [CONTRIBUTING.md](../CONTRIBUTING.md) for scope, checks, and review.
