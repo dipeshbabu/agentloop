@@ -3,7 +3,7 @@ from __future__ import annotations
 import hmac
 from typing import Any
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -33,7 +33,15 @@ from agentloop.tracer import AgentTrace
 from agentloop.value import build_value_report
 from agentloop.version import __version__
 
-app = FastAPI(title="AgentLoop API", version=__version__)
+app = FastAPI(
+    title="AgentLoop API",
+    version=__version__,
+    description="API v1 is served under /v1. The info version is the server package version. "
+    "Unversioned application routes are deprecated aliases retained throughout 0.x; "
+    "their earliest removal is 1.0 with release notice. Health/readiness aliases remain supported.",
+)
+versioned = APIRouter(tags=["API v1"])
+legacy = APIRouter(deprecated=True, tags=["Deprecated aliases"])
 
 _cors_origins = get_cors_origins()
 if _cors_origins:
@@ -129,18 +137,21 @@ def resolve_admin(x_agentloop_admin_key: str | None = Header(default=None)) -> N
         )
 
 
+@versioned.get("/health")
 @app.get("/health")
 def health() -> dict[str, str | bool]:
     return {"status": "ok", "version": __version__, "auth_required": require_api_key()}
 
 
+@versioned.get("/readyz")
 @app.get("/readyz")
 def readyz(db: TraceStore = Depends(store)) -> dict[str, str]:
     db.usage_summary(project_id="default")
     return {"status": "ready"}
 
 
-@app.post("/api-keys")
+@versioned.post("/api-keys")
+@legacy.post("/api-keys")
 def create_api_key(
     payload: CreateApiKeyPayload,
     _: None = Depends(resolve_admin),
@@ -149,7 +160,8 @@ def create_api_key(
     return db.create_api_key(project_id=payload.project_id, name=payload.name)
 
 
-@app.post("/traces")
+@versioned.post("/traces")
+@legacy.post("/traces")
 def ingest_trace(
     payload: TracePayload,
     project_id: str = Depends(resolve_project),
@@ -178,7 +190,8 @@ def _selected_project(project_id_filter: str | None, authenticated_project: str)
     return project_id_filter or authenticated_project
 
 
-@app.get("/traces")
+@versioned.get("/traces")
+@legacy.get("/traces")
 def list_traces(
     project_id_filter: str | None = Query(default=None, alias="project_id"),
     page_size: int | None = Query(default=None, ge=1, le=MAX_PAGE_SIZE),
@@ -220,7 +233,8 @@ def _load_trace_or_404(db: TraceStore, run_id: str, project_id: str) -> AgentTra
     return trace
 
 
-@app.get("/traces/{run_id}/report")
+@versioned.get("/traces/{run_id}/report")
+@legacy.get("/traces/{run_id}/report")
 def get_report(
     run_id: str,
     project_id: str = Depends(resolve_project),
@@ -229,7 +243,8 @@ def get_report(
     return _load_trace_or_404(db, run_id, project_id).report()
 
 
-@app.get("/traces/{run_id}/optimize")
+@versioned.get("/traces/{run_id}/optimization")
+@legacy.get("/traces/{run_id}/optimize")
 def optimize_trace(
     run_id: str,
     project_id: str = Depends(resolve_project),
@@ -238,13 +253,14 @@ def optimize_trace(
     return build_optimization_plan(_load_trace_or_404(db, run_id, project_id))
 
 
-@app.get(
+@legacy.get(
     "/traces/{run_id}/diagnose",
     deprecated=True,
-    description="Read-only compatibility alias for GET /traces/{run_id}/diagnosis. "
-    "Available throughout 0.x; use POST /traces/{run_id}/diagnosis to persist findings.",
+    description="Read-only compatibility alias for GET /v1/traces/{run_id}/diagnosis. "
+    "Available throughout 0.x; use POST /v1/traces/{run_id}/diagnosis to persist findings.",
 )
-@app.get("/traces/{run_id}/diagnosis")
+@versioned.get("/traces/{run_id}/diagnosis")
+@legacy.get("/traces/{run_id}/diagnosis")
 def diagnose_trace(
     run_id: str,
     project_id: str = Depends(resolve_project),
@@ -254,7 +270,8 @@ def diagnose_trace(
     return build_diagnosis(_load_trace_or_404(db, run_id, project_id))
 
 
-@app.post("/traces/{run_id}/diagnosis")
+@versioned.post("/traces/{run_id}/diagnosis")
+@legacy.post("/traces/{run_id}/diagnosis")
 def persist_trace_diagnosis(
     run_id: str,
     project_id: str = Depends(resolve_project),
@@ -266,7 +283,8 @@ def persist_trace_diagnosis(
     return diagnosis
 
 
-@app.post("/interventions")
+@versioned.post("/interventions")
+@legacy.post("/interventions")
 def create_intervention_endpoint(
     payload: InterventionPayload,
     project_id: str = Depends(resolve_project),
@@ -283,7 +301,8 @@ def create_intervention_endpoint(
         raise HTTPException(status_code=422, detail=str(exc)) from None
 
 
-@app.get("/interventions/{intervention_id}")
+@versioned.get("/interventions/{intervention_id}")
+@legacy.get("/interventions/{intervention_id}")
 def get_intervention_endpoint(
     intervention_id: str,
     project_id: str = Depends(resolve_project),
@@ -295,7 +314,8 @@ def get_intervention_endpoint(
     return record
 
 
-@app.get("/findings")
+@versioned.get("/findings")
+@legacy.get("/findings")
 def list_findings(
     status: str | None = Query(default=None),
     project_id_filter: str | None = Query(default=None, alias="project_id"),
@@ -336,7 +356,8 @@ class FindingStatusPayload(BaseModel):
     status: str
 
 
-@app.post("/findings/{run_id}/{finding_id}/status")
+@versioned.post("/findings/{run_id}/{finding_id}/status")
+@legacy.post("/findings/{run_id}/{finding_id}/status")
 def update_finding_status(
     run_id: str,
     finding_id: str,
@@ -354,7 +375,8 @@ def update_finding_status(
         raise HTTPException(status_code=400, detail=str(exc)) from None
 
 
-@app.get("/optimization-queue")
+@versioned.get("/optimization-queue")
+@legacy.get("/optimization-queue")
 def optimization_queue(
     project_id_filter: str | None = Query(default=None, alias="project_id"),
     project_id: str = Depends(resolve_project),
@@ -367,7 +389,8 @@ def optimization_queue(
     }
 
 
-@app.get("/optimization-queue/github-issues")
+@versioned.get("/optimization-queue/github-issues")
+@legacy.get("/optimization-queue/github-issues")
 def github_issue_drafts(
     limit: int = Query(default=5, ge=1, le=20),
     project_id_filter: str | None = Query(default=None, alias="project_id"),
@@ -382,7 +405,8 @@ def github_issue_drafts(
     }
 
 
-@app.post("/quality-report")
+@versioned.post("/quality-reports")
+@legacy.post("/quality-report")
 def quality_report_endpoint(
     payload: QualityReportPayload,
     project_id: str = Depends(resolve_project),
@@ -419,7 +443,8 @@ def quality_report_endpoint(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
-@app.get("/traces/{run_id}/value")
+@versioned.get("/traces/{run_id}/value")
+@legacy.get("/traces/{run_id}/value")
 def value_report(
     run_id: str,
     runs_per_month: int = Query(default=1000, ge=0),
@@ -437,7 +462,8 @@ def value_report(
     )
 
 
-@app.get("/usage")
+@versioned.get("/usage")
+@legacy.get("/usage")
 def usage_summary(
     project_id_filter: str | None = Query(default=None, alias="project_id"),
     project_id: str = Depends(resolve_project),
@@ -445,3 +471,7 @@ def usage_summary(
 ) -> dict[str, Any]:
     selected_project = _selected_project(project_id_filter, project_id)
     return db.usage_summary(project_id=selected_project)
+
+
+app.include_router(versioned, prefix="/v1")
+app.include_router(legacy)

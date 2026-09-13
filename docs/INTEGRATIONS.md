@@ -318,6 +318,19 @@ process you want to trace.
 
 ## Typical workflow
 
+Remote integrations use [HTTP API v1](API_VERSIONING.md). The Python client keeps
+the server origin or mount path in `AGENTLOOP_API_URL` and adds the version prefix:
+
+```python
+from agentloop import AgentLoopClient
+
+client = AgentLoopClient.from_env()
+runs = client.list_traces(page_size=20)  # GET /v1/traces?page_size=20
+```
+
+Upgrade the server before adopting the current client. Existing unversioned
+HTTP callers retain compatibility throughout 0.x.
+
 1. Install AgentLoop.
 2. Instrument the framework already used by the team.
 3. Run one production-like agent task.

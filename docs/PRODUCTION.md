@@ -37,11 +37,11 @@ For file-backed secrets, set `AGENTLOOP_POSTGRES_PASSWORD_FILE` instead of
 `PGPASSWORD`. The file is read only when no complete database URL is configured.
 
 `AGENTLOOP_ADMIN_API_KEY` protects hosted API-key creation. When API auth is enabled,
-`POST /api-keys` returns `503` unless the admin secret is configured.
+`POST /v1/api-keys` returns `503` unless the admin secret is configured.
 
 The Python client's credential handling is endpoint-specific. `AgentLoopClient.from_env()`
 may load both credentials, but sends `X-AgentLoop-Key` only on ordinary project requests
-and `X-AgentLoop-Admin-Key` only on `POST /api-keys`; the headers are never sent together.
+and `X-AgentLoop-Admin-Key` only on `POST /v1/api-keys`; the headers are never sent together.
 Keep the admin secret in trusted management processes and do not use it for trace uploads,
 reports, findings, usage, health checks, or other ordinary API calls.
 
@@ -117,10 +117,17 @@ Use `uv run agentloop production-check --allow-http` only for local staging URLs
 
 ## Diagnosis reads and writes
 
+Application endpoints use `/v1`. Configure `AGENTLOOP_API_URL` as the origin or
+mount path, without the version suffix; the Python client adds `/v1` itself.
+Upgrade servers before clients. Unversioned application aliases remain supported
+throughout 0.x and can be removed no earlier than 1.0 with release notice.
+`/health` and `/readyz` remain supported operational aliases. See
+[API versioning](API_VERSIONING.md) for the full route map and compatibility policy.
+
 | Operation | Behavior |
 |---|---|
-| `GET /traces/{run_id}/diagnosis` | Compute the current diagnosis without changing stored findings. |
-| `POST /traces/{run_id}/diagnosis` | Recompute and persist findings, including lifecycle updates. No request body is required. |
+| `GET /v1/traces/{run_id}/diagnosis` | Compute the current diagnosis without changing stored findings. |
+| `POST /v1/traces/{run_id}/diagnosis` | Recompute and persist findings, including lifecycle updates. No request body is required. |
 | `GET /traces/{run_id}/diagnose` | Deprecated read-only alias of the GET operation. |
 
 All three operations require the same project API key and return `404` for a

@@ -132,8 +132,9 @@ def test_python_client_distinguishes_read_and_persist(diagnosis_api) -> None:
     }
 
 
-def test_openapi_marks_only_legacy_diagnosis_route_deprecated() -> None:
+def test_openapi_keeps_versioned_diagnosis_current_and_aliases_deprecated() -> None:
     paths = server.app.openapi()["paths"]
     assert paths["/traces/{run_id}/diagnose"]["get"]["deprecated"] is True
-    assert not paths["/traces/{run_id}/diagnosis"]["get"].get("deprecated", False)
-    assert "post" in paths["/traces/{run_id}/diagnosis"]
+    assert paths["/traces/{run_id}/diagnosis"]["get"]["deprecated"] is True
+    assert not paths["/v1/traces/{run_id}/diagnosis"]["get"].get("deprecated", False)
+    assert "post" in paths["/v1/traces/{run_id}/diagnosis"]
