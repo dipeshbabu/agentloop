@@ -120,6 +120,49 @@ def test_critical_path_preserves_length_and_predecessor_order_ties() -> None:
     assert graph.critical_path() == CriticalPath(["root", "b", "sink"], 2)
 
 
+@pytest.mark.parametrize("duplicate_kind", ["sequence", "parent", "dependency"])
+@pytest.mark.parametrize("timestamped", [False, True])
+def test_duplicate_edges_wait_for_every_predecessor(duplicate_kind: str, timestamped: bool) -> None:
+    if timestamped:
+        nodes = ExecutionGraph.from_trace(_trace([("a", 0, 1), ("b", 1, 2), ("z", 2, 12)])).nodes
+    else:
+        nodes = [_node("a"), _node("b"), _node("z", 10)]
+    edges = [ExecutionEdge("a", "b"), ExecutionEdge("z", "b")]
+    graph = ExecutionGraph(nodes, edges)
+    expected = CriticalPath(["z", "b"], 11)
+    assert graph.critical_path() == expected
+
+    # A duplicate can have another kind, such as a parent relationship also
+    # declared as a dependency. It must not release b before z is processed.
+    edges.insert(1, ExecutionEdge("a", "b", duplicate_kind))
+    assert graph.critical_path() == expected
+    assert graph.to_dict()["critical_path"] == expected.to_dict()
+
+
+def test_duplicate_edges_do_not_change_seeded_dag_critical_paths() -> None:
+    rng = random.Random(179)
+    for _ in range(50):
+        nodes = [_node(f"node-{index:02d}", rng.randrange(10)) for index in range(20)]
+        rng.shuffle(nodes)
+        edges = [
+            ExecutionEdge(source.node_id, target.node_id)
+            for index, source in enumerate(nodes)
+            for target in nodes[index + 1 :]
+            if rng.random() < 0.2
+        ]
+        expected = ExecutionGraph(nodes, edges).critical_path()
+        repeated_edges = [
+            edge
+            for original in edges
+            for edge in (
+                original,
+                ExecutionEdge(original.source, original.target, "dependency"),
+                ExecutionEdge(original.source, original.target, "parent"),
+            )
+        ]
+        assert ExecutionGraph(nodes, repeated_edges).critical_path() == expected
+
+
 def test_wide_fanout_has_deterministic_critical_path() -> None:
     children = [f"child-{index:04d}" for index in range(200)]
     graph = ExecutionGraph(
