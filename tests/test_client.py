@@ -40,16 +40,16 @@ def test_client_upload_and_optimize(tmp_path, monkeypatch) -> None:
                 return test_client.get(route).json()
             if method == "POST" and route == "/traces":
                 return test_client.post(route, json=payload).json()
-            if method == "GET" and route.endswith("/optimize"):
-                return test_client.get(route).json()
+            if method == "GET" and route.endswith("/optimization"):
+                return test_client.get("/v1" + route).json()
             if method == "GET" and route == "/findings":
                 return test_client.get(route).json()
             if method == "GET" and route == "/optimization-queue":
                 return test_client.get(route).json()
             if method == "GET" and route.startswith("/optimization-queue/github-issues"):
                 return test_client.get(route).json()
-            if method == "POST" and route == "/quality-report":
-                return test_client.post(route, json=payload).json()
+            if method == "POST" and route == "/quality-reports":
+                return test_client.post("/v1" + route, json=payload).json()
             raise AssertionError(f"unexpected request {method} {route}")
 
     client = LocalAgentLoopClient()
@@ -94,7 +94,7 @@ def test_client_quotes_run_ids_in_request_paths() -> None:
 
     assert routes == [
         "/traces/team%2Frun%20%3F1/report",
-        "/traces/team%2Frun%20%3F1/optimize",
+        "/traces/team%2Frun%20%3F1/optimization",
         "/traces/team%2Frun%20%3F1/diagnosis",
         "/traces/team%2Frun%20%3F1/diagnosis",
         "/traces/team%2Frun%20%3F1/value",

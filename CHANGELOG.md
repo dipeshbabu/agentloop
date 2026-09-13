@@ -8,6 +8,11 @@ Project history from before the first public release remains available in Git.
 
 ## [Unreleased]
 
+- Introduced the `/v1` HTTP namespace with shared legacy handlers and versioned
+  Python client requests. Unversioned application routes are deprecated but
+  remain available throughout 0.x; their earliest removal is 1.0 with release
+  notice. Health/readiness aliases remain supported. See [API versioning](docs/API_VERSIONING.md).
+
 - Added pinned OpenTelemetry GenAI, OpenInference, and MCP conformance fixtures.
   Imports preserve usage details, external evaluations/logs, links, resource/scope
   metadata, and MCP relationships. Native round trips retain nested metadata,

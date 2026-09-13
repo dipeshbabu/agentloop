@@ -257,6 +257,8 @@ Open the URL printed by Streamlit and leave the sidebar's Project field set to
 
 AgentLoop uses SQLite by default and supports Postgres for shared storage. The
 optional HTTP API accepts traces and serves project-scoped reports and findings.
+Application endpoints use `/v1`. Existing unversioned aliases remain available
+throughout 0.x; see [API versioning](docs/API_VERSIONING.md) for the migration path.
 See [Dashboard setup](docs/DASHBOARD.md) and [Production deployment](docs/PRODUCTION.md)
 for database configuration, API authentication, and deployment instructions.
 

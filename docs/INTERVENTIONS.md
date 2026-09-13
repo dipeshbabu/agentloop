@@ -86,8 +86,8 @@ agentloop intervention-get int_YOUR_ID --out saved-intervention.json
 These commands use the configured SQLite/Postgres store and accept `--project-id`
 for local project selection. For a remote server, add `--api-url` and supply its
 project key through `AGENTLOOP_API_KEY` or `--api-key`; the key selects the remote
-project. The endpoints are `POST /interventions` and
-`GET /interventions/{intervention_id}`. `AgentLoopClient.create_intervention()`
+project. The endpoints are `POST /v1/interventions` and
+`GET /v1/interventions/{intervention_id}`. `AgentLoopClient.create_intervention()`
 and `.get_intervention()` expose the same operations.
 
 Creation preserves evidence even when gates fail; successful persistence returns

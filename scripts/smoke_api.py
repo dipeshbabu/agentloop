@@ -48,18 +48,18 @@ def main() -> int:
     api_key = os.getenv("AGENTLOOP_API_KEY")
     admin_api_key = os.getenv("AGENTLOOP_ADMIN_API_KEY")
 
-    health = _request("GET", "/health", api_url=api_url)
+    health = _request("GET", "/v1/health", api_url=api_url)
     if health.get("status") != "ok":
         raise RuntimeError(f"Unexpected health response: {health}")
 
-    ready = _request("GET", "/readyz", api_url=api_url)
+    ready = _request("GET", "/v1/readyz", api_url=api_url)
     if ready.get("status") != "ready":
         raise RuntimeError(f"Unexpected readiness response: {ready}")
 
     if not api_key and admin_api_key:
         key = _request(
             "POST",
-            "/api-keys",
+            "/v1/api-keys",
             api_url=api_url,
             admin_api_key=admin_api_key,
             payload={"project_id": "smoke", "name": "smoke"},
@@ -73,15 +73,15 @@ def main() -> int:
         "metadata": {"source": "scripts/smoke_api.py"},
         "events": [],
     }
-    uploaded = _request("POST", "/traces", api_url=api_url, api_key=api_key, payload=trace)
+    uploaded = _request("POST", "/v1/traces", api_url=api_url, api_key=api_key, payload=trace)
     if uploaded.get("run_id") != run_id:
         raise RuntimeError(f"Unexpected upload response: {uploaded}")
 
-    report = _request("GET", f"/traces/{run_id}/report", api_url=api_url, api_key=api_key)
+    report = _request("GET", f"/v1/traces/{run_id}/report", api_url=api_url, api_key=api_key)
     if "total_runtime_ms" not in report:
         raise RuntimeError(f"Unexpected report response: {report}")
 
-    stored = _request("GET", "/traces", api_url=api_url, api_key=api_key)
+    stored = _request("GET", "/v1/traces", api_url=api_url, api_key=api_key)
     traces = stored.get("traces")
     if not isinstance(traces, list) or not any(item.get("run_id") == run_id for item in traces):
         raise RuntimeError("Uploaded smoke trace was not returned by the list API")
