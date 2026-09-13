@@ -8,6 +8,9 @@ Project history from before the first public release remains available in Git.
 
 ## [Unreleased]
 
+- Reduced execution-graph analysis time for large traces and critical-path memory
+  use for deep traces, preserving timestamp handling and deterministic ordering.
+
 - Sanitized finding-rule failures before report/API serialization. Public
   diagnostics retain the failed rule and safe error category; detailed exceptions
   are available only through explicitly enabled local debug logging.
