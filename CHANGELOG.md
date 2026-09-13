@@ -8,6 +8,10 @@ Project history from before the first public release remains available in Git.
 
 ## [Unreleased]
 
+- Sanitized finding-rule failures before report/API serialization. Public
+  diagnostics retain the failed rule and safe error category; detailed exceptions
+  are available only through explicitly enabled local debug logging.
+
 - Introduced the `/v1` HTTP namespace with shared legacy handlers and versioned
   Python client requests. Unversioned application routes are deprecated but
   remain available throughout 0.x; their earliest removal is 1.0 with release
