@@ -45,6 +45,13 @@ components under MPL-2.0, including Certifi and tqdm. Consult `uv.lock` and the
 installed distributions for the complete version-specific dependency graph,
 license texts, copyright notices, and attribution requirements.
 
+## Documentation graphics
+
+The README diagrams include Python, OpenAI, LangGraph, and CrewAI logos from
+Simple Icons and Lobe Icons. Their source links and complete license texts are
+listed in [Diagram icon credits](docs/assets/ICONS.md). AgentLoop's own mark and
+the accompanying outline icons are original project artwork.
+
 ## Reviewing a dependency change
 
 Use a clean, exact runtime environment so previously installed development tools
