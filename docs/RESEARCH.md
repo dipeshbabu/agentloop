@@ -125,6 +125,10 @@ timeline, finding evidence, estimator assumptions, and optional baseline/quality
 comparison. Keep the source JSON artifacts alongside it and review included
 metadata and task content before sharing.
 
+The [complete evidence workflow](EVIDENCE_WORKFLOW.md) links findings, applied
+changes, recorded outcomes, and paired study summaries in one offline example.
+Use it to locate the artifact fields behind each research claim.
+
 ## Token measurements
 
 Not every token number in a trace is a token count. When a caller supplies text
