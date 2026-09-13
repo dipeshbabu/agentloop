@@ -285,7 +285,9 @@ def _topological_order(
     successors: dict[str, list[str]],
 ) -> list[str]:
     node_by_id = {node.node_id: node for node in nodes}
-    indegree = {node_id: len(set(items)) for node_id, items in predecessors.items()}
+    # Successor lists retain repeated edges, including different relationship
+    # kinds, so count every incoming edge to match the decrements below.
+    indegree = {node_id: len(items) for node_id, items in predecessors.items()}
     sort_keys = {node_id: _node_sort_key(node) for node_id, node in node_by_id.items()}
     ready = [(sort_keys[node_id], node_id) for node_id, count in indegree.items() if count == 0]
     heapify(ready)

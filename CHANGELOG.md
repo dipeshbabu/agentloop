@@ -8,6 +8,10 @@ Project history from before the first public release remains available in Git.
 
 ## [Unreleased]
 
+- Fixed critical paths being truncated when repeated edges, including different
+  relationship kinds between the same spans, released a node before all of its
+  predecessors were processed.
+
 - Reduced execution-graph analysis time for large traces and critical-path memory
   use for deep traces, preserving timestamp handling and deterministic ordering.
 
