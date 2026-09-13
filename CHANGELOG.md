@@ -8,6 +8,10 @@ Project history from before the first public release remains available in Git.
 
 ## [Unreleased]
 
+- Added a reproducible 72-second Remotion demo with captioned tracing, findings,
+  replay, study, and HTML-report scenes sourced from the offline example.
+  The optional video project has separate dependencies and a rendering workflow.
+
 - Sanitized finding-rule failures before report/API serialization. Public
   diagnostics retain the failed rule and safe error category; detailed exceptions
   are available only through explicitly enabled local debug logging.

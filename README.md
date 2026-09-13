@@ -17,6 +17,9 @@ or hosted account. The dashboard and HTTP API are optional.
 
 ## Quickstart
 
+For a visual walkthrough, see the [72-second Remotion demo](video/README.md).
+It covers tracing, findings, replay, quality checks, and sharing an offline report.
+
 Requires Python 3.10 or newer:
 
 ```bash

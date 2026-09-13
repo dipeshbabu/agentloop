@@ -1,0 +1,55 @@
+{
+  "fps": 30,
+  "width": 1920,
+  "height": 1080,
+  "scenes": [
+    {
+      "id": "intro",
+      "seconds": 6,
+      "label": "AGENT PERFORMANCE, EXPLAINED",
+      "caption": "Profile your agent. Find repeated work. Verify the effect of a change."
+    },
+    {
+      "id": "quickstart",
+      "seconds": 9,
+      "label": "01 / START LOCALLY",
+      "caption": "From a source checkout, run the quickstart. No model API key is needed."
+    },
+    {
+      "id": "instrument",
+      "seconds": 10,
+      "label": "02 / RECORD YOUR RUN",
+      "caption": "Wrap your functions, retain the output you want to evaluate, and export a trace."
+    },
+    {
+      "id": "finding",
+      "seconds": 11,
+      "label": "03 / INSPECT THE EVIDENCE",
+      "caption": "This offline fixture has three serial lookups. Check independence and shared-state safety before parallelizing."
+    },
+    {
+      "id": "compare",
+      "seconds": 12,
+      "label": "04 / COMPARE THE CHANGE",
+      "caption": "Record a candidate, then replay both traces with quality checks. These timings are synthetic demonstration data."
+    },
+    {
+      "id": "study",
+      "seconds": 9,
+      "label": "05 / CHECK MORE THAN ONE RUN",
+      "caption": "Repeat across tasks and seeds. Keep the failures: one candidate here fails quality, despite running faster."
+    },
+    {
+      "id": "share",
+      "seconds": 9,
+      "label": "06 / SHARE THE EVIDENCE",
+      "caption": "Save the intervention and study results. Export one HTML file for an offline review."
+    },
+    {
+      "id": "outro",
+      "seconds": 6,
+      "label": "TRY AGENTLOOP",
+      "caption": "Start with the example, then bring your own agent and task-specific quality checks."
+    }
+  ]
+}

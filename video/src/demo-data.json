@@ -1,0 +1,530 @@
+{
+  "schemaVersion": 1,
+  "synthetic": true,
+  "sourceCommand": "uv run --frozen python video/scripts/prepare-data.py",
+  "sourceCommit": "8a88a7976229924986b1e39a8ba56978d2d49364",
+  "quickstart": {
+    "runtimeMs": 1000.0,
+    "spanCount": 7,
+    "findingCount": 6
+  },
+  "baseline": {
+    "schema_version": "1.1",
+    "name": "baseline",
+    "run_id": "baseline-task0-seed0",
+    "started_at": "2026-01-01T00:00:00+00:00",
+    "ended_at": "2026-01-01T00:00:00.700000+00:00",
+    "elapsed_ms": 700.0,
+    "metadata": {
+      "synthetic": true,
+      "task_id": 0,
+      "seed": 0,
+      "output": "ok",
+      "success": true,
+      "quality_score": 1.0
+    },
+    "events": [
+      {
+        "event_id": "baseline-task0-seed0-tool0",
+        "run_id": "baseline-task0-seed0",
+        "event_type": "tool_call",
+        "name": "lookup",
+        "started_at": "2026-01-01T00:00:00+00:00",
+        "ended_at": "2026-01-01T00:00:00.200000+00:00",
+        "duration_ms": 200,
+        "parent_id": null,
+        "model": null,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "token_provenance": null,
+        "input_text": null,
+        "output_text": null,
+        "status": "ok",
+        "error": null,
+        "metadata": {
+          "parallel_safe": true
+        }
+      },
+      {
+        "event_id": "baseline-task0-seed0-tool1",
+        "run_id": "baseline-task0-seed0",
+        "event_type": "tool_call",
+        "name": "lookup",
+        "started_at": "2026-01-01T00:00:00.200000+00:00",
+        "ended_at": "2026-01-01T00:00:00.400000+00:00",
+        "duration_ms": 200,
+        "parent_id": null,
+        "model": null,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "token_provenance": null,
+        "input_text": null,
+        "output_text": null,
+        "status": "ok",
+        "error": null,
+        "metadata": {
+          "parallel_safe": true
+        }
+      },
+      {
+        "event_id": "baseline-task0-seed0-tool2",
+        "run_id": "baseline-task0-seed0",
+        "event_type": "tool_call",
+        "name": "lookup",
+        "started_at": "2026-01-01T00:00:00.400000+00:00",
+        "ended_at": "2026-01-01T00:00:00.600000+00:00",
+        "duration_ms": 200,
+        "parent_id": null,
+        "model": null,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "token_provenance": null,
+        "input_text": null,
+        "output_text": null,
+        "status": "ok",
+        "error": null,
+        "metadata": {
+          "parallel_safe": true
+        }
+      },
+      {
+        "event_id": "baseline-task0-seed0-model",
+        "run_id": "baseline-task0-seed0",
+        "event_type": "model_call",
+        "name": "answer",
+        "started_at": "2026-01-01T00:00:00.600000+00:00",
+        "ended_at": "2026-01-01T00:00:00.700000+00:00",
+        "duration_ms": 100,
+        "parent_id": null,
+        "model": "gpt-4o-mini",
+        "input_tokens": 100,
+        "output_tokens": 20,
+        "token_provenance": "user_supplied",
+        "input_text": null,
+        "output_text": null,
+        "status": "ok",
+        "error": null,
+        "metadata": {}
+      }
+    ]
+  },
+  "candidate": {
+    "schema_version": "1.1",
+    "name": "candidate",
+    "run_id": "candidate-task0-seed0",
+    "started_at": "2026-01-01T00:00:00+00:00",
+    "ended_at": "2026-01-01T00:00:00.300000+00:00",
+    "elapsed_ms": 300.0,
+    "metadata": {
+      "synthetic": true,
+      "task_id": 0,
+      "seed": 0,
+      "output": "ok",
+      "success": true,
+      "quality_score": 1.0
+    },
+    "events": [
+      {
+        "event_id": "candidate-task0-seed0-tool0",
+        "run_id": "candidate-task0-seed0",
+        "event_type": "tool_call",
+        "name": "lookup",
+        "started_at": "2026-01-01T00:00:00+00:00",
+        "ended_at": "2026-01-01T00:00:00.200000+00:00",
+        "duration_ms": 200,
+        "parent_id": null,
+        "model": null,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "token_provenance": null,
+        "input_text": null,
+        "output_text": null,
+        "status": "ok",
+        "error": null,
+        "metadata": {
+          "parallel_safe": true
+        }
+      },
+      {
+        "event_id": "candidate-task0-seed0-tool1",
+        "run_id": "candidate-task0-seed0",
+        "event_type": "tool_call",
+        "name": "lookup",
+        "started_at": "2026-01-01T00:00:00+00:00",
+        "ended_at": "2026-01-01T00:00:00.200000+00:00",
+        "duration_ms": 200,
+        "parent_id": null,
+        "model": null,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "token_provenance": null,
+        "input_text": null,
+        "output_text": null,
+        "status": "ok",
+        "error": null,
+        "metadata": {
+          "parallel_safe": true
+        }
+      },
+      {
+        "event_id": "candidate-task0-seed0-tool2",
+        "run_id": "candidate-task0-seed0",
+        "event_type": "tool_call",
+        "name": "lookup",
+        "started_at": "2026-01-01T00:00:00+00:00",
+        "ended_at": "2026-01-01T00:00:00.200000+00:00",
+        "duration_ms": 200,
+        "parent_id": null,
+        "model": null,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "token_provenance": null,
+        "input_text": null,
+        "output_text": null,
+        "status": "ok",
+        "error": null,
+        "metadata": {
+          "parallel_safe": true
+        }
+      },
+      {
+        "event_id": "candidate-task0-seed0-model",
+        "run_id": "candidate-task0-seed0",
+        "event_type": "model_call",
+        "name": "answer",
+        "started_at": "2026-01-01T00:00:00.200000+00:00",
+        "ended_at": "2026-01-01T00:00:00.300000+00:00",
+        "duration_ms": 100,
+        "parent_id": null,
+        "model": "gpt-4o-mini",
+        "input_tokens": 100,
+        "output_tokens": 20,
+        "token_provenance": "user_supplied",
+        "input_text": null,
+        "output_text": null,
+        "status": "ok",
+        "error": null,
+        "metadata": {}
+      }
+    ]
+  },
+  "finding": {
+    "finding_id": "al_parallelize_tools_cb048f0d7a72",
+    "severity": "high",
+    "type": "parallelize_tools",
+    "title": "Parallelize repeated `lookup` tool calls",
+    "confidence": "medium",
+    "affected_spans": [
+      "baseline-task0-seed0-tool0",
+      "baseline-task0-seed0-tool1",
+      "baseline-task0-seed0-tool2"
+    ],
+    "evidence": [
+      {
+        "span_id": "baseline-task0-seed0-tool0",
+        "name": "lookup",
+        "event_type": "tool_call",
+        "operation_kind": "tool",
+        "duration_ms": 200.0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "model": null,
+        "status": "ok"
+      },
+      {
+        "span_id": "baseline-task0-seed0-tool1",
+        "name": "lookup",
+        "event_type": "tool_call",
+        "operation_kind": "tool",
+        "duration_ms": 200.0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "model": null,
+        "status": "ok"
+      },
+      {
+        "span_id": "baseline-task0-seed0-tool2",
+        "name": "lookup",
+        "event_type": "tool_call",
+        "operation_kind": "tool",
+        "duration_ms": 200.0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "model": null,
+        "status": "ok"
+      }
+    ],
+    "savings": {
+      "estimated_latency_savings_ms": 400.0,
+      "estimated_cost_savings_usd": 0.0,
+      "formula": "sum_duration_ms - max_duration_ms"
+    },
+    "rewrite": {
+      "kind": "parallelize_tools",
+      "hint": "After verifying output independence and shared-state safety, use asyncio.gather or ThreadPoolExecutor and validate the change with replay.",
+      "patchable": true
+    },
+    "validation": {
+      "command": "agentloop replay",
+      "acceptance_criteria": "runtime decreases while tool outputs remain equivalent"
+    },
+    "metadata": {
+      "why": "3 repeated calls. The integration declares these calls safe to run concurrently; validate with replay.",
+      "cost_status": "complete",
+      "identity": "content-v1"
+    },
+    "evidence_level": "declared",
+    "assumptions": [
+      "No call consumes another call's output.",
+      "Calls do not conflict through shared mutable state.",
+      "Calls are on the runtime-limiting path and scheduling adds no overhead."
+    ],
+    "observations": {
+      "evidence_level": "observed",
+      "tool_call_count": 3,
+      "cumulative_span_time_ms": 600.0,
+      "timing": "non_overlapping"
+    },
+    "rule_id": "parallelize_tools",
+    "rule_version": "1.1",
+    "estimate": {
+      "estimator_id": "parallelize_tools",
+      "estimator_version": "1.0",
+      "method": "heuristic",
+      "confidence": "medium",
+      "calibrated": false,
+      "formula": "sum_duration_ms - max_duration_ms",
+      "parameters": {},
+      "inputs": {
+        "sum_duration_ms": 600.0,
+        "max_duration_ms": 200.0,
+        "span_count": 3,
+        "current_cost_usd": 2.7e-5,
+        "repeated_context_ratio": 0.0,
+        "cost_status": "complete",
+        "token_status": "exact"
+      },
+      "assumptions": [
+        "No call consumes another call's output.",
+        "Calls do not conflict through shared mutable state.",
+        "Calls are on the runtime-limiting path and scheduling adds no overhead.",
+        "The formula applies assuming concurrent execution has negligible scheduling overhead."
+      ],
+      "unmodeled_metrics": ["cost"]
+    }
+  },
+  "replay": {
+    "baseline": {
+      "run_id": "baseline-task0-seed0",
+      "name": "baseline",
+      "runtime_ms": 700.0,
+      "estimated_cost_usd": 2.7e-5,
+      "has_unknown_cost": false,
+      "cost_status": "complete",
+      "token_status": "exact",
+      "operation_counts": {
+        "model": 1,
+        "tool": 3
+      },
+      "input_tokens": 100,
+      "output_tokens": 20,
+      "retry_count": 0,
+      "tool_call_count": 3,
+      "model_call_count": 1,
+      "schema_validity_pct": null,
+      "schema_valid": null,
+      "quality_score": 1.0
+    },
+    "candidate": {
+      "run_id": "candidate-task0-seed0",
+      "name": "candidate",
+      "runtime_ms": 300.0,
+      "estimated_cost_usd": 2.7e-5,
+      "has_unknown_cost": false,
+      "cost_status": "complete",
+      "token_status": "exact",
+      "operation_counts": {
+        "model": 1,
+        "tool": 3
+      },
+      "input_tokens": 100,
+      "output_tokens": 20,
+      "retry_count": 0,
+      "tool_call_count": 3,
+      "model_call_count": 1,
+      "schema_validity_pct": null,
+      "schema_valid": null,
+      "quality_score": 1.0
+    },
+    "deltas": {
+      "runtime_ms_delta": -400.0,
+      "latency_improvement_pct": 57.14,
+      "latency_regression_pct": 0.0,
+      "cost_usd_delta": 0.0,
+      "cost_improvement_pct": 0.0,
+      "cost_regression_pct": 0.0,
+      "input_tokens_delta": 0,
+      "input_token_improvement_pct": 0.0,
+      "output_tokens_delta": 0,
+      "output_token_improvement_pct": 0.0,
+      "retry_count_delta": 0,
+      "retry_improvement_pct": 0.0,
+      "tool_call_count_delta": 0,
+      "tool_call_improvement_pct": 0.0,
+      "model_call_count_delta": 0,
+      "model_call_improvement_pct": 0.0,
+      "schema_validity_delta_pct": 0.0,
+      "schema_validity_improvement_pct": 0.0,
+      "quality_score_delta": 0.0,
+      "quality_score_improvement_pct": 0.0
+    },
+    "gates": {
+      "passed": true,
+      "cost_evaluable": true,
+      "pricing_known": true,
+      "token_basis_evaluable": true,
+      "baseline_token_status": "exact",
+      "candidate_token_status": "exact",
+      "indeterminate": [],
+      "config": {
+        "max_cost_regression_pct": 0.0,
+        "max_latency_regression_pct": 0.0,
+        "min_latency_improvement_pct": 0.0,
+        "min_cost_improvement_pct": 0.0,
+        "require_retry_non_increase": true,
+        "require_schema_valid": false,
+        "min_quality_score": null
+      },
+      "results": [
+        {
+          "name": "latency_regression",
+          "passed": true,
+          "detail": "0.00% regression <= 0.00% allowed",
+          "indeterminate": false
+        },
+        {
+          "name": "cost_regression",
+          "passed": true,
+          "detail": "0.00% regression <= 0.00% allowed",
+          "indeterminate": false
+        },
+        {
+          "name": "latency_improvement",
+          "passed": true,
+          "detail": "57.14% improvement >= 0.00% required",
+          "indeterminate": false
+        },
+        {
+          "name": "cost_improvement",
+          "passed": true,
+          "detail": "0.00% improvement >= 0.00% required",
+          "indeterminate": false
+        },
+        {
+          "name": "retry_non_increase",
+          "passed": true,
+          "detail": "0 candidate retries <= 0 baseline retries",
+          "indeterminate": false
+        },
+        {
+          "name": "quality_fixtures",
+          "passed": true,
+          "detail": "supplied quality fixtures passed",
+          "indeterminate": false
+        }
+      ]
+    },
+    "quality": {
+      "case_count": 1,
+      "passed": true,
+      "baseline_score": 1.0,
+      "candidate_score": 1.0,
+      "quality_delta": 0.0,
+      "min_score": null,
+      "failed_case_count": 0,
+      "failed_cases": [],
+      "cases": [
+        {
+          "case_id": "answer",
+          "input": null,
+          "scorer": {
+            "type": "exact_match"
+          },
+          "baseline": {
+            "score": 1.0,
+            "passed": true,
+            "detail": "exact match"
+          },
+          "candidate": {
+            "score": 1.0,
+            "passed": true,
+            "detail": "exact match"
+          },
+          "passed": true
+        }
+      ]
+    },
+    "summary": "Replay passed: latency improvement 57.14%, cost improvement 0.00%, retry delta 0."
+  },
+  "outcomes": {
+    "synthetic": true,
+    "intervention_type": "parallelize_tools",
+    "intervention_count": 6,
+    "configured_gates_passed_count": 5,
+    "configured_gate_pass_rate": 0.8333333333333334,
+    "criterion": "the configured performance and quality gates passed",
+    "interpretation": "Fixture results demonstrate artifact linkage, not empirical recommendation precision or calibration.",
+    "intervention_ids": [
+      "int_e739b4340d1416f6116c6974b2e55496228a5fb3847b44bd9eaae41cb7a546c6",
+      "int_180e9d594d0ef6493f5dcc23c87c1af9ef27667252ff784cad7218a002144698",
+      "int_3253a14d426010ed2eab9e45d2b898dac96658506e3ad095a66ce2a1ffb00b54",
+      "int_f64a28ae17d9bf5d7f44eb70aeb3db3e7e43c767ca75f9427b86b517b49181ba",
+      "int_4255b7c8e58463f2e32cef4b696bbf81bfcf4f6cc50fb6a9eb49de377cb6ac5e",
+      "int_77cd49ab3ffe49d9fdf51277129e653cb0791fda2142f554109e2be8fdeec0a0"
+    ]
+  },
+  "pairs": [
+    {
+      "task": 0,
+      "seed": 0,
+      "passed": true,
+      "qualityPassed": true,
+      "costEvaluable": true
+    },
+    {
+      "task": 0,
+      "seed": 1,
+      "passed": true,
+      "qualityPassed": true,
+      "costEvaluable": true
+    },
+    {
+      "task": 1,
+      "seed": 0,
+      "passed": true,
+      "qualityPassed": true,
+      "costEvaluable": true
+    },
+    {
+      "task": 1,
+      "seed": 1,
+      "passed": true,
+      "qualityPassed": true,
+      "costEvaluable": true
+    },
+    {
+      "task": 2,
+      "seed": 0,
+      "passed": true,
+      "qualityPassed": true,
+      "costEvaluable": true
+    },
+    {
+      "task": 2,
+      "seed": 1,
+      "passed": false,
+      "qualityPassed": false,
+      "costEvaluable": false
+    }
+  ]
+}

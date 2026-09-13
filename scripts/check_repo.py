@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 import sys
 from pathlib import Path
@@ -12,7 +13,7 @@ except ModuleNotFoundError:  # pragma: no cover - Python 3.10 compatibility
 
 
 ROOT = Path(__file__).resolve().parents[1]
-EXCLUDED_PARTS = {".git", ".venv", "build", "dist"}
+EXCLUDED_PARTS = {".git", ".venv", "node_modules", ".remotion", "build", "dist"}
 LINK_PATTERN = re.compile(r"!?\[[^\]]*\]\(([^)\n]+)\)")
 VERSION_PATTERN = re.compile(r'^__version__\s*=\s*"([^"]+)"$', re.MULTILINE)
 REQUIRED_COMMUNITY_FILES = {
@@ -29,11 +30,11 @@ REQUIRED_COMMUNITY_FILES = {
 
 
 def markdown_files() -> list[Path]:
-    return sorted(
-        path
-        for path in ROOT.rglob("*.md")
-        if not EXCLUDED_PARTS.intersection(path.relative_to(ROOT).parts)
-    )
+    paths = []
+    for directory, children, files in os.walk(ROOT):
+        children[:] = [name for name in children if name not in EXCLUDED_PARTS]
+        paths.extend(Path(directory) / name for name in files if name.endswith(".md"))
+    return sorted(paths)
 
 
 def local_link_target(source: Path, raw_target: str) -> Path | None:

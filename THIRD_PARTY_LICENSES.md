@@ -45,6 +45,17 @@ components under MPL-2.0, including Certifi and tqdm. Consult `uv.lock` and the
 installed distributions for the complete version-specific dependency graph,
 license texts, copyright notices, and attribution requirements.
 
+## Optional video authoring
+
+The optional [demo video project](video/README.md) has its own npm lockfile and is
+not part of the Python runtime or application container. Its direct authoring
+dependencies include Remotion and its CLI/bundler/renderer (Remotion License),
+React/React DOM and Prettier (MIT), TypeScript (Apache-2.0), React type definitions
+(MIT), and the Inter/JetBrains Mono fonts distributed through Fontsource (SIL
+Open Font License 1.1). The installed packages include their complete license
+texts. Remotion's source-available authoring terms are not replaced by AgentLoop's
+Apache-2.0 license.
+
 ## Reviewing a dependency change
 
 Use a clean, exact runtime environment so previously installed development tools

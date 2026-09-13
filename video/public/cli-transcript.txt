@@ -1,0 +1,71 @@
+=== quickstart ===
+   AgentLoop Analysis:
+   agentloop_quickstart
+┌───────────────┬────────┐
+│ Metric        │ Value  │
+├───────────────┼────────┤
+│ Runtime       │ 1.000s │
+│ Findings      │ 6      │
+│ High severity │ 2      │
+│ Patchable     │ 6      │
+│ Retries       │ 1      │
+│ Input tokens  │ 2100   │
+└───────────────┴────────┘
+
+Top findings:
+-  Parallelize repeated `retrieve` tool calls (low confidence)
+-  Reduce retry loop with structured outputs (high confidence)
+-  Batch repeated `summarize` model calls (medium confidence)
+-  Route `summarize` to a cheaper model (low confidence)
+-  Route `summarize` to a cheaper model (low confidence)
+
+Synthetic trace: runs\video-evidence\quickstart.json
+Next: agentloop analyze runs\video-evidence\quickstart.json
+Analysis JSON: runs\video-evidence\quickstart-analysis.json
+
+
+=== analyze ===
+   AgentLoop Analysis:
+         baseline
+┌───────────────┬────────┐
+│ Metric        │ Value  │
+├───────────────┼────────┤
+│ Runtime       │ 0.700s │
+│ Findings      │ 1      │
+│ High severity │ 1      │
+│ Patchable     │ 1      │
+│ Retries       │ 0      │
+│ Input tokens  │ 100    │
+└───────────────┴────────┘
+
+Top findings:
+-  Parallelize repeated `lookup` tool calls (medium confidence)
+Wrote analysis JSON to runs\video-evidence\analysis.json
+
+
+=== replay ===
+Wrote replay report to runs\video-evidence\replay.md
+Wrote replay JSON to runs\video-evidence\replay.json
+Replay passed: latency improvement 57.14%, cost improvement 0.00%, retry delta 0.
+
+
+=== html ===
+   AgentLoop Analysis:
+        candidate
+┌───────────────┬────────┐
+│ Metric        │ Value  │
+├───────────────┼────────┤
+│ Runtime       │ 0.300s │
+│ Findings      │ 0      │
+│ High severity │ 0      │
+│ Patchable     │ 0      │
+│ Retries       │ 0      │
+│ Input tokens  │ 100    │
+└───────────────┴────────┘
+No optimization findings detected.
+Wrote HTML report to runs\video-evidence\report.html
+
+
+=== study ===
+Wrote study reports to runs\video-evidence\study.md and runs\video-evidence\study-results.json
+candidate: 6 paired runs, 0 unmatched runs
