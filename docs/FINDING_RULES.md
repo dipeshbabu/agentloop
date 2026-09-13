@@ -21,7 +21,11 @@ caching now uses the optimizer's title, `Cache repeated prompt/context prefix`.
 ## Failures and completeness
 
 Each detector failure is isolated. Other rules still return their findings, and
-`rule_errors` records the failed ID/version, exception type, and a bounded message.
+`rule_errors` records the failed ID/version, a safe error category, and a generic
+message. Raw exception messages and implementation class names are not serialized
+into reports or HTTP responses. For local debugging, enable DEBUG logging for
+`agentloop.rules`; detailed exception logs may contain private inputs and should
+remain restricted to operators.
 Reports, plans, and diagnoses mark `analysis_complete: false`; human reports and
 dashboard views show the diagnostics. CI fails incomplete diagnosis even when its
 performance gates pass, so missing analysis cannot produce a clean merge signal.
