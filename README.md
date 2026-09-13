@@ -1,12 +1,30 @@
-# AgentLoop
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/agentloop-logo-dark.svg">
+    <img src="docs/assets/agentloop-logo-light.svg" alt="AgentLoop" width="440">
+  </picture>
+</h1>
 
-[![CI](https://github.com/dipeshbabu/agentloop/actions/workflows/ci.yml/badge.svg)](https://github.com/dipeshbabu/agentloop/actions/workflows/ci.yml)
-[![PyPI](https://img.shields.io/pypi/v/agentloop-profiler.svg?cacheSeconds=300)](https://pypi.org/project/agentloop-profiler/)
-[![Downloads/month](https://static.pepy.tech/badge/agentloop-profiler/month)](https://pepy.tech/projects/agentloop-profiler)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB.svg)](https://www.python.org/downloads/)
-[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+<p align="center">
+  <strong>Find wasted work in AI agents. Verify each change.</strong><br>
+  Trace calls, inspect findings, and compare performance with your quality checks.
+</p>
 
-**Profile your AI agent and check whether a change improves it.**
+<p align="center">
+  <a href="https://github.com/dipeshbabu/agentloop/actions/workflows/ci.yml"><img src="https://github.com/dipeshbabu/agentloop/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://pypi.org/project/agentloop-profiler/"><img src="https://img.shields.io/pypi/v/agentloop-profiler.svg?cacheSeconds=300" alt="PyPI"></a>
+  <a href="https://pepy.tech/projects/agentloop-profiler"><img src="https://static.pepy.tech/badge/agentloop-profiler/month" alt="Downloads/month"></a>
+  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10%2B-3776AB.svg" alt="Python 3.10 or newer"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="License: Apache-2.0"></a>
+</p>
+
+<p align="center">
+  <a href="#quickstart">Quickstart</a> ·
+  <a href="#without-and-with-agentloop">Why AgentLoop</a> ·
+  <a href="#compare-before-and-after">Compare runs</a> ·
+  <a href="#framework-integrations">Integrations</a> ·
+  <a href="docs/FIRST_USE.md">Guide</a>
+</p>
 
 AgentLoop records model calls, tool calls, and retries in an agent workflow. Use
 its reports to inspect latency, token usage, and estimated model costs, find
@@ -14,6 +32,46 @@ repeated work, and compare runs before and after a change.
 
 Tracing and analysis run locally. You can work with JSON files without a database
 or hosted account. The dashboard and HTTP API are optional.
+
+## Without and with AgentLoop
+
+<picture>
+  <source media="(max-width: 600px)" srcset="docs/assets/workflow-comparison-mobile.svg">
+  <source media="(prefers-reduced-motion: reduce)" srcset="docs/assets/workflow-comparison.svg">
+  <img src="docs/assets/workflow-comparison.gif" width="100%" alt="Architecture comparison: your agent feeds custom timing, usage parsing, retry analysis, output checks, and report code without AgentLoop. With AgentLoop, the same execution evidence feeds a shared tracing, analysis, and replay workflow.">
+</picture>
+
+<details>
+<summary>Read the comparison in text</summary>
+
+| Question | Without AgentLoop | With AgentLoop |
+|---|---|---|
+| Where did the time go? | Add timers and connect logs to calls. | Inspect recorded model, tool, and retry spans. |
+| What should I investigate? | Look through calls and logs for repeated work. | Follow findings to affected spans and suggested changes. |
+| Did the change help? | Write your own before/after comparison. | Compare saved runs with `agentloop replay`. |
+| Is the output still acceptable? | Combine task-specific checks with the performance comparison. | Supply quality fixtures and evaluate them alongside performance gates. |
+
+</details>
+
+AgentLoop supplies the tracing and comparison workflow. You choose the change,
+define what a correct output looks like, and decide which checks must pass.
+
+## How AgentLoop fits your stack
+
+<picture>
+  <source media="(max-width: 600px)" srcset="docs/assets/framework-comparison-mobile.svg">
+  <source media="(prefers-reduced-motion: reduce)" srcset="docs/assets/framework-comparison.svg">
+  <img src="docs/assets/framework-comparison.gif" width="100%" alt="Architecture: your application runs the agent and calls models and tools. AgentLoop decorators and adapters record spans into trace JSON. Analyze produces metrics and findings; replay compares a candidate with its baseline and your quality fixtures. Both produce reports for review or CI.">
+</picture>
+
+Your application runs the agent and chooses its framework and models.
+AgentLoop's [decorators and adapters](#framework-integrations) record the
+instrumented calls. Exported traces feed analysis, baseline/candidate replay,
+and reports for review or CI.
+
+When you change the framework, model, prompt, or execution strategy, record the
+same task again. [Compare both runs](#compare-before-and-after) with the same
+[quality fixtures](#quality-gates) to check the effect of your change.
 
 ## Quickstart
 
