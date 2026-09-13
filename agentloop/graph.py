@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from heapq import heapify, heappop, heappush
 from typing import Any
 
 from agentloop.operations import operation_kind
@@ -76,12 +77,14 @@ class CriticalPath:
         return {"node_ids": self.node_ids, "duration_ms": round(self.duration_ms, 3)}
 
 
-@dataclass
+@dataclass(slots=True)
 class _PathState:
-    node_ids: list[str]
+    node_id: str
     duration_ms: float
     started_ms: float | None = None
     ended_ms: float | None = None
+    predecessor: _PathState | None = field(default=None, repr=False)
+    node_count: int = 1
 
 
 @dataclass
@@ -161,9 +164,9 @@ class ExecutionGraph:
             node = node_by_id[node_id]
             interval = event_interval_ms(node)
             if interval is None:
-                own = _PathState([node_id], recorded_duration_ms(node))
+                own = _PathState(node_id, recorded_duration_ms(node))
             else:
-                own = _PathState([node_id], interval[1] - interval[0], interval[0], interval[1])
+                own = _PathState(node_id, interval[1] - interval[0], interval[0], interval[1])
 
             candidates = [own]
             for predecessor_id in predecessors[node_id]:
@@ -171,11 +174,18 @@ class ExecutionGraph:
                 if predecessor is not None:
                     candidates.append(_extend_path(predecessor, node, interval))
             states[node_id] = max(
-                candidates, key=lambda state: (state.duration_ms, len(state.node_ids))
+                candidates, key=lambda state: (state.duration_ms, state.node_count)
             )
 
-        best = max(states.values(), key=lambda state: (state.duration_ms, len(state.node_ids)))
-        return CriticalPath(best.node_ids, best.duration_ms)
+        best = max(states.values(), key=lambda state: (state.duration_ms, state.node_count))
+        # Share path prefixes while traversing; materialize only the winning path.
+        node_ids = []
+        state: _PathState | None = best
+        while state is not None:
+            node_ids.append(state.node_id)
+            state = state.predecessor
+        node_ids.reverse()
+        return CriticalPath(node_ids, best.duration_ms)
 
     def parallelizable_groups(self) -> list[dict[str, Any]]:
         return parallelization_candidates(
@@ -238,18 +248,23 @@ def _inferred_sequence_edges(roots: list[ExecutionNode]) -> list[ExecutionEdge]:
 
     ordered = sorted(roots, key=_node_sort_key)
     edges: list[ExecutionEdge] = []
-    for index, current in enumerate(ordered):
+    pending: list[tuple[float, float, str]] = []
+    latest: tuple[float, float, str] | None = None
+    for current in ordered:
         current_interval = intervals[current.node_id]
         if current_interval is None:
             continue
-        candidates = []
-        for previous in ordered[:index]:
-            previous_interval = intervals[previous.node_id]
-            if previous_interval is not None and previous_interval[1] <= current_interval[0]:
-                candidates.append((previous_interval[1], previous_interval[0], previous))
-        if candidates:
-            predecessor = max(candidates, key=lambda item: (item[0], item[1], item[2].node_id))[2]
-            edges.append(ExecutionEdge(source=predecessor.node_id, target=current.node_id))
+        started, ended = current_interval
+        # Each earlier span becomes eligible once. Retain the same latest-end,
+        # latest-start, then node-ID tie break without scanning every earlier span.
+        while pending and pending[0][0] <= started:
+            candidate = heappop(pending)
+            if latest is None or candidate > latest:
+                latest = candidate
+        if latest is not None:
+            edges.append(ExecutionEdge(source=latest[2], target=current.node_id))
+        # Insert after selecting a predecessor, including for zero-duration spans.
+        heappush(pending, (ended, started, current.node_id))
     return edges
 
 
@@ -271,22 +286,21 @@ def _topological_order(
 ) -> list[str]:
     node_by_id = {node.node_id: node for node in nodes}
     indegree = {node_id: len(set(items)) for node_id, items in predecessors.items()}
-    ready = sorted(
-        (node_by_id[node_id] for node_id, count in indegree.items() if count == 0),
-        key=_node_sort_key,
-    )
+    sort_keys = {node_id: _node_sort_key(node) for node_id, node in node_by_id.items()}
+    ready = [(sort_keys[node_id], node_id) for node_id, count in indegree.items() if count == 0]
+    heapify(ready)
     ordered: list[str] = []
     while ready:
-        node = ready.pop(0)
-        ordered.append(node.node_id)
-        for target in successors[node.node_id]:
+        _, node_id = heappop(ready)
+        ordered.append(node_id)
+        for target in successors[node_id]:
             indegree[target] -= 1
             if indegree[target] == 0:
-                ready.append(node_by_id[target])
-                ready.sort(key=_node_sort_key)
+                heappush(ready, (sort_keys[target], target))
 
     if len(ordered) != len(nodes):
-        remaining = [node for node in nodes if node.node_id not in set(ordered)]
+        visited = set(ordered)
+        remaining = [node for node in nodes if node.node_id not in visited]
         ordered.extend(node.node_id for node in sorted(remaining, key=_node_sort_key))
     return ordered
 
@@ -296,9 +310,14 @@ def _extend_path(
     node: ExecutionNode,
     interval: tuple[float, float] | None,
 ) -> _PathState:
-    node_ids = [*predecessor.node_ids, node.node_id]
+    node_count = predecessor.node_count + 1
     if predecessor.started_ms is not None and predecessor.ended_ms is not None and interval:
         started = min(predecessor.started_ms, interval[0])
         ended = max(predecessor.ended_ms, interval[1])
-        return _PathState(node_ids, ended - started, started, ended)
-    return _PathState(node_ids, predecessor.duration_ms + recorded_duration_ms(node))
+        return _PathState(node.node_id, ended - started, started, ended, predecessor, node_count)
+    return _PathState(
+        node.node_id,
+        predecessor.duration_ms + recorded_duration_ms(node),
+        predecessor=predecessor,
+        node_count=node_count,
+    )
