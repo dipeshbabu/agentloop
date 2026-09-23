@@ -1,5 +1,8 @@
 # Native trace schema & compatibility
 
+Generic workflows and decision stages use this same native schema. See
+[workflow tracing](WORKFLOW_TRACING.md) for their versioned metadata contract.
+
 AgentLoop's serialized trace JSON is a **public compatibility surface**: the CLI,
 the HTTP API, both persistence backends, and the OTLP/Vercel adapters all read
 and write it through one contract defined in [`agentloop/schema.py`](../agentloop/schema.py).

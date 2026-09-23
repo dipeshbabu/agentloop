@@ -1,5 +1,8 @@
 # AgentLoop Framework Integrations
 
+For framework-neutral pipeline and stage annotations, see
+[workflow tracing](WORKFLOW_TRACING.md).
+
 For opt-in runtime controls, see the [LangGraph harness adapter](LANGGRAPH_HARNESS.md).
 The tracing integrations below remain observation APIs; recording a call does
 not itself enforce a policy.

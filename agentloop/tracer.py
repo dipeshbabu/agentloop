@@ -231,7 +231,7 @@ def bind_trace_context(trace: AgentTrace | None, event_id: str | None = None) ->
 
 
 @contextmanager
-def trace_agent(name: str, metadata: dict[str, Any] | None = None) -> Iterator[AgentTrace]:
+def _trace_execution(name: str, metadata: dict[str, Any] | None = None) -> Iterator[AgentTrace]:
     trace = AgentTrace(name=name, metadata=metadata)
     trace._timing_active = True
     token = _current_trace.set(trace)
@@ -246,6 +246,13 @@ def trace_agent(name: str, metadata: dict[str, Any] | None = None) -> Iterator[A
 
         if should_auto_export():
             trace.finalize_result = finalize_trace(trace)
+
+
+@contextmanager
+def trace_agent(name: str, metadata: dict[str, Any] | None = None) -> Iterator[AgentTrace]:
+    """Backward-compatible agent scope sharing the generic execution lifecycle."""
+    with _trace_execution(name, metadata) as trace:
+        yield trace
 
 
 def record_model_call(

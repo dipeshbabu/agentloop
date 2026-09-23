@@ -18,6 +18,10 @@ OPERATION_KINDS = frozenset(
         "guardrail",
         "evaluator",
         "retry",
+        "rule",
+        "classifier",
+        "transform",
+        "external_service",
     }
 )
 LEGACY_OPERATION_KINDS = {"model_call": "model", "tool_call": "tool", "retry": "retry"}

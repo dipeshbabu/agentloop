@@ -182,16 +182,28 @@ def _run(path: Path, keys: list[str]) -> dict[str, Any]:
         categories["task_failure"] += 1
     # No error spans means execution succeeded, not that task quality was verified.
     success_value = not failures if success is None else success and not failures
+    success_basis = "task_metadata_and_execution" if success is not None else "execution_only"
+    execution = report.get("execution")
+    if execution is not None:
+        status = execution.get("status") if execution.get("schema_status") == "supported" else None
+        if status in {"failed", "cancelled", "interrupted"}:
+            success_value = False
+            categories[f"workflow_{status}"] += 1
+        elif status != "completed":
+            success_value = False if failures or success is False else None
+        success_basis = "task_metadata_and_workflow" if success is not None else "workflow_status"
     cost_known = is_cost_evaluable(report["cost_status"]) and is_token_basis_evaluable(
         report["token_status"]
     )
     return {
         "path": str(path),
+        **({"execution": report["execution"]} if "execution" in report else {}),
+        **({"stages": report["stages"]} if "stages" in report else {}),
         "run_id": trace.run_id,
         "pair_key": _pair_key(trace.metadata, keys),
         "pairing_metadata": {key: trace.metadata.get(key) for key in keys},
         "metrics": {
-            "success": float(success_value),
+            "success": float(success_value) if success_value is not None else None,
             "quality_score": quality,
             "runtime_ms": report["total_runtime_ms"],
             "input_tokens": report["input_tokens"],
@@ -201,7 +213,7 @@ def _run(path: Path, keys: list[str]) -> dict[str, Any]:
             "retry_count": report["retry_count"],
             "cost_usd": report["estimated_cost_usd"] if cost_known else None,
         },
-        "success_basis": "task_metadata_and_execution" if success is not None else "execution_only",
+        "success_basis": success_basis,
         "cost_status": report["cost_status"],
         "token_status": report["token_status"],
         "operation_counts": report.get("operation_counts", {}),

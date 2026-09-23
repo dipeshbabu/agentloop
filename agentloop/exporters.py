@@ -41,6 +41,17 @@ def export_report_markdown(report: dict[str, Any], path: str | Path) -> Path:
     ]
     for rec in report["recommendations"]:
         lines.append(f"- **{markdown_text(rec['title'])}** — {markdown_text(rec['description'])}")
+    if "execution" in report:
+        lines.extend(
+            [
+                "",
+                "## Workflow",
+                "",
+                markdown_code_span(json.dumps(report["execution"], sort_keys=True)),
+                "",
+                "Cost and token totals cover recorded model calls, not arbitrary service billing.",
+            ]
+        )
     lines.extend(
         [
             "",
@@ -58,5 +69,33 @@ def export_report_markdown(report: dict[str, Any], path: str | Path) -> Path:
             f"{event.get('input_tokens', 0)} | {event.get('output_tokens', 0)} | "
             f"{markdown_table_cell(event.get('status', 'ok'))} |"
         )
+    if report.get("stages"):
+        lines.extend(
+            [
+                "",
+                "## Stages",
+                "",
+                "| Span | Stage / version | Kind | Outcome | Schema references | Data references | Dependencies |",
+                "| --- | --- | --- | --- | --- | --- | --- |",
+            ]
+        )
+        for identity, stage in report["stages"].items():
+            cells = [
+                identity,
+                f"{stage.get('stage_id')} / {stage.get('version')}",
+                stage.get("kind"),
+                stage.get("outcome"),
+                f"{stage.get('input_schema_ref')} -> {stage.get('output_schema_ref')}",
+                f"{stage.get('input_ref')} -> {stage.get('output_ref')}",
+                ", ".join(stage.get("depends_on", [])),
+            ]
+            lines.append(
+                "| "
+                + " | ".join(
+                    markdown_table_cell("unavailable" if value is None else str(value))
+                    for value in cells
+                )
+                + " |"
+            )
     out.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return out

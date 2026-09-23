@@ -32,11 +32,31 @@ from agentloop.tracer import (
 )
 from agentloop.value import build_value_report
 from agentloop.version import __version__
+from agentloop.workflows import (
+    ExecutionTrace,
+    StageInfo,
+    WorkflowInfo,
+    operation_metadata,
+    record_operation,
+    set_workflow_outcome,
+    trace_operation,
+    trace_workflow,
+    workflow_metadata,
+)
 
 __all__ = [
     "AgentLoopClient",
     "AgentLoopClientError",
     "AgentTrace",
+    "ExecutionTrace",
+    "StageInfo",
+    "WorkflowInfo",
+    "operation_metadata",
+    "record_operation",
+    "set_workflow_outcome",
+    "trace_operation",
+    "trace_workflow",
+    "workflow_metadata",
     "CLEAR",
     "FinalizationError",
     "DetectionResult",

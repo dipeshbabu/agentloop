@@ -98,6 +98,28 @@ def analysis_to_html(payload: dict[str, Any], *, include_content: bool = False) 
         sections.append(
             '<p class="notice">No execution spans were supplied. This artifact contains external evaluation metadata.</p>'
         )
+    if report.get("execution") is not None:
+        execution = report["execution"]
+        sections.append(
+            "<h3>Workflow</h3>"
+            + _definition(
+                [
+                    (key.replace("_", " ").title(), value)
+                    for key, value in execution.items()
+                    if value is not None
+                ]
+            )
+        )
+        sections.append(
+            '<p class="notice">Cost and token totals cover recorded model calls. A completed execution or outcome label is not independent task-quality evidence.</p>'
+        )
+    dependency_evidence = plan.get("graph", {}).get("dependency_evidence")
+    if dependency_evidence is not None:
+        sections.append(
+            "<details><summary>Dependency declarations</summary>"
+            + _json(dependency_evidence)
+            + "</details>"
+        )
     if not diagnosis.get("analysis_complete", True):
         sections.append(
             '<p class="notice">Analysis incomplete: one or more finding rules failed.</p>'
@@ -349,8 +371,40 @@ def _timeline(trace: AgentTrace, nodes: list[dict[str, Any]], anchors: dict[str,
             if parent in anchors
             else _text(parent or "root")
         )
+        stage = node.get("stage")
+        stage_detail = ""
+        if stage is not None:
+            stage_detail = (
+                "<details><summary>Stage: "
+                + _text(stage.get("stage_id") or stage.get("schema_status"))
+                + "</summary>"
+            )
+            stage_detail += _definition(
+                [
+                    (key.replace("_", " ").title(), stage.get(key))
+                    for key in (
+                        "version",
+                        "kind",
+                        "input_schema_ref",
+                        "output_schema_ref",
+                        "input_ref",
+                        "output_ref",
+                        "outcome",
+                    )
+                    if stage.get(key) is not None
+                ]
+            )
+            links = [
+                f'<a href="#{anchors[source]}">{_text(source)}</a>'
+                if source in anchors
+                else _text(source) + " (unresolved)"
+                for source in stage.get("depends_on", [])
+            ]
+            if links:
+                stage_detail += "<p>Depends on: " + ", ".join(links) + "</p>"
+            stage_detail += "</details>"
         rows.append(
-            f'<tr id="{anchors[node["node_id"]]}"><td>{_text(node["name"])}<br><code>{_text(node["node_id"])}</code></td><td>{_text(node.get("operation_kind", node["event_type"]))}</td><td>{node["duration_ms"]:.3f} ms</td><td>{bar}</td><td>{parent_link}</td></tr>'
+            f'<tr id="{anchors[node["node_id"]]}"><td>{_text(node["name"])}<br><code>{_text(node["node_id"])}</code>{stage_detail}</td><td>{_text(node.get("operation_kind", node["event_type"]))}</td><td>{node["duration_ms"]:.3f} ms</td><td>{bar}</td><td>{parent_link}</td></tr>'
         )
     return (
         '<section id="timeline"><h2>Execution timeline</h2><div class="table-wrap"><table><caption>Recorded span timing and parent structure. Bars show relative timestamps, not predicted savings.</caption><thead><tr><th scope="col">Span</th><th scope="col">Operation</th><th scope="col">Duration</th><th scope="col">Relative timing</th><th scope="col">Parent</th></tr></thead><tbody>'
