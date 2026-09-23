@@ -44,6 +44,10 @@ def _estimate(context, case, row, inputs):
     events = inputs["events"]
     selected = [events[identity] for identity in case.target_spans]
     leaf = all(item["event_id"] not in inputs["children"] for item in selected)
+    all_models = all(item["event_type"] == "model_call" for item in selected)
+    selected_token_status = (
+        token_status([SimpleNamespace(**item) for item in selected]) if all_models else None
+    )
     eligible = bool(case.removal_attribution_ref and leaf and case.family != "context_relevance")
     predictions = {
         "latency_ms": None,
@@ -92,9 +96,8 @@ def _estimate(context, case, row, inputs):
             assumptions.append(
                 "The recorded flat, nonoverlapping execution remains serial after the change, so removed span time can shorten elapsed runtime."
             )
-        all_models = all(item["event_type"] == "model_call" for item in selected)
         if all_models:
-            exact_tokens = token_status([SimpleNamespace(**item) for item in selected]) in {
+            exact_tokens = selected_token_status in {
                 "exact",
                 "empty",
             }
@@ -122,6 +125,11 @@ def _estimate(context, case, row, inputs):
         "parameters": {},
         "assumptions": assumptions,
         "inputs": {
+            "family": case.family,
+            "attribution_eligible": eligible,
+            "all_model_calls": all_models,
+            "token_status": selected_token_status,
+            "trace_cost_status": context.report.get("cost_status"),
             "target_spans": list(case.target_spans),
             "leaf_spans": leaf,
             "flat_serial_timing": serial,
