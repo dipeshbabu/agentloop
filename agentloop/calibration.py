@@ -605,7 +605,14 @@ def _mark_duplicates(rows):
     for row in rows:
         if row["intervention"] is not None:
             by_outcome[row["intervention"]["intervention_id"]].append(row)
-        by_pair[(row["cohort_id"], row["task_key"], row["repetition_key"])].append(row)
+        by_pair[
+            (
+                row["cohort_id"],
+                row["task_key"],
+                row["repetition_key"],
+                row["prediction_snapshot"]["finding_id"],
+            )
+        ].append(row)
     for groups, issue in ((by_outcome, "duplicate_outcome"), (by_pair, "duplicate_pairing_key")):
         for group in groups.values():
             if len(group) > 1:

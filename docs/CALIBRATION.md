@@ -113,8 +113,11 @@ exported JSON and its compatible normalized trace form are recognized, so an
 integer duration becoming a float on import does not invalidate an unchanged
 historical export. Stored ledger identities are never rewritten. Combined
 multi-finding interventions remain unattributed rather than assigning their
-whole effect to each finding. Duplicate outcome or pairing keys are ambiguous;
-all copies are retained and excluded from empirical calculations.
+whole effect to each finding. A pairing key includes cohort, task, repetition and
+original finding identity. Duplicate outcomes or pairing keys are ambiguous;
+all copies are retained and excluded from empirical calculations. Different
+findings on one task remain distinct observations, while the task still receives
+one statistical weight.
 
 ## Errors, quality, and denominators
 

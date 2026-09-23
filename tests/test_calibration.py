@@ -489,13 +489,44 @@ def test_declared_policy_must_appear_in_enforced_source_evidence(tmp_path):
     assert not row["metrics"]["latency"]["empirical_eligible"]
 
 
+def shared_baseline_cases(directory, *, same_prediction):
+    cases = [make_case(directory, name, task="same-task") for name in ("a", "b")]
+    if same_prediction:
+        cases[1]["prediction"] = copy.deepcopy(cases[0]["prediction"])
+    baseline = AgentTrace.from_json(directory / "a-baseline.json")
+    candidate = AgentTrace.from_json(directory / "b-candidate.json")
+    prediction = cases[1]["prediction"]
+    record = build_intervention(
+        baseline,
+        candidate,
+        target_finding_ids=[prediction["finding_id"]],
+        intervention_type="fixture-change",
+        diagnosis={"run_id": baseline.run_id, "findings": [prediction]},
+        metadata={"synthetic": False},
+    ).to_dict()
+    write(directory / "b-record.json", record)
+    cases[1]["outcome"]["baseline_trace"] = "a-baseline.json"
+    return cases
+
+
 def test_duplicate_pairing_keys_are_all_excluded(tmp_path):
-    cases = [make_case(tmp_path, name, task="same-task") for name in ("a", "b")]
+    cases = shared_baseline_cases(tmp_path, same_prediction=True)
     report = summarize_calibration(manifest(tmp_path, cases))
     assert all("duplicate_pairing_key" in row["issues"] for row in report["registrations"])
     assert all(
         not row["metrics"]["latency"]["empirical_eligible"] for row in report["registrations"]
     )
+
+
+def test_distinct_findings_on_one_task_are_not_duplicate_predictions(tmp_path):
+    cases = shared_baseline_cases(tmp_path, same_prediction=False)
+    report = summarize_calibration(manifest(tmp_path, cases))
+    assert all(row["metrics"]["latency"]["empirical_eligible"] for row in report["registrations"])
+    summary = report["cohorts"][0]["metrics"]["latency"]["splits"]["fit"]["original"][
+        "signed_error"
+    ]
+    assert summary["observation_summary"]["count"] == 2
+    assert summary["task_summary"]["count"] == 1
 
 
 def test_task_means_give_each_task_one_fit_weight(tmp_path):
