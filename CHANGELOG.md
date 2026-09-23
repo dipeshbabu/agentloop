@@ -10,6 +10,11 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added an [AI execution profiling guide](docs/AI_EXECUTION_PROFILING.md)
+  connecting workflow tracing, caller-defined quality, optional judgments,
+  findings, substitution experiments and paired studies, with source-checkout
+  instructions and all five synthetic reference workflows.
+
 - Added a synthetic [batch data-pipeline reference](docs/BATCH_DATA_PIPELINE.md)
   with chunk-level workflows, per-record extraction/classification/matching
   criteria, retained failed outputs, per-stage distributions and native paired
