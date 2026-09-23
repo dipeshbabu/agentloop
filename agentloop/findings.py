@@ -64,6 +64,14 @@ def build_diagnosis(trace: Any) -> dict[str, Any]:
     findings = [_finding_from_card(card, plan) for card in plan.get("optimization_cards", [])]
     findings = [finding for finding in findings if finding is not None]
     return {
+        **(
+            {
+                "semantic_judgments": plan["semantic_judgments"],
+                "evidence_categories": plan["evidence_categories"],
+            }
+            if "semantic_judgments" in plan
+            else {}
+        ),
         **({"execution": plan["graph"]["execution"]} if "execution" in plan["graph"] else {}),
         "run_id": plan["run_id"],
         "name": plan["name"],
@@ -151,6 +159,10 @@ def diagnosis_to_markdown(diagnosis: dict[str, Any]) -> str:
                     "",
                 ]
             )
+    if "semantic_judgments" in diagnosis:
+        from agentloop.judgment_views import judgment_markdown
+
+        lines.extend(judgment_markdown(diagnosis["semantic_judgments"]))
     return "\n".join(lines).rstrip() + "\n"
 
 
