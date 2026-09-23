@@ -146,9 +146,23 @@ def test_original_failure_identity(contract, kind, error):
         {"sync": fail, "async": afail, "generator": stream, "async_generator": astream}[kind],
         kind,
     )
-    with pytest.raises(type(error)) as caught:
-        execute(fn, kind)
-    assert caught.value is error
+    if kind in {"async", "async_generator"}:
+
+        async def check():
+            # Check at the adapter boundary: Python 3.10's asyncio.run() creates
+            # a new CancelledError after a cancelled coroutine leaves the task.
+            with pytest.raises(type(error)) as caught:
+                if kind == "async":
+                    await fn(3)
+                else:
+                    await fn(3).__anext__()
+            assert caught.value is error
+
+        asyncio.run(check())
+    else:
+        with pytest.raises(type(error)) as caught:
+            execute(fn, kind)
+        assert caught.value is error
 
 
 def test_sync_stream_protocol_laziness_and_context(contract):
