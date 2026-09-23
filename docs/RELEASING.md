@@ -41,6 +41,20 @@ itself is the reason to cut that release.
 
 ## Prepare a release
 
+For the 0.7.0 evidence-workflow release, follow the
+[0.6 to 0.7 upgrade guide](UPGRADING_0_7.md) when reviewing compatibility and
+recovery. The package CI job runs `scripts/smoke_installed_wheel.py` using the
+freshly installed wheel and an isolated interpreter. It exercises quickstart,
+analysis/HTML, paired studies, and intervention creation/retrieval in a temporary
+directory outside the checkout, including a retained quality failure and unknown
+cost. Run the same script locally with the wheel environment's Python:
+
+```bash
+path/to/wheel-env/bin/python -I scripts/smoke_installed_wheel.py --expected-version 0.7.0
+```
+
+On Windows, use `path/to/wheel-env/Scripts/python.exe`.
+
 ### Automated (recommended)
 
 1. From the **Actions** tab, run the **Bump version** workflow (or
