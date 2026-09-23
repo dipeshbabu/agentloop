@@ -4,6 +4,7 @@ from typing import Any
 
 from agentloop.costs import format_cost_usd
 from agentloop.markdown import markdown_code_span, markdown_heading, markdown_text
+from agentloop.timing import format_duration_ms
 
 # Generated drafts target this repository, so use only deliberately maintained
 # labels that already exist. Finding type and severity remain structured fields
@@ -59,7 +60,7 @@ def _issue_for_queue_item(item: dict[str, Any]) -> dict[str, Any]:
             f"- Quality risk: {markdown_code_span(item.get('quality_risk', 'unknown'))}",
             f"- Requires scorer: {item.get('requires_scorer', True)}",
             f"- Safe to auto-patch: {item.get('safe_to_auto_patch', False)}",
-            f"- Estimated latency savings: {item['estimated_latency_savings_ms'] / 1000:.2f}s",
+            f"- Estimated latency savings: {format_duration_ms(item['estimated_latency_savings_ms'])}",
             "- Estimated cost savings: " + format_cost_usd(item.get("estimated_cost_savings_usd")),
             f"- Priority score: {item['priority_score']:.1f}",
             "",

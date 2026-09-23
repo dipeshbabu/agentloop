@@ -8,12 +8,14 @@ or remote service is required.
 
 Use the [adapter and benchmark layer](JUDGMENT_BENCHMARKS.md) to compare rules,
 local predictors and optional typed-service transports on frozen labelled cases.
+Use [semantic waste investigations](SEMANTIC_WASTE.md) to bind optional judgments
+to canonical finding rules and explicit task criteria.
 
 Judgments are separate from observed execution facts, deterministic finding
 rules, and [caller-defined task quality](STRUCTURED_QUALITY.md). A judgment is
 neither universal correctness evidence nor permission to change production
-behavior. This contract does not introduce semantic waste finding rules or
-automatic model substitution.
+behavior. Judgment execution alone does not create semantic waste findings or
+automatically substitute models.
 
 ## Python interface
 

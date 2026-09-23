@@ -37,6 +37,7 @@ def build_optimization_plan(trace: Any, report: dict[str, Any] | None = None) ->
     total_cost_savings = aggregate["cost_savings_usd"]
 
     return {
+        **({"semantic_waste": report["semantic_waste"]} if "semantic_waste" in report else {}),
         **(
             {
                 "semantic_judgments": report["semantic_judgments"],
@@ -112,7 +113,7 @@ def _aggregate_savings(
     capped_cost = (
         (min(selection.cost_usd, current_cost) if current_cost else 0.0) if cost_evaluable else None
     )
-    raw_latency = sum(card.estimated_latency_savings_ms for card in cards)
+    raw_latency = sum(card.estimated_latency_savings_ms or 0.0 for card in cards)
     raw_cost = (
         sum(float(card.estimated_cost_savings_usd or 0.0) for card in cards)
         if cost_evaluable
@@ -136,6 +137,32 @@ def _aggregate_savings(
         "latency_savings_ms": capped_latency,
         "cost_savings_usd": capped_cost,
         "explanation": {
+            **(
+                {
+                    "unmodeled_cost_findings": sum(
+                        card.estimated_cost_savings_usd is None
+                        and (card.estimate or {}).get("estimator_id") == "semantic_leaf_removal"
+                        for card in cards
+                    ),
+                    "cost_estimate_complete": False,
+                }
+                if any(
+                    card.estimated_cost_savings_usd is None
+                    and (card.estimate or {}).get("estimator_id") == "semantic_leaf_removal"
+                    for card in cards
+                )
+                else {}
+            ),
+            **(
+                {
+                    "unmodeled_latency_findings": sum(
+                        card.estimated_latency_savings_ms is None for card in cards
+                    ),
+                    "latency_estimate_complete": False,
+                }
+                if any(card.estimated_latency_savings_ms is None for card in cards)
+                else {}
+            ),
             "rule": rule,
             "card_count": len(cards),
             "selected_card_indexes": list(selection.indices),

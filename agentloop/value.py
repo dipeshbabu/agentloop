@@ -31,7 +31,12 @@ def build_value_report(
     plan = build_optimization_plan(trace)
     current = plan["current"]
     estimated_after = plan["estimated_after"]
-    cards = plan.get("optimization_cards", [])
+    all_cards = plan.get("optimization_cards", [])
+    cards = [
+        card
+        for card in all_cards
+        if (card.get("estimate") or {}).get("estimator_id") != "semantic_leaf_removal"
+    ]
 
     cost_status = plan.get("cost_status", current.get("cost_status", "complete"))
     cost_evaluable = is_cost_evaluable(cost_status)
@@ -83,6 +88,11 @@ def build_value_report(
     )
 
     return {
+        **(
+            {"unmodeled_semantic_non_cost_findings": len(all_cards) - len(cards)}
+            if len(all_cards) != len(cards)
+            else {}
+        ),
         "run_id": plan.get("run_id"),
         "name": plan.get("name"),
         "cost_status": cost_status,
@@ -130,7 +140,7 @@ def build_value_report(
             cards=cards,
             pricing=pricing,
         ),
-        "optimization_cards": cards,
+        "optimization_cards": all_cards,
     }
 
 

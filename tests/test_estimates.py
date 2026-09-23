@@ -11,6 +11,7 @@ from agentloop.findings import build_diagnosis, diagnosis_to_markdown
 from agentloop.optimizer import build_optimization_plan
 from agentloop.plan_export import export_optimization_markdown
 from agentloop.rules import BUILTIN_RULES, FindingCandidate
+from agentloop.semantic_waste_types import QUESTIONS
 from agentloop.tracer import AgentTrace
 
 
@@ -41,11 +42,13 @@ def all_rules_trace():
     return trace
 
 
-def test_every_builtin_estimator_is_self_contained_and_reproduces_predictions():
+def test_default_estimators_are_self_contained_and_reproduce_predictions():
     trace = all_rules_trace()
     plan = build_optimization_plan(trace)
     cards = plan["optimization_cards"]
-    assert {card["rule_id"] for card in cards} == {rule.rule_id for rule in BUILTIN_RULES}
+    # A trace with no explicit investigations must only activate default rules.
+    assert {card["rule_id"] for card in cards} == set(ESTIMATORS)
+    assert {rule.rule_id for rule in BUILTIN_RULES} == set(ESTIMATORS) | set(QUESTIONS)
     for card in cards:
         estimate = card["estimate"]
         assert estimate["estimator_id"] == card["rule_id"]
@@ -143,7 +146,51 @@ def test_human_reports_identify_uncalibrated_hypotheses_for_every_card(tmp_path)
     for report in reports:
         assert report.count("uncalibrated; predicted savings") == len(plan["optimization_cards"])
         for rule in BUILTIN_RULES:
-            assert rule.rule_id in report
+            if rule.rule_id in ESTIMATORS:
+                assert rule.rule_id in report
         assert "latency_fraction" in report
         assert "0.35" in report
         assert "Assumptions:" in report
+
+
+@pytest.mark.parametrize("family", sorted(QUESTIONS))
+def test_explicit_semantic_estimators_preserve_their_inputs_and_human_evidence(family, tmp_path):
+    from test_semantic_waste import investigation, judge, trace_fixture
+
+    from agentloop.semantic_waste import evaluate_semantic_waste
+
+    trace = trace_fixture()
+    if family == "retry_usefulness":
+        trace.events[1].metadata["retry_of"] = "reference"
+    case = investigation(family, removal_attribution_ref="fixture:removal-v1")
+    evaluate_semantic_waste(trace, [case], judges=[judge()], enabled=True)
+    plan = build_optimization_plan(trace)
+    card = next(item for item in plan["optimization_cards"] if item["rule_id"] == family)
+    snapshot = json.loads(json.dumps(card["estimate"], allow_nan=False))
+    assert snapshot["estimator_id"] == "semantic_leaf_removal"
+    assert snapshot["estimator_version"] == card["rule_version"] == "1.0"
+    assert snapshot["inputs"]["family"] == family
+    assert snapshot["inputs"]["token_status"] == "exact"
+    assert snapshot["inputs"]["trace_cost_status"] == "complete"
+    assert snapshot["calibrated"] is False
+    if family == "context_relevance":
+        assert set(snapshot["predictions"].values()) == {None}
+        assert snapshot["inputs"]["attribution_eligible"] is False
+    else:
+        count = 2 if family == "semantic_no_progress" else 1
+        assert snapshot["predictions"] == {
+            "latency_ms": 10 * count,
+            "cost_usd": 0.001 * count,
+            "input_tokens": 10 * count,
+            "output_tokens": 2 * count,
+        }
+        assert len(snapshot["inputs"]["model_costs"]) == count
+        assert snapshot["inputs"]["attribution_eligible"] is True
+    for rendered in (
+        export_optimization_markdown(plan, tmp_path / "plan.md").read_text(encoding="utf-8"),
+        diagnosis_to_markdown(build_diagnosis(trace)),
+    ):
+        assert family in rendered and "uncalibrated; predicted savings" in rendered
+        assert "quality:route-v1" in rendered
+    trace.events[1].input_tokens = 1000
+    assert card["estimate"] == snapshot

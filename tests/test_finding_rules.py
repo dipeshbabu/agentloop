@@ -40,6 +40,11 @@ def test_registry_ids_and_order_are_stable():
         "split_large_step",
         "runaway_loop",
         "tool_oscillation",
+        "semantic_redundancy",
+        "low_contribution",
+        "semantic_no_progress",
+        "retry_usefulness",
+        "context_relevance",
     ]
 
 

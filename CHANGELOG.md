@@ -10,6 +10,12 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added opt-in [semantic waste investigations](docs/SEMANTIC_WASTE.md) for
+  redundancy, low contribution, no progress, retry usefulness and context
+  relevance. Canonical findings retain source/judge provenance and abstentions;
+  conditional leaf-removal estimates require explicit attribution. Unavailable
+  savings stay null through stored findings, queues and report views.
+
 - Added [judgment adapters and frozen benchmarks](docs/JUDGMENT_BENCHMARKS.md)
   for local predictors and optional typed-service transports. Comparisons retain
   missing, failed and unlabelled cases, separate independent-label quality from

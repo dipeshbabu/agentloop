@@ -101,5 +101,9 @@ def export_report_markdown(report: dict[str, Any], path: str | Path) -> Path:
         from agentloop.judgment_views import judgment_markdown
 
         lines.extend(judgment_markdown(report["semantic_judgments"]))
+    if "semantic_waste" in report:
+        from agentloop.semantic_waste import semantic_waste_markdown
+
+        lines.extend(semantic_waste_markdown(report["semantic_waste"]))
     out.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return out

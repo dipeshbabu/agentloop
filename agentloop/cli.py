@@ -50,6 +50,7 @@ from agentloop.store import (
     get_store,
 )
 from agentloop.studies import StudyValidationError, study_to_markdown, summarize_study
+from agentloop.timing import format_duration_ms
 from agentloop.tracer import AgentTrace
 from agentloop.value import build_value_report
 
@@ -915,7 +916,7 @@ def list_findings(
             str(finding["run_id"]),
             str(finding["status"]),
             "yes" if finding["patchable"] else "no",
-            f"{finding['estimated_latency_savings_ms'] / 1000:.2f}s / "
+            f"{format_duration_ms(finding['estimated_latency_savings_ms'])} / "
             f"{format_cost_usd(finding.get('estimated_cost_savings_usd'))}",
         )
     console.print(table)
@@ -982,7 +983,7 @@ def optimization_queue(
             str(item["title"]),
             str(item["run_count"]),
             str(item["patchable_count"]),
-            f"{item['estimated_latency_savings_ms'] / 1000:.2f}s / "
+            f"{format_duration_ms(item['estimated_latency_savings_ms'])} / "
             f"{format_cost_usd(item.get('estimated_cost_savings_usd'))}",
         )
     console.print(table)
