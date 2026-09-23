@@ -112,12 +112,17 @@ termination, automatic retry, or spend guarantee in this contract.
 
 ## Evidence and extensions
 
-The run exposes immutable in-memory hook results for inspection. These distinguish
-proposals, resolved actions, mode, execution status, and policy errors. They are
-not intervention outcomes, measured benefits, or a persistent audit ledger.
-Versioned trace/OTLP/HTML decision provenance belongs to #184; budget reservation
-and reconciliation to #185; retry/loop semantics to #186. Those extensions must
-use this contract and the existing intervention ledger rather than replacing them.
+The run exposes immutable in-memory hook results and versioned
+[decision evidence](HARNESS_EVIDENCE.md). Active traces retain policy snapshots,
+proposal dispositions, dispatch status, timing, and explicit retry/conflict links
+through native JSON, supported OTLP round trips, and HTML. The existing intervention
+ledger links actual comparisons without treating a logged action as a measured
+benefit. Raw policy configuration capture is disabled by default.
+
+Budget reservation/reconciliation belongs to #185 and retry/loop enforcement to
+#186. Those extensions must use this contract and the existing intervention ledger
+rather than replacing them. `Decision.retry_of` only annotates a host-declared
+relationship; it never executes an automatic retry.
 
 Policy transformations, provider routing, scheduling, checkpoint recovery, and
 automatic completion repair require later explicit capability extensions. The

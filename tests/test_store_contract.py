@@ -718,3 +718,49 @@ def test_optimization_queue_bounded_window_excludes_inactive_statuses(store):
     store.update_finding_status("proj_a", run_id, "f2", "dismissed")
 
     assert store.optimization_queue(project_id="proj_a") == []
+
+
+def test_harness_decisions_and_linked_interventions_preserve_project_isolation(store):
+    from agentloop.findings import build_diagnosis
+    from agentloop.harness import Decision, Harness, HarnessConfig, HarnessDeniedError, Hook, Policy
+    from agentloop.harness_evidence import read_evidence
+    from agentloop.intervention_service import create_stored_intervention
+    from agentloop.interventions import InterventionReferenceError
+    from agentloop.tracer import AgentTrace, bind_trace_context
+
+    baseline = _repeated_context_trace("baseline-policy")
+    candidate = AgentTrace.from_dict(copy.deepcopy(baseline.to_dict()))
+    candidate.run_id = "candidate-" + baseline.run_id
+    for event in candidate.events:
+        event.run_id = candidate.run_id
+    policy = Policy(
+        "deny-tool",
+        "historical",
+        lambda context: Decision("deny"),
+        hooks={Hook("tool")},
+        actions={"deny"},
+    )
+    with bind_trace_context(candidate):
+        run = Harness(HarnessConfig("enforce", (policy,))).start_run()
+        with pytest.raises(HarnessDeniedError):
+            run.wrap(lambda: pytest.fail("denied tool dispatched"), boundary="tool")()
+    expected = read_evidence(candidate)
+    for trace in (baseline, candidate):
+        store.save_trace(trace, project_id="proj_a")
+    assert read_evidence(store.get_trace(candidate.run_id, project_id="proj_a")) == expected
+    assert store.get_trace(candidate.run_id, project_id="proj_b") is None
+    targets = [item["finding_id"] for item in build_diagnosis(baseline)["findings"]]
+    request = {
+        "baseline_run_id": baseline.run_id,
+        "candidate_run_id": candidate.run_id,
+        "target_finding_ids": targets,
+        "intervention_type": "guarded_tool",
+    }
+    record = create_stored_intervention(store, request, project_id="proj_a")
+    assert create_stored_intervention(store, request, project_id="proj_a") == record
+    evidence = record["metadata"]["agentloop.harness_evidence"]
+    assert evidence["candidate"] == expected
+    assert len(evidence["applied_candidate_decision_ids"]) == 1
+    assert store.get_intervention(record["intervention_id"], project_id="proj_b") is None
+    with pytest.raises(InterventionReferenceError):
+        create_stored_intervention(store, request, project_id="proj_b")

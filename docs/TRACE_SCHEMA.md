@@ -166,3 +166,18 @@ attributes come from provider usage and read as `provider`, and a span with no
 usage attributes reads as `unavailable` rather than a measured zero. Event metadata is exported under the `agentloop.metadata.` namespace
 and decoded exactly once on import. Third-party resource/span attributes on a
 non-AgentLoop OTLP payload are preserved as event metadata without collision.
+
+### Harness decision metadata
+
+Enabled Python harnesses use the reserved trace metadata key `agentloop.harness`
+for the independent [decision-evidence schema 1.0](HARNESS_EVIDENCE.md). Native
+trace schema remains 1.1; existing traces and application-owned metadata such as
+`harness` keep their original meaning. The new namespace contains decision IDs,
+historical policy declarations, outcome/dispatch evidence, timing, and explicit
+retry/conflict references. Raw configuration capture is opt-in.
+
+Native JSON and AgentLoop OTLP resource metadata preserve this namespace, including
+traces without execution spans. Unknown evidence versions remain opaque metadata;
+the evidence reader reports them as unsupported, and HTML omits their raw content.
+A logged control decision is not a verified intervention outcome or a security
+audit. See [harness decision evidence](HARNESS_EVIDENCE.md) for privacy and linkage.
