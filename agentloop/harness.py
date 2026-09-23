@@ -20,6 +20,7 @@ from threading import RLock
 from types import MappingProxyType
 from typing import Any, TypeVar
 from uuid import uuid4
+from weakref import ReferenceType, ref
 
 from agentloop.events import new_run_id
 from agentloop.tracer import current_event_id, current_trace
@@ -333,6 +334,14 @@ class _Invocation:
     parent_span_id: str | None
 
 
+@dataclass(frozen=True)
+class _WrapperMarker:
+    run: HarnessRun
+    boundary: str
+    branch_id: str
+    function: ReferenceType
+
+
 def _failure_status(exc: BaseException) -> str:
     if isinstance(exc, GeneratorExit):
         return "closed"
@@ -501,8 +510,14 @@ class HarnessRun:
         _identifier(branch_id, "branch_id")
         if self.harness.config.mode == "disabled":
             return function
-        marker = (self, boundary, branch_id)
-        if getattr(function, "__agentloop_harness__", None) == marker:
+        marker = getattr(function, "__agentloop_harness__", None)
+        if (
+            isinstance(marker, _WrapperMarker)
+            and marker.run is self
+            and marker.boundary == boundary
+            and marker.branch_id == branch_id
+            and marker.function() is function
+        ):
             return function
         kind = _callable_kind(function)
         if kind not in self.harness.capabilities.execution_kinds:
@@ -570,5 +585,5 @@ class HarnessRun:
                 self._finish(invocation, "ok")
                 return result
 
-        wrapped.__agentloop_harness__ = marker
+        wrapped.__agentloop_harness__ = _WrapperMarker(self, boundary, branch_id, ref(wrapped))
         return wrapped  # type: ignore[return-value]

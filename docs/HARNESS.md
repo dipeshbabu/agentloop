@@ -100,6 +100,8 @@ first resume. Send, throw, close, async equivalents, and generator return values
 are preserved. After hooks run once, at exhaustion, closure, failure, or denial.
 A generator never resumed produces no decisions. Disabled wrappers return the
 original callable, preserving all existing behavior and instrumentation.
+Wrapping the same protected function again with the same run/boundary/branch is
+a no-op. Metadata copied onto a different function does not bypass its admission.
 
 A normal function that returns an SDK stream is controlled only through its
 return, not through subsequent consumption. Wrap an explicit generator that

@@ -4,7 +4,7 @@ import asyncio
 import inspect
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import FrozenInstanceError
-from functools import partial
+from functools import partial, wraps
 from threading import Barrier
 
 import pytest
@@ -553,3 +553,18 @@ def test_cleanup_distinguishes_cancellation_before_and_after_dispatch(cancel_pol
     assert invoked == ([] if cancel_policy else [True])
     assert run.results[0].dispatched is False
     assert run.results[-1].dispatched is (not cancel_policy)
+
+
+def test_copied_decorator_metadata_cannot_skip_enforcement_on_a_different_callable():
+    run = run_with(lambda context: Decision("deny"))
+    dispatched = []
+    protected = run.wrap(lambda: None, boundary="model")
+
+    @wraps(protected)
+    def replacement():
+        dispatched.append(True)
+
+    wrapped = run.wrap(replacement, boundary="model")
+    with pytest.raises(HarnessDeniedError):
+        wrapped()
+    assert dispatched == []
