@@ -8,6 +8,8 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from agentloop.ablation_protocol import AblationValidationError
+from agentloop.ablations import ablation_to_markdown, summarize_ablation
 from agentloop.audit import estimate_improvement
 from agentloop.autoinstrument import detect_integrations
 from agentloop.ci import build_ci_report, ci_report_to_markdown
@@ -50,6 +52,31 @@ app = typer.Typer(help="AgentLoop profiler CLI")
 console = Console()
 study_app = typer.Typer(help="Summarize paired experiments from offline traces.")
 app.add_typer(study_app, name="study")
+
+
+@study_app.command("ablation")
+def study_ablation_command(
+    bundle: Path,
+    out: Path = typer.Option(Path("runs/ablation.md"), help="Readable ablation report."),
+    json_out: Path = typer.Option(
+        Path("runs/ablation.json"), help="Full observations and denominators."
+    ),
+) -> None:
+    try:
+        report = summarize_ablation(bundle)
+    except AblationValidationError as exc:
+        raise typer.BadParameter(str(exc), param_hint="bundle") from None
+    outputs = {out.resolve(), json_out.resolve()}
+    sources = {Path(source).resolve() for source in report["source_paths"]}
+    if len(outputs) != 2 or outputs & sources:
+        raise typer.BadParameter(
+            "report paths must differ from each other and all source evidence",
+            param_hint="out/json-out",
+        )
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(ablation_to_markdown(report), encoding="utf-8")
+    _write_json(json_out, report)
+    console.print(f"Wrote ablation reports to {out} and {json_out}")
 
 
 @study_app.command("summarize")
