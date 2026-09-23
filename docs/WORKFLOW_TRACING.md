@@ -1,5 +1,8 @@
 # Trace AI workflows and decision pipelines
 
+Use [structured quality contracts](STRUCTURED_QUALITY.md) to compare the caller's
+routing, extraction and matching outputs through replay and paired studies.
+
 `trace_workflow` profiles classifier/rule/retrieval/transform pipelines using the
 same lifecycle, native trace schema, stores and HTTP routes as `trace_agent`.
 `ExecutionTrace` is an alias of `AgentTrace`. Existing agent APIs and default

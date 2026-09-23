@@ -1,5 +1,8 @@
 # Intervention evidence
 
+Interventions can retain [versioned structured-output quality](STRUCTURED_QUALITY.md)
+for generic workflows without changing their original finding snapshots.
+
 An intervention records which findings motivated a change and what happened in
 a baseline/candidate comparison. It is a versioned evidence artifact, independent
 of the native trace schema. It does not modify application code or tune rules.

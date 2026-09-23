@@ -1,5 +1,8 @@
 # Paired study summaries
 
+[Structured quality](STRUCTURED_QUALITY.md) adds versioned decision, extraction
+and matching evidence to these same paired summaries, retaining unscored cases.
+
 [Historical calibration](CALIBRATION.md) compares frozen intervention predictions
 with outcomes, using separate fitting/held-out tasks and unchanged source ledgers.
 

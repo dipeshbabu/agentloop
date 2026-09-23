@@ -476,6 +476,19 @@ def _comparison(replay: dict[str, Any]) -> str:
                 )
             values.append(_text("unavailable" if value is None else value))
         rows.append([_text(label), *values])
+    if "decision_count_delta" in replay["deltas"]:
+        for label, key in (
+            ("Recorded model calls", "model_call_count"),
+            ("Recorded tool calls", "tool_call_count"),
+            ("Recorded decision spans", "decision_count"),
+            ("Recorded error spans", "error_span_count"),
+        ):
+            rows.append(
+                [
+                    _text(label),
+                    *[_text(replay[side].get(key)) for side in ("baseline", "candidate")],
+                ]
+            )
     result = _table(
         ["Recorded metric", "Baseline", "Candidate"],
         rows,

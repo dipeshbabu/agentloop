@@ -9,6 +9,7 @@ from agentloop.graph import ExecutionGraph
 from agentloop.operations import operation_counts, operation_kind
 from agentloop.parallelism import parallelization_candidates
 from agentloop.rules import AnalysisContext, run_rules
+from agentloop.structured_quality import decision_span_count, read_quality_evidence
 from agentloop.timing import cumulative_span_time_ms, elapsed_runtime_ms
 from agentloop.tokens import (
     describe_token_status,
@@ -74,6 +75,13 @@ def build_report(trace: Any) -> dict[str, Any]:
     stages = {key: value for key, value in stages.items() if value is not None}
     if stages:
         report["stages"] = stages
+    quality = read_quality_evidence(trace)
+    if quality is not None:
+        report["quality_evidence"] = quality
+        report["quality_score"] = quality["score"]
+        report["decision_count"] = decision_span_count(trace)
+        report["error_span_count"] = sum(event.status == "error" for event in events)
+        report["decision_count_basis"] = "recorded_classifier_or_rule_spans"
     candidates, errors = run_rules(
         AnalysisContext(report=report, graph=ExecutionGraph.from_trace(trace))
     )

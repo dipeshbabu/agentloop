@@ -19,6 +19,7 @@ from agentloop.runtime import (
     init,
     reset_runtime,
 )
+from agentloop.structured_quality import attach_quality_report
 from agentloop.tracer import (
     AgentTrace,
     bind_trace_context,
@@ -48,6 +49,7 @@ __all__ = [
     "AgentLoopClient",
     "AgentLoopClientError",
     "AgentTrace",
+    "attach_quality_report",
     "ExecutionTrace",
     "StageInfo",
     "WorkflowInfo",
