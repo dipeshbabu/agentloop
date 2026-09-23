@@ -6,6 +6,9 @@ answers to explicitly posed questions about selected execution spans. Ordinary
 judge. They can display already attached receipts. No provider SDK, credentials
 or remote service is required.
 
+Use the [adapter and benchmark layer](JUDGMENT_BENCHMARKS.md) to compare rules,
+local predictors and optional typed-service transports on frozen labelled cases.
+
 Judgments are separate from observed execution facts, deterministic finding
 rules, and [caller-defined task quality](STRUCTURED_QUALITY.md). A judgment is
 neither universal correctness evidence nor permission to change production

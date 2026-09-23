@@ -10,6 +10,12 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added [judgment adapters and frozen benchmarks](docs/JUDGMENT_BENCHMARKS.md)
+  for local predictors and optional typed-service transports. Comparisons retain
+  missing, failed and unlabelled cases, separate independent-label quality from
+  disagreement/latency/cost, and report probability calibration only with stated
+  support. Required CI uses synthetic AgentLoop-owned local implementations.
+
 - Added an opt-in [offline semantic judgment contract](docs/SEMANTIC_JUDGMENTS.md)
   with provider-independent boolean, probability, choice and bounded-score
   answers, local callbacks, source-bound receipts, explicit unknowns and failures,
