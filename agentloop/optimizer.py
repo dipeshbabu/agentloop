@@ -37,6 +37,14 @@ def build_optimization_plan(trace: Any, report: dict[str, Any] | None = None) ->
     total_cost_savings = aggregate["cost_savings_usd"]
 
     return {
+        **(
+            {
+                "semantic_judgments": report["semantic_judgments"],
+                "evidence_categories": report["evidence_categories"],
+            }
+            if "semantic_judgments" in report
+            else {}
+        ),
         "run_id": trace.run_id,
         "name": trace.name,
         "cost_status": cost_status,

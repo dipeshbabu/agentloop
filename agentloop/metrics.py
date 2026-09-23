@@ -6,6 +6,7 @@ from typing import Any
 
 from agentloop.costs import CostEstimate, PricingTable, estimate_cost, load_pricing_table
 from agentloop.graph import ExecutionGraph
+from agentloop.judgments import read_judgments
 from agentloop.operations import operation_counts, operation_kind
 from agentloop.parallelism import parallelization_candidates
 from agentloop.rules import AnalysisContext, run_rules
@@ -82,6 +83,14 @@ def build_report(trace: Any) -> dict[str, Any]:
         report["decision_count"] = decision_span_count(trace)
         report["error_span_count"] = sum(event.status == "error" for event in events)
         report["decision_count_basis"] = "recorded_classifier_or_rule_spans"
+    judgments = read_judgments(trace)
+    if judgments is not None:
+        report["semantic_judgments"] = judgments
+        report["evidence_categories"] = {
+            "observed_facts": "Recorded spans, statuses, durations and usage with their source provenance.",
+            "deterministic_inference": "Finding rules and savings estimates; assumptions still require validation.",
+            "semantic_judgments": "Explicit offline judge answers; separate from observed facts and task quality.",
+        }
     candidates, errors = run_rules(
         AnalysisContext(report=report, graph=ExecutionGraph.from_trace(trace))
     )

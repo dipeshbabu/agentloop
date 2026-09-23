@@ -8,6 +8,23 @@ from agentloop.client import AgentLoopClient, AgentLoopClientError
 from agentloop.decorators import trace_model, trace_tool, traceable
 from agentloop.doctor import run_doctor
 from agentloop.findings import build_diagnosis
+from agentloop.judgment_types import (
+    JudgeIdentity,
+    JudgeUsage,
+    JudgmentAnswer,
+    JudgmentBackend,
+    JudgmentEvidence,
+    JudgmentRequest,
+    JudgmentSpec,
+    JudgmentUncertainty,
+)
+from agentloop.judgments import (
+    JudgmentSession,
+    LocalCallbackJudge,
+    attach_judgment,
+    judgment_request,
+    read_judgments,
+)
 from agentloop.otel import trace_from_otel, trace_to_otel, traces_from_otel
 from agentloop.patches import RepositoryPathError, build_patch_plan
 from agentloop.replay import ReplayGates, build_replay_report
@@ -46,6 +63,19 @@ from agentloop.workflows import (
 )
 
 __all__ = [
+    "JudgeIdentity",
+    "JudgeUsage",
+    "JudgmentAnswer",
+    "JudgmentBackend",
+    "JudgmentEvidence",
+    "JudgmentRequest",
+    "JudgmentSpec",
+    "JudgmentUncertainty",
+    "JudgmentSession",
+    "LocalCallbackJudge",
+    "attach_judgment",
+    "judgment_request",
+    "read_judgments",
     "AgentLoopClient",
     "AgentLoopClientError",
     "AgentTrace",

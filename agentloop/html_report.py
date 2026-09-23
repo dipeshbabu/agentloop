@@ -114,6 +114,48 @@ def analysis_to_html(payload: dict[str, Any], *, include_content: bool = False) 
             '<p class="notice">Cost and token totals cover recorded model calls. A completed execution or outcome label is not independent task-quality evidence.</p>'
         )
     dependency_evidence = plan.get("graph", {}).get("dependency_evidence")
+    if "semantic_judgments" in report:
+        sections.append(
+            '<section id="judgments"><h2>Offline semantic judgments</h2>'
+            "<p>Recorded execution facts, deterministic rule inferences, and semantic "
+            "judge answers are separate evidence categories. Judge answers do not "
+            "establish task quality or calibrated confidence. Judge latency and cost "
+            "are analysis overhead, separate from workflow totals.</p>"
+            + _table(
+                [
+                    "Judge / version",
+                    "Question",
+                    "Status",
+                    "Answer",
+                    "Confidence basis",
+                    "Incurred cost USD",
+                ],
+                [
+                    [
+                        _text(f"{item['judge']['implementation']} / {item['judge']['version']}"),
+                        _text(item["request"]["spec"]["question"]),
+                        _text(item["effective_status"]),
+                        _text(
+                            "unavailable"
+                            if item["effective_value"] is None
+                            else item["effective_value"]
+                        ),
+                        _text(item["evaluation"]["uncertainty"]["calibration_status"]),
+                        _text(
+                            "unavailable"
+                            if item["invocation"]["usage"]["cost_usd"] is None
+                            else item["invocation"]["usage"]["cost_usd"]
+                        ),
+                    ]
+                    for item in report["semantic_judgments"]["records"]
+                ],
+                caption="Saved judgment evidence: " + report["semantic_judgments"]["status"],
+            )
+            + "<details><summary>Archived provenance and usage receipts</summary>"
+            + _json(report["semantic_judgments"])
+            + "</details>"
+            + "</section>"
+        )
     if dependency_evidence is not None:
         sections.append(
             "<details><summary>Dependency declarations</summary>"
