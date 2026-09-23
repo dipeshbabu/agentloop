@@ -8,11 +8,12 @@ from pathlib import Path
 from typing import Any
 
 from agentloop.markdown import markdown_table_cell
+from agentloop.structured_quality import SCORER_TYPES as STRUCTURED_SCORER_TYPES
 
 _MAX_GLOB_PATTERN_LENGTH = 256
 _MAX_GLOB_TEXT_LENGTH = 1_000_000
 _MISSING = object()
-SUPPORTED_SCORER_TYPES = (
+_LEGACY_SCORER_TYPES = (
     "contains",
     "custom",
     "exact_match",
@@ -20,7 +21,8 @@ SUPPORTED_SCORER_TYPES = (
     "json_subset",
     "required_fields",
 )
-_SCORER_TYPES = set(SUPPORTED_SCORER_TYPES)
+SUPPORTED_SCORER_TYPES = (*_LEGACY_SCORER_TYPES, *STRUCTURED_SCORER_TYPES)
+_SCORER_TYPES = set(_LEGACY_SCORER_TYPES)
 _REMOVED_SCORER_MIGRATIONS = {
     "json_schema": (
         "use 'required_fields' for dependency-free object-field checks or 'json_subset' "
@@ -41,6 +43,16 @@ def parse_quality_fixtures(payload: Any) -> list[dict[str, Any]]:
         if "fixtures" not in payload:
             raise QualityValidationError("top-level object must contain a 'fixtures' list")
         fixtures = payload["fixtures"]
+        version = payload.get("schema_version", "1.0")
+        if version not in ("1.0", "2.0"):
+            raise QualityValidationError("unsupported quality fixture schema_version")
+        if version == "2.0" and isinstance(fixtures, list):
+            if any(
+                not isinstance(item, dict) or item.get("schema_version", version) != version
+                for item in fixtures
+            ):
+                raise QualityValidationError("conflicting structured fixture versions")
+            fixtures = [{**item, "schema_version": version} for item in fixtures]
     else:
         raise QualityValidationError("quality fixtures must be a JSON list or object")
     return validate_quality_fixtures(fixtures)
@@ -61,11 +73,17 @@ def validate_quality_fixtures(fixtures: Any) -> list[dict[str, Any]]:
         raise QualityValidationError("'fixtures' must be a list")
     if not fixtures:
         raise QualityValidationError("quality fixture suite must contain at least one case")
+    if any(isinstance(item, dict) and item.get("schema_version") == "2.0" for item in fixtures):
+        from agentloop.structured_quality import validate_fixtures
+
+        return validate_fixtures(fixtures)
 
     for index, fixture in enumerate(fixtures):
         path = f"fixtures[{index}]"
         if not isinstance(fixture, dict):
             raise QualityValidationError(f"{path} must be an object")
+        if fixture.get("schema_version", "1.0") != "1.0":
+            raise QualityValidationError(f"{path} has an unsupported quality fixture version")
         if "id" in fixture and (not isinstance(fixture["id"], str) or not fixture["id"].strip()):
             raise QualityValidationError(f"{path}.id must be a non-empty string")
 
@@ -80,6 +98,8 @@ def validate_quality_fixtures(fixtures: Any) -> list[dict[str, Any]]:
                 f"{path}.scorer.type must not contain leading or trailing whitespace"
             )
         if scorer_type not in _SCORER_TYPES:
+            if scorer_type in STRUCTURED_SCORER_TYPES:
+                raise QualityValidationError(f"{scorer_type} requires fixture schema_version 2.0")
             migration = _REMOVED_SCORER_MIGRATIONS.get(scorer_type)
             if migration:
                 raise QualityValidationError(
@@ -146,6 +166,15 @@ def build_quality_report(
     min_score: float | None = None,
 ) -> dict[str, Any]:
     validate_quality_fixtures(fixtures)
+    if fixtures[0].get("schema_version") == "2.0":
+        from agentloop.structured_quality import build_report
+
+        return build_report(
+            fixtures,
+            baseline_trace=baseline_trace,
+            candidate_trace=candidate_trace,
+            min_score=min_score,
+        )
     if min_score is not None:
         _bounded_score(min_score, "min_score")
 
@@ -189,6 +218,10 @@ def build_quality_report(
 
 
 def score_output(output: Any, fixture: dict[str, Any], scorer: dict[str, Any]) -> dict[str, Any]:
+    if fixture.get("schema_version") == "2.0":
+        from agentloop.structured_quality import score_result
+
+        return score_result(output, fixture, scorer)
     scorer_type = str(scorer.get("type", "exact_match"))
     if output is _MISSING:
         return _result(False, "output is missing")
@@ -285,6 +318,10 @@ def _score_custom(output: Any, fixture: dict[str, Any], scorer: dict[str, Any]) 
 
 
 def quality_report_to_markdown(report: dict[str, Any]) -> str:
+    if report.get("schema_version") == "2.0":
+        from agentloop.structured_quality import report_to_markdown
+
+        return report_to_markdown(report)
     status = "passed" if report["passed"] else "failed"
     lines = [
         "# AgentLoop Quality Report",

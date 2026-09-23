@@ -192,17 +192,47 @@ def _run(path: Path, keys: list[str]) -> dict[str, Any]:
         elif status != "completed":
             success_value = False if failures or success is False else None
         success_basis = "task_metadata_and_workflow" if success is not None else "workflow_status"
+    quality_evidence = report.get("quality_evidence")
+    if quality_evidence is not None:
+        quality = quality_evidence["score"]
+        if (
+            failures
+            or success is False
+            or quality_evidence.get("summary", {}).get("execution_failed_count", 0) > 0
+            or execution is not None
+            and execution.get("status") in {"failed", "cancelled", "interrupted"}
+        ):
+            success_value = False
+        elif quality_evidence.get("status") == "complete":
+            success_value = quality_evidence["passed"]
+        else:
+            success_value = None
+        success_basis = "versioned_quality_and_execution"
+        if not quality_evidence.get("passed"):
+            categories[
+                "quality_rejected"
+                if quality_evidence.get("status") == "complete"
+                else "quality_" + quality_evidence.get("status", "invalid")
+            ] += 1
     cost_known = is_cost_evaluable(report["cost_status"]) and is_token_basis_evaluable(
         report["token_status"]
     )
     return {
         "path": str(path),
+        **(
+            {"quality_evidence": quality_evidence, "decision_count": report["decision_count"]}
+            if quality_evidence is not None
+            else {}
+        ),
         **({"execution": report["execution"]} if "execution" in report else {}),
         **({"stages": report["stages"]} if "stages" in report else {}),
         "run_id": trace.run_id,
         "pair_key": _pair_key(trace.metadata, keys),
         "pairing_metadata": {key: trace.metadata.get(key) for key in keys},
         "metrics": {
+            **(
+                {"decision_count": report["decision_count"]} if quality_evidence is not None else {}
+            ),
             "success": float(success_value) if success_value is not None else None,
             "quality_score": quality,
             "runtime_ms": report["total_runtime_ms"],
@@ -228,10 +258,14 @@ def _condition(runs: list[dict[str, Any]]) -> dict[str, Any]:
     for run in runs:
         categories.update(run["failure_categories"])
         operations.update(run["operation_counts"])
+    metrics = (
+        *_METRICS,
+        *(("decision_count",) if any("decision_count" in run["metrics"] for run in runs) else ()),
+    )
     return {
         "run_count": len(runs),
         "metrics": {
-            key: summarize_values([run["metrics"][key] for run in runs]) for key in _METRICS
+            key: summarize_values([run["metrics"].get(key) for run in runs]) for key in metrics
         },
         "cost_status_counts": dict(sorted(Counter(run["cost_status"] for run in runs).items())),
         "token_status_counts": dict(sorted(Counter(run["token_status"] for run in runs).items())),
@@ -247,6 +281,16 @@ def _compare(
     candidate: list[dict[str, Any]],
     bootstrap: dict[str, Any] | None,
 ) -> dict[str, Any]:
+    metrics = (
+        *_METRICS,
+        *(
+            ("decision_count",)
+            if any(
+                "decision_count" in run["metrics"] for runs in (baseline, candidate) for run in runs
+            )
+            else ()
+        ),
+    )
     groups: dict[str, dict[str, list[dict[str, Any]]]] = {"baseline": {}, "candidate": {}}
     unmatched = []
     for side, runs in (("baseline", baseline), ("candidate", candidate)):
@@ -287,10 +331,11 @@ def _compare(
         deltas = {
             metric: (
                 after["metrics"][metric] - before["metrics"][metric]
-                if after["metrics"][metric] is not None and before["metrics"][metric] is not None
+                if after["metrics"].get(metric) is not None
+                and before["metrics"].get(metric) is not None
                 else None
             )
-            for metric in _METRICS
+            for metric in metrics
         }
         pairs.append(
             {
@@ -301,7 +346,7 @@ def _compare(
             }
         )
     summaries = {}
-    for metric in _METRICS:
+    for metric in metrics:
         values = [pair["deltas"][metric] for pair in pairs]
         summaries[metric] = summarize_values(values)
         if bootstrap:

@@ -652,8 +652,8 @@ elif page == "Quality Gates":
     traces = store.list_traces(project_id=project_id)
     st.subheader("Quality gates")
     st.caption(
-        "Score production-derived fixtures so replay proof can show faster, cheaper, and still correct. "
-        "Supported scorers: exact_match, contains, bounded glob, required_fields, json_subset, and trusted local custom."
+        "Compare caller-defined quality criteria alongside recorded cost and latency. "
+        "Legacy scorers and versioned structured decision, multilabel, numeric, extraction and matching scorers are supported. Custom Python scorers are trusted local code."
     )
     if len(traces) < 2:
         st.info("Store at least two traces to score baseline and candidate quality.")
@@ -725,9 +725,34 @@ elif page == "Quality Gates":
                 status = "passed" if quality["passed"] else "failed"
                 c1, c2, c3, c4 = st.columns(4)
                 c1.metric("Status", status)
-                c2.metric("Candidate score", f"{quality['candidate_score']:.4f}")
-                c3.metric("Quality delta", f"{quality['quality_delta']:.4f}")
+                c2.metric(
+                    "Candidate score",
+                    "unavailable"
+                    if quality["candidate_score"] is None
+                    else str(quality["candidate_score"])
+                    if quality.get("schema_version") == "2.0"
+                    else f"{quality['candidate_score']:.4f}",
+                )
+                c3.metric(
+                    "Quality delta",
+                    "unavailable"
+                    if quality["quality_delta"] is None
+                    else str(quality["quality_delta"])
+                    if quality.get("schema_version") == "2.0"
+                    else f"{quality['quality_delta']:.4f}",
+                )
                 c4.metric("Failed cases", quality["failed_case_count"])
+                if quality.get("schema_version") == "2.0":
+                    st.caption(
+                        f"Indeterminate cases: {quality['indeterminate_case_count']}; incomplete evidence cannot pass the quality gate."
+                    )
+                    with st.expander("Quality denominators and classification metrics"):
+                        st.json(
+                            {
+                                "summaries": quality["summaries"],
+                                "classification": quality["classification"],
+                            }
+                        )
                 st.dataframe(pd.DataFrame(quality["cases"]), width="stretch", hide_index=True)
                 st.download_button(
                     "Download quality report JSON",

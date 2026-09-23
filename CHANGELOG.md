@@ -10,6 +10,12 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added opt-in [structured quality contract 2.0](docs/STRUCTURED_QUALITY.md) for
+  typed decisions, multilabel sets, bounded numeric outputs, extracted fields and
+  entity matches. Reports preserve scorer provenance, sparse confusion counts,
+  unavailable evaluations and execution failures through replay, studies and
+  immutable intervention records. Legacy quality fixtures retain their behavior.
+
 - Added [workflow and stage tracing](docs/WORKFLOW_TRACING.md) on the existing
   native trace/store contract, with generic rule/classifier/transform/service
   operations, schema/data references, declared dependencies and execution status.

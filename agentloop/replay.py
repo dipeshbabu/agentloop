@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from fractions import Fraction
 from typing import Any
 
 from agentloop.markdown import markdown_code_span, markdown_table_cell
@@ -41,8 +42,26 @@ def build_replay_report(
     baseline = _trace_summary(baseline_trace, baseline_report)
     candidate = _trace_summary(candidate_trace, candidate_report)
     if quality_report is not None:
-        baseline["quality_score"] = float(quality_report.get("baseline_score", 0.0))
-        candidate["quality_score"] = float(quality_report.get("candidate_score", 0.0))
+        if quality_report.get("schema_version") == "2.0":
+            from agentloop.structured_quality import decision_span_count, validate_report
+
+            quality_report = validate_report(
+                quality_report, baseline_trace=baseline_trace, candidate_trace=candidate_trace
+            )
+
+            baseline["quality_score"] = _optional_float(quality_report.get("baseline_score"))
+            candidate["quality_score"] = _optional_float(quality_report.get("candidate_score"))
+            baseline["decision_count"] = decision_span_count(baseline_trace)
+            candidate["decision_count"] = decision_span_count(candidate_trace)
+            baseline["error_span_count"] = sum(
+                event.status == "error" for event in baseline_trace.events
+            )
+            candidate["error_span_count"] = sum(
+                event.status == "error" for event in candidate_trace.events
+            )
+        else:
+            baseline["quality_score"] = float(quality_report.get("baseline_score", 0.0))
+            candidate["quality_score"] = float(quality_report.get("candidate_score", 0.0))
     pricing_known = not (
         bool(baseline.get("has_unknown_cost")) or bool(candidate.get("has_unknown_cost"))
     )
@@ -51,6 +70,21 @@ def build_replay_report(
     ) and is_token_basis_evaluable(candidate.get("token_status"))
     cost_evaluable = pricing_known and token_basis_evaluable
     deltas = _deltas(baseline, candidate)
+    versioned_quality = quality_report is not None and quality_report.get("schema_version") == "2.0"
+    if versioned_quality or "quality_evidence" in baseline or "quality_evidence" in candidate:
+        if baseline.get("quality_score") is None or candidate.get("quality_score") is None:
+            deltas["quality_score_delta"] = None
+        else:
+            deltas["quality_score_delta"] = float(
+                Fraction(str(candidate["quality_score"])) - Fraction(str(baseline["quality_score"]))
+            )
+        if "decision_count" in baseline and "decision_count" in candidate:
+            deltas["decision_count_delta"] = (
+                candidate["decision_count"] - baseline["decision_count"]
+            )
+            deltas["error_span_count_delta"] = (
+                candidate["error_span_count"] - baseline["error_span_count"]
+            )
     if not cost_evaluable:
         # The cost totals are lower bounds when a model is unpriced, and a rate
         # times a word estimate when the token basis is approximate. Either way
@@ -189,15 +223,52 @@ def replay_report_to_markdown(report: dict[str, Any]) -> str:
                 "pct",
             )
         )
-    if baseline.get("quality_score") is not None or candidate.get("quality_score") is not None:
+    if "decision_count_delta" in deltas:
+        lines.append(
+            _metric_row(
+                "Recorded decision spans",
+                baseline["decision_count"],
+                candidate["decision_count"],
+                deltas["decision_count_delta"],
+                None,
+                "count",
+            )
+        )
+        lines.append(
+            _metric_row(
+                "Recorded error spans",
+                baseline["error_span_count"],
+                candidate["error_span_count"],
+                deltas["error_span_count_delta"],
+                None,
+                "count",
+            )
+        )
+    versioned_quality = (
+        report.get("quality", {}).get("schema_version") == "2.0"
+        if report.get("quality") is not None
+        else False
+    )
+    versioned_quality = (
+        versioned_quality or "quality_evidence" in baseline or "quality_evidence" in candidate
+    )
+    if (
+        baseline.get("quality_score") is not None
+        or candidate.get("quality_score") is not None
+        or versioned_quality
+    ):
         lines.append(
             _metric_row(
                 "Quality score",
-                baseline.get("quality_score") or 0.0,
-                candidate.get("quality_score") or 0.0,
+                baseline.get("quality_score")
+                if versioned_quality
+                else baseline.get("quality_score") or 0.0,
+                candidate.get("quality_score")
+                if versioned_quality
+                else candidate.get("quality_score") or 0.0,
                 deltas["quality_score_delta"],
                 deltas["quality_score_improvement_pct"],
-                "score",
+                "exact_score" if versioned_quality else "score",
             )
         )
     if report.get("quality"):
@@ -208,8 +279,8 @@ def replay_report_to_markdown(report: dict[str, Any]) -> str:
                 "## Quality",
                 "",
                 f"- Cases: {quality['case_count']}",
-                f"- Candidate score: {quality['candidate_score']:.4f}",
-                f"- Quality delta: {quality['quality_delta']:.4f}",
+                f"- Candidate score: {_format_metric(quality['candidate_score'], 'exact_score' if quality.get('schema_version') == '2.0' else 'score')}",
+                f"- Quality delta: {_format_metric(quality['quality_delta'], 'exact_score' if quality.get('schema_version') == '2.0' else 'score')}",
                 f"- Failed cases: {quality['failed_case_count']}",
             ]
         )
@@ -238,6 +309,15 @@ def _trace_summary(trace: Any, report: dict[str, Any]) -> dict[str, Any]:
     metadata = getattr(trace, "metadata", {}) or {}
     cost = report.get("cost_breakdown") or {}
     return {
+        **(
+            {
+                "quality_evidence": report["quality_evidence"],
+                "decision_count": report["decision_count"],
+                "error_span_count": report["error_span_count"],
+            }
+            if "quality_evidence" in report
+            else {}
+        ),
         **({"execution": report["execution"]} if "execution" in report else {}),
         **({"stages": report["stages"]} if "stages" in report else {}),
         "run_id": trace.run_id,
@@ -273,7 +353,7 @@ def _trace_summary(trace: Any, report: dict[str, Any]) -> dict[str, Any]:
         ),
         "quality_score": _optional_float(
             report.get("quality_score")
-            if report.get("quality_score") is not None
+            if "quality_evidence" in report or report.get("quality_score") is not None
             else metadata.get("quality_score")
         ),
     }
@@ -402,13 +482,32 @@ def _gate_results(
     if quality_report is not None:
         fixture_passed = bool(quality_report.get("passed"))
         failed_count = int(quality_report.get("failed_case_count", 0) or 0)
+        versioned = quality_report.get("schema_version") == "2.0"
+        unavailable = quality_report.get("indeterminate_case_count", 0) if versioned else 0
         results.append(
             _gate(
                 "quality_fixtures",
                 fixture_passed,
                 "supplied quality fixtures passed"
                 if fixture_passed
-                else f"{failed_count} supplied quality fixture case(s) failed",
+                else (
+                    f"structured quality criteria failed; {failed_count} nonpassing cases, {unavailable} indeterminate cases; configured aggregate threshold retained"
+                    if versioned
+                    else f"{failed_count} supplied quality fixture case(s) failed"
+                ),
+                indeterminate=bool(unavailable),
+            )
+        )
+    if quality_report is None and "quality_evidence" in candidate:
+        evidence = candidate["quality_evidence"]
+        results.append(
+            _gate(
+                "quality_evidence",
+                evidence.get("status") == "complete" and evidence.get("passed") is True,
+                "attached structured quality evidence passed"
+                if evidence.get("passed")
+                else "attached structured quality evidence is nonpassing or unavailable",
+                indeterminate=evidence.get("status") != "complete",
             )
         )
     if gates.min_quality_score is not None:
@@ -419,7 +518,16 @@ def _gate_results(
             if quality_score is not None
             else f"candidate quality score missing; {gates.min_quality_score:.4f} required"
         )
-        results.append(_gate("quality_score", passed, detail))
+        versioned = (
+            quality_report is not None
+            and quality_report.get("schema_version") == "2.0"
+            or "quality_evidence" in candidate
+        )
+        results.append(
+            _gate(
+                "quality_score", passed, detail, indeterminate=versioned and quality_score is None
+            )
+        )
     return results
 
 
@@ -538,6 +646,8 @@ def _format_metric(value: float | None, kind: str) -> str:
         return f"{value:.3f}%"
     if kind == "score":
         return f"{value:.4f}"
+    if kind == "exact_score":
+        return str(value)
     return str(int(value))
 
 
