@@ -8,16 +8,9 @@ Project history from before the first public release remains available in Git.
 
 ## [Unreleased]
 
-- Fixed critical paths being truncated when repeated edges, including different
-  relationship kinds between the same spans, released a node before all of its
-  predecessors were processed.
+## [0.7.0] - 2026-09-22
 
-- Reduced execution-graph analysis time for large traces and critical-path memory
-  use for deep traces, preserving timestamp handling and deterministic ordering.
-
-- Sanitized finding-rule failures before report/API serialization. Public
-  diagnostics retain the failed rule and safe error category; detailed exceptions
-  are available only through explicitly enabled local debug logging.
+### Added
 
 - Introduced the `/v1` HTTP namespace with shared legacy handlers and versioned
   Python client requests. Unversioned application routes are deprecated but
@@ -43,15 +36,29 @@ Project history from before the first public release remains available in Git.
   and optional seeded bootstrap intervals. JSON/Markdown exports and a
   deterministic offline example support repeated experiments.
 
-- Every built-in optimization estimate now includes versioned provenance,
-  explicit coefficients, input snapshots, and assumptions. Human reports mark
-  predictions as uncalibrated; persisted findings retain their estimator metadata.
-  See [Estimator provenance](docs/ESTIMATORS.md).
-
 - Added normalized operation kinds in event metadata, graph and finding evidence,
   report counts, and replay summaries. OTLP agent/workflow spans retain their
   distinct roles and are excluded from tool-specific savings. Legacy event
   categories and schema 1.0/1.1 readability remain compatible.
+
+- Added `bind_trace_context(trace, event_id=None)` and explicit `trace=` targeting
+  for `record_tool_call`, matching model-event parent handling. Generator decorators
+  now use the tracer-owned context helper and record completion into their captured
+  trace without changing the caller's active context.
+
+- Added a [0.6 to 0.7 upgrade guide](docs/UPGRADING_0_7.md) and installed-wheel
+  evidence-workflow checks covering quickstart, HTML analysis, paired studies,
+  and intervention persistence outside the checkout.
+
+### Changed
+
+- Reduced execution-graph analysis time for large traces and critical-path memory
+  use for deep traces, preserving timestamp handling and deterministic ordering.
+
+- Every built-in optimization estimate now includes versioned provenance,
+  explicit coefficients, input snapshots, and assumptions. Human reports mark
+  predictions as uncalibrated; persisted findings retain their estimator metadata.
+  See [Estimator provenance](docs/ESTIMATORS.md).
 
 - Unified report recommendations and optimizer findings behind versioned local
   rules. Reports retain canonical candidates and expose rule failures; incomplete
@@ -67,15 +74,6 @@ Project history from before the first public release remains available in Git.
   findings, exports, and the dashboard. Known dependency conflicts and already
   overlapping calls are excluded; missing timing retains a qualified low-confidence
   candidate. See [parallelization evidence](docs/PARALLELIZATION.md).
-
-- LangGraph builder instrumentation now rejects pre-added nodes before modifying
-  the builder, with instructions to instrument before `add_node()`. Unsupported
-  node registries fail explicitly; repeated instrumentation remains a no-op.
-
-- Raised the HTTPX2 development dependency minimum to 2.12.0 and updated the
-  locked HTTPX2/HTTPCore2 packages to resolve six dependency alerts covering
-  SOCKS WebSocket TLS, SSE buffering, multipart header injection, request framing,
-  and response decompression amplification.
 
 - Token counts now carry their provenance, so a word-count approximation no
   longer reads as exact provider usage. Trace schema is **1.1**: model events
@@ -102,11 +100,6 @@ Project history from before the first public release remains available in Git.
   attributes import as `provider`, and spans without usage as `unavailable`.
   See [docs/TRACE_SCHEMA.md](docs/TRACE_SCHEMA.md#token-provenance).
 
-- Added `bind_trace_context(trace, event_id=None)` and explicit `trace=` targeting
-  for `record_tool_call`, matching model-event parent handling. Generator decorators
-  now use the tracer-owned context helper and record completion into their captured
-  trace without changing the caller's active context.
-
 - Diagnosis GET requests no longer persist or supersede findings. Use
   `POST /traces/{run_id}/diagnosis`, `AgentLoopClient.save_diagnosis(run_id)`, or
   `remote-diagnose` to recompute and persist them. `GET /traces/{run_id}/diagnosis`
@@ -114,12 +107,35 @@ Project history from before the first public release remains available in Git.
   is a deprecated read-only alias retained throughout 0.x; removal will be
   announced before a 1.0-or-later release. Upgrade the server before the client.
 
+### Fixed
+
+- Fixed critical paths being truncated when repeated edges, including different
+  relationship kinds between the same spans, released a node before all of its
+  predecessors were processed.
+
+- LangGraph builder instrumentation now rejects pre-added nodes before modifying
+  the builder, with instructions to instrument before `add_node()`. Unsupported
+  node registries fail explicitly; repeated instrumentation remains a no-op.
+
 - Storage methods now validate pagination cursors directly, without package-import
   patches or duplicate decoding. Existing cursor formats and HTTP errors are unchanged.
+
+### Removed
 
 - Removed the misleading `regex` and `json_schema` quality scorer names from
   validation. Migrate `regex` to bounded `glob`, `contains`, or `exact_match`,
   and migrate `json_schema` to `required_fields` or `json_subset`.
+
+### Security
+
+- Sanitized finding-rule failures before report/API serialization. Public
+  diagnostics retain the failed rule and safe error category; detailed exceptions
+  are available only through explicitly enabled local debug logging.
+
+- Raised the HTTPX2 development dependency minimum to 2.12.0 and updated the
+  locked HTTPX2/HTTPCore2 packages to resolve six dependency alerts covering
+  SOCKS WebSocket TLS, SSE buffering, multipart header injection, request framing,
+  and response decompression amplification.
 
 ## [0.6.0] - 2026-08-24
 
@@ -497,7 +513,8 @@ Project history from before the first public release remains available in Git.
 - Constrained patch-plan source discovery to a normalized allowed root and
   excluded source and directory symlinks from scans.
 
-[Unreleased]: https://github.com/dipeshbabu/agentloop/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/dipeshbabu/agentloop/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/dipeshbabu/agentloop/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/dipeshbabu/agentloop/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/dipeshbabu/agentloop/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/dipeshbabu/agentloop/releases/tag/v0.4.0
