@@ -36,6 +36,8 @@ from agentloop.runtime import (
     init,
     reset_runtime,
 )
+from agentloop.semantic_waste import evaluate_semantic_waste, read_semantic_waste
+from agentloop.semantic_waste_types import SemanticInvestigation
 from agentloop.structured_quality import attach_quality_report
 from agentloop.tracer import (
     AgentTrace,
@@ -63,6 +65,9 @@ from agentloop.workflows import (
 )
 
 __all__ = [
+    "SemanticInvestigation",
+    "evaluate_semantic_waste",
+    "read_semantic_waste",
     "JudgeIdentity",
     "JudgeUsage",
     "JudgmentAnswer",

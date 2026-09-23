@@ -86,6 +86,31 @@ def test_generic_workflow_metadata_and_operations_roundtrip(store):
     assert loaded.report()["stages"]["route"]["depends_on"] == ["lookup", "priority"]
 
 
+def test_semantic_unknown_savings_are_preserved_in_both_backends(store):
+    from test_semantic_findings import prepare
+
+    trace = prepare()
+    store.save_trace(trace)
+    loaded = store.get_trace(trace.run_id)
+    assert loaded.report()["semantic_waste"]["cases"][0]["status"] == "supported"
+    saved = next(item for item in store.list_findings() if item["type"] == "semantic_redundancy")
+    assert saved["estimated_latency_savings_ms"] is None
+    assert saved["estimated_cost_savings_usd"] is None
+    page = store.list_findings_page(limit=100)
+    assert (
+        next(item for item in page["items"] if item["type"] == "semantic_redundancy")[
+            "estimated_latency_savings_ms"
+        ]
+        is None
+    )
+    queue = next(
+        item for item in store.optimization_queue() if item["type"] == "semantic_redundancy"
+    )
+    assert queue["estimated_latency_savings_ms"] is None
+    assert queue["estimated_cost_savings_usd"] is None
+    assert queue["requires_scorer"] and not queue["safe_to_auto_patch"]
+
+
 def _repeated_context_trace(name: str = "queue-test"):
     with trace_agent(name) as trace:
         repeated = "stable context " * 100

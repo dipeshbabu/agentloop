@@ -10,6 +10,7 @@ from agentloop.costs import format_cost_usd
 from agentloop.estimates import estimate_markdown
 from agentloop.markdown import markdown_code_span, markdown_heading, markdown_text
 from agentloop.optimizer import build_optimization_plan
+from agentloop.timing import format_duration_ms
 
 
 @dataclass
@@ -64,6 +65,7 @@ def build_diagnosis(trace: Any) -> dict[str, Any]:
     findings = [_finding_from_card(card, plan) for card in plan.get("optimization_cards", [])]
     findings = [finding for finding in findings if finding is not None]
     return {
+        **({"semantic_waste": plan["semantic_waste"]} if "semantic_waste" in plan else {}),
         **(
             {
                 "semantic_judgments": plan["semantic_judgments"],
@@ -111,6 +113,11 @@ def diagnosis_to_markdown(diagnosis: dict[str, Any]) -> str:
         "",
     ]
     findings = diagnosis.get("findings", [])
+    summary = diagnosis.get("summary")
+    if isinstance(summary, dict) and (
+        summary.get("unmodeled_latency_findings") or summary.get("unmodeled_cost_findings")
+    ):
+        lines.extend(["Some savings are unavailable; totals cover modeled candidates only.", ""])
     if diagnosis.get("rule_errors"):
         lines.extend(["Analysis incomplete; some finding rules failed:", ""])
         for error in diagnosis["rule_errors"]:
@@ -134,7 +141,7 @@ def diagnosis_to_markdown(diagnosis: dict[str, Any]) -> str:
                 f"- Confidence: {markdown_text(finding['confidence'])}",
                 "- Affected spans: "
                 f"{markdown_text(', '.join(map(str, finding['affected_spans'])) or 'none')}",
-                f"- Estimated latency savings: {savings['estimated_latency_savings_ms'] / 1000:.2f}s",
+                f"- Estimated latency savings: {format_duration_ms(savings['estimated_latency_savings_ms'])}",
                 "- Estimated cost savings: "
                 + format_cost_usd(savings.get("estimated_cost_savings_usd")),
                 f"- Rewrite: {markdown_text(rewrite['hint'])}",
@@ -163,10 +170,16 @@ def diagnosis_to_markdown(diagnosis: dict[str, Any]) -> str:
         from agentloop.judgment_views import judgment_markdown
 
         lines.extend(judgment_markdown(diagnosis["semantic_judgments"]))
+    if "semantic_waste" in diagnosis:
+        from agentloop.semantic_waste import semantic_waste_markdown
+
+        lines.extend(semantic_waste_markdown(diagnosis["semantic_waste"]))
     return "\n".join(lines).rstrip() + "\n"
 
 
-def _stable_finding_id(finding_type: str, title: str, affected_spans: list[str]) -> str:
+def _stable_finding_id(
+    finding_type: str, title: str, affected_spans: list[str], *, context=None
+) -> str:
     """Return an order-independent identity for one concrete detected finding.
 
     The old IDs used a card enumeration index, so inserting or reordering an
@@ -180,6 +193,8 @@ def _stable_finding_id(finding_type: str, title: str, affected_spans: list[str])
         "title": title,
         "affected_spans": sorted(str(span) for span in affected_spans),
     }
+    if context is not None:
+        identity["semantic_context"] = context
     raw = json.dumps(identity, sort_keys=True, separators=(",", ":")).encode("utf-8")
     digest = hashlib.sha256(raw).hexdigest()[:12]
     return f"al_{finding_type}_{digest}"
@@ -197,9 +212,26 @@ def _finding_from_card(card: dict[str, Any], plan: dict[str, Any]) -> Optimizati
     evidence = [
         _evidence_row(node_lookup[node_id]) for node_id in affected_spans if node_id in node_lookup
     ]
+    semantic = (card.get("estimate") or {}).get("estimator_id") == "semantic_leaf_removal"
+    observations = dict(card.get("observations", {}))
+    if semantic:
+        severity = "medium" if card.get("confidence") == "medium" else "low"
+        evidence.extend(
+            {"kind": "semantic_judgment", **item} for item in observations.get("judgments", [])
+        )
 
     return OptimizationFinding(
-        finding_id=_stable_finding_id(finding_type, title, affected_spans),
+        finding_id=_stable_finding_id(
+            finding_type,
+            title,
+            affected_spans,
+            context={
+                "investigation_id": observations.get("investigation_id"),
+                "criteria_ref": observations.get("criteria_ref"),
+            }
+            if semantic
+            else None,
+        ),
         severity=severity,
         type=finding_type,
         title=title,
@@ -207,13 +239,23 @@ def _finding_from_card(card: dict[str, Any], plan: dict[str, Any]) -> Optimizati
         affected_spans=affected_spans,
         evidence=evidence,
         savings={
-            "estimated_latency_savings_ms": round(latency_savings, 3),
+            "estimated_latency_savings_ms": None
+            if card.get("estimated_latency_savings_ms") is None
+            else round(latency_savings, 3),
             "estimated_cost_savings_usd": (
                 None if cost_savings is None else round(cost_savings, 6)
             ),
             "formula": (card.get("estimate") or {}).get("formula")
             or card.get("estimate_formula")
             or _savings_formula(finding_type),
+            **(
+                {
+                    "estimated_input_tokens": card["estimate"]["predictions"]["input_tokens"],
+                    "estimated_output_tokens": card["estimate"]["predictions"]["output_tokens"],
+                }
+                if semantic
+                else {}
+            ),
         },
         rewrite={
             "kind": finding_type,
@@ -232,16 +274,25 @@ def _finding_from_card(card: dict[str, Any], plan: dict[str, Any]) -> Optimizati
         },
         validation={
             "command": "agentloop replay",
-            "acceptance_criteria": _acceptance_criteria(finding_type),
+            "acceptance_criteria": observations["validation_criteria"]
+            if semantic
+            else _acceptance_criteria(finding_type),
+            **(
+                {"criteria_ref": observations["criteria_ref"], "requires_independent_quality": True}
+                if semantic
+                else {}
+            ),
         },
         metadata={
             "why": card.get("why", ""),
-            "cost_status": plan.get("cost_status"),
-            "identity": "content-v1",
+            "cost_status": "unknown"
+            if semantic and raw_cost_savings is None
+            else plan.get("cost_status"),
+            "identity": "semantic-context-v1" if semantic else "content-v1",
         },
         evidence_level=card.get("evidence_level"),
         assumptions=list(card.get("assumptions", [])),
-        observations=dict(card.get("observations", {})),
+        observations=observations,
         rule_id=card.get("rule_id"),
         rule_version=card.get("rule_version"),
         estimate=deepcopy(card.get("estimate")),
@@ -250,6 +301,11 @@ def _finding_from_card(card: dict[str, Any], plan: dict[str, Any]) -> Optimizati
 
 def _summary(plan: dict[str, Any], findings: list[OptimizationFinding]) -> dict[str, Any]:
     return {
+        **{
+            key: plan["savings_aggregation"][key]
+            for key in ("unmodeled_latency_findings", "unmodeled_cost_findings")
+            if key in plan.get("savings_aggregation", {})
+        },
         "finding_count": len(findings),
         "high_severity_count": sum(1 for finding in findings if finding.severity == "high"),
         "patchable_count": sum(1 for finding in findings if finding.rewrite.get("patchable")),

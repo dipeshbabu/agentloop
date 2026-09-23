@@ -12,6 +12,7 @@ from agentloop.markdown import (
     markdown_table_cell,
     markdown_text,
 )
+from agentloop.timing import format_duration_ms
 
 
 def export_optimization_json(plan: dict[str, Any], path: str | Path) -> Path:
@@ -50,6 +51,11 @@ def export_optimization_markdown(plan: dict[str, Any], path: str | Path) -> Path
         "",
     ]
     cards = plan.get("optimization_cards", [])
+    if (
+        plan.get("savings_aggregation", {}).get("latency_estimate_complete") is False
+        or plan.get("savings_aggregation", {}).get("cost_estimate_complete") is False
+    ):
+        lines.extend(["Some savings are unavailable; totals cover modeled candidates only.", ""])
     if plan.get("rule_errors"):
         lines.extend(["Analysis incomplete; some finding rules failed:", ""])
         for error in plan["rule_errors"]:
@@ -70,7 +76,7 @@ def export_optimization_markdown(plan: dict[str, Any], path: str | Path) -> Path
                 f"- Confidence: {markdown_text(card['confidence'])}",
                 f"- Why: {markdown_text(card['why'])}",
                 f"- Rewrite hint: {markdown_text(card['rewrite_hint'])}",
-                f"- Estimated latency savings: {card['estimated_latency_savings_ms'] / 1000:.2f}s",
+                f"- Estimated latency savings: {format_duration_ms(card['estimated_latency_savings_ms'])}",
                 "- Estimated cost savings: "
                 + format_cost_usd(card.get("estimated_cost_savings_usd")),
                 "",
@@ -102,5 +108,9 @@ def export_optimization_markdown(plan: dict[str, Any], path: str | Path) -> Path
             f"{markdown_table_cell(item['event_type'])} | "
             f"{item['duration_ms'] / 1000:.2f}s | {item['runtime_share']:.1%} |"
         )
+    if "semantic_waste" in plan:
+        from agentloop.semantic_waste import semantic_waste_markdown
+
+        lines.extend(semantic_waste_markdown(plan["semantic_waste"]))
     out.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return out

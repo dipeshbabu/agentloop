@@ -6,6 +6,17 @@ from datetime import datetime, timezone
 from typing import Any, Iterable
 
 
+def format_duration_ms(value: float | None, *, unit="s", precision=2) -> str:
+    """Render an optional timing estimate without turning unavailable into zero."""
+    if value is None:
+        return "unavailable"
+    if unit not in {"s", "ms"}:
+        raise ValueError("unit must be s or ms")
+    amount = value / 1000 if unit == "s" else value
+    suffix = "s" if unit == "s" else " ms"
+    return f"{amount:.{precision}f}{suffix}"
+
+
 def timestamp_ms(value: Any) -> float | None:
     """Parse an ISO-8601 timestamp into milliseconds since the Unix epoch."""
 

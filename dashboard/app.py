@@ -54,8 +54,8 @@ def money(value: float | None) -> str:
     return "unavailable" if value is None else f"${float(value):,.4f}"
 
 
-def seconds(ms: float) -> str:
-    return f"{float(ms) / 1000:,.2f}s"
+def seconds(ms: float | None) -> str:
+    return "unavailable" if ms is None else f"{float(ms) / 1000:,.2f}s"
 
 
 def render_estimate_details(item: dict) -> None:
@@ -289,7 +289,11 @@ elif page == "Optimization Queue":
     c3.metric("Patchable findings", sum(1 for finding in findings if finding["patchable"]))
     c4.metric(
         "Estimated latency savings",
-        seconds(sum(item["estimated_latency_savings_ms"] for item in queue)),
+        seconds(
+            None
+            if any(item["estimated_latency_savings_ms"] is None for item in queue)
+            else sum(item["estimated_latency_savings_ms"] for item in queue)
+        ),
     )
 
     if not queue:
@@ -409,6 +413,11 @@ elif page == "Optimization":
         if trace is not None:
             report = trace.report()
             plan = build_optimization_plan(trace, report)
+            if (
+                plan.get("savings_aggregation", {}).get("latency_estimate_complete") is False
+                or plan.get("savings_aggregation", {}).get("cost_estimate_complete") is False
+            ):
+                st.caption("Some savings are unavailable; totals cover modeled candidates only.")
             current = plan["current"]
             after = plan["estimated_after"]
 
