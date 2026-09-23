@@ -1,5 +1,9 @@
 # Canonical finding rules
 
+The [finding trust benchmark](FINDING_BENCHMARKS.md) evaluates versioned rules
+against independently labeled fixtures, preserving false positives, abstentions,
+unknown labels and backend provenance in a release regression gate.
+
 `agentloop.rules` owns built-in detection. A `FindingRule` has a stable `rule_id`,
 a version, and a detector accepting `AnalysisContext` (metrics plus execution
 graph). It returns `FindingCandidate` objects containing wording, confidence,

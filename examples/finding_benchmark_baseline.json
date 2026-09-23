@@ -1,0 +1,2096 @@
+{
+  "schema_version": "1.0",
+  "corpus_hash": "0dd18272b0c34a794f6e1c149f097ca313c5e0b53bb7ca9f6d13e416c0da79da",
+  "split": "evaluation",
+  "policy": {
+    "id": "canonical finding rules",
+    "ref": "git:41e0cc58274b9a257892fae29b697110cc3283f9; no threshold or prompt tuning",
+    "version": "1.0"
+  },
+  "source_revision": "41e0cc58274b9a257892fae29b697110cc3283f9",
+  "python": "3.13.12",
+  "rules": {
+    "add_schema_validation": "1.1",
+    "batch_model_calls": "1.1",
+    "context_relevance": "1.0",
+    "low_contribution": "1.0",
+    "parallelize_tools": "1.1",
+    "retry_usefulness": "1.0",
+    "semantic_no_progress": "1.0",
+    "semantic_redundancy": "1.0"
+  },
+  "rows": [
+    {
+      "case_id": "parallel-independent-evaluation",
+      "rule_id": "parallelize_tools",
+      "rule_version": "1.1",
+      "trace_hash": "bf7ce5d9c686502ab2f4e53f4daf4807c3e6da886e7eb566a2e8ebe94da28836",
+      "status": "emitted",
+      "findings": [
+        {
+          "affected_nodes": [
+            "span-0",
+            "span-1",
+            "span-2"
+          ],
+          "assumptions": [
+            "No call consumes another call's output.",
+            "Calls do not conflict through shared mutable state.",
+            "Calls are on the runtime-limiting path and scheduling adds no overhead."
+          ],
+          "confidence": "medium",
+          "estimate": {
+            "assumptions": [
+              "No call consumes another call's output.",
+              "Calls do not conflict through shared mutable state.",
+              "Calls are on the runtime-limiting path and scheduling adds no overhead.",
+              "The formula applies assuming concurrent execution has negligible scheduling overhead."
+            ],
+            "calibrated": false,
+            "confidence": "medium",
+            "estimator_id": "parallelize_tools",
+            "estimator_version": "1.0",
+            "formula": "sum_duration_ms - max_duration_ms",
+            "inputs": {
+              "cost_status": "empty",
+              "current_cost_usd": 0,
+              "max_duration_ms": 10.0,
+              "repeated_context_ratio": 0.0,
+              "span_count": 3,
+              "sum_duration_ms": 30.0,
+              "token_status": "empty"
+            },
+            "method": "heuristic",
+            "parameters": {},
+            "unmodeled_metrics": [
+              "cost"
+            ]
+          },
+          "estimate_formula": "sum(tool durations) - max(tool duration), assuming the calls can run concurrently",
+          "estimated_cost_savings_usd": 0.0,
+          "estimated_latency_savings_ms": 20.0,
+          "evidence_level": "declared",
+          "observations": {
+            "cumulative_span_time_ms": 30.0,
+            "evidence_level": "observed",
+            "timing": "non_overlapping",
+            "tool_call_count": 3
+          },
+          "rewrite_hint": "After verifying output independence and shared-state safety, use asyncio.gather or ThreadPoolExecutor and validate the change with replay.",
+          "rule_id": "parallelize_tools",
+          "rule_version": "1.1",
+          "title": "Parallelize repeated `lookup` tool calls",
+          "type": "parallelize_tools",
+          "why": "3 repeated calls. The integration declares these calls safe to run concurrently; validate with replay."
+        }
+      ],
+      "analysis_ms": 0.5421,
+      "evidence": {
+        "required": [
+          "timing"
+        ],
+        "missing": [],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [],
+        "backends": []
+      }
+    },
+    {
+      "case_id": "parallel-dependent-evaluation",
+      "rule_id": "parallelize_tools",
+      "rule_version": "1.1",
+      "trace_hash": "0a106ed6d4d08e88961cfa480dc42939c08a0572be9ef3d51770fab291f27da4",
+      "status": "abstained",
+      "findings": [],
+      "analysis_ms": 0.2635,
+      "evidence": {
+        "required": [
+          "timing"
+        ],
+        "missing": [],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [],
+        "backends": []
+      }
+    },
+    {
+      "case_id": "parallel-missing-timing",
+      "rule_id": "parallelize_tools",
+      "rule_version": "1.1",
+      "trace_hash": "45479f788a32b817829fc019f60c409e5ca5e2860a89c89472fc6709a9db6c50",
+      "status": "emitted",
+      "findings": [
+        {
+          "affected_nodes": [
+            "span-0",
+            "span-1",
+            "span-2"
+          ],
+          "assumptions": [
+            "No call consumes another call's output.",
+            "Calls do not conflict through shared mutable state.",
+            "Calls are on the runtime-limiting path and scheduling adds no overhead.",
+            "Calls ran serially; timing is incomplete or inconsistent."
+          ],
+          "confidence": "low",
+          "estimate": {
+            "assumptions": [
+              "No call consumes another call's output.",
+              "Calls do not conflict through shared mutable state.",
+              "Calls are on the runtime-limiting path and scheduling adds no overhead.",
+              "Calls ran serially; timing is incomplete or inconsistent.",
+              "The formula applies assuming concurrent execution has negligible scheduling overhead."
+            ],
+            "calibrated": false,
+            "confidence": "low",
+            "estimator_id": "parallelize_tools",
+            "estimator_version": "1.0",
+            "formula": "sum_duration_ms - max_duration_ms",
+            "inputs": {
+              "cost_status": "empty",
+              "current_cost_usd": 0,
+              "max_duration_ms": 10.0,
+              "repeated_context_ratio": 0.0,
+              "span_count": 3,
+              "sum_duration_ms": 30.0,
+              "token_status": "empty"
+            },
+            "method": "heuristic",
+            "parameters": {},
+            "unmodeled_metrics": [
+              "cost"
+            ]
+          },
+          "estimate_formula": "sum(tool durations) - max(tool duration), assuming the calls can run concurrently",
+          "estimated_cost_savings_usd": 0.0,
+          "estimated_latency_savings_ms": 20.0,
+          "evidence_level": "declared",
+          "observations": {
+            "cumulative_span_time_ms": 30.0,
+            "evidence_level": "observed",
+            "timing": "unavailable",
+            "tool_call_count": 3
+          },
+          "rewrite_hint": "After verifying output independence and shared-state safety, use asyncio.gather or ThreadPoolExecutor and validate the change with replay.",
+          "rule_id": "parallelize_tools",
+          "rule_version": "1.1",
+          "title": "Parallelize repeated `lookup` tool calls",
+          "type": "parallelize_tools",
+          "why": "3 repeated calls. The integration declares these calls safe to run concurrently; validate with replay."
+        }
+      ],
+      "analysis_ms": 0.2736,
+      "evidence": {
+        "required": [
+          "timing"
+        ],
+        "missing": [
+          "timing"
+        ],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [],
+        "backends": []
+      }
+    },
+    {
+      "case_id": "parallel-unsafe",
+      "rule_id": "parallelize_tools",
+      "rule_version": "1.1",
+      "trace_hash": "0a3f247fc37c2a65b3ebc4891dd24ff93a478d7723c2109149ffd5991a258c13",
+      "status": "abstained",
+      "findings": [],
+      "analysis_ms": 0.1674,
+      "evidence": {
+        "required": [],
+        "missing": [],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [],
+        "backends": []
+      }
+    },
+    {
+      "case_id": "batch-independent",
+      "rule_id": "batch_model_calls",
+      "rule_version": "1.1",
+      "trace_hash": "dd358f569d08c40c79c7539f31145e1529f6bd901355fdefa163c8046b6bba16",
+      "status": "emitted",
+      "findings": [
+        {
+          "affected_nodes": [
+            "span-0",
+            "span-1",
+            "span-2"
+          ],
+          "confidence": "medium",
+          "estimate": {
+            "assumptions": [
+              "Repeated calls accept a shared batch without changing item-level outputs.",
+              "Batch size, token limits, and provider throughput permit the estimated reduction."
+            ],
+            "calibrated": false,
+            "confidence": "medium",
+            "estimator_id": "batch_model_calls",
+            "estimator_version": "1.0",
+            "formula": "sum_duration_ms * latency_fraction",
+            "inputs": {
+              "cost_status": "complete",
+              "current_cost_usd": 0.003,
+              "max_duration_ms": 10.0,
+              "repeated_context_ratio": 0.2,
+              "span_count": 3,
+              "sum_duration_ms": 30.0,
+              "token_status": "exact"
+            },
+            "method": "heuristic",
+            "parameters": {
+              "latency_fraction": 0.35
+            },
+            "unmodeled_metrics": [
+              "cost"
+            ]
+          },
+          "estimated_cost_savings_usd": 0.0,
+          "estimated_latency_savings_ms": 10.5,
+          "rewrite_hint": "Batch documents/items into one prompt or use map-reduce only when outputs truly need independent reasoning.",
+          "rule_id": "batch_model_calls",
+          "rule_version": "1.1",
+          "title": "Batch repeated `lookup` model calls",
+          "type": "batch_model_calls",
+          "why": "3 `lookup` calls have the same role and may be batchable."
+        }
+      ],
+      "analysis_ms": 0.4605,
+      "evidence": {
+        "required": [
+          "timing",
+          "tokens",
+          "cost"
+        ],
+        "missing": [],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [],
+        "backends": []
+      }
+    },
+    {
+      "case_id": "batch-stateful-shift",
+      "rule_id": "batch_model_calls",
+      "rule_version": "1.1",
+      "trace_hash": "08d39d0aa98c9cdedef60b53b05d6c2e7d8f58e2167ee79e77f58e48371b25ae",
+      "status": "emitted",
+      "findings": [
+        {
+          "affected_nodes": [
+            "span-0",
+            "span-1",
+            "span-2"
+          ],
+          "confidence": "medium",
+          "estimate": {
+            "assumptions": [
+              "Repeated calls accept a shared batch without changing item-level outputs.",
+              "Batch size, token limits, and provider throughput permit the estimated reduction."
+            ],
+            "calibrated": false,
+            "confidence": "medium",
+            "estimator_id": "batch_model_calls",
+            "estimator_version": "1.0",
+            "formula": "sum_duration_ms * latency_fraction",
+            "inputs": {
+              "cost_status": "complete",
+              "current_cost_usd": 0.003,
+              "max_duration_ms": 10.0,
+              "repeated_context_ratio": 0.2,
+              "span_count": 3,
+              "sum_duration_ms": 30.0,
+              "token_status": "exact"
+            },
+            "method": "heuristic",
+            "parameters": {
+              "latency_fraction": 0.35
+            },
+            "unmodeled_metrics": [
+              "cost"
+            ]
+          },
+          "estimated_cost_savings_usd": 0.0,
+          "estimated_latency_savings_ms": 10.5,
+          "rewrite_hint": "Batch documents/items into one prompt or use map-reduce only when outputs truly need independent reasoning.",
+          "rule_id": "batch_model_calls",
+          "rule_version": "1.1",
+          "title": "Batch repeated `lookup` model calls",
+          "type": "batch_model_calls",
+          "why": "3 `lookup` calls have the same role and may be batchable."
+        }
+      ],
+      "analysis_ms": 0.4399,
+      "evidence": {
+        "required": [],
+        "missing": [],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [],
+        "backends": []
+      }
+    },
+    {
+      "case_id": "schema-repair",
+      "rule_id": "add_schema_validation",
+      "rule_version": "1.1",
+      "trace_hash": "f4eb526160352dbb35243b4413d859dbd888e6c0a94f6b14954b45829977d127",
+      "status": "emitted",
+      "findings": [
+        {
+          "affected_nodes": [
+            "span-0"
+          ],
+          "confidence": "high",
+          "estimate": {
+            "assumptions": [
+              "Most observed retries are preventable with validation or repair.",
+              "Added validation overhead is smaller than avoided retry time."
+            ],
+            "calibrated": false,
+            "confidence": "high",
+            "estimator_id": "add_schema_validation",
+            "estimator_version": "1.0",
+            "formula": "sum_duration_ms * latency_fraction",
+            "inputs": {
+              "cost_status": "empty",
+              "current_cost_usd": 0,
+              "max_duration_ms": 10.0,
+              "repeated_context_ratio": 0.0,
+              "span_count": 1,
+              "sum_duration_ms": 10.0,
+              "token_status": "empty"
+            },
+            "method": "heuristic",
+            "parameters": {
+              "latency_fraction": 0.8
+            },
+            "unmodeled_metrics": [
+              "cost"
+            ]
+          },
+          "estimated_cost_savings_usd": 0.0,
+          "estimated_latency_savings_ms": 8.0,
+          "rewrite_hint": "Add schema validation, JSON mode, constrained decoding, or a cheap repair prompt before rerunning a full step.",
+          "rule_id": "add_schema_validation",
+          "rule_version": "1.1",
+          "title": "Reduce retry loop with structured outputs",
+          "type": "add_schema_validation",
+          "why": "Observed 1 retry span(s), costing 0.01s."
+        }
+      ],
+      "analysis_ms": 0.1768,
+      "evidence": {
+        "required": [
+          "timing"
+        ],
+        "missing": [],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [],
+        "backends": []
+      }
+    },
+    {
+      "case_id": "network-retry",
+      "rule_id": "add_schema_validation",
+      "rule_version": "1.1",
+      "trace_hash": "7b0d03c3d5e9301f7ee49ddf638fd1227c2c1e8e246b81f5b13b035bda8f7ca1",
+      "status": "emitted",
+      "findings": [
+        {
+          "affected_nodes": [
+            "span-0"
+          ],
+          "confidence": "high",
+          "estimate": {
+            "assumptions": [
+              "Most observed retries are preventable with validation or repair.",
+              "Added validation overhead is smaller than avoided retry time."
+            ],
+            "calibrated": false,
+            "confidence": "high",
+            "estimator_id": "add_schema_validation",
+            "estimator_version": "1.0",
+            "formula": "sum_duration_ms * latency_fraction",
+            "inputs": {
+              "cost_status": "empty",
+              "current_cost_usd": 0,
+              "max_duration_ms": 10.0,
+              "repeated_context_ratio": 0.0,
+              "span_count": 1,
+              "sum_duration_ms": 10.0,
+              "token_status": "empty"
+            },
+            "method": "heuristic",
+            "parameters": {
+              "latency_fraction": 0.8
+            },
+            "unmodeled_metrics": [
+              "cost"
+            ]
+          },
+          "estimated_cost_savings_usd": 0.0,
+          "estimated_latency_savings_ms": 8.0,
+          "rewrite_hint": "Add schema validation, JSON mode, constrained decoding, or a cheap repair prompt before rerunning a full step.",
+          "rule_id": "add_schema_validation",
+          "rule_version": "1.1",
+          "title": "Reduce retry loop with structured outputs",
+          "type": "add_schema_validation",
+          "why": "Observed 1 retry span(s), costing 0.01s."
+        }
+      ],
+      "analysis_ms": 0.1436,
+      "evidence": {
+        "required": [],
+        "missing": [],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [],
+        "backends": []
+      }
+    },
+    {
+      "case_id": "semantic_redundancy-supported",
+      "rule_id": "semantic_redundancy",
+      "rule_version": "1.0",
+      "trace_hash": "68912babb28be552cf86bbe0a8446866a1dc76ce8fb51911fb0af855b721eec6",
+      "status": "emitted",
+      "findings": [
+        {
+          "affected_nodes": [
+            "span-1"
+          ],
+          "assumptions": [
+            "Selected evidence and approved summaries cover the relevant task context and downstream outcomes.",
+            "The finding is a hypothesis; independent paired replay must preserve the caller's quality criteria."
+          ],
+          "confidence": "low",
+          "estimate": {
+            "assumptions": [
+              "Selected evidence and approved summaries cover the relevant task context and downstream outcomes.",
+              "The finding is a hypothesis; independent paired replay must preserve the caller's quality criteria."
+            ],
+            "calibrated": false,
+            "confidence": "low",
+            "estimator_id": "semantic_leaf_removal",
+            "estimator_version": "1.0",
+            "formula": "conditional removal: sum selected nonoverlapping serial leaf durations; sum separately attributed model billing and exact model token counts",
+            "inputs": {
+              "all_model_calls": true,
+              "attribution_eligible": false,
+              "family": "semantic_redundancy",
+              "flat_serial_timing": false,
+              "leaf_spans": true,
+              "model_costs": [],
+              "recorded_target_work_ms": 10.0,
+              "removal_attribution_ref": null,
+              "target_spans": [
+                "span-1"
+              ],
+              "token_status": "exact",
+              "trace_cost_status": "complete"
+            },
+            "method": "unavailable_attribution",
+            "parameters": {},
+            "predictions": {
+              "cost_usd": null,
+              "input_tokens": null,
+              "latency_ms": null,
+              "output_tokens": null
+            },
+            "unmodeled_metrics": [
+              "latency_ms",
+              "cost_usd",
+              "input_tokens",
+              "output_tokens"
+            ]
+          },
+          "estimate_formula": "conditional removal: sum selected nonoverlapping serial leaf durations; sum separately attributed model billing and exact model token counts",
+          "estimated_cost_savings_usd": null,
+          "estimated_latency_savings_ms": null,
+          "evidence_level": "semantic_judgment",
+          "observations": {
+            "basis": "semantic_judgment",
+            "criteria_ref": "fixture:route:v1",
+            "evidence_hash": "a3283dc8d14e2b539928084f7d5e6b8e59e5f059d0804ce83d9df76cec675535",
+            "investigation_id": "semantic_redundancy-supported",
+            "judgments": [
+              {
+                "evidence_refs": [
+                  "span-0",
+                  "span-1"
+                ],
+                "judge": {
+                  "config_hash": "21e5e1b52d47a387da587986651eeb0d4e6f22fa028026d542151a888718e17e",
+                  "implementation": "synthetic-judge-0",
+                  "model_or_rule": "callback",
+                  "provider": "local",
+                  "revision": "1",
+                  "version": "1"
+                },
+                "record_hash": "4bf547effcae1a91d2929c999971fc90371b2ab9d2d46725628d96b294094416",
+                "status": "known",
+                "uncertainty": {
+                  "calibration_ref": null,
+                  "calibration_status": "uncalibrated",
+                  "confidence": null
+                },
+                "value": true
+              }
+            ],
+            "reference_spans": [
+              "span-0"
+            ],
+            "reuse_contract_ref": null,
+            "target_spans": [
+              "span-1"
+            ],
+            "validation_criteria": "Run a paired intervention against the original trace, with an independent scorer implementing the referenced task criteria, preserved required side effects, and complete cost/token provenance."
+          },
+          "rewrite_hint": "Prepare an offline candidate and validate its independent task quality before accepting any step removal or context change.",
+          "rule_id": "semantic_redundancy",
+          "rule_version": "1.0",
+          "title": "Investigate semantically redundant work",
+          "type": "semantic_redundancy",
+          "why": "An explicit investigation supports this hypothesis under the recorded task criteria and evidence coverage assumptions."
+        }
+      ],
+      "analysis_ms": 2.8474,
+      "evidence": {
+        "required": [
+          "semantic"
+        ],
+        "missing": [],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [
+          {
+            "id": "semantic_redundancy-supported",
+            "status": "supported",
+            "basis": "semantic_judgment"
+          }
+        ],
+        "backends": [
+          {
+            "config_hash": "21e5e1b52d47a387da587986651eeb0d4e6f22fa028026d542151a888718e17e",
+            "implementation": "synthetic-judge-0",
+            "model_or_rule": "callback",
+            "provider": "local",
+            "revision": "1",
+            "version": "1"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "semantic_redundancy-retained",
+      "rule_id": "semantic_redundancy",
+      "rule_version": "1.0",
+      "trace_hash": "302efdb5ac1a8c646b378d8a22fae176e24e42fcca9bede2b897d2b691cf7e04",
+      "status": "abstained",
+      "findings": [],
+      "analysis_ms": 0.7516,
+      "evidence": {
+        "required": [
+          "semantic"
+        ],
+        "missing": [],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [
+          {
+            "id": "semantic_redundancy-retained",
+            "status": "retained",
+            "basis": "unavailable"
+          }
+        ],
+        "backends": []
+      }
+    },
+    {
+      "case_id": "semantic_redundancy-disagreement",
+      "rule_id": "semantic_redundancy",
+      "rule_version": "1.0",
+      "trace_hash": "6975d6b6e45228a240a1357a7b80fab942e6baff653bebd29a16c6d8e8cde969",
+      "status": "abstained",
+      "findings": [],
+      "analysis_ms": 1.764,
+      "evidence": {
+        "required": [
+          "semantic"
+        ],
+        "missing": [
+          "semantic"
+        ],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [
+          {
+            "id": "semantic_redundancy-disagreement",
+            "status": "disagreement",
+            "basis": "semantic_judgment"
+          }
+        ],
+        "backends": [
+          {
+            "config_hash": "df8d7c4d58b03e069be92ed214d441ac1a2ea2b815ea03f88cc82c55cb4e7e7a",
+            "implementation": "synthetic-judge-1",
+            "model_or_rule": "callback",
+            "provider": "local",
+            "revision": "1",
+            "version": "1"
+          },
+          {
+            "config_hash": "21e5e1b52d47a387da587986651eeb0d4e6f22fa028026d542151a888718e17e",
+            "implementation": "synthetic-judge-0",
+            "model_or_rule": "callback",
+            "provider": "local",
+            "revision": "1",
+            "version": "1"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "semantic_redundancy-unknown",
+      "rule_id": "semantic_redundancy",
+      "rule_version": "1.0",
+      "trace_hash": "33cb0c663d8908d564910455521e0a6d9270b171f360e16916d30e00c96d561e",
+      "status": "abstained",
+      "findings": [],
+      "analysis_ms": 1.1407,
+      "evidence": {
+        "required": [
+          "semantic"
+        ],
+        "missing": [
+          "semantic"
+        ],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [
+          {
+            "id": "semantic_redundancy-unknown",
+            "status": "unknown",
+            "basis": "semantic_judgment"
+          }
+        ],
+        "backends": [
+          {
+            "config_hash": "21e5e1b52d47a387da587986651eeb0d4e6f22fa028026d542151a888718e17e",
+            "implementation": "synthetic-judge-0",
+            "model_or_rule": "callback",
+            "provider": "local",
+            "revision": "1",
+            "version": "1"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "low_contribution-supported",
+      "rule_id": "low_contribution",
+      "rule_version": "1.0",
+      "trace_hash": "9f2db7d018f2f9fa8d7a4d8e538656b61674b5225bf7a0e9876f1975e305385b",
+      "status": "emitted",
+      "findings": [
+        {
+          "affected_nodes": [
+            "span-1"
+          ],
+          "assumptions": [
+            "Selected evidence and approved summaries cover the relevant task context and downstream outcomes.",
+            "The finding is a hypothesis; independent paired replay must preserve the caller's quality criteria."
+          ],
+          "confidence": "low",
+          "estimate": {
+            "assumptions": [
+              "Selected evidence and approved summaries cover the relevant task context and downstream outcomes.",
+              "The finding is a hypothesis; independent paired replay must preserve the caller's quality criteria."
+            ],
+            "calibrated": false,
+            "confidence": "low",
+            "estimator_id": "semantic_leaf_removal",
+            "estimator_version": "1.0",
+            "formula": "conditional removal: sum selected nonoverlapping serial leaf durations; sum separately attributed model billing and exact model token counts",
+            "inputs": {
+              "all_model_calls": true,
+              "attribution_eligible": false,
+              "family": "low_contribution",
+              "flat_serial_timing": false,
+              "leaf_spans": true,
+              "model_costs": [],
+              "recorded_target_work_ms": 10.0,
+              "removal_attribution_ref": null,
+              "target_spans": [
+                "span-1"
+              ],
+              "token_status": "exact",
+              "trace_cost_status": "complete"
+            },
+            "method": "unavailable_attribution",
+            "parameters": {},
+            "predictions": {
+              "cost_usd": null,
+              "input_tokens": null,
+              "latency_ms": null,
+              "output_tokens": null
+            },
+            "unmodeled_metrics": [
+              "latency_ms",
+              "cost_usd",
+              "input_tokens",
+              "output_tokens"
+            ]
+          },
+          "estimate_formula": "conditional removal: sum selected nonoverlapping serial leaf durations; sum separately attributed model billing and exact model token counts",
+          "estimated_cost_savings_usd": null,
+          "estimated_latency_savings_ms": null,
+          "evidence_level": "semantic_judgment",
+          "observations": {
+            "basis": "semantic_judgment",
+            "criteria_ref": "fixture:route:v1",
+            "evidence_hash": "a7441f4b067953ff02d7655ad5dd48f97703873a05cfcedaf0f07d626b63aae5",
+            "investigation_id": "low_contribution-supported",
+            "judgments": [
+              {
+                "evidence_refs": [
+                  "span-2",
+                  "span-1"
+                ],
+                "judge": {
+                  "config_hash": "21e5e1b52d47a387da587986651eeb0d4e6f22fa028026d542151a888718e17e",
+                  "implementation": "synthetic-judge-0",
+                  "model_or_rule": "callback",
+                  "provider": "local",
+                  "revision": "1",
+                  "version": "1"
+                },
+                "record_hash": "691de7de124b0dd29739071294275ad376c7d89a7cc5a2e06975d32d088ffda6",
+                "status": "known",
+                "uncertainty": {
+                  "calibration_ref": null,
+                  "calibration_status": "uncalibrated",
+                  "confidence": null
+                },
+                "value": true
+              }
+            ],
+            "reference_spans": [
+              "span-2"
+            ],
+            "reuse_contract_ref": null,
+            "target_spans": [
+              "span-1"
+            ],
+            "validation_criteria": "Run a paired intervention against the original trace, with an independent scorer implementing the referenced task criteria, preserved required side effects, and complete cost/token provenance."
+          },
+          "rewrite_hint": "Prepare an offline candidate and validate its independent task quality before accepting any step removal or context change.",
+          "rule_id": "low_contribution",
+          "rule_version": "1.0",
+          "title": "Investigate low-contribution work",
+          "type": "low_contribution",
+          "why": "An explicit investigation supports this hypothesis under the recorded task criteria and evidence coverage assumptions."
+        }
+      ],
+      "analysis_ms": 1.1683,
+      "evidence": {
+        "required": [
+          "semantic"
+        ],
+        "missing": [],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [
+          {
+            "id": "low_contribution-supported",
+            "status": "supported",
+            "basis": "semantic_judgment"
+          }
+        ],
+        "backends": [
+          {
+            "config_hash": "21e5e1b52d47a387da587986651eeb0d4e6f22fa028026d542151a888718e17e",
+            "implementation": "synthetic-judge-0",
+            "model_or_rule": "callback",
+            "provider": "local",
+            "revision": "1",
+            "version": "1"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "low_contribution-retained",
+      "rule_id": "low_contribution",
+      "rule_version": "1.0",
+      "trace_hash": "e00440095794731e125f54537a4d149f824c66e26f58f70179817a982fadd36d",
+      "status": "abstained",
+      "findings": [],
+      "analysis_ms": 0.7503,
+      "evidence": {
+        "required": [
+          "semantic"
+        ],
+        "missing": [],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [
+          {
+            "id": "low_contribution-retained",
+            "status": "retained",
+            "basis": "unavailable"
+          }
+        ],
+        "backends": []
+      }
+    },
+    {
+      "case_id": "low_contribution-disagreement",
+      "rule_id": "low_contribution",
+      "rule_version": "1.0",
+      "trace_hash": "3dacb306dedc7f3c57b371a68faa7a7af30a8c83b539438744eae2a3963ada41",
+      "status": "abstained",
+      "findings": [],
+      "analysis_ms": 1.4047,
+      "evidence": {
+        "required": [
+          "semantic"
+        ],
+        "missing": [
+          "semantic"
+        ],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [
+          {
+            "id": "low_contribution-disagreement",
+            "status": "disagreement",
+            "basis": "semantic_judgment"
+          }
+        ],
+        "backends": [
+          {
+            "config_hash": "df8d7c4d58b03e069be92ed214d441ac1a2ea2b815ea03f88cc82c55cb4e7e7a",
+            "implementation": "synthetic-judge-1",
+            "model_or_rule": "callback",
+            "provider": "local",
+            "revision": "1",
+            "version": "1"
+          },
+          {
+            "config_hash": "21e5e1b52d47a387da587986651eeb0d4e6f22fa028026d542151a888718e17e",
+            "implementation": "synthetic-judge-0",
+            "model_or_rule": "callback",
+            "provider": "local",
+            "revision": "1",
+            "version": "1"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "low_contribution-unknown",
+      "rule_id": "low_contribution",
+      "rule_version": "1.0",
+      "trace_hash": "398892edefcf332de9c4b236e8b4164c64751bfeae09f9cbae05960e252616d1",
+      "status": "abstained",
+      "findings": [],
+      "analysis_ms": 1.5124,
+      "evidence": {
+        "required": [
+          "semantic"
+        ],
+        "missing": [
+          "semantic"
+        ],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [
+          {
+            "id": "low_contribution-unknown",
+            "status": "unknown",
+            "basis": "semantic_judgment"
+          }
+        ],
+        "backends": [
+          {
+            "config_hash": "21e5e1b52d47a387da587986651eeb0d4e6f22fa028026d542151a888718e17e",
+            "implementation": "synthetic-judge-0",
+            "model_or_rule": "callback",
+            "provider": "local",
+            "revision": "1",
+            "version": "1"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "semantic_no_progress-supported",
+      "rule_id": "semantic_no_progress",
+      "rule_version": "1.0",
+      "trace_hash": "d925f6d9250c141e8865424131b30d35f67cfc459e2d07401cfbcadc7e2e5a1e",
+      "status": "emitted",
+      "findings": [
+        {
+          "affected_nodes": [
+            "span-1",
+            "span-2"
+          ],
+          "assumptions": [
+            "Selected evidence and approved summaries cover the relevant task context and downstream outcomes.",
+            "The finding is a hypothesis; independent paired replay must preserve the caller's quality criteria."
+          ],
+          "confidence": "low",
+          "estimate": {
+            "assumptions": [
+              "Selected evidence and approved summaries cover the relevant task context and downstream outcomes.",
+              "The finding is a hypothesis; independent paired replay must preserve the caller's quality criteria."
+            ],
+            "calibrated": false,
+            "confidence": "low",
+            "estimator_id": "semantic_leaf_removal",
+            "estimator_version": "1.0",
+            "formula": "conditional removal: sum selected nonoverlapping serial leaf durations; sum separately attributed model billing and exact model token counts",
+            "inputs": {
+              "all_model_calls": true,
+              "attribution_eligible": false,
+              "family": "semantic_no_progress",
+              "flat_serial_timing": false,
+              "leaf_spans": true,
+              "model_costs": [],
+              "recorded_target_work_ms": 20.0,
+              "removal_attribution_ref": null,
+              "target_spans": [
+                "span-1",
+                "span-2"
+              ],
+              "token_status": "exact",
+              "trace_cost_status": "complete"
+            },
+            "method": "unavailable_attribution",
+            "parameters": {},
+            "predictions": {
+              "cost_usd": null,
+              "input_tokens": null,
+              "latency_ms": null,
+              "output_tokens": null
+            },
+            "unmodeled_metrics": [
+              "latency_ms",
+              "cost_usd",
+              "input_tokens",
+              "output_tokens"
+            ]
+          },
+          "estimate_formula": "conditional removal: sum selected nonoverlapping serial leaf durations; sum separately attributed model billing and exact model token counts",
+          "estimated_cost_savings_usd": null,
+          "estimated_latency_savings_ms": null,
+          "evidence_level": "semantic_judgment",
+          "observations": {
+            "basis": "semantic_judgment",
+            "criteria_ref": "fixture:route:v1",
+            "evidence_hash": "402f490ec98a0d5f9a251d267b4a9b1ff37521cd67ca0a209f71fbc2b09abd35",
+            "investigation_id": "semantic_no_progress-supported",
+            "judgments": [
+              {
+                "evidence_refs": [
+                  "span-0",
+                  "span-1",
+                  "span-2"
+                ],
+                "judge": {
+                  "config_hash": "21e5e1b52d47a387da587986651eeb0d4e6f22fa028026d542151a888718e17e",
+                  "implementation": "synthetic-judge-0",
+                  "model_or_rule": "callback",
+                  "provider": "local",
+                  "revision": "1",
+                  "version": "1"
+                },
+                "record_hash": "7990dd978cedf199925df0d64faeb060f3751eee1ac6b46c29e88d925891a163",
+                "status": "known",
+                "uncertainty": {
+                  "calibration_ref": null,
+                  "calibration_status": "uncalibrated",
+                  "confidence": null
+                },
+                "value": true
+              }
+            ],
+            "reference_spans": [
+              "span-0"
+            ],
+            "reuse_contract_ref": null,
+            "target_spans": [
+              "span-1",
+              "span-2"
+            ],
+            "validation_criteria": "Run a paired intervention against the original trace, with an independent scorer implementing the referenced task criteria, preserved required side effects, and complete cost/token provenance."
+          },
+          "rewrite_hint": "Prepare an offline candidate and validate its independent task quality before accepting any step removal or context change.",
+          "rule_id": "semantic_no_progress",
+          "rule_version": "1.0",
+          "title": "Investigate a sequence with no task progress",
+          "type": "semantic_no_progress",
+          "why": "An explicit investigation supports this hypothesis under the recorded task criteria and evidence coverage assumptions."
+        }
+      ],
+      "analysis_ms": 1.1762,
+      "evidence": {
+        "required": [
+          "semantic"
+        ],
+        "missing": [],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [
+          {
+            "id": "semantic_no_progress-supported",
+            "status": "supported",
+            "basis": "semantic_judgment"
+          }
+        ],
+        "backends": [
+          {
+            "config_hash": "21e5e1b52d47a387da587986651eeb0d4e6f22fa028026d542151a888718e17e",
+            "implementation": "synthetic-judge-0",
+            "model_or_rule": "callback",
+            "provider": "local",
+            "revision": "1",
+            "version": "1"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "semantic_no_progress-retained",
+      "rule_id": "semantic_no_progress",
+      "rule_version": "1.0",
+      "trace_hash": "a867a7c9d97b400bd8d8e35ec83444f607233d23cb9a8cd27d68106885d1a279",
+      "status": "abstained",
+      "findings": [],
+      "analysis_ms": 0.6158,
+      "evidence": {
+        "required": [
+          "semantic"
+        ],
+        "missing": [],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [
+          {
+            "id": "semantic_no_progress-retained",
+            "status": "retained",
+            "basis": "unavailable"
+          }
+        ],
+        "backends": []
+      }
+    },
+    {
+      "case_id": "semantic_no_progress-disagreement",
+      "rule_id": "semantic_no_progress",
+      "rule_version": "1.0",
+      "trace_hash": "45a12beb083e2e833dbc221a8253814dc714a603ab1b8b8d0802b534b44e36a0",
+      "status": "abstained",
+      "findings": [],
+      "analysis_ms": 2.4454,
+      "evidence": {
+        "required": [
+          "semantic"
+        ],
+        "missing": [
+          "semantic"
+        ],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [
+          {
+            "id": "semantic_no_progress-disagreement",
+            "status": "disagreement",
+            "basis": "semantic_judgment"
+          }
+        ],
+        "backends": [
+          {
+            "config_hash": "df8d7c4d58b03e069be92ed214d441ac1a2ea2b815ea03f88cc82c55cb4e7e7a",
+            "implementation": "synthetic-judge-1",
+            "model_or_rule": "callback",
+            "provider": "local",
+            "revision": "1",
+            "version": "1"
+          },
+          {
+            "config_hash": "21e5e1b52d47a387da587986651eeb0d4e6f22fa028026d542151a888718e17e",
+            "implementation": "synthetic-judge-0",
+            "model_or_rule": "callback",
+            "provider": "local",
+            "revision": "1",
+            "version": "1"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "semantic_no_progress-unknown",
+      "rule_id": "semantic_no_progress",
+      "rule_version": "1.0",
+      "trace_hash": "3fd1758ed58d047dc1bb65b97637cc5401c4323cd609fdd32035115bf3b3f039",
+      "status": "abstained",
+      "findings": [],
+      "analysis_ms": 1.2261,
+      "evidence": {
+        "required": [
+          "semantic"
+        ],
+        "missing": [
+          "semantic"
+        ],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [
+          {
+            "id": "semantic_no_progress-unknown",
+            "status": "unknown",
+            "basis": "semantic_judgment"
+          }
+        ],
+        "backends": [
+          {
+            "config_hash": "21e5e1b52d47a387da587986651eeb0d4e6f22fa028026d542151a888718e17e",
+            "implementation": "synthetic-judge-0",
+            "model_or_rule": "callback",
+            "provider": "local",
+            "revision": "1",
+            "version": "1"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "retry_usefulness-supported",
+      "rule_id": "retry_usefulness",
+      "rule_version": "1.0",
+      "trace_hash": "311a72f2c346ade703a066ce52fb9a7a470f8758c04fd6c9e6a172539b8efdc2",
+      "status": "emitted",
+      "findings": [
+        {
+          "affected_nodes": [
+            "span-1"
+          ],
+          "assumptions": [
+            "Selected evidence and approved summaries cover the relevant task context and downstream outcomes.",
+            "The finding is a hypothesis; independent paired replay must preserve the caller's quality criteria."
+          ],
+          "confidence": "low",
+          "estimate": {
+            "assumptions": [
+              "Selected evidence and approved summaries cover the relevant task context and downstream outcomes.",
+              "The finding is a hypothesis; independent paired replay must preserve the caller's quality criteria."
+            ],
+            "calibrated": false,
+            "confidence": "low",
+            "estimator_id": "semantic_leaf_removal",
+            "estimator_version": "1.0",
+            "formula": "conditional removal: sum selected nonoverlapping serial leaf durations; sum separately attributed model billing and exact model token counts",
+            "inputs": {
+              "all_model_calls": true,
+              "attribution_eligible": false,
+              "family": "retry_usefulness",
+              "flat_serial_timing": false,
+              "leaf_spans": true,
+              "model_costs": [],
+              "recorded_target_work_ms": 10.0,
+              "removal_attribution_ref": null,
+              "target_spans": [
+                "span-1"
+              ],
+              "token_status": "exact",
+              "trace_cost_status": "complete"
+            },
+            "method": "unavailable_attribution",
+            "parameters": {},
+            "predictions": {
+              "cost_usd": null,
+              "input_tokens": null,
+              "latency_ms": null,
+              "output_tokens": null
+            },
+            "unmodeled_metrics": [
+              "latency_ms",
+              "cost_usd",
+              "input_tokens",
+              "output_tokens"
+            ]
+          },
+          "estimate_formula": "conditional removal: sum selected nonoverlapping serial leaf durations; sum separately attributed model billing and exact model token counts",
+          "estimated_cost_savings_usd": null,
+          "estimated_latency_savings_ms": null,
+          "evidence_level": "semantic_judgment",
+          "observations": {
+            "basis": "semantic_judgment",
+            "criteria_ref": "fixture:route:v1",
+            "evidence_hash": "50df75266268592788640add089f3837ea98748a9e4290d4d358545636ca0c59",
+            "investigation_id": "retry_usefulness-supported",
+            "judgments": [
+              {
+                "evidence_refs": [
+                  "span-0",
+                  "span-1"
+                ],
+                "judge": {
+                  "config_hash": "21e5e1b52d47a387da587986651eeb0d4e6f22fa028026d542151a888718e17e",
+                  "implementation": "synthetic-judge-0",
+                  "model_or_rule": "callback",
+                  "provider": "local",
+                  "revision": "1",
+                  "version": "1"
+                },
+                "record_hash": "25379c5bdd073dff6d50835f4a539f3f71175a403c8e0610dec64bfdb3fc3308",
+                "status": "known",
+                "uncertainty": {
+                  "calibration_ref": null,
+                  "calibration_status": "uncalibrated",
+                  "confidence": null
+                },
+                "value": true
+              }
+            ],
+            "reference_spans": [
+              "span-0"
+            ],
+            "reuse_contract_ref": null,
+            "target_spans": [
+              "span-1"
+            ],
+            "validation_criteria": "Run a paired intervention against the original trace, with an independent scorer implementing the referenced task criteria, preserved required side effects, and complete cost/token provenance."
+          },
+          "rewrite_hint": "Prepare an offline candidate and validate its independent task quality before accepting any step removal or context change.",
+          "rule_id": "retry_usefulness",
+          "rule_version": "1.0",
+          "title": "Investigate retries without useful new evidence",
+          "type": "retry_usefulness",
+          "why": "An explicit investigation supports this hypothesis under the recorded task criteria and evidence coverage assumptions."
+        }
+      ],
+      "analysis_ms": 1.0152,
+      "evidence": {
+        "required": [
+          "semantic"
+        ],
+        "missing": [],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [
+          {
+            "id": "retry_usefulness-supported",
+            "status": "supported",
+            "basis": "semantic_judgment"
+          }
+        ],
+        "backends": [
+          {
+            "config_hash": "21e5e1b52d47a387da587986651eeb0d4e6f22fa028026d542151a888718e17e",
+            "implementation": "synthetic-judge-0",
+            "model_or_rule": "callback",
+            "provider": "local",
+            "revision": "1",
+            "version": "1"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "retry_usefulness-retained",
+      "rule_id": "retry_usefulness",
+      "rule_version": "1.0",
+      "trace_hash": "d4fedd04824aa5d0b7d5599da312c83ab9a5c647a0001040ac0a674465bc3956",
+      "status": "abstained",
+      "findings": [],
+      "analysis_ms": 0.5581,
+      "evidence": {
+        "required": [
+          "semantic"
+        ],
+        "missing": [],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [
+          {
+            "id": "retry_usefulness-retained",
+            "status": "retained",
+            "basis": "unavailable"
+          }
+        ],
+        "backends": []
+      }
+    },
+    {
+      "case_id": "retry_usefulness-disagreement",
+      "rule_id": "retry_usefulness",
+      "rule_version": "1.0",
+      "trace_hash": "09e0a94cf8f212ed62a54a91300764f47d440d0e2a042f7b2a0d6fd387068a5c",
+      "status": "abstained",
+      "findings": [],
+      "analysis_ms": 1.137,
+      "evidence": {
+        "required": [
+          "semantic"
+        ],
+        "missing": [
+          "semantic"
+        ],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [
+          {
+            "id": "retry_usefulness-disagreement",
+            "status": "disagreement",
+            "basis": "semantic_judgment"
+          }
+        ],
+        "backends": [
+          {
+            "config_hash": "df8d7c4d58b03e069be92ed214d441ac1a2ea2b815ea03f88cc82c55cb4e7e7a",
+            "implementation": "synthetic-judge-1",
+            "model_or_rule": "callback",
+            "provider": "local",
+            "revision": "1",
+            "version": "1"
+          },
+          {
+            "config_hash": "21e5e1b52d47a387da587986651eeb0d4e6f22fa028026d542151a888718e17e",
+            "implementation": "synthetic-judge-0",
+            "model_or_rule": "callback",
+            "provider": "local",
+            "revision": "1",
+            "version": "1"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "retry_usefulness-unknown",
+      "rule_id": "retry_usefulness",
+      "rule_version": "1.0",
+      "trace_hash": "6463490f10f404810959e70e8d2b55307a4286fe68350b20d55030ebaecf66ab",
+      "status": "abstained",
+      "findings": [],
+      "analysis_ms": 0.9226,
+      "evidence": {
+        "required": [
+          "semantic"
+        ],
+        "missing": [
+          "semantic"
+        ],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [
+          {
+            "id": "retry_usefulness-unknown",
+            "status": "unknown",
+            "basis": "semantic_judgment"
+          }
+        ],
+        "backends": [
+          {
+            "config_hash": "21e5e1b52d47a387da587986651eeb0d4e6f22fa028026d542151a888718e17e",
+            "implementation": "synthetic-judge-0",
+            "model_or_rule": "callback",
+            "provider": "local",
+            "revision": "1",
+            "version": "1"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "context_relevance-supported",
+      "rule_id": "context_relevance",
+      "rule_version": "1.0",
+      "trace_hash": "9786bc0f27696623ae2308e593ede4e633b308390ee9f3135561e6cbc3f22943",
+      "status": "emitted",
+      "findings": [
+        {
+          "affected_nodes": [
+            "span-1"
+          ],
+          "assumptions": [
+            "Selected evidence and approved summaries cover the relevant task context and downstream outcomes.",
+            "The finding is a hypothesis; independent paired replay must preserve the caller's quality criteria."
+          ],
+          "confidence": "low",
+          "estimate": {
+            "assumptions": [
+              "Selected evidence and approved summaries cover the relevant task context and downstream outcomes.",
+              "The finding is a hypothesis; independent paired replay must preserve the caller's quality criteria."
+            ],
+            "calibrated": false,
+            "confidence": "low",
+            "estimator_id": "semantic_leaf_removal",
+            "estimator_version": "1.0",
+            "formula": "conditional removal: sum selected nonoverlapping serial leaf durations; sum separately attributed model billing and exact model token counts",
+            "inputs": {
+              "all_model_calls": true,
+              "attribution_eligible": false,
+              "family": "context_relevance",
+              "flat_serial_timing": false,
+              "leaf_spans": true,
+              "model_costs": [],
+              "recorded_target_work_ms": 10.0,
+              "removal_attribution_ref": null,
+              "target_spans": [
+                "span-1"
+              ],
+              "token_status": "exact",
+              "trace_cost_status": "complete"
+            },
+            "method": "unavailable_attribution",
+            "parameters": {},
+            "predictions": {
+              "cost_usd": null,
+              "input_tokens": null,
+              "latency_ms": null,
+              "output_tokens": null
+            },
+            "unmodeled_metrics": [
+              "latency_ms",
+              "cost_usd",
+              "input_tokens",
+              "output_tokens"
+            ]
+          },
+          "estimate_formula": "conditional removal: sum selected nonoverlapping serial leaf durations; sum separately attributed model billing and exact model token counts",
+          "estimated_cost_savings_usd": null,
+          "estimated_latency_savings_ms": null,
+          "evidence_level": "semantic_judgment",
+          "observations": {
+            "basis": "semantic_judgment",
+            "criteria_ref": "fixture:route:v1",
+            "evidence_hash": "3d35dbce4478b9ab15dd94e6a41ec6da82b99b83f462a61f5c082b66c69bc52f",
+            "investigation_id": "context_relevance-supported",
+            "judgments": [
+              {
+                "evidence_refs": [
+                  "span-0",
+                  "span-1"
+                ],
+                "judge": {
+                  "config_hash": "21e5e1b52d47a387da587986651eeb0d4e6f22fa028026d542151a888718e17e",
+                  "implementation": "synthetic-judge-0",
+                  "model_or_rule": "callback",
+                  "provider": "local",
+                  "revision": "1",
+                  "version": "1"
+                },
+                "record_hash": "a08acc8f54082be47f5f97b8d670d430007b36310119250c105a9124b6b7043a",
+                "status": "known",
+                "uncertainty": {
+                  "calibration_ref": null,
+                  "calibration_status": "uncalibrated",
+                  "confidence": null
+                },
+                "value": true
+              }
+            ],
+            "reference_spans": [
+              "span-0"
+            ],
+            "reuse_contract_ref": null,
+            "target_spans": [
+              "span-1"
+            ],
+            "validation_criteria": "Run a paired intervention against the original trace, with an independent scorer implementing the referenced task criteria, preserved required side effects, and complete cost/token provenance."
+          },
+          "rewrite_hint": "Prepare an offline candidate and validate its independent task quality before accepting any step removal or context change.",
+          "rule_id": "context_relevance",
+          "rule_version": "1.0",
+          "title": "Investigate context unrelated to the decision",
+          "type": "context_relevance",
+          "why": "An explicit investigation supports this hypothesis under the recorded task criteria and evidence coverage assumptions."
+        }
+      ],
+      "analysis_ms": 1.1341,
+      "evidence": {
+        "required": [
+          "semantic"
+        ],
+        "missing": [],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [
+          {
+            "id": "context_relevance-supported",
+            "status": "supported",
+            "basis": "semantic_judgment"
+          }
+        ],
+        "backends": [
+          {
+            "config_hash": "21e5e1b52d47a387da587986651eeb0d4e6f22fa028026d542151a888718e17e",
+            "implementation": "synthetic-judge-0",
+            "model_or_rule": "callback",
+            "provider": "local",
+            "revision": "1",
+            "version": "1"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "context_relevance-retained",
+      "rule_id": "context_relevance",
+      "rule_version": "1.0",
+      "trace_hash": "4f48686a7bcc3d0bfc836079d584a7f0037c4a87ae07153bfb7125d318ebfeda",
+      "status": "abstained",
+      "findings": [],
+      "analysis_ms": 0.6389,
+      "evidence": {
+        "required": [
+          "semantic"
+        ],
+        "missing": [],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [
+          {
+            "id": "context_relevance-retained",
+            "status": "retained",
+            "basis": "unavailable"
+          }
+        ],
+        "backends": []
+      }
+    },
+    {
+      "case_id": "context_relevance-disagreement",
+      "rule_id": "context_relevance",
+      "rule_version": "1.0",
+      "trace_hash": "c2711dea1a0e5d7ea1007cf5a68c13c4752e72c693cd58b5ff3cd0fa364137ab",
+      "status": "abstained",
+      "findings": [],
+      "analysis_ms": 1.2673,
+      "evidence": {
+        "required": [
+          "semantic"
+        ],
+        "missing": [
+          "semantic"
+        ],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [
+          {
+            "id": "context_relevance-disagreement",
+            "status": "disagreement",
+            "basis": "semantic_judgment"
+          }
+        ],
+        "backends": [
+          {
+            "config_hash": "df8d7c4d58b03e069be92ed214d441ac1a2ea2b815ea03f88cc82c55cb4e7e7a",
+            "implementation": "synthetic-judge-1",
+            "model_or_rule": "callback",
+            "provider": "local",
+            "revision": "1",
+            "version": "1"
+          },
+          {
+            "config_hash": "21e5e1b52d47a387da587986651eeb0d4e6f22fa028026d542151a888718e17e",
+            "implementation": "synthetic-judge-0",
+            "model_or_rule": "callback",
+            "provider": "local",
+            "revision": "1",
+            "version": "1"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "context_relevance-unknown",
+      "rule_id": "context_relevance",
+      "rule_version": "1.0",
+      "trace_hash": "872d3427eeded3f4bdbead2d1834d7136fbae3da5f1791f892e1c38ac01312b5",
+      "status": "abstained",
+      "findings": [],
+      "analysis_ms": 1.0076,
+      "evidence": {
+        "required": [
+          "semantic"
+        ],
+        "missing": [
+          "semantic"
+        ],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [
+          {
+            "id": "context_relevance-unknown",
+            "status": "unknown",
+            "basis": "semantic_judgment"
+          }
+        ],
+        "backends": [
+          {
+            "config_hash": "21e5e1b52d47a387da587986651eeb0d4e6f22fa028026d542151a888718e17e",
+            "implementation": "synthetic-judge-0",
+            "model_or_rule": "callback",
+            "provider": "local",
+            "revision": "1",
+            "version": "1"
+          }
+        ]
+      }
+    }
+  ],
+  "summary": {
+    "synthetic": true,
+    "unit": "exact family and affected-span finding; FPR is any emission per known-negative case",
+    "overall": {
+      "planned_cases": 28,
+      "emitted_cases": 11,
+      "abstained_cases": 17,
+      "error_cases": 0,
+      "missing_cases": 0,
+      "opportunity_cases": 8,
+      "negative_cases": 9,
+      "unknown_cases": 6,
+      "ambiguous_cases": 5,
+      "negative_cases_with_findings": 2,
+      "true_positive_findings": 8,
+      "false_positive_findings": 2,
+      "unscored_findings": 1,
+      "missed_opportunities": 0,
+      "complete_evidence_cases": 17,
+      "incomplete_evidence_findings": 1,
+      "precision": 0.8,
+      "false_positive_rate": 0.2222222222222222,
+      "coverage": 0.39285714285714285,
+      "abstention_rate": 0.6071428571428571,
+      "evidence_completeness": 0.6071428571428571,
+      "confidence_counts": [],
+      "confidence_semantics": "See per-rule and evidence-basis strata; confidence is never pooled across rules.",
+      "analysis_timing": {
+        "scope": "native report including all canonical rules per selected trace",
+        "measured_cases": 28,
+        "total_ms": 26.9511,
+        "mean_ms": 0.9625392857142857
+      },
+      "backends": [
+        {
+          "config_hash": "df8d7c4d58b03e069be92ed214d441ac1a2ea2b815ea03f88cc82c55cb4e7e7a",
+          "implementation": "synthetic-judge-1",
+          "model_or_rule": "callback",
+          "provider": "local",
+          "revision": "1",
+          "version": "1"
+        },
+        {
+          "config_hash": "21e5e1b52d47a387da587986651eeb0d4e6f22fa028026d542151a888718e17e",
+          "implementation": "synthetic-judge-0",
+          "model_or_rule": "callback",
+          "provider": "local",
+          "revision": "1",
+          "version": "1"
+        }
+      ]
+    },
+    "per_rule": [
+      {
+        "rule_id": "add_schema_validation",
+        "rule_version": "1.1",
+        "planned_cases": 2,
+        "emitted_cases": 2,
+        "abstained_cases": 0,
+        "error_cases": 0,
+        "missing_cases": 0,
+        "opportunity_cases": 1,
+        "negative_cases": 1,
+        "unknown_cases": 0,
+        "ambiguous_cases": 0,
+        "negative_cases_with_findings": 1,
+        "true_positive_findings": 1,
+        "false_positive_findings": 1,
+        "unscored_findings": 0,
+        "missed_opportunities": 0,
+        "complete_evidence_cases": 2,
+        "incomplete_evidence_findings": 0,
+        "precision": 0.5,
+        "false_positive_rate": 1.0,
+        "coverage": 1.0,
+        "abstention_rate": 0.0,
+        "evidence_completeness": 1.0,
+        "confidence_counts": [
+          {
+            "basis": "deterministic_rule",
+            "confidence": "high",
+            "true_positive_findings": 1,
+            "false_positive_findings": 1
+          }
+        ],
+        "confidence_semantics": "ordinal per rule; not probabilities; numeric calibration unavailable",
+        "analysis_timing": {
+          "scope": "native report including all canonical rules per selected trace",
+          "measured_cases": 2,
+          "total_ms": 0.3204,
+          "mean_ms": 0.1602
+        },
+        "backends": []
+      },
+      {
+        "rule_id": "batch_model_calls",
+        "rule_version": "1.1",
+        "planned_cases": 2,
+        "emitted_cases": 2,
+        "abstained_cases": 0,
+        "error_cases": 0,
+        "missing_cases": 0,
+        "opportunity_cases": 1,
+        "negative_cases": 1,
+        "unknown_cases": 0,
+        "ambiguous_cases": 0,
+        "negative_cases_with_findings": 1,
+        "true_positive_findings": 1,
+        "false_positive_findings": 1,
+        "unscored_findings": 0,
+        "missed_opportunities": 0,
+        "complete_evidence_cases": 2,
+        "incomplete_evidence_findings": 0,
+        "precision": 0.5,
+        "false_positive_rate": 1.0,
+        "coverage": 1.0,
+        "abstention_rate": 0.0,
+        "evidence_completeness": 1.0,
+        "confidence_counts": [
+          {
+            "basis": "deterministic_rule",
+            "confidence": "medium",
+            "true_positive_findings": 1,
+            "false_positive_findings": 1
+          }
+        ],
+        "confidence_semantics": "ordinal per rule; not probabilities; numeric calibration unavailable",
+        "analysis_timing": {
+          "scope": "native report including all canonical rules per selected trace",
+          "measured_cases": 2,
+          "total_ms": 0.9004000000000001,
+          "mean_ms": 0.45020000000000004
+        },
+        "backends": []
+      },
+      {
+        "rule_id": "context_relevance",
+        "rule_version": "1.0",
+        "planned_cases": 4,
+        "emitted_cases": 1,
+        "abstained_cases": 3,
+        "error_cases": 0,
+        "missing_cases": 0,
+        "opportunity_cases": 1,
+        "negative_cases": 1,
+        "unknown_cases": 1,
+        "ambiguous_cases": 1,
+        "negative_cases_with_findings": 0,
+        "true_positive_findings": 1,
+        "false_positive_findings": 0,
+        "unscored_findings": 0,
+        "missed_opportunities": 0,
+        "complete_evidence_cases": 2,
+        "incomplete_evidence_findings": 0,
+        "precision": 1.0,
+        "false_positive_rate": 0.0,
+        "coverage": 0.25,
+        "abstention_rate": 0.75,
+        "evidence_completeness": 0.5,
+        "confidence_counts": [
+          {
+            "basis": "semantic_judgment",
+            "confidence": "low",
+            "true_positive_findings": 1
+          }
+        ],
+        "confidence_semantics": "ordinal per rule; not probabilities; numeric calibration unavailable",
+        "analysis_timing": {
+          "scope": "native report including all canonical rules per selected trace",
+          "measured_cases": 4,
+          "total_ms": 4.0479,
+          "mean_ms": 1.011975
+        },
+        "backends": [
+          {
+            "config_hash": "df8d7c4d58b03e069be92ed214d441ac1a2ea2b815ea03f88cc82c55cb4e7e7a",
+            "implementation": "synthetic-judge-1",
+            "model_or_rule": "callback",
+            "provider": "local",
+            "revision": "1",
+            "version": "1"
+          },
+          {
+            "config_hash": "21e5e1b52d47a387da587986651eeb0d4e6f22fa028026d542151a888718e17e",
+            "implementation": "synthetic-judge-0",
+            "model_or_rule": "callback",
+            "provider": "local",
+            "revision": "1",
+            "version": "1"
+          }
+        ]
+      },
+      {
+        "rule_id": "low_contribution",
+        "rule_version": "1.0",
+        "planned_cases": 4,
+        "emitted_cases": 1,
+        "abstained_cases": 3,
+        "error_cases": 0,
+        "missing_cases": 0,
+        "opportunity_cases": 1,
+        "negative_cases": 1,
+        "unknown_cases": 1,
+        "ambiguous_cases": 1,
+        "negative_cases_with_findings": 0,
+        "true_positive_findings": 1,
+        "false_positive_findings": 0,
+        "unscored_findings": 0,
+        "missed_opportunities": 0,
+        "complete_evidence_cases": 2,
+        "incomplete_evidence_findings": 0,
+        "precision": 1.0,
+        "false_positive_rate": 0.0,
+        "coverage": 0.25,
+        "abstention_rate": 0.75,
+        "evidence_completeness": 0.5,
+        "confidence_counts": [
+          {
+            "basis": "semantic_judgment",
+            "confidence": "low",
+            "true_positive_findings": 1
+          }
+        ],
+        "confidence_semantics": "ordinal per rule; not probabilities; numeric calibration unavailable",
+        "analysis_timing": {
+          "scope": "native report including all canonical rules per selected trace",
+          "measured_cases": 4,
+          "total_ms": 4.8357,
+          "mean_ms": 1.208925
+        },
+        "backends": [
+          {
+            "config_hash": "df8d7c4d58b03e069be92ed214d441ac1a2ea2b815ea03f88cc82c55cb4e7e7a",
+            "implementation": "synthetic-judge-1",
+            "model_or_rule": "callback",
+            "provider": "local",
+            "revision": "1",
+            "version": "1"
+          },
+          {
+            "config_hash": "21e5e1b52d47a387da587986651eeb0d4e6f22fa028026d542151a888718e17e",
+            "implementation": "synthetic-judge-0",
+            "model_or_rule": "callback",
+            "provider": "local",
+            "revision": "1",
+            "version": "1"
+          }
+        ]
+      },
+      {
+        "rule_id": "parallelize_tools",
+        "rule_version": "1.1",
+        "planned_cases": 4,
+        "emitted_cases": 2,
+        "abstained_cases": 2,
+        "error_cases": 0,
+        "missing_cases": 0,
+        "opportunity_cases": 1,
+        "negative_cases": 2,
+        "unknown_cases": 1,
+        "ambiguous_cases": 0,
+        "negative_cases_with_findings": 0,
+        "true_positive_findings": 1,
+        "false_positive_findings": 0,
+        "unscored_findings": 1,
+        "missed_opportunities": 0,
+        "complete_evidence_cases": 3,
+        "incomplete_evidence_findings": 1,
+        "precision": 1.0,
+        "false_positive_rate": 0.0,
+        "coverage": 0.5,
+        "abstention_rate": 0.5,
+        "evidence_completeness": 0.75,
+        "confidence_counts": [
+          {
+            "basis": "deterministic_rule",
+            "confidence": "low",
+            "unscored_findings": 1
+          },
+          {
+            "basis": "deterministic_rule",
+            "confidence": "medium",
+            "true_positive_findings": 1
+          }
+        ],
+        "confidence_semantics": "ordinal per rule; not probabilities; numeric calibration unavailable",
+        "analysis_timing": {
+          "scope": "native report including all canonical rules per selected trace",
+          "measured_cases": 4,
+          "total_ms": 1.2466,
+          "mean_ms": 0.31165
+        },
+        "backends": []
+      },
+      {
+        "rule_id": "retry_usefulness",
+        "rule_version": "1.0",
+        "planned_cases": 4,
+        "emitted_cases": 1,
+        "abstained_cases": 3,
+        "error_cases": 0,
+        "missing_cases": 0,
+        "opportunity_cases": 1,
+        "negative_cases": 1,
+        "unknown_cases": 1,
+        "ambiguous_cases": 1,
+        "negative_cases_with_findings": 0,
+        "true_positive_findings": 1,
+        "false_positive_findings": 0,
+        "unscored_findings": 0,
+        "missed_opportunities": 0,
+        "complete_evidence_cases": 2,
+        "incomplete_evidence_findings": 0,
+        "precision": 1.0,
+        "false_positive_rate": 0.0,
+        "coverage": 0.25,
+        "abstention_rate": 0.75,
+        "evidence_completeness": 0.5,
+        "confidence_counts": [
+          {
+            "basis": "semantic_judgment",
+            "confidence": "low",
+            "true_positive_findings": 1
+          }
+        ],
+        "confidence_semantics": "ordinal per rule; not probabilities; numeric calibration unavailable",
+        "analysis_timing": {
+          "scope": "native report including all canonical rules per selected trace",
+          "measured_cases": 4,
+          "total_ms": 3.6329000000000002,
+          "mean_ms": 0.9082250000000001
+        },
+        "backends": [
+          {
+            "config_hash": "df8d7c4d58b03e069be92ed214d441ac1a2ea2b815ea03f88cc82c55cb4e7e7a",
+            "implementation": "synthetic-judge-1",
+            "model_or_rule": "callback",
+            "provider": "local",
+            "revision": "1",
+            "version": "1"
+          },
+          {
+            "config_hash": "21e5e1b52d47a387da587986651eeb0d4e6f22fa028026d542151a888718e17e",
+            "implementation": "synthetic-judge-0",
+            "model_or_rule": "callback",
+            "provider": "local",
+            "revision": "1",
+            "version": "1"
+          }
+        ]
+      },
+      {
+        "rule_id": "semantic_no_progress",
+        "rule_version": "1.0",
+        "planned_cases": 4,
+        "emitted_cases": 1,
+        "abstained_cases": 3,
+        "error_cases": 0,
+        "missing_cases": 0,
+        "opportunity_cases": 1,
+        "negative_cases": 1,
+        "unknown_cases": 1,
+        "ambiguous_cases": 1,
+        "negative_cases_with_findings": 0,
+        "true_positive_findings": 1,
+        "false_positive_findings": 0,
+        "unscored_findings": 0,
+        "missed_opportunities": 0,
+        "complete_evidence_cases": 2,
+        "incomplete_evidence_findings": 0,
+        "precision": 1.0,
+        "false_positive_rate": 0.0,
+        "coverage": 0.25,
+        "abstention_rate": 0.75,
+        "evidence_completeness": 0.5,
+        "confidence_counts": [
+          {
+            "basis": "semantic_judgment",
+            "confidence": "low",
+            "true_positive_findings": 1
+          }
+        ],
+        "confidence_semantics": "ordinal per rule; not probabilities; numeric calibration unavailable",
+        "analysis_timing": {
+          "scope": "native report including all canonical rules per selected trace",
+          "measured_cases": 4,
+          "total_ms": 5.4635,
+          "mean_ms": 1.365875
+        },
+        "backends": [
+          {
+            "config_hash": "df8d7c4d58b03e069be92ed214d441ac1a2ea2b815ea03f88cc82c55cb4e7e7a",
+            "implementation": "synthetic-judge-1",
+            "model_or_rule": "callback",
+            "provider": "local",
+            "revision": "1",
+            "version": "1"
+          },
+          {
+            "config_hash": "21e5e1b52d47a387da587986651eeb0d4e6f22fa028026d542151a888718e17e",
+            "implementation": "synthetic-judge-0",
+            "model_or_rule": "callback",
+            "provider": "local",
+            "revision": "1",
+            "version": "1"
+          }
+        ]
+      },
+      {
+        "rule_id": "semantic_redundancy",
+        "rule_version": "1.0",
+        "planned_cases": 4,
+        "emitted_cases": 1,
+        "abstained_cases": 3,
+        "error_cases": 0,
+        "missing_cases": 0,
+        "opportunity_cases": 1,
+        "negative_cases": 1,
+        "unknown_cases": 1,
+        "ambiguous_cases": 1,
+        "negative_cases_with_findings": 0,
+        "true_positive_findings": 1,
+        "false_positive_findings": 0,
+        "unscored_findings": 0,
+        "missed_opportunities": 0,
+        "complete_evidence_cases": 2,
+        "incomplete_evidence_findings": 0,
+        "precision": 1.0,
+        "false_positive_rate": 0.0,
+        "coverage": 0.25,
+        "abstention_rate": 0.75,
+        "evidence_completeness": 0.5,
+        "confidence_counts": [
+          {
+            "basis": "semantic_judgment",
+            "confidence": "low",
+            "true_positive_findings": 1
+          }
+        ],
+        "confidence_semantics": "ordinal per rule; not probabilities; numeric calibration unavailable",
+        "analysis_timing": {
+          "scope": "native report including all canonical rules per selected trace",
+          "measured_cases": 4,
+          "total_ms": 6.5037,
+          "mean_ms": 1.625925
+        },
+        "backends": [
+          {
+            "config_hash": "df8d7c4d58b03e069be92ed214d441ac1a2ea2b815ea03f88cc82c55cb4e7e7a",
+            "implementation": "synthetic-judge-1",
+            "model_or_rule": "callback",
+            "provider": "local",
+            "revision": "1",
+            "version": "1"
+          },
+          {
+            "config_hash": "21e5e1b52d47a387da587986651eeb0d4e6f22fa028026d542151a888718e17e",
+            "implementation": "synthetic-judge-0",
+            "model_or_rule": "callback",
+            "provider": "local",
+            "revision": "1",
+            "version": "1"
+          }
+        ]
+      }
+    ],
+    "limits": "Corpus-specific diagnostics, not universal precision or production savings. Abstention means no emitted finding, not a proven negative. Unknown and ambiguous labels are not correctness trials. Timings include saved evidence validation, not judge inference."
+  }
+}

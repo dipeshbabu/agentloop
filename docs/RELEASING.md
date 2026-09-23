@@ -41,6 +41,11 @@ itself is the reason to cut that release.
 
 ## Prepare a release
 
+Review the [finding benchmark](FINDING_BENCHMARKS.md) results and any corpus or
+baseline changes. CI runs its small deterministic evaluation suite against the
+checked-in baseline. A baseline update requires an explicit explanation and
+review of labeled regressions; missing or failed cases cannot be waived.
+
 For the 0.7.0 evidence-workflow release, follow the
 [0.6 to 0.7 upgrade guide](UPGRADING_0_7.md) when reviewing compatibility and
 recovery. The package CI job runs `scripts/smoke_installed_wheel.py` using the
