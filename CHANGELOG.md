@@ -10,6 +10,13 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added an offline [harness ablation protocol](docs/HARNESS_ABLATIONS.md) and
+  `study ablation` reports for uninstrumented, traced, shadow and enforced runs.
+  Reports retain planned/missing/failed cases, independent task-quality gates,
+  separate billed/calculated costs, task-level intervals, and existing study and
+  intervention artifacts. The included fixture is synthetic; real-agent
+  validation remains pending workload inputs.
+
 - Added an optional [LangGraph harness adapter](docs/LANGGRAPH_HARNESS.md), pinned
   to SDK 1.2.11, with explicit node/model/tool admission, lazy compiled streams,
   completion delivery hooks, and framework retry attribution. Shared enforcement
