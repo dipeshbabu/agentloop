@@ -119,10 +119,12 @@ through native JSON, supported OTLP round trips, and HTML. The existing interven
 ledger links actual comparisons without treating a logged action as a measured
 benefit. Raw policy configuration capture is disabled by default.
 
-Budget reservation/reconciliation belongs to #185 and retry/loop enforcement to
-#186. Those extensions must use this contract and the existing intervention ledger
-rather than replacing them. `Decision.retry_of` only annotates a host-declared
-relationship; it never executes an automatic retry.
+[Admission budgets](BUDGETS.md) use the same hooks for atomic reservation and
+reconciliation, with explicit unknown-usage policies and cooperative deadlines.
+`DispatchOptions` carries typed bounds and retry origin; an optional synchronous
+`usage_reader` returns normalized `ResourceUsage` without retaining raw results.
+Retry/loop enforcement remains #186. `Decision.retry_of` only annotates a
+host-declared relationship; it never executes an automatic retry.
 
 Policy transformations, provider routing, scheduling, checkpoint recovery, and
 automatic completion repair require later explicit capability extensions. The

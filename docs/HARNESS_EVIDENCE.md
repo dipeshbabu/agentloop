@@ -61,7 +61,7 @@ different content at an existing decision identity or policy hash raises an erro
 | `conflicting_decision_ids`, `retry_of` | Conflicting proposals in the same hook and an explicitly declared prior retry decision |
 | `hook_sequence`, `policy_order` | Recorded ordering, independent of JSON dictionary order |
 | `timing` | UTC start, policy evaluation duration, and shared hook evaluation duration |
-| `budget_snapshot` | Null while budget evidence is unavailable; never an invented zero budget |
+| `budget_snapshot` | A typed [budget snapshot](BUDGETS.md), or null when unavailable; never an invented zero budget |
 | `evaluation_status` | `unverified`; a decision alone is not an outcome comparison |
 
 Decision identity is SHA-256 of canonical JSON containing evidence version, run
