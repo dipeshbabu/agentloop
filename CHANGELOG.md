@@ -10,6 +10,11 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added an offline [incident-triage reference](docs/INCIDENT_TRIAGE.md) with
+  separately traced detection/severity/response/disposition stages, normal/noisy/
+  ambiguous/severe fixtures, inert proposals, retained failures and semantic
+  repeated-analysis/context investigations. No infrastructure action is executed.
+
 - Added an offline [payment-review reference](docs/PAYMENT_REVIEW.md) with
   synthetic identifier-free records, traced review stages, false-positive and
   false-negative traps, explicit manual-review outcomes and retained failures.
