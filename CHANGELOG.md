@@ -10,6 +10,12 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added an opt-in [offline semantic judgment contract](docs/SEMANTIC_JUDGMENTS.md)
+  with provider-independent boolean, probability, choice and bounded-score
+  answers, local callbacks, source-bound receipts, explicit unknowns and failures,
+  bounded caching, and separate judge usage/latency. Saved evidence appears in
+  reports and exports without invoking a judge during ordinary analysis.
+
 - Added opt-in [structured quality contract 2.0](docs/STRUCTURED_QUALITY.md) for
   typed decisions, multilabel sets, bounded numeric outputs, extracted fields and
   entity matches. Reports preserve scorer provenance, sparse confusion counts,

@@ -97,5 +97,9 @@ def export_report_markdown(report: dict[str, Any], path: str | Path) -> Path:
                 )
                 + " |"
             )
+    if "semantic_judgments" in report:
+        from agentloop.judgment_views import judgment_markdown
+
+        lines.extend(judgment_markdown(report["semantic_judgments"]))
     out.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return out
