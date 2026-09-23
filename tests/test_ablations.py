@@ -557,3 +557,19 @@ def test_stop_reason_rejects_unbounded_exception_text(experiment):
     candidate(rows)["stop_reason"] = "Exception: potentially private payload"
     with pytest.raises(AblationValidationError, match="bounded identifier"):
         build_ablation_report(protocol, rows)
+
+
+def test_exported_integer_durations_keep_the_original_ledger_fingerprint(example_bundle):
+    from agentloop.interventions import canonical_json
+
+    directory, _, _ = example_bundle
+    path = directory / "trace" / "pilot-0-trace.json"
+    trace = json.loads(path.read_text(encoding="utf-8"))
+    for event in trace["events"]:
+        event["duration_ms"] = int(event["duration_ms"])
+    path.write_text(json.dumps(trace), encoding="utf-8")
+    ledger_path = directory / "intervention.json"
+    record = json.loads(ledger_path.read_text(encoding="utf-8"))
+    record["trace_fingerprints"]["baseline"] = sha256(canonical_json(trace).encode()).hexdigest()
+    ledger_path.write_text(json.dumps(record), encoding="utf-8")
+    assert summarize_ablation(directory / "bundle.json")["interventions"][0] == record

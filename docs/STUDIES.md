@@ -1,5 +1,8 @@
 # Paired study summaries
 
+[Historical calibration](CALIBRATION.md) compares frozen intervention predictions
+with outcomes, using separate fitting/held-out tasks and unchanged source ledgers.
+
 For frozen four-condition runtime-control comparisons with task-level uncertainty
 and explicit planned denominators, see [harness ablations](HARNESS_ABLATIONS.md).
 
