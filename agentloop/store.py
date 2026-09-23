@@ -230,7 +230,11 @@ def _finding_row(row: dict[str, Any]) -> dict[str, Any]:
     raw_payload = row.pop("payload_json")
     payload = json.loads(raw_payload) if isinstance(raw_payload, str) else raw_payload
     row["patchable"] = bool(row["patchable"])
-    row["estimated_latency_savings_ms"] = float(row["estimated_latency_savings_ms"] or 0)
+    row["estimated_latency_savings_ms"] = (
+        None
+        if row["estimated_latency_savings_ms"] is None
+        else float(row["estimated_latency_savings_ms"] or 0)
+    )
     row["estimated_cost_savings_usd"] = (
         None
         if row["estimated_cost_savings_usd"] is None
@@ -321,7 +325,7 @@ def _max_severity(left: str, right: str) -> str:
 def _priority_score(item: dict[str, Any]) -> float:
     severity_weight = {"high": 1000.0, "medium": 500.0, "low": 100.0}.get(item["severity"], 0.0)
     patch_weight = 100.0 if item["patchable_count"] else 0.0
-    latency_weight = float(item["estimated_latency_savings_ms"]) / 100.0
+    latency_weight = float(item["estimated_latency_savings_ms"] or 0.0) / 100.0
     cost_weight = float(item["estimated_cost_savings_usd"] or 0.0) * 1000.0
     occurrence_weight = float(item["occurrence_count"]) * 25.0
     return round(
@@ -368,6 +372,8 @@ def _build_optimization_queue(
             },
         )
         cluster["occurrence_count"] += 1
+        if finding["estimated_latency_savings_ms"] is None:
+            cluster["unmodeled_latency_count"] = cluster.get("unmodeled_latency_count", 0) + 1
         if finding["run_id"] not in cluster["affected_runs"]:
             cluster["affected_runs"].append(finding["run_id"])
             cluster["run_count"] += 1
@@ -400,7 +406,9 @@ def _build_optimization_queue(
             selection = select_compatible(run_items)
             latency += selection.latency_ms
             cost += selection.cost_usd
-        cluster["estimated_latency_savings_ms"] = round(latency, 3)
+        cluster["estimated_latency_savings_ms"] = (
+            None if cluster.get("unmodeled_latency_count") else round(latency, 3)
+        )
         cluster["cost_status"] = cluster["cost_status"] or "complete"
         cluster["estimated_cost_savings_usd"] = (
             round(cost, 6) if cluster["cost_status"] in {"complete", "empty"} else None
@@ -414,6 +422,14 @@ def _build_optimization_queue(
 
 
 def _quality_risk(finding_type: str) -> str:
+    if finding_type in {
+        "semantic_redundancy",
+        "low_contribution",
+        "semantic_no_progress",
+        "retry_usefulness",
+        "context_relevance",
+    }:
+        return "high"
     if finding_type in {"route_to_smaller_model", "split_large_step", "batch_model_calls"}:
         return "high"
     if finding_type in {
@@ -727,8 +743,8 @@ class SQLiteTraceStore(InterventionStoreMixin):
                   AND status = COALESCE(?, status)
                 ORDER BY
                     CASE severity WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,
-                    estimated_cost_savings_usd DESC,
-                    estimated_latency_savings_ms DESC,
+                    COALESCE(estimated_cost_savings_usd, -1) DESC,
+                    COALESCE(estimated_latency_savings_ms, -1) DESC,
                     updated_at DESC
                 LIMIT ?
                 """,
@@ -1185,8 +1201,8 @@ class PostgresTraceStore(InterventionStoreMixin):
                   AND status = COALESCE(%s, status)
                 ORDER BY
                     CASE severity WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,
-                    estimated_cost_savings_usd DESC,
-                    estimated_latency_savings_ms DESC,
+                    COALESCE(estimated_cost_savings_usd, -1) DESC,
+                    COALESCE(estimated_latency_savings_ms, -1) DESC,
                     updated_at DESC
                 LIMIT %s
                 """,

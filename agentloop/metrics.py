@@ -10,6 +10,7 @@ from agentloop.judgments import read_judgments
 from agentloop.operations import operation_counts, operation_kind
 from agentloop.parallelism import parallelization_candidates
 from agentloop.rules import AnalysisContext, run_rules
+from agentloop.semantic_waste import read_semantic_waste
 from agentloop.structured_quality import decision_span_count, read_quality_evidence
 from agentloop.timing import cumulative_span_time_ms, elapsed_runtime_ms
 from agentloop.tokens import (
@@ -91,6 +92,17 @@ def build_report(trace: Any) -> dict[str, Any]:
             "deterministic_inference": "Finding rules and savings estimates; assumptions still require validation.",
             "semantic_judgments": "Explicit offline judge answers; separate from observed facts and task quality.",
         }
+    semantic_waste = read_semantic_waste(trace, judgments=judgments)
+    if semantic_waste is not None:
+        report["semantic_waste"] = semantic_waste
+        report.setdefault(
+            "evidence_categories",
+            {
+                "observed_facts": "Recorded spans, statuses, durations and usage with their source provenance.",
+                "deterministic_inference": "Finding rules and savings estimates; assumptions still require validation.",
+                "semantic_judgments": "Explicit offline judge answers; separate from observed facts and task quality.",
+            },
+        )
     candidates, errors = run_rules(
         AnalysisContext(report=report, graph=ExecutionGraph.from_trace(trace))
     )

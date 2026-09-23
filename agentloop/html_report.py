@@ -8,7 +8,7 @@ from typing import Any
 
 from agentloop.costs import format_cost_usd
 from agentloop.harness_evidence import METADATA_KEY, HarnessEvidenceError, read_evidence
-from agentloop.timing import event_interval_ms
+from agentloop.timing import event_interval_ms, format_duration_ms
 from agentloop.tracer import AgentTrace
 
 _CSS = """
@@ -114,6 +114,28 @@ def analysis_to_html(payload: dict[str, Any], *, include_content: bool = False) 
             '<p class="notice">Cost and token totals cover recorded model calls. A completed execution or outcome label is not independent task-quality evidence.</p>'
         )
     dependency_evidence = plan.get("graph", {}).get("dependency_evidence")
+    if "semantic_waste" in report:
+        semantic = report["semantic_waste"]
+        sections.append(
+            '<section id="semantic-investigations"><h2>Offline semantic investigations</h2>'
+            "<p>These investigations use explicit task criteria and source-bound evidence. "
+            "Unknowns, disagreement and stale evidence do not produce recommendations. "
+            "Any savings are conditional estimates requiring independent replay validation.</p>"
+            + _table(
+                ["Investigation", "Family", "Status", "Evidence basis"],
+                [
+                    [
+                        _text(item["definition"]["investigation_id"]),
+                        _text(item["definition"]["family"]),
+                        _text(item["status"]),
+                        _text(item["basis"]),
+                    ]
+                    for item in semantic["cases"]
+                ],
+                caption="Investigation completeness: " + semantic["status"],
+            )
+            + "</section>"
+        )
     if "semantic_judgments" in report:
         sections.append(
             '<section id="judgments"><h2>Offline semantic judgments</h2>'
@@ -227,6 +249,13 @@ def analysis_to_html(payload: dict[str, Any], *, include_content: bool = False) 
         '<section id="findings"><h2>Predicted improvements</h2><p>Optimizer savings are uncalibrated hypotheses. Validate a candidate run and its quality before accepting a change.</p>'
     )
     after = plan["estimated_after"]
+    if (
+        plan.get("savings_aggregation", {}).get("latency_estimate_complete") is False
+        or plan.get("savings_aggregation", {}).get("cost_estimate_complete") is False
+    ):
+        sections.append(
+            '<p class="notice">Some savings are unavailable; totals cover modeled candidates only.</p>'
+        )
     sections.append(
         '<article class="prediction"><h3>Predicted outcome</h3>'
         + _definition(
@@ -465,7 +494,10 @@ def _finding(finding: dict[str, Any], index: int, anchors: dict[str, str]) -> st
     result += _definition(
         [
             ("Finding ID", finding["finding_id"]),
-            ("Estimated latency savings", f"{savings['estimated_latency_savings_ms']:.3f} ms"),
+            (
+                "Estimated latency savings",
+                format_duration_ms(savings["estimated_latency_savings_ms"], unit="ms", precision=3),
+            ),
             ("Estimated cost savings", format_cost_usd(savings.get("estimated_cost_savings_usd"))),
             ("Proposed change", finding["rewrite"]["hint"]),
             ("Validation", finding["validation"]["acceptance_criteria"]),
@@ -476,6 +508,12 @@ def _finding(finding: dict[str, Any], index: int, anchors: dict[str, str]) -> st
         for span in finding.get("affected_spans", [])
     ]
     result += "<p>Evidence spans: " + (", ".join(links) or "none") + "</p>"
+    if finding.get("observations", {}).get("investigation_id"):
+        result += (
+            "<details><summary>Semantic investigation and judge provenance</summary>"
+            + _json(finding["observations"])
+            + "</details>"
+        )
     estimate = finding.get("estimate")
     if estimate:
         result += (

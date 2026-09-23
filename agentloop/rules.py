@@ -38,6 +38,11 @@ class RecommendationType(str, Enum):
     SPLIT_LARGE_STEP = "split_large_step"
     RUNAWAY_LOOP = "runaway_loop"
     TOOL_OSCILLATION = "tool_oscillation"
+    SEMANTIC_REDUNDANCY = "semantic_redundancy"
+    LOW_CONTRIBUTION = "low_contribution"
+    SEMANTIC_NO_PROGRESS = "semantic_no_progress"
+    RETRY_USEFULNESS = "retry_usefulness"
+    CONTEXT_RELEVANCE = "context_relevance"
 
 
 @dataclass
@@ -47,7 +52,7 @@ class FindingCandidate:
     why: str
     rewrite_hint: str
     confidence: str
-    estimated_latency_savings_ms: float = 0.0
+    estimated_latency_savings_ms: float | None = 0.0
     estimated_cost_savings_usd: float | None = 0.0
     affected_nodes: list[str] | None = None
     evidence_level: str | None = None
@@ -66,7 +71,9 @@ class FindingCandidate:
             "why": self.why,
             "rewrite_hint": self.rewrite_hint,
             "confidence": self.confidence,
-            "estimated_latency_savings_ms": round(self.estimated_latency_savings_ms, 3),
+            "estimated_latency_savings_ms": None
+            if self.estimated_latency_savings_ms is None
+            else round(self.estimated_latency_savings_ms, 3),
             "estimated_cost_savings_usd": (
                 None
                 if self.estimated_cost_savings_usd is None
@@ -121,7 +128,7 @@ def run_rules(
             for item in detected:
                 item.rule_id = rule.rule_id
                 item.rule_version = rule.version
-                if rule in BUILTIN_RULES:
+                if rule in BUILTIN_RULES and item.estimate is None:
                     item.estimate = estimate_snapshot(item, context.report, context.graph.nodes)
             candidates.extend(detected)
         except Exception as exc:
@@ -346,6 +353,14 @@ def _tool_oscillation_cards(graph: ExecutionGraph) -> list[FindingCandidate]:
     return sorted(cards, key=lambda card: card.estimated_latency_savings_ms, reverse=True)[:3]
 
 
+def _semantic_cards(context, family):
+    if not context.report.get("semantic_waste"):
+        return []
+    from agentloop.semantic_rules import semantic_candidates
+
+    return semantic_candidates(context, family)
+
+
 BUILTIN_RULES = (
     FindingRule("parallelize_tools", "1.1", lambda ctx: _parallelization_cards(ctx.graph)),
     FindingRule("cache_context", "1.1", lambda ctx: _context_cache_cards(ctx.report, ctx.graph)),
@@ -355,4 +370,13 @@ BUILTIN_RULES = (
     FindingRule("split_large_step", "1.1", lambda ctx: _split_large_step_cards(ctx.graph)),
     FindingRule("runaway_loop", "1.1", lambda ctx: _runaway_loop_cards(ctx.graph)),
     FindingRule("tool_oscillation", "1.1", lambda ctx: _tool_oscillation_cards(ctx.graph)),
+    FindingRule(
+        "semantic_redundancy", "1.0", lambda ctx: _semantic_cards(ctx, "semantic_redundancy")
+    ),
+    FindingRule("low_contribution", "1.0", lambda ctx: _semantic_cards(ctx, "low_contribution")),
+    FindingRule(
+        "semantic_no_progress", "1.0", lambda ctx: _semantic_cards(ctx, "semantic_no_progress")
+    ),
+    FindingRule("retry_usefulness", "1.0", lambda ctx: _semantic_cards(ctx, "retry_usefulness")),
+    FindingRule("context_relevance", "1.0", lambda ctx: _semantic_cards(ctx, "context_relevance")),
 )
