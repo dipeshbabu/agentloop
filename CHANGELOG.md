@@ -10,6 +10,12 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added an offline [payment-review reference](docs/PAYMENT_REVIEW.md) with
+  synthetic identifier-free records, traced review stages, false-positive and
+  false-negative traps, explicit manual-review outcomes and retained failures.
+  Native replay/study evidence evaluates cheaper implementations without
+  financial authorization or money movement.
+
 - Added a reproducible [email pipeline reference](docs/EMAIL_WORKFLOW.md) with
   traced spam/category/priority/routing stages, independent frozen labels,
   baseline/hybrid/cheap/failing configurations, native replay/study artifacts,
