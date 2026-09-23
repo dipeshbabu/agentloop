@@ -10,6 +10,8 @@ from datetime import datetime
 from hashlib import sha256
 from typing import Any
 
+from agentloop.budget_types import BudgetSnapshot, BudgetValidationError
+
 EVIDENCE_VERSION = "1.0"
 METADATA_KEY = "agentloop.harness"
 _ACTIONS = {"continue", "deny", "stop", "escalate"}
@@ -185,8 +187,16 @@ class HarnessDecisionRecord:
             raise HarnessEvidenceError("hook sequence must be nonnegative or unavailable")
         if type(value["policy_order"]) is not int or value["policy_order"] < 0:
             raise HarnessEvidenceError("policy order must be nonnegative")
-        if value["budget_snapshot"] is not None and not isinstance(value["budget_snapshot"], dict):
-            raise HarnessEvidenceError("budget snapshot must be an object or unavailable")
+        if value["budget_snapshot"] is not None:
+            try:
+                budget = BudgetSnapshot.from_dict(value["budget_snapshot"]).to_dict()
+                if value["mode"] == "shadow" and any(
+                    budget[key] == "best_effort"
+                    for key in ("spend_enforcement", "token_enforcement")
+                ):
+                    raise BudgetValidationError("shadow budgets cannot claim enforcement")
+            except (BudgetValidationError, TypeError):
+                raise HarnessEvidenceError("invalid or unsupported budget snapshot") from None
         for key in ("evidence_refs", "conflicting_decision_ids"):
             items = value[key]
             if (
@@ -340,7 +350,11 @@ def records_for_hook(
                         "duration_ms": proposal.duration_ms if proposal is not None else 0.0,
                         "hook_duration_ms": result.duration_ms,
                     },
-                    "budget_snapshot": None,
+                    "budget_snapshot": (
+                        proposal.decision.budget_snapshot.to_dict()
+                        if proposal is not None and proposal.decision.budget_snapshot is not None
+                        else None
+                    ),
                     "evaluation_status": "unverified",
                     "origin": "policy" if proposal is not None else "harness",
                     "hook_sequence": result.sequence,

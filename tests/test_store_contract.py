@@ -764,3 +764,43 @@ def test_harness_decisions_and_linked_interventions_preserve_project_isolation(s
     assert store.get_intervention(record["intervention_id"], project_id="proj_b") is None
     with pytest.raises(InterventionReferenceError):
         create_stored_intervention(store, request, project_id="proj_b")
+
+
+def test_budget_snapshots_keep_decimal_totals_and_unknowns_across_backends(store):
+    from agentloop.budget_types import DispatchOptions, Reservation, ResourceUsage
+    from agentloop.budgets import BudgetLimits, budget_policy
+    from agentloop.harness import Harness, HarnessConfig
+    from agentloop.harness_evidence import read_evidence
+
+    with trace_agent("budget-store", metadata={"synthetic": True}) as trace:
+        policy = budget_policy(
+            BudgetLimits(max_model_calls=2, max_tokens=10, max_cost_usd=1),
+            unknown_usage="monitor_only",
+        )
+        run = Harness(HarnessConfig("enforce", (policy,))).start_run()
+        report = ResourceUsage(3, 0.03, "provider", "provider_reported", complete=True)
+        run.wrap(
+            lambda: None,
+            boundary="model",
+            dispatch=DispatchOptions(Reservation(5, 0.1, "upper_bound", True)),
+            usage_reader=lambda _: report,
+        )()
+        run.wrap(
+            lambda: None,
+            boundary="model",
+            dispatch=DispatchOptions(Reservation(5, 0.1, "upper_bound", True)),
+        )()
+    expected = read_evidence(trace)
+    store.save_trace(trace, project_id="proj_a")
+    actual = read_evidence(store.get_trace(trace.run_id, project_id="proj_a"))
+    assert actual == expected
+    assert store.get_trace(trace.run_id, project_id="proj_b") is None
+    snapshots = [
+        record["budget_snapshot"]
+        for record in actual["decisions"].values()
+        if record["budget_snapshot"]
+    ]
+    latest = max(snapshots, key=lambda snapshot: snapshot["committed"]["model_calls"])
+    assert latest["committed"]["cost_known_usd"] == "0.03"
+    assert latest["unknown_usage"]["cost_held_usd"] == "0.1"
+    assert latest["total_usage"] == {"tokens": None, "cost_usd": None}

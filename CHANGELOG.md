@@ -10,6 +10,12 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added [atomic admission budgets](docs/BUDGETS.md) for explicit model/tool,
+  iteration, and retry boundaries, with cooperative monotonic deadlines,
+  provenance-aware token/cost reservations, usage reconciliation, and retained
+  unknown charges. Cost limits remain best-effort; controls are opt-in and do not
+  reroute models or rewrite context.
+
 - Added [versioned harness decision evidence](docs/HARNESS_EVIDENCE.md) with
   historical policy snapshots, distinct proposal/application/failure outcomes,
   retry and conflict links, and separate policy timing. Native traces, supported
