@@ -95,6 +95,8 @@ jobs:
         run: |
           uv run --frozen agentloop --help
           uv run --frozen agentloop demo-all
+          uv run --frozen python examples/intervention_calibration.py --out runs/intervention-calibration
+          uv run --frozen agentloop study calibrate runs/intervention-calibration/manifest.json --out runs/intervention-calibration/cli-report.md --json-out runs/intervention-calibration/cli-report.json
           uv run --frozen python examples/harness_ablation.py --out runs/harness-ablation
           uv run --frozen agentloop study ablation runs/harness-ablation/bundle.json --out runs/harness-ablation/cli-report.md --json-out runs/harness-ablation/cli-report.json
           uv run --frozen agentloop compare

@@ -1,5 +1,10 @@
 # Optimization estimates
 
+Use [historical calibration artifacts](CALIBRATION.md) to compare saved predictions
+with saved intervention outcomes. The offline tool preserves the original models
+and excludes synthetic fixtures from empirical fitting; real calibration still
+requires permission-cleared workload evidence.
+
 Every built-in optimization card and diagnosis finding includes an `estimate`
 record. These predictions are hypotheses until you implement a change and measure
 a candidate run with [replay and quality checks](RESEARCH.md). All current estimators

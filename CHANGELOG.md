@@ -10,6 +10,13 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added offline [historical intervention calibration](docs/CALIBRATION.md) with
+  original prediction/outcome snapshots, explicit selection inventories, cohort
+  and task separation, retained failures/unknowns, and optional diagnostic scale
+  fitting. Synthetic inputs are excluded from empirical summaries and runtime
+  coefficients remain unchanged. Native exported trace fingerprints now tolerate
+  compatible integer-to-float normalization without rewriting ledger identities.
+
 - Added an offline [harness ablation protocol](docs/HARNESS_ABLATIONS.md) and
   `study ablation` reports for uninstrumented, traced, shadow and enforced runs.
   Reports retain planned/missing/failed cases, independent task-quality gates,
