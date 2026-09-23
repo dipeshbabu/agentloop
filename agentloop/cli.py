@@ -12,6 +12,11 @@ from agentloop.ablation_protocol import AblationValidationError
 from agentloop.ablations import ablation_to_markdown, summarize_ablation
 from agentloop.audit import estimate_improvement
 from agentloop.autoinstrument import detect_integrations
+from agentloop.calibration import (
+    CalibrationValidationError,
+    calibration_to_markdown,
+    summarize_calibration,
+)
 from agentloop.ci import build_ci_report, ci_report_to_markdown
 from agentloop.client import AgentLoopClient, AgentLoopClientError
 from agentloop.costs import format_cost_usd, is_cost_evaluable
@@ -50,7 +55,7 @@ from agentloop.value import build_value_report
 
 app = typer.Typer(help="AgentLoop profiler CLI")
 console = Console()
-study_app = typer.Typer(help="Summarize paired experiments from offline traces.")
+study_app = typer.Typer(help="Summarize offline studies and preserved intervention evidence.")
 app.add_typer(study_app, name="study")
 
 
@@ -77,6 +82,31 @@ def study_ablation_command(
     out.write_text(ablation_to_markdown(report), encoding="utf-8")
     _write_json(json_out, report)
     console.print(f"Wrote ablation reports to {out} and {json_out}")
+
+
+@study_app.command("calibrate")
+def study_calibrate_command(
+    manifest: Path,
+    out: Path = typer.Option(Path("runs/calibration.md"), help="Readable historical calibration."),
+    json_out: Path = typer.Option(
+        Path("runs/calibration.json"), help="Versioned calibration artifact."
+    ),
+) -> None:
+    try:
+        report = summarize_calibration(manifest)
+    except CalibrationValidationError as exc:
+        raise typer.BadParameter(str(exc), param_hint="manifest") from None
+    outputs = {out.resolve(), json_out.resolve()}
+    sources = {Path(source).resolve() for source in report["source_paths"]}
+    if len(outputs) != 2 or outputs & sources:
+        raise typer.BadParameter(
+            "report paths must differ from each other and all source evidence",
+            param_hint="out/json-out",
+        )
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(calibration_to_markdown(report), encoding="utf-8")
+    _write_json(json_out, report)
+    console.print(f"Wrote calibration reports to {out} and {json_out}")
 
 
 @study_app.command("summarize")

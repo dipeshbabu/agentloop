@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import json
-import random
 import re
-import statistics
 from collections import Counter, defaultdict
 from fractions import Fraction
 from pathlib import Path
@@ -23,11 +21,11 @@ from agentloop.ablation_protocol import (
 from agentloop.interventions import (
     InterventionRecord,
     InterventionValidationError,
-    trace_fingerprint,
 )
 from agentloop.markdown import markdown_code_span, markdown_heading, markdown_table_cell
-from agentloop.studies import StudyValidationError, summarize_study, summarize_values
-from agentloop.tracer import AgentTrace
+from agentloop.studies import StudyValidationError, summarize_study
+from agentloop.study_statistics import task_weighted_summary
+from agentloop.trace_sources import TraceSource
 
 RESOURCE_METRICS = (
     "latency_ms",
@@ -178,48 +176,23 @@ def _gate(left, right, settings):
     return "accepted", "task_quality_preserved"
 
 
-def _percentile(values, fraction):
-    position = (len(values) - 1) * fraction
-    low = int(position)
-    high = min(low + 1, len(values) - 1)
-    return values[low] + (values[high] - values[low]) * (position - low)
-
-
 def _task_summary(cases, metric, settings, *, eligible=False):
-    values, grouped = [], defaultdict(list)
-    for case in cases:
-        value = case["deltas"][metric]
-        if eligible and case["quality_gate"] != "accepted":
-            value = None
-        values.append(value)
-        if value is not None:
-            grouped[case["pairing"]["task_id"]].append(value)
-    means = [statistics.fmean(grouped[key]) for key in sorted(grouped)]
-    interval = {
-        "method": "percentile_bootstrap_equal_weight_task_means",
-        **settings,
-        "task_count": len(means),
-        "lower": None,
-        "upper": None,
-        "status": "insufficient_tasks",
-    }
-    if len(means) >= 2:
-        rng = random.Random(settings["seed"])  # nosec B311 - reproducible statistical resampling
-        samples = sorted(
-            statistics.fmean(rng.choices(means, k=len(means))) for _ in range(settings["samples"])
-        )
-        tail = (1 - settings["confidence"]) / 2
-        interval.update(
-            lower=_percentile(samples, tail),
-            upper=_percentile(samples, 1 - tail),
-            status="computed",
-        )
+    result = task_weighted_summary(
+        (
+            (
+                case["pairing"]["task_id"],
+                None if eligible and case["quality_gate"] != "accepted" else case["deltas"][metric],
+            )
+            for case in cases
+        ),
+        settings,
+    )
     return {
-        "pair_summary": summarize_values(values),
-        "task_summary": summarize_values(means),
-        "interval": interval,
-        "planned_pair_count": len(cases),
-        "planned_task_count": len({case["pairing"]["task_id"] for case in cases}),
+        "pair_summary": result["observation_summary"],
+        "task_summary": result["task_summary"],
+        "interval": result["interval"],
+        "planned_pair_count": result["planned_observation_count"],
+        "planned_task_count": result["planned_task_count"],
     }
 
 
@@ -489,11 +462,11 @@ def _verify_links(report):
                     "intervention references a trace outside the linked study"
                 )
             if identity not in fingerprints:
-                trace = AgentTrace.from_dict(
+                source = TraceSource.from_dict(
                     json.loads(Path(runs[identity][1]["path"]).read_text(encoding="utf-8"))
                 )
-                fingerprints[identity] = trace_fingerprint(trace)
-            if record["trace_fingerprints"][side] != fingerprints[identity]:
+                fingerprints[identity] = source.fingerprints
+            if record["trace_fingerprints"][side] not in fingerprints[identity]:
                 raise AblationValidationError("intervention trace fingerprint no longer matches")
     report["unlinked_trace_run_ids"] = sorted(
         set(runs) - {row["trace_run_id"] for row in referenced}
