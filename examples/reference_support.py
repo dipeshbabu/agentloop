@@ -30,28 +30,42 @@ def fixture_tokens(value):
     return len(canonical(value).split())
 
 
-def decision(trace, stage_id, inputs, callback, *, model_fixture, depends_on=(), fail=False):
+def decision(
+    trace,
+    stage_id,
+    inputs,
+    callback,
+    *,
+    model_fixture,
+    depends_on=(),
+    fail=False,
+    event_id=None,
+    capture_input=False,
+    extra_metadata=None,
+):
     started = utc_now_iso()
     began = perf_counter()
-    output, status = None, "ok"
+    output, status, error_type = None, "ok", None
     try:
         if fail:
             raise TimeoutError("synthetic fixture timeout")
         output = callback(inputs)
         return output
-    except Exception:
+    except Exception as exc:
         status = "error"
+        error_type = "fixture_timeout" if isinstance(exc, TimeoutError) else "fixture_error"
         raise
     finally:
         elapsed = (perf_counter() - began) * 1000
         ended = utc_now_iso()
         metadata = {
+            **(extra_metadata or {}),
             "synthetic": True,
             "input_hash": digest(inputs),
             "implementation": "fixture-model-v1" if model_fixture else "local-rule-v1",
         }
         if status == "error":
-            metadata["error_type"] = "fixture_timeout"
+            metadata["error_type"] = error_type
         input_tokens = fixture_tokens(inputs) if model_fixture else None
         output_tokens = (
             fixture_tokens(output)
@@ -77,7 +91,7 @@ def decision(trace, stage_id, inputs, callback, *, model_fixture, depends_on=(),
             started_at=started,
             ended_at=ended,
             trace=trace,
-            event_id=stage_id,
+            event_id=event_id or stage_id,
             stage=StageInfo(
                 stage_id,
                 metadata["implementation"],
@@ -94,6 +108,8 @@ def decision(trace, stage_id, inputs, callback, *, model_fixture, depends_on=(),
             status=status,
             metadata=metadata,
         )
+        if capture_input:
+            trace.events[-1].input_text = canonical(inputs)
 
 
 def write_json(path, value):

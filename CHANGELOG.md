@@ -10,6 +10,12 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added a synthetic [batch data-pipeline reference](docs/BATCH_DATA_PIPELINE.md)
+  with chunk-level workflows, per-record extraction/classification/matching
+  criteria, retained failed outputs, per-stage distributions and native paired
+  studies. It demonstrates batching, context/cache hypotheses and offline stage
+  substitution, with explicit prompt-capture and diagnostic-volume tradeoffs.
+
 - Added a synthetic [marketplace reference](docs/MARKETPLACE_WORKFLOW.md) with
   duplicate/near-duplicate, policy, category and review-routing cases. Separate
   per-field diagnostics retain stage and final-route errors alongside unchanged
