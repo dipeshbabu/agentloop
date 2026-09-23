@@ -113,8 +113,9 @@ def diagnosis_to_markdown(diagnosis: dict[str, Any]) -> str:
         "",
     ]
     findings = diagnosis.get("findings", [])
-    if diagnosis["summary"].get("unmodeled_latency_findings") or diagnosis["summary"].get(
-        "unmodeled_cost_findings"
+    summary = diagnosis.get("summary")
+    if isinstance(summary, dict) and (
+        summary.get("unmodeled_latency_findings") or summary.get("unmodeled_cost_findings")
     ):
         lines.extend(["Some savings are unavailable; totals cover modeled candidates only.", ""])
     if diagnosis.get("rule_errors"):
