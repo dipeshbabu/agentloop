@@ -17,13 +17,25 @@ from dataclasses import dataclass, field
 from functools import wraps
 from hashlib import sha256
 from threading import RLock
+from time import perf_counter_ns
 from types import MappingProxyType
 from typing import Any, TypeVar
 from uuid import uuid4
 from weakref import ReferenceType, ref
 
-from agentloop.events import new_run_id
-from agentloop.tracer import current_event_id, current_trace
+from agentloop.events import new_run_id, utc_now_iso
+from agentloop.harness_evidence import (
+    METADATA_KEY,
+    HarnessEvidenceError,
+    append_records,
+    canonical_json,
+    decision_id,
+    empty_evidence,
+    policy_snapshot,
+    records_for_hook,
+    valid_decision_id,
+)
+from agentloop.tracer import AgentTrace, current_event_id, current_trace
 
 CONTRACT_VERSION = "1.0"
 BOUNDARIES = frozenset({"model", "tool", "iteration", "completion"})
@@ -39,6 +51,11 @@ F = TypeVar("F", bound=Callable[..., Any])
 def _identifier(value: str, label: str) -> None:
     if not isinstance(value, str) or not _IDENTIFIER.fullmatch(value):
         raise ValueError(f"{label} must be a bounded identifier, not free-form content")
+
+
+def _reference(value: str, label: str) -> None:
+    if not isinstance(value, str) or not value:
+        raise ValueError(f"{label} must be a nonempty string")
 
 
 def _json_value(value: Any) -> Any:
@@ -101,11 +118,21 @@ class Decision:
 
     action: str = "continue"
     reason_code: str = "allowed"
+    evidence_refs: tuple[str, ...] = ()
+    retry_of: str | None = None
 
     def __post_init__(self) -> None:
         if self.action not in ACTIONS:
             raise ValueError("unsupported harness action")
         _identifier(self.reason_code, "reason_code")
+        if not isinstance(self.evidence_refs, (tuple, list, set, frozenset)):
+            raise ValueError("evidence_refs must be a collection of identifiers")
+        refs = tuple(self.evidence_refs)
+        for value in refs:
+            _reference(value, "evidence reference")
+        object.__setattr__(self, "evidence_refs", tuple(sorted(set(refs))))
+        if self.retry_of is not None and not valid_decision_id(self.retry_of):
+            raise ValueError("retry_of must reference a harness decision ID")
 
 
 @dataclass(frozen=True)
@@ -123,6 +150,7 @@ class HookContext:
     configuration: Mapping[str, Any]
     state: dict[str, Any] = field(repr=False, compare=False)
     dispatched: bool
+    decision_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -182,6 +210,7 @@ class HarnessConfig:
     mode: str = "disabled"
     policies: tuple[Policy, ...] = ()
     schema_version: str = CONTRACT_VERSION
+    capture_policy_configuration: bool = False
     config_hash: str = field(init=False)
 
     def __post_init__(self) -> None:
@@ -189,6 +218,8 @@ class HarnessConfig:
             raise ValueError("mode must be disabled, shadow, or enforce")
         if self.schema_version != CONTRACT_VERSION:
             raise ValueError("unsupported harness configuration version")
+        if type(self.capture_policy_configuration) is not bool:
+            raise ValueError("capture_policy_configuration must be a boolean")
         policies = tuple(self.policies)
         if any(not isinstance(policy, Policy) for policy in policies):
             raise ValueError("policies must be Policy objects")
@@ -204,6 +235,11 @@ class HarnessConfig:
                     "schema_version": self.schema_version,
                     "mode": self.mode,
                     "policies": [policy.config_hash for policy in policies],
+                    **(
+                        {"capture_policy_configuration": True}
+                        if self.capture_policy_configuration
+                        else {}
+                    ),
                 }
             ),
         )
@@ -240,6 +276,8 @@ class PolicyResult:
     config_hash: str
     decision: Decision
     failed: bool = False
+    started_at: str | None = None
+    duration_ms: float | None = None
 
 
 @dataclass(frozen=True)
@@ -258,6 +296,9 @@ class HookResult:
     action: str
     applied: bool
     dispatched: bool
+    started_at: str | None = None
+    duration_ms: float | None = None
+    sequence: int | None = None
 
 
 class HarnessControlError(RuntimeError):
@@ -289,6 +330,8 @@ class Harness:
     _policies_by_hook: Mapping[Hook, tuple[Policy, ...]] = field(
         init=False, repr=False, compare=False
     )
+    _snapshot_json: Mapping[str, str] = field(init=False, repr=False, compare=False)
+    _system_snapshot_json: str = field(init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         if not isinstance(self.config, HarnessConfig) or not isinstance(
@@ -316,12 +359,46 @@ class Harness:
                 }
             ),
         )
+        snapshots = {
+            policy.config_hash: canonical_json(
+                policy_snapshot(
+                    policy, include_configuration=self.config.capture_policy_configuration
+                )
+            )
+            for policy in self.config.policies
+        }
+        system = {
+            "policy_id": "agentloop.harness",
+            "version": CONTRACT_VERSION,
+            "config_hash": _hash(
+                {
+                    "harness_config_hash": self.config.config_hash,
+                    "adapter": self.capabilities.name,
+                    "hooks": [
+                        (hook.boundary, hook.phase) for hook in sorted(self.capabilities.hooks)
+                    ],
+                    "actions": sorted(self.capabilities.actions),
+                    "execution_kinds": sorted(self.capabilities.execution_kinds),
+                }
+            ),
+            "priority": 0,
+            "hooks": [
+                {"boundary": hook.boundary, "phase": hook.phase} for hook in sorted(ALL_HOOKS)
+            ],
+            "actions": sorted(ACTIONS),
+            "configuration_capture": "redacted",
+            "configuration": None,
+        }
+        serialized = canonical_json(system)
+        snapshots[system["config_hash"]] = serialized
+        object.__setattr__(self, "_snapshot_json", MappingProxyType(snapshots))
+        object.__setattr__(self, "_system_snapshot_json", serialized)
 
     def start_run(self, run_id: str | None = None) -> HarnessRun:
         """Create fresh state, using the active trace's identity when available."""
         trace = current_trace()
         identity = run_id if run_id is not None else trace.run_id if trace else new_run_id()
-        _identifier(identity, "run_id")
+        _reference(identity, "run_id")
         return HarnessRun(self, identity)
 
 
@@ -332,6 +409,7 @@ class _Invocation:
     branch_id: str
     trace_id: str | None
     parent_span_id: str | None
+    trace: AgentTrace | None = field(repr=False, compare=False)
 
 
 @dataclass(frozen=True)
@@ -360,6 +438,9 @@ class HarnessRun:
         self._states: dict[str, dict[str, Any]] = {}
         self._results: list[HookResult] = []
         self._stopped = False
+        self._evidence = empty_evidence()
+        self._snapshots = {key: json.loads(value) for key, value in harness._snapshot_json.items()}
+        self._system_snapshot = json.loads(harness._system_snapshot_json)
 
     @property
     def harness(self) -> Harness:
@@ -383,11 +464,38 @@ class HarnessRun:
         with self._lock:
             return self._stopped
 
+    def export_evidence(self) -> dict[str, Any]:
+        """Return a detached artifact, including any safe trace-capture diagnostics."""
+        with self._lock:
+            return json.loads(canonical_json(self._evidence))
+
+    def _record_evidence(self, invocation: _Invocation, result: HookResult) -> None:
+        records = records_for_hook(result, self.harness.config.config_hash, self._system_snapshot)
+        append_records(self._evidence, records, self._snapshots)
+        if invocation.trace is None:
+            return
+        try:
+            envelope = invocation.trace.metadata.setdefault(METADATA_KEY, empty_evidence())
+            append_records(envelope, records, self._snapshots)
+        except (HarnessEvidenceError, AttributeError, TypeError, KeyError):
+            self._evidence["capture_errors"].append(
+                {
+                    "call_id": invocation.call_id,
+                    "phase": result.hook.phase,
+                    "category": "trace_evidence_error",
+                }
+            )
+            if self.harness.config.mode == "enforce":
+                self._stopped = True
+                raise HarnessEvidenceError("trace evidence capture failed") from None
+
     def _hook(
         self, invocation: _Invocation, phase: str, status: str, *, dispatched: bool = False
     ) -> HookResult:
         hook = Hook(invocation.boundary, phase)
         config = self.harness.config
+        started_at = utc_now_iso()
+        started_ns = perf_counter_ns()
         with self._lock:
             proposals = []
             fatal: BaseException | None = None
@@ -406,15 +514,25 @@ class HarnessRun:
                         policy.configuration,
                         self._states.setdefault(policy.policy_id, {}),
                         dispatched,
+                        decision_id(
+                            self.run_id,
+                            invocation.call_id,
+                            hook.boundary,
+                            hook.phase,
+                            policy.policy_id,
+                        ),
                     )
                     token = _IN_POLICY.set(True)
                     failed = False
+                    policy_started_at = utc_now_iso()
+                    policy_started_ns = perf_counter_ns()
                     try:
                         decision = policy.evaluate(context)
                         if (
                             not isinstance(decision, Decision)
                             or decision.action not in policy.actions
                             or (phase == "after" and decision.action == "deny")
+                            or decision.retry_of == context.decision_id
                         ):
                             if inspect.iscoroutine(decision):
                                 decision.close()
@@ -428,7 +546,13 @@ class HarnessRun:
                         _IN_POLICY.reset(token)
                     proposals.append(
                         PolicyResult(
-                            policy.policy_id, policy.version, policy.config_hash, decision, failed
+                            policy.policy_id,
+                            policy.version,
+                            policy.config_hash,
+                            decision,
+                            failed,
+                            policy_started_at,
+                            max(0, perf_counter_ns() - policy_started_ns) / 1_000_000,
                         )
                     )
                     if _PRECEDENCE[decision.action] > _PRECEDENCE[action]:
@@ -450,8 +574,16 @@ class HarnessRun:
                 action,
                 config.mode == "enforce" and action != "continue",
                 dispatched,
+                started_at,
+                max(0, perf_counter_ns() - started_ns) / 1_000_000,
+                len(self._results),
             )
             self._results.append(result)
+            try:
+                self._record_evidence(invocation, result)
+            except HarnessEvidenceError:
+                if fatal is None:
+                    raise
             if fatal is not None:
                 raise fatal
             return result
@@ -477,6 +609,7 @@ class HarnessRun:
             branch_id,
             trace.run_id if trace else None,
             current_event_id() if trace else None,
+            trace,
         )
         try:
             self._apply(self._hook(invocation, "before", "pending"))
@@ -507,7 +640,7 @@ class HarnessRun:
         if not callable(function):
             raise ValueError("protected work must be callable")
         Hook(boundary)
-        _identifier(branch_id, "branch_id")
+        _reference(branch_id, "branch_id")
         if self.harness.config.mode == "disabled":
             return function
         marker = getattr(function, "__agentloop_harness__", None)

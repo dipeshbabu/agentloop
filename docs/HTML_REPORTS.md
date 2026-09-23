@@ -75,3 +75,16 @@ fixtures alongside an HTML research supplement when reproducibility matters.
 The HTML is a readable artifact; it does not establish that a suggested change
 was implemented or that its predicted savings were measured. See
 [CI evidence](CI.md) and [research guidance](RESEARCH.md).
+
+## Harness decisions
+
+Traces with [versioned harness evidence](HARNESS_EVIDENCE.md) gain a decision
+section showing policy versions, proposal/application outcomes, dispatch status,
+timing, parent spans, and retained retry/conflict links. Shadow proposals are not
+shown as executed interventions, and individual policy benefits remain unverified.
+Shared hook timing is counted once even when several policies proposed actions.
+
+Raw policy configuration remains omitted unless it was explicitly captured and
+the report also enables `--include-content`. Invalid or unsupported decision
+evidence produces a notice; its raw contents are not dumped into the generic
+metadata section. Traces without harness evidence render as before.

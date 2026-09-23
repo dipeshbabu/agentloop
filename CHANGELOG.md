@@ -10,6 +10,13 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added [versioned harness decision evidence](docs/HARNESS_EVIDENCE.md) with
+  historical policy snapshots, distinct proposal/application/failure outcomes,
+  retry and conflict links, and separate policy timing. Native traces, supported
+  OTLP round trips, HTML, and the existing intervention ledger preserve this
+  evidence; raw configuration is omitted by default and logged decisions do not
+  imply measured benefit.
+
 - Added an opt-in [Python harness lifecycle contract](docs/HARNESS.md) with
   disabled, shadow, and enforce modes, immutable policy settings, explicit adapter
   capabilities, synchronized run-local state, and lazy sync/async stream wrappers.
