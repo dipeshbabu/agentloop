@@ -8,6 +8,8 @@ The [incident-triage reference](INCIDENT_TRIAGE.md) evaluates inert response and
 rollback/escalation proposals without changing infrastructure.
 The [marketplace reference](MARKETPLACE_WORKFLOW.md) preserves per-stage and
 final-route quality evidence for duplicate, policy and category decisions.
+The [batch data reference](BATCH_DATA_PIPELINE.md) profiles many records in
+generic workflow chunks, with explicit extraction/matching quality and retention tradeoffs.
 
 Use [structured quality contracts](STRUCTURED_QUALITY.md) to compare the caller's
 routing, extraction and matching outputs through replay and paired studies.
