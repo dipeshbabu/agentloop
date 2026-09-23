@@ -2,6 +2,10 @@
 
 AgentLoop has two orchestration commands for people who do not yet need the lower-level workflow.
 
+For classifiers, rules and decision pipelines, see the
+[AI execution profiling guide](AI_EXECUTION_PROFILING.md). Those workflow APIs
+and reference examples currently require an unreleased source checkout.
+
 ## 1. Verify the install without an account or API key
 
 ```bash

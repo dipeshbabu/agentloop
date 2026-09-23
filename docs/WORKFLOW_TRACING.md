@@ -1,5 +1,9 @@
 # Trace AI workflows and decision pipelines
 
+These APIs are unreleased additions on `main`. Start with the
+[AI execution profiling guide](AI_EXECUTION_PROFILING.md) for source setup and
+the path from tracing through quality checks, findings and paired comparisons.
+
 The [email pipeline reference](EMAIL_WORKFLOW.md) executes spam, category,
 priority and routing stages with paired quality, replay and semantic evidence.
 The [payment-review reference](PAYMENT_REVIEW.md) demonstrates structured review
