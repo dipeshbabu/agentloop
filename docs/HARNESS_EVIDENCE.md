@@ -17,13 +17,13 @@ The example writes traces, detached evidence JSON, and HTML for all three modes.
 Disabled and shadow execute the synthetic tool once; enforce denies it before
 dispatch. This demonstrates capture and control flow, not an optimization benefit.
 
-## Envelope 1.0
+## Envelope 1.1
 
 The namespace has four fields:
 
 | Field | Contract |
 | --- | --- |
-| `schema_version` | Independent harness-evidence version, `1.0` |
+| `schema_version` | Independent harness-evidence version, `1.1`; readers also accept `1.0` |
 | `policies` | Immutable-at-capture declarations indexed by policy configuration hash |
 | `decisions` | Records indexed by their `hdec_` identity |
 | `capture_errors` | Safe diagnostics when delivery to a trace failed |
@@ -63,13 +63,24 @@ different content at an existing decision identity or policy hash raises an erro
 | `timing` | UTC start, policy evaluation duration, and shared hook evaluation duration |
 | `budget_snapshot` | A typed [budget snapshot](BUDGETS.md), or null when unavailable; never an invented zero budget |
 | `evaluation_status` | `unverified`; a decision alone is not an outcome comparison |
+| `feedback` | Optional explicit diagnostic text, limited to 256 characters in schema 1.1 |
 
-Decision identity is SHA-256 of canonical JSON containing evidence version, run
+Decision identity is SHA-256 of canonical JSON containing identity version 1.0, run
 ID, invocation ID, boundary, phase, and policy ID. Identity excludes outcome and
 timing so an attempted overwrite with changed evidence is a conflict. Invocation
 IDs distinguish actual repeated calls; retry links do not reuse identities.
 The shared hook identity omits policy ID so multiple proposals are not counted as
 multiple control effects.
+
+Schema 1.1 adds bounded feedback without changing identity version 1.0. Readers
+accept old 1.0 records unchanged, and appending new records upgrades the envelope
+while retaining historical record versions and bytes. Custom feedback is explicit
+caller content; library loop guards use fixed safe templates rather than raw input
+or exception text.
+
+The enclosing intervention comparison-link contract remains version 1.0 and
+carries each trace's own evidence version. This avoids changing historical
+comparison payloads merely because a newer reader supports feedback.
 
 The span reference is the existing parent context, not an invented model/tool
 span for denied work. Use ordinary tracing alongside the harness to capture

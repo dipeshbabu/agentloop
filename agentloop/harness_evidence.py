@@ -12,7 +12,9 @@ from typing import Any
 
 from agentloop.budget_types import BudgetSnapshot, BudgetValidationError
 
-EVIDENCE_VERSION = "1.0"
+EVIDENCE_VERSION = "1.1"
+_IDENTITY_VERSION = "1.0"
+_COMPARISON_VERSION = "1.0"
 METADATA_KEY = "agentloop.harness"
 _ACTIONS = {"continue", "deny", "stop", "escalate"}
 _OUTCOMES = {"proposed", "applied", "rejected", "failed", "no_op"}
@@ -51,6 +53,7 @@ _FIELDS = {
     "hook_sequence",
     "policy_order",
 }
+_CURRENT_FIELDS = _FIELDS | {"feedback"}
 
 
 class HarnessEvidenceError(ValueError):
@@ -66,13 +69,13 @@ def canonical_json(value: Any) -> str:
 
 
 def hook_id(run_id: str, call_id: str, boundary: str, phase: str) -> str:
-    identity = [EVIDENCE_VERSION, run_id, call_id, boundary, phase]
+    identity = [_IDENTITY_VERSION, run_id, call_id, boundary, phase]
     return "hook_" + sha256(canonical_json(identity).encode()).hexdigest()
 
 
 def decision_id(run_id: str, call_id: str, boundary: str, phase: str, policy_id: str) -> str:
     """Return one stable identity for a policy at a particular call boundary."""
-    identity = [EVIDENCE_VERSION, run_id, call_id, boundary, phase, policy_id]
+    identity = [_IDENTITY_VERSION, run_id, call_id, boundary, phase, policy_id]
     return "hdec_" + sha256(canonical_json(identity).encode()).hexdigest()
 
 
@@ -93,7 +96,8 @@ def _envelope(value: Any) -> dict[str, Any]:
     if (
         not isinstance(value, dict)
         or set(value) != {"schema_version", "policies", "decisions", "capture_errors"}
-        or value.get("schema_version") != EVIDENCE_VERSION
+        or not isinstance(value.get("schema_version"), str)
+        or value.get("schema_version") not in {"1.0", EVIDENCE_VERSION}
         or not isinstance(value.get("policies"), dict)
         or not isinstance(value.get("decisions"), dict)
         or not isinstance(value.get("capture_errors"), list)
@@ -113,10 +117,18 @@ class HarnessDecisionRecord:
 
     @classmethod
     def from_dict(cls, value: dict[str, Any]) -> HarnessDecisionRecord:
-        if not isinstance(value, dict) or set(value) != _FIELDS:
+        if not isinstance(value, dict):
             raise HarnessEvidenceError("invalid harness decision fields")
-        if value["schema_version"] != EVIDENCE_VERSION:
+        version = value.get("schema_version")
+        if not isinstance(version, str) or version not in {"1.0", EVIDENCE_VERSION}:
             raise HarnessEvidenceError("unsupported harness decision version")
+        if set(value) != (_FIELDS if version == "1.0" else _CURRENT_FIELDS):
+            raise HarnessEvidenceError("invalid harness decision fields")
+        feedback = value.get("feedback")
+        if feedback is not None and (
+            not isinstance(feedback, str) or not feedback or len(feedback) > 256
+        ):
+            raise HarnessEvidenceError("invalid bounded decision feedback")
         for key in ("run_id", "call_id", "branch_id", "policy_id", "policy_version", "reason_code"):
             if not isinstance(value[key], str) or not value[key]:
                 raise HarnessEvidenceError(
@@ -357,6 +369,7 @@ def records_for_hook(
                     ),
                     "evaluation_status": "unverified",
                     "origin": "policy" if proposal is not None else "harness",
+                    "feedback": proposal.decision.feedback if proposal is not None else None,
                     "hook_sequence": result.sequence,
                     "policy_order": policy_order,
                 }
@@ -394,6 +407,8 @@ def append_records(
         if config_hash not in target["policies"]:
             target["policies"].setdefault(config_hash, json.loads(snapshot_json))
         target["decisions"].setdefault(identity, payload)
+        if payload["schema_version"] == EVIDENCE_VERSION:
+            target["schema_version"] = EVIDENCE_VERSION
 
 
 def validate_evidence(value: Any, *, trace_id: str | None = None) -> dict[str, Any]:
@@ -458,6 +473,8 @@ def validate_evidence(value: Any, *, trace_id: str | None = None) -> dict[str, A
     orders: dict[str, set[int]] = {}
     for identity, payload in envelope["decisions"].items():
         record = HarnessDecisionRecord.from_dict(payload).to_dict()
+        if envelope["schema_version"] == "1.0" and record["schema_version"] != "1.0":
+            raise HarnessEvidenceError("decision version exceeds its envelope version")
         if identity != record["decision_id"] or (
             trace_id is not None and record["trace_id"] != trace_id
         ):
@@ -552,7 +569,7 @@ def comparison_evidence(baseline: Any, candidate: Any) -> dict[str, Any] | None:
         }
     )
     return {
-        "schema_version": EVIDENCE_VERSION,
+        "schema_version": _COMPARISON_VERSION,
         "baseline_run_id": baseline.run_id,
         "candidate_run_id": candidate.run_id,
         "comparison_status": "observed_pair",

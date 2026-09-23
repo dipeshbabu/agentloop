@@ -170,7 +170,8 @@ non-AgentLoop OTLP payload are preserved as event metadata without collision.
 ### Harness decision metadata
 
 Enabled Python harnesses use the reserved trace metadata key `agentloop.harness`
-for the independent [decision-evidence schema 1.0](HARNESS_EVIDENCE.md). Native
+for the independent [decision-evidence schema 1.1](HARNESS_EVIDENCE.md), with 1.0
+read compatibility. Native
 trace schema remains 1.1; existing traces and application-owned metadata such as
 `harness` keep their original meaning. The new namespace contains decision IDs,
 historical policy declarations, outcome/dispatch evidence, timing, and explicit
