@@ -8,6 +8,14 @@ Project history from before the first public release remains available in Git.
 
 ## [Unreleased]
 
+### Added
+
+- Added an opt-in [Python harness lifecycle contract](docs/HARNESS.md) with
+  disabled, shadow, and enforce modes, immutable policy settings, explicit adapter
+  capabilities, synchronized run-local state, and lazy sync/async stream wrappers.
+  Denied calls do not dispatch; policy failures stop enforced admission. Ordinary
+  tracing remains unchanged and no framework dependency is required.
+
 ## [0.7.0] - 2026-09-22
 
 ### Added
