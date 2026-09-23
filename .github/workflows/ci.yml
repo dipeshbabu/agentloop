@@ -131,6 +131,8 @@ jobs:
           uv venv --python 3.13 .package-smoke
           uv pip install --python .package-smoke/bin/python "$wheel"
           .package-smoke/bin/agentloop --help
+          .package-smoke/bin/python -I scripts/smoke_installed_wheel.py \
+            --expected-version "$(uv version --short)"
 
       - name: Upload validated release artifact
         if: ${{ inputs.upload_release_artifact || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
