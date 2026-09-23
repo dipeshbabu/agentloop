@@ -11,6 +11,7 @@ from agentloop.costs import format_cost_usd
 from agentloop.demo import run_baseline, run_langgraph_style, run_optimized, run_proof_pair
 from agentloop.findings import build_diagnosis
 from agentloop.issues import build_issue_drafts, issue_drafts_to_markdown
+from agentloop.operations import operation_kind
 from agentloop.optimizer import build_optimization_plan
 from agentloop.patches import RepositoryPathError, build_patch_plan
 from agentloop.quality import (
@@ -110,7 +111,7 @@ def render_gate_table(results: list[dict]) -> None:
 
 
 st.sidebar.title("AgentLoop")
-st.sidebar.caption("Agent-loop performance control panel")
+st.sidebar.caption("Execution profiling and evidence")
 
 project_id = st.sidebar.text_input("Project", value=st.session_state.get("project_id", "default"))
 st.session_state["project_id"] = project_id
@@ -205,10 +206,17 @@ elif page == "Traces":
         if trace is not None:
             report = trace.report()
             st.markdown(f"### {trace.name}")
+            if report.get("execution") is not None:
+                execution = report["execution"]
+                st.caption(
+                    f"Workflow {execution.get('workflow_id', 'unknown')} · version {execution.get('version', 'unknown')} · {execution.get('status', 'unknown')}"
+                )
+                with st.expander("Workflow references"):
+                    st.json(execution)
             c1, c2, c3, c4 = st.columns(4)
             c1.metric("Runtime", seconds(report["total_runtime_ms"]))
             c2.metric(
-                "Cost",
+                "Recorded model cost" if "execution" in report else "Cost",
                 format_cost_usd(report["estimated_cost_usd"], report.get("cost_status")),
             )
             c3.metric("Model calls", report["model_call_count"])
@@ -226,6 +234,38 @@ elif page == "Traces":
                     "output_tokens",
                     "status",
                 ]
+                if "execution" in report or "stages" in report:
+                    events["operation_kind"] = [operation_kind(event) for event in trace.events]
+                    summaries = [
+                        report.get("stages", {}).get(event.event_id, {}) for event in trace.events
+                    ]
+                    stage_columns = {
+                        "Stage": "stage_id",
+                        "Stage kind": "kind",
+                        "Stage version": "version",
+                        "Input schema": "input_schema_ref",
+                        "Output schema": "output_schema_ref",
+                        "Input reference": "input_ref",
+                        "Output reference": "output_ref",
+                        "Outcome": "outcome",
+                        "Dependencies": "depends_on",
+                    }
+                    for label, key in stage_columns.items():
+                        events[label] = [value.get(key) for value in summaries]
+                    cols = [
+                        "operation_kind",
+                        "Stage",
+                        "Stage kind",
+                        "Stage version",
+                        "parent_id",
+                        *cols,
+                        "Input schema",
+                        "Output schema",
+                        "Input reference",
+                        "Output reference",
+                        "Outcome",
+                        "Dependencies",
+                    ]
                 for col in cols:
                     if col not in events.columns:
                         events[col] = None
@@ -411,6 +451,10 @@ elif page == "Optimization":
 
             st.subheader("Execution graph")
             graph = plan["graph"]
+            if graph.get("execution") is not None:
+                st.json(graph["execution"])
+            if graph.get("dependency_evidence") is not None:
+                st.json(graph["dependency_evidence"])
             st.write("Bottlenecks")
             st.dataframe(pd.DataFrame(graph["bottlenecks"]), width="stretch")
             st.write("Parallelization candidates")

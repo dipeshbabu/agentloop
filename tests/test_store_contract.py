@@ -74,6 +74,18 @@ def _sample_trace(name: str = "contract-test"):
     return trace
 
 
+def test_generic_workflow_metadata_and_operations_roundtrip(store):
+    from workflow_fixtures import pipeline
+
+    trace = pipeline(branching=True)
+    store.save_trace(trace)
+    loaded = store.get_trace(trace.run_id)
+    assert loaded.to_dict() == trace.to_dict()
+    assert loaded.report()["operation_counts"] == trace.report()["operation_counts"]
+    assert loaded.report()["execution"]["workflow_id"] == "mail-router"
+    assert loaded.report()["stages"]["route"]["depends_on"] == ["lookup", "priority"]
+
+
 def _repeated_context_trace(name: str = "queue-test"):
     with trace_agent(name) as trace:
         repeated = "stable context " * 100

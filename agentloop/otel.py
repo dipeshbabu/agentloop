@@ -311,6 +311,7 @@ def _event_from_span(span: dict[str, Any], run_id: str) -> AgentEvent:
         parent_id=parent_id,
         model=_first_string(
             attrs,
+            "agentloop.model",
             "gen_ai.response.model",
             "gen_ai.request.model",
             "llm.response.model_name",
@@ -318,8 +319,8 @@ def _event_from_span(span: dict[str, Any], run_id: str) -> AgentEvent:
             "llm.request.model_name",
             "embedding.model_name",
         ),
-        input_tokens=usage_count(attrs, INPUT_USAGE),
-        output_tokens=usage_count(attrs, OUTPUT_USAGE),
+        input_tokens=usage_count(attrs, ("agentloop.input_tokens", *INPUT_USAGE)),
+        output_tokens=usage_count(attrs, ("agentloop.output_tokens", *OUTPUT_USAGE)),
         token_provenance=_token_provenance(attrs),
         status=status,
         error=error,
@@ -330,16 +331,27 @@ def _event_from_span(span: dict[str, Any], run_id: str) -> AgentEvent:
 def _span_from_event(trace: AgentTrace, event: AgentEvent) -> dict[str, Any]:
     start_ns = _ns_from_iso(event.started_at)
     end_ns = _ns_from_iso(event.ended_at)
-    attrs = [
-        _attribute(
-            "gen_ai.operation.name", _operation_name(event.event_type, event.operation_kind)
-        ),
+    generic = event.event_type not in LEGACY_OPERATION_KINDS
+    attrs = (
+        []
+        if generic
+        else [
+            _attribute(
+                "gen_ai.operation.name", _operation_name(event.event_type, event.operation_kind)
+            )
+        ]
+    ) + [
         _attribute("agentloop.event_type", event.event_type),
         _attribute("agentloop.name", event.name),
         _attribute("agentloop.duration_ms", event.duration_ms),
         _attribute("agentloop.run_id", trace.run_id),
-        _attribute("gen_ai.usage.input_tokens", event.input_tokens),
-        _attribute("gen_ai.usage.output_tokens", event.output_tokens),
+        _attribute(
+            "agentloop.input_tokens" if generic else "gen_ai.usage.input_tokens", event.input_tokens
+        ),
+        _attribute(
+            "agentloop.output_tokens" if generic else "gen_ai.usage.output_tokens",
+            event.output_tokens,
+        ),
     ]
     if "operation_kind" in event.metadata:
         attrs.append(_attribute("agentloop.operation_kind", event.metadata["operation_kind"]))
@@ -349,7 +361,9 @@ def _span_from_event(trace: AgentTrace, event: AgentEvent) -> dict[str, Any]:
     if preserved_fields:
         attrs.append(_attribute("agentloop.preserved_span_fields", preserved_fields))
     if event.model:
-        attrs.append(_attribute("gen_ai.request.model", event.model))
+        attrs.append(
+            _attribute("agentloop.model" if generic else "gen_ai.request.model", event.model)
+        )
     attrs.append(_attribute("agentloop.token_provenance", event.token_provenance))
     for key, value in sorted((event.metadata or {}).items()):
         if key in _reserved_metadata_keys():
@@ -684,6 +698,9 @@ def _token_provenance(attrs: dict[str, Any]) -> str | None:
 
 def _direct_attribute_keys() -> set[str]:
     return {
+        "agentloop.model",
+        "agentloop.input_tokens",
+        "agentloop.output_tokens",
         "agentloop.event_type",
         "agentloop.operation_kind",
         "agentloop.name",

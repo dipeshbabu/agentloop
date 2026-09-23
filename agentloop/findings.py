@@ -64,6 +64,7 @@ def build_diagnosis(trace: Any) -> dict[str, Any]:
     findings = [_finding_from_card(card, plan) for card in plan.get("optimization_cards", [])]
     findings = [finding for finding in findings if finding is not None]
     return {
+        **({"execution": plan["graph"]["execution"]} if "execution" in plan["graph"] else {}),
         "run_id": plan["run_id"],
         "name": plan["name"],
         "cost_status": plan.get("cost_status", "complete"),
@@ -264,6 +265,7 @@ def _severity(
 
 def _evidence_row(node: dict[str, Any]) -> dict[str, Any]:
     return {
+        **({"stage": deepcopy(node["stage"])} if "stage" in node else {}),
         "span_id": node["node_id"],
         "name": node["name"],
         "event_type": node["event_type"],

@@ -10,6 +10,12 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added [workflow and stage tracing](docs/WORKFLOW_TRACING.md) on the existing
+  native trace/store contract, with generic rule/classifier/transform/service
+  operations, schema/data references, declared dependencies and execution status.
+  Graphs, evidence, replay/studies, OTLP and report/dashboard views preserve these
+  semantics while existing agent APIs remain compatible.
+
 - Added offline [historical intervention calibration](docs/CALIBRATION.md) with
   original prediction/outcome snapshots, explicit selection inventories, cohort
   and task separation, retained failures/unknowns, and optional diagnostic scale
