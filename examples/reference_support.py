@@ -12,7 +12,7 @@ from agentloop.entrypoint import _analysis_payload
 from agentloop.events import utc_now_iso
 from agentloop.findings import build_diagnosis, diagnosis_to_markdown
 from agentloop.html_report import analysis_to_html
-from agentloop.quality import build_quality_report
+from agentloop.quality import build_quality_report, quality_report_to_markdown
 from agentloop.replay import ReplayGates, build_replay_report, replay_report_to_markdown
 from agentloop.studies import study_to_markdown, summarize_study
 
@@ -103,7 +103,9 @@ def write_json(path, value):
     )
 
 
-def write_reference_bundle(out, *, name, fixtures, variants, run_case, inspect_trace=None):
+def write_reference_bundle(
+    out, *, name, fixtures, variants, run_case, inspect_trace=None, field_diagnostics=False
+):
     """Execute actual local configurations, score frozen gold, and export native artifacts."""
     out = Path(out)
     if out.exists() and any(out.iterdir()):
@@ -152,6 +154,32 @@ def write_reference_bundle(out, *, name, fixtures, variants, run_case, inspect_t
             )
             directory = out / variant / f"case-{index:04d}"
             write_json(directory / "quality.json", quality)
+            if field_diagnostics:
+                diagnostic = build_quality_report(
+                    [
+                        {
+                            "schema_version": "2.0",
+                            "id": fixture["id"] + ":" + field,
+                            "input_ref": "sha256:" + digest(fixture["input"]),
+                            "expected_ref": "fixture:"
+                            + fixture_hash
+                            + ":"
+                            + fixture["id"]
+                            + ":"
+                            + field,
+                            "expected": {field: value},
+                            "scorer": {"type": "fields", "version": "1.0", "allow_extra": True},
+                        }
+                        for field, value in fixture["expected"].items()
+                    ],
+                    baseline_trace=before,
+                    candidate_trace=after,
+                    min_score=1,
+                )
+                write_json(directory / "field-quality.json", diagnostic)
+                (directory / "field-quality.md").write_text(
+                    quality_report_to_markdown(diagnostic), encoding="utf-8"
+                )
             write_json(directory / "replay.json", replay)
             (directory / "replay.md").write_text(
                 replay_report_to_markdown(replay), encoding="utf-8"

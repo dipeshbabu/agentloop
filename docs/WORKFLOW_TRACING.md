@@ -6,6 +6,8 @@ The [payment-review reference](PAYMENT_REVIEW.md) demonstrates structured review
 labels, explicit abstention and failure retention without financial actions.
 The [incident-triage reference](INCIDENT_TRIAGE.md) evaluates inert response and
 rollback/escalation proposals without changing infrastructure.
+The [marketplace reference](MARKETPLACE_WORKFLOW.md) preserves per-stage and
+final-route quality evidence for duplicate, policy and category decisions.
 
 Use [structured quality contracts](STRUCTURED_QUALITY.md) to compare the caller's
 routing, extraction and matching outputs through replay and paired studies.

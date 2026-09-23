@@ -10,6 +10,11 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added a synthetic [marketplace reference](docs/MARKETPLACE_WORKFLOW.md) with
+  duplicate/near-duplicate, policy, category and review-routing cases. Separate
+  per-field diagnostics retain stage and final-route errors alongside unchanged
+  full-output quality, replay/study evidence and semantic overlap investigations.
+
 - Added an offline [incident-triage reference](docs/INCIDENT_TRIAGE.md) with
   separately traced detection/severity/response/disposition stages, normal/noisy/
   ambiguous/severe fixtures, inert proposals, retained failures and semantic
