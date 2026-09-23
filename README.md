@@ -33,6 +33,11 @@ repeated work, and compare runs before and after a change.
 Tracing and analysis run locally. You can work with JSON files without a database
 or hosted account. The dashboard and HTTP API are optional.
 
+The unreleased source checkout also profiles classifiers, rules and decision
+pipelines. See [AI execution profiling](docs/AI_EXECUTION_PROFILING.md) for the
+trace-to-quality workflow and five offline reference examples. These additions
+are not included in the published `0.7.0` package.
+
 ## Without and with AgentLoop
 
 <picture>
