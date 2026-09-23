@@ -101,6 +101,7 @@ jobs:
           uv run --frozen python examples/model_substitution.py --out runs/model-substitution
           uv run --frozen python examples/email_workflow.py --out runs/email-reference
           uv run --frozen python examples/payment_review.py --out runs/payment-reference
+          uv run --frozen python examples/incident_triage.py --out runs/incident-reference
           uv run --frozen python examples/structured_quality_workflow.py --out runs/structured-quality
           uv run --frozen python examples/workflow_trace.py --out runs/workflow-trace
           uv run --frozen python examples/workflow_trace.py --linear --out runs/workflow-trace-linear

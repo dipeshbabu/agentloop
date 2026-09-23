@@ -4,6 +4,8 @@ The [email pipeline reference](EMAIL_WORKFLOW.md) executes spam, category,
 priority and routing stages with paired quality, replay and semantic evidence.
 The [payment-review reference](PAYMENT_REVIEW.md) demonstrates structured review
 labels, explicit abstention and failure retention without financial actions.
+The [incident-triage reference](INCIDENT_TRIAGE.md) evaluates inert response and
+rollback/escalation proposals without changing infrastructure.
 
 Use [structured quality contracts](STRUCTURED_QUALITY.md) to compare the caller's
 routing, extraction and matching outputs through replay and paired studies.
