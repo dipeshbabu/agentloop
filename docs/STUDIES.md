@@ -1,5 +1,8 @@
 # Paired study summaries
 
+For frozen four-condition runtime-control comparisons with task-level uncertainty
+and explicit planned denominators, see [harness ablations](HARNESS_ABLATIONS.md).
+
 `agentloop study summarize` compares recorded conditions across tasks and
 repetitions. It runs offline with the Python standard library. It does not run
 agents or assign a universal significance decision to an experiment.
