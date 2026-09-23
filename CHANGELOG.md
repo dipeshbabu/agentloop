@@ -10,6 +10,13 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added a reproducible [email pipeline reference](docs/EMAIL_WORKFLOW.md) with
+  traced spam/category/priority/routing stages, independent frozen labels,
+  baseline/hybrid/cheap/failing configurations, native replay/study artifacts,
+  and optional semantic investigations with a deterministic local fallback.
+  All model usage and billing fixtures are explicitly synthetic; no inbox or
+  external model API is accessed.
+
 - Added [offline model-substitution experiments](docs/MODEL_SUBSTITUTION.md)
   with explicit versioned callbacks, frozen inputs/scorers, independent quality
   versus baseline agreement, retained failures and declared usage provenance.

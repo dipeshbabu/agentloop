@@ -1,5 +1,8 @@
 # Trace AI workflows and decision pipelines
 
+The [email pipeline reference](EMAIL_WORKFLOW.md) executes spam, category,
+priority and routing stages with paired quality, replay and semantic evidence.
+
 Use [structured quality contracts](STRUCTURED_QUALITY.md) to compare the caller's
 routing, extraction and matching outputs through replay and paired studies.
 
