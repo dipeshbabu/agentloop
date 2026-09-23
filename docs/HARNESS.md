@@ -58,6 +58,13 @@ they do not receive raw arguments, results, or exception messages. Existing trac
 and parent IDs are read through public trace-context helpers, without taking over
 tracing or changing the active context.
 
+`HookContext.dispatched` and `HookResult.dispatched` are false before admission
+and on cleanup after a failed/denied before hook. They are true once the wrapper
+attempts to invoke the callable. This distinguishes a policy cancellation before
+dispatch from cancellation of admitted work, without inferring provider usage or
+side effects. Even an attempted invocation can fail before the callable's body
+does any work (for example, argument binding can fail).
+
 Policies run by ascending priority, then policy ID. All matching policies are
 evaluated; conflict resolution is `escalate > stop > deny > continue`. An explicit
 adapter capability declaration is checked at construction. Enforced hooks or

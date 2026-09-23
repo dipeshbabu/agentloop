@@ -121,6 +121,7 @@ class HookContext:
     parent_span_id: str | None
     configuration: Mapping[str, Any]
     state: dict[str, Any] = field(repr=False, compare=False)
+    dispatched: bool
 
 
 @dataclass(frozen=True)
@@ -255,6 +256,7 @@ class HookResult:
     proposals: tuple[PolicyResult, ...]
     action: str
     applied: bool
+    dispatched: bool
 
 
 class HarnessControlError(RuntimeError):
@@ -372,7 +374,9 @@ class HarnessRun:
         with self._lock:
             return self._stopped
 
-    def _hook(self, invocation: _Invocation, phase: str, status: str) -> HookResult:
+    def _hook(
+        self, invocation: _Invocation, phase: str, status: str, *, dispatched: bool = False
+    ) -> HookResult:
         hook = Hook(invocation.boundary, phase)
         config = self.harness.config
         with self._lock:
@@ -392,6 +396,7 @@ class HarnessRun:
                         invocation.parent_span_id,
                         policy.configuration,
                         self._states.setdefault(policy.policy_id, {}),
+                        dispatched,
                     )
                     token = _IN_POLICY.set(True)
                     failed = False
@@ -435,6 +440,7 @@ class HarnessRun:
                 tuple(proposals),
                 action,
                 config.mode == "enforce" and action != "continue",
+                dispatched,
             )
             self._results.append(result)
             if fatal is not None:
@@ -467,15 +473,20 @@ class HarnessRun:
             self._apply(self._hook(invocation, "before", "pending"))
         except BaseException as exc:
             status = "denied" if isinstance(exc, HarnessControlError) else _failure_status(exc)
-            self._finish(invocation, status, exc)
+            self._finish(invocation, status, exc, dispatched=False)
             raise
         return invocation
 
     def _finish(
-        self, invocation: _Invocation, status: str, original: BaseException | None = None
+        self,
+        invocation: _Invocation,
+        status: str,
+        original: BaseException | None = None,
+        *,
+        dispatched: bool = True,
     ) -> None:
         try:
-            self._apply(self._hook(invocation, "after", status))
+            self._apply(self._hook(invocation, "after", status, dispatched=dispatched))
         except BaseException:
             if original is None:
                 raise

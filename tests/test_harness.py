@@ -526,3 +526,30 @@ def test_duplicate_ids_versions_modes_and_async_policies_are_rejected():
 
     with pytest.raises(ValueError, match="synchronous"):
         policy(unsupported)
+
+
+@pytest.mark.parametrize("cancel_policy", [False, True])
+def test_cleanup_distinguishes_cancellation_before_and_after_dispatch(cancel_policy):
+    cancellation = asyncio.CancelledError()
+    observed = []
+    invoked = []
+
+    def lifecycle(context):
+        if context.hook.phase == "before" and cancel_policy:
+            raise cancellation
+        if context.hook.phase == "after":
+            observed.append((context.status, context.dispatched))
+        return Decision()
+
+    def target():
+        invoked.append(True)
+        raise cancellation
+
+    run = run_with(lifecycle, hooks=[Hook("model"), Hook("model", "after")])
+    with pytest.raises(asyncio.CancelledError) as caught:
+        run.wrap(target, boundary="model")()
+    assert caught.value is cancellation
+    assert observed == [("cancelled", not cancel_policy)]
+    assert invoked == ([] if cancel_policy else [True])
+    assert run.results[0].dispatched is False
+    assert run.results[-1].dispatched is (not cancel_policy)
