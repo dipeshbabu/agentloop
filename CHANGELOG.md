@@ -10,6 +10,11 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added an optional [LangGraph harness adapter](docs/LANGGRAPH_HARNESS.md), pinned
+  to SDK 1.2.11, with explicit node/model/tool admission, lazy compiled streams,
+  completion delivery hooks, and framework retry attribution. Shared enforcement
+  contracts and real offline SDK tests verify that denied work never dispatches.
+
 - Added [retry and no-progress guards](docs/LOOP_GUARDS.md) with branch/step
   isolation, explicit retry safety and origins, optional fingerprint-based
   repetition/oscillation bounds, and bounded diagnostics. Polling, declared

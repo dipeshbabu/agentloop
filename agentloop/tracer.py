@@ -209,10 +209,11 @@ def current_event_id() -> str | None:
 
 
 @contextmanager
-def bind_trace_context(trace: AgentTrace, event_id: str | None = None) -> Iterator[None]:
+def bind_trace_context(trace: AgentTrace | None, event_id: str | None = None) -> Iterator[None]:
     """Temporarily bind a captured trace and parent event in the current context.
 
-    ``event_id=None`` clears the ambient parent. On exit, both previous bindings
+    ``trace=None`` clears the ambient trace; ``event_id=None`` clears its parent.
+    On exit, both previous bindings
     are restored, including when an exception or cancellation propagates. This
     helper does not create events, start timers, finish traces, or export them.
     Enter and exit each binding in the same execution context; generator adapters
