@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import deque
 from dataclasses import dataclass, field
 from heapq import heapify, heappop, heappush
 from typing import Any
@@ -14,6 +15,7 @@ from agentloop.timing import (
 from agentloop.timing import (
     duration_ms as recorded_duration_ms,
 )
+from agentloop.workflow_types import stage_summary, workflow_summary
 
 
 @dataclass
@@ -40,7 +42,7 @@ class ExecutionNode:
         return self.input_tokens + self.output_tokens
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        result = {
             "node_id": self.node_id,
             "name": self.name,
             "event_type": self.event_type,
@@ -56,6 +58,10 @@ class ExecutionNode:
             "status": self.status,
             "metadata": self.metadata,
         }
+        stage = stage_summary(self)
+        if stage is not None:
+            result["stage"] = stage
+        return result
 
 
 @dataclass
@@ -92,6 +98,8 @@ class ExecutionGraph:
     nodes: list[ExecutionNode]
     edges: list[ExecutionEdge]
     elapsed_ms: float | None = None
+    execution: dict[str, Any] | None = None
+    dependency_mode: str | None = None
 
     @classmethod
     def from_trace(cls, trace: Any) -> "ExecutionGraph":
@@ -131,9 +139,30 @@ class ExecutionGraph:
             else:
                 roots.append(node)
 
-        edges.extend(_inferred_sequence_edges(roots))
+        stages = {node.node_id: stage_summary(node) for node in nodes}
+        annotated = {key: value for key, value in stages.items() if value is not None}
+        declared = any(
+            value.get("dependency_status") in {"declared", "invalid"}
+            for value in annotated.values()
+        )
+        if declared:
+            for target, stage in annotated.items():
+                if stage.get("dependencies_declared"):
+                    edges.extend(
+                        ExecutionEdge(source, target, "dependency")
+                        for source in stage["depends_on"]
+                        if source in node_ids
+                    )
+        else:
+            edges.extend(_inferred_sequence_edges(roots))
         return cls(
-            nodes=nodes, edges=_deduplicate_edges(edges), elapsed_ms=elapsed_runtime_ms(trace)
+            nodes=nodes,
+            edges=_deduplicate_edges(edges),
+            elapsed_ms=elapsed_runtime_ms(trace),
+            execution=workflow_summary(getattr(trace, "metadata", {})),
+            dependency_mode=("declared" if declared else "inferred_sequence")
+            if annotated
+            else None,
         )
 
     def total_runtime_ms(self) -> float:
@@ -146,6 +175,14 @@ class ExecutionGraph:
         return cumulative_span_time_ms(self.nodes)
 
     def critical_path(self) -> CriticalPath:
+        details = self.dependency_summary()
+        if details is not None and not details["valid"]:
+            raise ValueError(
+                "critical path is unavailable for invalid or unresolved declared dependencies"
+            )
+        return self._critical_path()
+
+    def _critical_path(self) -> CriticalPath:
         if not self.nodes:
             return CriticalPath([], 0.0)
 
@@ -187,6 +224,56 @@ class ExecutionGraph:
         node_ids.reverse()
         return CriticalPath(node_ids, best.duration_ms)
 
+    def dependency_summary(self):
+        if self.dependency_mode is None:
+            return None
+        identities = {node.node_id for node in self.nodes}
+        declared, invalid, unresolved = 0, [], []
+        for node in self.nodes:
+            stage = stage_summary(node)
+            if stage is None:
+                continue
+            if stage.get("dependency_status") == "invalid":
+                invalid.append(node.node_id)
+            if stage.get("dependencies_declared"):
+                declared += 1
+                unresolved.extend(
+                    {"source": source, "target": node.node_id}
+                    for source in stage["depends_on"]
+                    if source not in identities
+                )
+        successors = {identity: set() for identity in identities}
+        indegrees = dict.fromkeys(identities, 0)
+        for edge in self.edges:
+            if edge.source not in identities or edge.target not in identities:
+                unresolved.append({"source": edge.source, "target": edge.target})
+            elif edge.target not in successors[edge.source]:
+                successors[edge.source].add(edge.target)
+                indegrees[edge.target] += 1
+        ready = deque(identity for identity, count in indegrees.items() if not count)
+        visited = 0
+        while ready:
+            identity = ready.popleft()
+            visited += 1
+            for target in successors[identity]:
+                indegrees[target] -= 1
+                if indegrees[target] == 0:
+                    ready.append(target)
+        cyclic = visited != len(identities)
+        return {
+            "basis": self.dependency_mode,
+            "declared_span_count": declared,
+            "span_count": len(self.nodes),
+            "all_spans_declared": declared == len(self.nodes),
+            "invalid_spans": sorted(invalid),
+            "unresolved": sorted(unresolved, key=lambda item: (item["source"], item["target"])),
+            "cyclic": cyclic,
+            "valid": not invalid
+            and not unresolved
+            and not cyclic
+            and len(identities) == len(self.nodes),
+        }
+
     def parallelizable_groups(self) -> list[dict[str, Any]]:
         return parallelization_candidates(
             self.nodes,
@@ -209,15 +296,23 @@ class ExecutionGraph:
         ]
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        dependencies = self.dependency_summary()
+        result = {
             "nodes": [node.to_dict() for node in self.nodes],
             "edges": [edge.to_dict() for edge in self.edges],
             "total_runtime_ms": round(self.total_runtime_ms(), 3),
             "cumulative_span_time_ms": round(cumulative_span_time_ms(self.nodes), 3),
-            "critical_path": self.critical_path().to_dict(),
+            "critical_path": self._critical_path().to_dict()
+            if dependencies is None or dependencies["valid"]
+            else {"node_ids": [], "duration_ms": None, "status": "unavailable"},
             "parallelizable_groups": self.parallelizable_groups(),
             "bottlenecks": self.bottlenecks(),
         }
+        if self.execution is not None:
+            result["execution"] = self.execution
+        if dependencies is not None:
+            result["dependency_evidence"] = dependencies
+        return result
 
 
 def _event_sort_key(item: tuple[int, Any]) -> tuple[Any, ...]:

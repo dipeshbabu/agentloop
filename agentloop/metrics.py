@@ -16,6 +16,7 @@ from agentloop.tokens import (
     provenance_grade,
     token_status,
 )
+from agentloop.workflow_types import stage_summary, workflow_summary
 
 
 def build_report(trace: Any) -> dict[str, Any]:
@@ -66,6 +67,13 @@ def build_report(trace: Any) -> dict[str, Any]:
         "recommendations": [],
         "events": [e.to_dict() for e in events],
     }
+    execution = workflow_summary(getattr(trace, "metadata", {}))
+    if execution is not None:
+        report["execution"] = execution
+    stages = {event.event_id: stage_summary(event) for event in events}
+    stages = {key: value for key, value in stages.items() if value is not None}
+    if stages:
+        report["stages"] = stages
     candidates, errors = run_rules(
         AnalysisContext(report=report, graph=ExecutionGraph.from_trace(trace))
     )

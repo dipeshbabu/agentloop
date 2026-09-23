@@ -238,6 +238,8 @@ def _trace_summary(trace: Any, report: dict[str, Any]) -> dict[str, Any]:
     metadata = getattr(trace, "metadata", {}) or {}
     cost = report.get("cost_breakdown") or {}
     return {
+        **({"execution": report["execution"]} if "execution" in report else {}),
+        **({"stages": report["stages"]} if "stages" in report else {}),
         "run_id": trace.run_id,
         "name": trace.name,
         "runtime_ms": float(report.get("total_runtime_ms", 0.0) or 0.0),

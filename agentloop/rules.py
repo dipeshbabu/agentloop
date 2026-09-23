@@ -275,6 +275,8 @@ def _split_large_step_cards(graph: ExecutionGraph) -> list[FindingCandidate]:
 
 
 def _runaway_loop_cards(graph: ExecutionGraph) -> list[FindingCandidate]:
+    if graph.execution is not None:
+        return []  # Repeated pipeline stages do not establish an agent loop.
     cards = []
     groups: dict[tuple[str, str], list[Any]] = {}
     for node in graph.nodes:
@@ -300,6 +302,8 @@ def _runaway_loop_cards(graph: ExecutionGraph) -> list[FindingCandidate]:
 
 
 def _tool_oscillation_cards(graph: ExecutionGraph) -> list[FindingCandidate]:
+    if graph.execution is not None:
+        return []  # Generic workflow ordering is not evidence of agent oscillation.
     tool_nodes = [node for node in graph.nodes if node.operation_kind == "tool"]
     if len(tool_nodes) < 4:
         return []

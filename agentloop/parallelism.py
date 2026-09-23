@@ -7,6 +7,7 @@ from typing import Any
 
 from agentloop.operations import operation_kind
 from agentloop.timing import duration_ms, event_interval_ms
+from agentloop.workflow_types import stage_summary
 
 PARALLELISM_NOTICE = (
     "Repeated tool calls may be candidates for concurrent execution. "
@@ -57,6 +58,11 @@ def parallelization_candidates(
             invalid_dependencies.add(span_id)
             required = []
         dependencies[span_id] = set(required)
+        stage = stage_summary(event)
+        if stage is not None and (
+            stage.get("schema_status") != "supported" or stage.get("dependency_status") == "invalid"
+        ):
+            invalid_dependencies.add(span_id)
         if "parallel_safe" in metadata:
             if metadata["parallel_safe"] is True:
                 declarations.add(span_id)
