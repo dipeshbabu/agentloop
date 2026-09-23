@@ -95,6 +95,14 @@ HTTP 200 and CLI exit 0. Inspect `gates_passed` when deciding whether to accept 
 change. Retrieval/export returns the complete JSON record without recomputation.
 There is no bulk list or statistical aggregation endpoint in this version.
 
+When either source trace contains [harness decisions](HARNESS_EVIDENCE.md), creation
+adds their historical snapshots to `metadata["agentloop.harness_evidence"]`. This key is reserved
+for derived evidence and cannot be supplied in request metadata. Only enforced,
+applied policy decisions are listed as applied candidate decisions; shadow,
+failed, and intrinsic admission records remain available without becoming executed
+interventions. A linked comparison does not establish an individual policy's causal
+effect. Existing artifacts without this additive metadata remain valid.
+
 ## Export directly from replay
 
 For an offline pair, add these options to the usual replay command:

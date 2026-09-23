@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from agentloop.findings import build_diagnosis
+from agentloop.harness_evidence import HarnessEvidenceError, comparison_evidence
 from agentloop.replay import ReplayGates, build_replay_report
 
 INTERVENTION_SCHEMA_VERSION = "1.0"
@@ -156,6 +157,19 @@ def build_intervention(
             quality_report=quality_report,
         )
     )
+    if metadata is not None and not isinstance(metadata, dict):
+        raise InterventionValidationError("metadata must be an object")
+    record_metadata = dict(metadata or {})
+    if "agentloop.harness_evidence" in record_metadata:
+        raise InterventionValidationError(
+            "agentloop.harness_evidence is derived from the compared traces"
+        )
+    try:
+        harness_evidence = comparison_evidence(baseline, candidate)
+    except HarnessEvidenceError:
+        raise InterventionValidationError("invalid harness evidence in compared traces") from None
+    if harness_evidence is not None:
+        record_metadata["agentloop.harness_evidence"] = harness_evidence
     payload = {
         "schema_version": INTERVENTION_SCHEMA_VERSION,
         "baseline_run_id": baseline.run_id,
@@ -170,7 +184,7 @@ def build_intervention(
             "baseline": trace_fingerprint(baseline),
             "candidate": trace_fingerprint(candidate),
         },
-        "metadata": {} if metadata is None else metadata,
+        "metadata": record_metadata,
     }
     payload["intervention_id"] = _identity(payload)
     return InterventionRecord.from_dict(payload)
