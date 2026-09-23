@@ -10,6 +10,12 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added [offline model-substitution experiments](docs/MODEL_SUBSTITUTION.md)
+  with explicit versioned callbacks, frozen inputs/scorers, independent quality
+  versus baseline agreement, retained failures and declared usage provenance.
+  Results export to native paired studies without activating a candidate or
+  rerunning a scorer; unavailable trial measurements remain unavailable.
+
 - Added opt-in [semantic waste investigations](docs/SEMANTIC_WASTE.md) for
   redundancy, low contribution, no progress, retry usefulness and context
   relevance. Canonical findings retain source/judge provenance and abstentions;

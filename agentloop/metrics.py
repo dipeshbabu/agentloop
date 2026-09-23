@@ -203,7 +203,7 @@ def cost_breakdown(model_events: list[Any], pricing: PricingTable | None = None)
     provenance (sources and ``as_of`` dates) behind the calculated portion, so a
     report can show exactly how complete and how current its cost number is.
     """
-    table = pricing if pricing is not None else load_pricing_table()
+    table = pricing if pricing is not None or not model_events else load_pricing_table()
     estimates = [_event_cost_estimate(event, table) for event in model_events]
 
     calculated = round(sum(e.amount_usd or 0.0 for e in estimates if e.state == "calculated"), 6)

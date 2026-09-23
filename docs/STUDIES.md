@@ -3,6 +3,10 @@
 [Structured quality](STRUCTURED_QUALITY.md) adds versioned decision, extraction
 and matching evidence to these same paired summaries, retaining unscored cases.
 
+[Offline model substitution](MODEL_SUBSTITUTION.md) exports explicit candidate
+trials into this format with frozen decision-step usage, independent quality and
+retained failures. Its measurement scope is kept separate from model-only traces.
+
 [Historical calibration](CALIBRATION.md) compares frozen intervention predictions
 with outcomes, using separate fitting/held-out tasks and unchanged source ledgers.
 
