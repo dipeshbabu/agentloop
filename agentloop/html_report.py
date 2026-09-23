@@ -305,6 +305,7 @@ def _harness_section(trace: AgentTrace, anchors: dict[str, str], *, include_cont
                     ("Invocation attempted", record["dispatched"]),
                     ("Execution status", record["execution_status"]),
                     ("Reason", record["reason_code"]),
+                    ("Diagnostic feedback", record.get("feedback") or "none"),
                     (
                         "Budget snapshot",
                         "unavailable" if record["budget_snapshot"] is None else "recorded",

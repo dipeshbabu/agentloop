@@ -804,3 +804,31 @@ def test_budget_snapshots_keep_decimal_totals_and_unknowns_across_backends(store
     assert latest["committed"]["cost_known_usd"] == "0.03"
     assert latest["unknown_usage"]["cost_held_usd"] == "0.1"
     assert latest["total_usage"] == {"tokens": None, "cost_usd": None}
+
+
+def test_loop_feedback_preserves_schema_and_project_isolation(store):
+    from agentloop.budget_types import DispatchOptions
+    from agentloop.harness import Harness, HarnessConfig
+    from agentloop.harness_evidence import read_evidence
+    from agentloop.loop_guards import LoopLimits, loop_guard_policy
+    from agentloop.loop_types import StepInfo, fingerprint
+
+    with trace_agent("loop-store", metadata={"synthetic": True}) as trace:
+        run = Harness(
+            HarnessConfig("shadow", (loop_guard_policy(LoopLimits(max_identical_calls=1)),))
+        ).start_run()
+        step = StepInfo(
+            "step", fingerprint({"input": 1}), fingerprint({"progress": 0}), mutating=False
+        )
+        wrapped = run.wrap(lambda: None, boundary="tool", dispatch=DispatchOptions(step=step))
+        wrapped()
+        wrapped()
+    expected = read_evidence(trace)
+    store.save_trace(trace, project_id="proj_a")
+    assert read_evidence(store.get_trace(trace.run_id, project_id="proj_a")) == expected
+    assert store.get_trace(trace.run_id, project_id="proj_b") is None
+    assert expected["schema_version"] == "1.1"
+    assert any(
+        record["reason_code"] == "identical_step_limit" and record["outcome"] == "proposed"
+        for record in expected["decisions"].values()
+    )

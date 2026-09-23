@@ -123,8 +123,10 @@ benefit. Raw policy configuration capture is disabled by default.
 reconciliation, with explicit unknown-usage policies and cooperative deadlines.
 `DispatchOptions` carries typed bounds and retry origin; an optional synchronous
 `usage_reader` returns normalized `ResourceUsage` without retaining raw results.
-Retry/loop enforcement remains #186. `Decision.retry_of` only annotates a
-host-declared relationship; it never executes an automatic retry.
+[Retry and loop guards](LOOP_GUARDS.md) use explicit step identities and caller
+fingerprints, with bounded retry and optional repetition/oscillation rules.
+`Decision.retry_of` annotates a host-declared relationship; nothing automatically
+executes a retry or replans the workflow.
 
 Policy transformations, provider routing, scheduling, checkpoint recovery, and
 automatic completion repair require later explicit capability extensions. The

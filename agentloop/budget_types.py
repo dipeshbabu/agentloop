@@ -10,6 +10,8 @@ from decimal import Decimal, localcontext
 from fractions import Fraction
 from typing import Any
 
+from agentloop.loop_types import StepInfo
+
 TOKEN_PROVENANCE = frozenset(
     {
         "provider",
@@ -176,8 +178,11 @@ class DispatchOptions:
 
     reservation: Reservation | None = None
     retry_source: str | None = None
+    step: StepInfo | None = None
 
     def __post_init__(self) -> None:
+        if self.step is not None and type(self.step) is not StepInfo:
+            raise BudgetValidationError("step must be StepInfo")
         if self.reservation is not None and type(self.reservation) is not Reservation:
             raise BudgetValidationError("reservation must be a Reservation")
         if self.retry_source is not None and (

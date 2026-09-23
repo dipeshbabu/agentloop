@@ -10,6 +10,12 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added [retry and no-progress guards](docs/LOOP_GUARDS.md) with branch/step
+  isolation, explicit retry safety and origins, optional fingerprint-based
+  repetition/oscillation bounds, and bounded diagnostics. Polling, declared
+  retries, missing evidence, and overlapping work are kept distinct; no automatic
+  retries or semantic usefulness claims are introduced.
+
 - Added [atomic admission budgets](docs/BUDGETS.md) for explicit model/tool,
   iteration, and retry boundaries, with cooperative monotonic deadlines,
   provenance-aware token/cost reservations, usage reconciliation, and retained
