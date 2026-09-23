@@ -1,5 +1,9 @@
 # AgentLoop Framework Integrations
 
+For opt-in runtime controls, see the [LangGraph harness adapter](LANGGRAPH_HARNESS.md).
+The tracing integrations below remain observation APIs; recording a call does
+not itself enforce a policy.
+
 AgentLoop integrations are designed for low-friction instrumentation. A team
 should be able to wrap an existing agent and inspect latency, token, retry, and
 tool-call waste without changing its framework.
