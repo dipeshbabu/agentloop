@@ -9,6 +9,9 @@ AgentLoop evaluates caller-defined criteria. A pass applies to those criteria
 and supplied examples; it does not establish universal correctness or authorize
 a production decision.
 
+[Model-substitution experiments](MODEL_SUBSTITUTION.md) apply these frozen
+criteria across explicit implementations and export the assessed trials to studies.
+
 ## Opt in explicitly
 
 Save a versioned fixture suite:

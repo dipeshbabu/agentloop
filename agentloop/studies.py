@@ -217,8 +217,66 @@ def _run(path: Path, keys: list[str]) -> dict[str, Any]:
     cost_known = is_cost_evaluable(report["cost_status"]) and is_token_basis_evaluable(
         report["token_status"]
     )
+    from agentloop.substitution_evidence import read_trial_evidence
+
+    trial = read_trial_evidence(trace)
+    trial_metrics = {}
+    cost_state, token_state = report["cost_status"], report["token_status"]
+    if trial is not None:
+        if trial["status"] == "valid":
+            usage = trial["usage"]
+            trial_metrics = {
+                "runtime_ms": trial["latency_ms"],
+                "input_tokens": usage["input_tokens"],
+                "output_tokens": usage["output_tokens"],
+                "cost_usd": usage["cost_usd"],
+            }
+            cost_state = "complete" if usage["cost_usd"] is not None else "unknown"
+            token_state = (
+                "estimated"
+                if usage["token_basis"] == "estimated"
+                else (
+                    "exact"
+                    if usage["input_tokens"] is not None and usage["output_tokens"] is not None
+                    else (
+                        "partial"
+                        if usage["input_tokens"] is not None or usage["output_tokens"] is not None
+                        else "unavailable"
+                    )
+                )
+            )
+            if trial["outcome"] != "completed":
+                quality = None
+                success_value = (
+                    False
+                    if trial["outcome"] in {"failed", "timed_out", "invalid_result"}
+                    or success_value is False
+                    else None
+                )
+        else:
+            trial_metrics = dict.fromkeys(
+                ("runtime_ms", "input_tokens", "output_tokens", "cost_usd")
+            )
+            quality = None
+            success_value = False if failures or success is False else None
+            cost_state, token_state = "unknown", "unavailable"
+            categories["substitution_evidence_" + trial["status"]] += 1
+        if quality_evidence is None:
+            quality = None
+            success_value = False if success_value is False else None
+            categories["quality_unavailable"] += 1
+        success_basis = (
+            "substitution_trial_and_versioned_quality"
+            if quality_evidence is not None
+            else "substitution_trial_without_quality"
+        )
     return {
         "path": str(path),
+        **(
+            {"decision_trial": trial, "measurement_scope": "declared_decision_step"}
+            if trial is not None
+            else {}
+        ),
         **(
             {"quality_evidence": quality_evidence, "decision_count": report["decision_count"]}
             if quality_evidence is not None
@@ -242,10 +300,11 @@ def _run(path: Path, keys: list[str]) -> dict[str, Any]:
             "tool_call_count": report["tool_call_count"],
             "retry_count": report["retry_count"],
             "cost_usd": report["estimated_cost_usd"] if cost_known else None,
+            **trial_metrics,
         },
         "success_basis": success_basis,
-        "cost_status": report["cost_status"],
-        "token_status": report["token_status"],
+        "cost_status": cost_state,
+        "token_status": token_state,
         "operation_counts": report.get("operation_counts", {}),
         "failure_categories": dict(sorted(categories.items())),
         "synthetic": trace.metadata.get("synthetic") is True,
@@ -391,8 +450,27 @@ def summarize_study(manifest_path: str | Path) -> dict[str, Any]:
             seen_ids.add(run["run_id"])
         runs.sort(key=lambda run: (run["pair_key"] or "", run["run_id"]))
         conditions[name] = _condition(runs)
+    trial_runs = [
+        run
+        for condition in conditions.values()
+        for run in condition["runs"]
+        if "decision_trial" in run
+    ]
+    if trial_runs:
+        if len(trial_runs) != sum(condition["run_count"] for condition in conditions.values()):
+            raise StudyValidationError(
+                "cannot mix declared decision-step measurements with ordinary model-only trace metrics"
+            )
+        plans = {
+            run["decision_trial"]["plan_hash"]
+            for run in trial_runs
+            if run["decision_trial"]["status"] == "valid"
+        }
+        if len(plans) > 1:
+            raise StudyValidationError("decision trials must share one frozen experiment plan")
     baseline = manifest["baseline"]
     return {
+        **({"measurement_scope": "declared_decision_step"} if trial_runs else {}),
         "schema_version": STUDY_SCHEMA_VERSION,
         "name": manifest["name"],
         "manifest": manifest,
@@ -425,6 +503,13 @@ def study_to_markdown(report: dict[str, Any]) -> str:
         lines.extend(
             [
                 "This study includes synthetic data; fixture results are not application performance evidence.",
+                "",
+            ]
+        )
+    if report.get("measurement_scope") == "declared_decision_step":
+        lines.extend(
+            [
+                "Cost and tokens use frozen caller-declared decision-step measurements, with reported/calculated bases retained per run. These are separate from model-only profile totals. Latency measures the callback; unavailable measurements are not zero. Shared baseline runs across studies are not additional independent observations.",
                 "",
             ]
         )

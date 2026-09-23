@@ -98,6 +98,7 @@ jobs:
           uv run --frozen python examples/semantic_judgments.py --out runs/semantic-judgments
           uv run --frozen python examples/judgment_benchmark.py --out runs/judgment-benchmark
           uv run --frozen python examples/semantic_waste.py --out runs/semantic-waste
+          uv run --frozen python examples/model_substitution.py --out runs/model-substitution
           uv run --frozen python examples/structured_quality_workflow.py --out runs/structured-quality
           uv run --frozen python examples/workflow_trace.py --out runs/workflow-trace
           uv run --frozen python examples/workflow_trace.py --linear --out runs/workflow-trace-linear
