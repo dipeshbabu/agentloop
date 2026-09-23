@@ -23,6 +23,7 @@ from typing import Any, TypeVar
 from uuid import uuid4
 from weakref import ReferenceType, ref
 
+from agentloop.budget_types import BudgetSnapshot, DispatchOptions, ResourceUsage
 from agentloop.events import new_run_id, utc_now_iso
 from agentloop.harness_evidence import (
     METADATA_KEY,
@@ -35,6 +36,7 @@ from agentloop.harness_evidence import (
     records_for_hook,
     valid_decision_id,
 )
+from agentloop.harness_usage import ObservedGenerator, UsageTracker
 from agentloop.tracer import AgentTrace, current_event_id, current_trace
 
 CONTRACT_VERSION = "1.0"
@@ -120,6 +122,7 @@ class Decision:
     reason_code: str = "allowed"
     evidence_refs: tuple[str, ...] = ()
     retry_of: str | None = None
+    budget_snapshot: BudgetSnapshot | None = None
 
     def __post_init__(self) -> None:
         if self.action not in ACTIONS:
@@ -133,6 +136,10 @@ class Decision:
         object.__setattr__(self, "evidence_refs", tuple(sorted(set(refs))))
         if self.retry_of is not None and not valid_decision_id(self.retry_of):
             raise ValueError("retry_of must reference a harness decision ID")
+        if self.budget_snapshot is not None:
+            if type(self.budget_snapshot) is not BudgetSnapshot:
+                raise ValueError("budget_snapshot must be a BudgetSnapshot")
+            BudgetSnapshot.from_dict(self.budget_snapshot.to_dict())
 
 
 @dataclass(frozen=True)
@@ -151,6 +158,9 @@ class HookContext:
     state: dict[str, Any] = field(repr=False, compare=False)
     dispatched: bool
     decision_id: str = ""
+    dispatch: DispatchOptions = field(default_factory=DispatchOptions)
+    usage: ResourceUsage | None = None
+    usage_error: str | None = None
 
 
 @dataclass(frozen=True)
@@ -410,6 +420,8 @@ class _Invocation:
     trace_id: str | None
     parent_span_id: str | None
     trace: AgentTrace | None = field(repr=False, compare=False)
+    dispatch: DispatchOptions
+    usage: UsageTracker = field(repr=False, compare=False)
 
 
 @dataclass(frozen=True)
@@ -418,6 +430,8 @@ class _WrapperMarker:
     boundary: str
     branch_id: str
     function: ReferenceType
+    dispatch: DispatchOptions
+    usage_reader: Callable | None
 
 
 def _failure_status(exc: BaseException) -> str:
@@ -426,6 +440,14 @@ def _failure_status(exc: BaseException) -> str:
     if isinstance(exc, CancelledError):
         return "cancelled"
     return "error"
+
+
+def _invoke_usage_reader(reader: Callable, value: Any):
+    token = _IN_POLICY.set(True)
+    try:
+        return reader(value)
+    finally:
+        _IN_POLICY.reset(token)
 
 
 class HarnessRun:
@@ -521,6 +543,9 @@ class HarnessRun:
                             hook.phase,
                             policy.policy_id,
                         ),
+                        invocation.dispatch,
+                        invocation.usage.latest,
+                        invocation.usage.error,
                     )
                     token = _IN_POLICY.set(True)
                     failed = False
@@ -528,6 +553,17 @@ class HarnessRun:
                     policy_started_ns = perf_counter_ns()
                     try:
                         decision = policy.evaluate(context)
+                        if (
+                            isinstance(decision, Decision)
+                            and decision.budget_snapshot is not None
+                            and config.mode == "shadow"
+                        ):
+                            budget = decision.budget_snapshot.to_dict()
+                            if any(
+                                budget[key] == "best_effort"
+                                for key in ("spend_enforcement", "token_enforcement")
+                            ):
+                                raise ValueError("shadow budget evidence cannot claim enforcement")
                         if (
                             not isinstance(decision, Decision)
                             or decision.action not in policy.actions
@@ -599,7 +635,13 @@ class HarnessRun:
         }
         raise error[result.action](result)
 
-    def _begin(self, boundary: str, branch_id: str) -> _Invocation:
+    def _begin(
+        self,
+        boundary: str,
+        branch_id: str,
+        dispatch: DispatchOptions,
+        usage_reader: Callable | None,
+    ) -> _Invocation:
         if _IN_POLICY.get():
             raise RuntimeError("protected dispatch from a policy is unsupported")
         trace = current_trace()
@@ -610,6 +652,8 @@ class HarnessRun:
             trace.run_id if trace else None,
             current_event_id() if trace else None,
             trace,
+            dispatch,
+            UsageTracker(usage_reader, _invoke_usage_reader),
         )
         try:
             self._apply(self._hook(invocation, "before", "pending"))
@@ -635,12 +679,27 @@ class HarnessRun:
             # Preserve an original failure/cancellation. The hook result has
             # already recorded the failure and stopped future enforced work.
 
-    def wrap(self, function: F, *, boundary: str, branch_id: str = "main") -> F:
+    def wrap(
+        self,
+        function: F,
+        *,
+        boundary: str,
+        branch_id: str = "main",
+        dispatch: DispatchOptions | None = None,
+        usage_reader: Callable[[Any], ResourceUsage | None] | None = None,
+    ) -> F:
         """Wrap an explicit dispatch, preserving each Python callable lifecycle."""
         if not callable(function):
             raise ValueError("protected work must be callable")
         Hook(boundary)
         _reference(branch_id, "branch_id")
+        options = DispatchOptions() if dispatch is None else dispatch
+        if type(options) is not DispatchOptions:
+            raise ValueError("dispatch must be DispatchOptions")
+        if usage_reader is not None and (
+            not callable(usage_reader) or _callable_kind(usage_reader) != "sync"
+        ):
+            raise ValueError("usage_reader must be a synchronous callable")
         if self.harness.config.mode == "disabled":
             return function
         marker = getattr(function, "__agentloop_harness__", None)
@@ -651,7 +710,9 @@ class HarnessRun:
             and marker.branch_id == branch_id
             and marker.function() is function
         ):
-            return function
+            if marker.dispatch == options and marker.usage_reader is usage_reader:
+                return function
+            raise ValueError("wrap the original callable to change dispatch or usage options")
         kind = _callable_kind(function)
         if kind not in self.harness.capabilities.execution_kinds:
             raise ValueError("adapter does not support this callable lifecycle")
@@ -662,11 +723,12 @@ class HarnessRun:
 
             @wraps(function)
             async def wrapped(*args, **kwargs):
-                invocation = self._begin(boundary, branch_id)
+                invocation = self._begin(boundary, branch_id, options, usage_reader)
                 try:
                     generator = function(*args, **kwargs)
                     item = await generator.__anext__()
                     while True:
+                        invocation.usage.observe(item)
                         try:
                             sent = yield item
                         except GeneratorExit:
@@ -685,9 +747,14 @@ class HarnessRun:
 
             @wraps(function)
             def wrapped(*args, **kwargs):
-                invocation = self._begin(boundary, branch_id)
+                invocation = self._begin(boundary, branch_id, options, usage_reader)
                 try:
-                    result = yield from function(*args, **kwargs)
+                    source = function(*args, **kwargs)
+                    result = yield from (
+                        source
+                        if usage_reader is None
+                        else ObservedGenerator(source, invocation.usage)
+                    )
                 except BaseException as exc:
                     self._finish(invocation, _failure_status(exc), exc)
                     raise
@@ -697,9 +764,10 @@ class HarnessRun:
 
             @wraps(function)
             async def wrapped(*args, **kwargs):
-                invocation = self._begin(boundary, branch_id)
+                invocation = self._begin(boundary, branch_id, options, usage_reader)
                 try:
                     result = await function(*args, **kwargs)
+                    invocation.usage.observe(result)
                 except BaseException as exc:
                     self._finish(invocation, _failure_status(exc), exc)
                     raise
@@ -709,14 +777,17 @@ class HarnessRun:
 
             @wraps(function)
             def wrapped(*args, **kwargs):
-                invocation = self._begin(boundary, branch_id)
+                invocation = self._begin(boundary, branch_id, options, usage_reader)
                 try:
                     result = function(*args, **kwargs)
+                    invocation.usage.observe(result)
                 except BaseException as exc:
                     self._finish(invocation, _failure_status(exc), exc)
                     raise
                 self._finish(invocation, "ok")
                 return result
 
-        wrapped.__agentloop_harness__ = _WrapperMarker(self, boundary, branch_id, ref(wrapped))
+        wrapped.__agentloop_harness__ = _WrapperMarker(
+            self, boundary, branch_id, ref(wrapped), options, usage_reader
+        )
         return wrapped  # type: ignore[return-value]
