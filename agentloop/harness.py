@@ -123,11 +123,16 @@ class Decision:
     evidence_refs: tuple[str, ...] = ()
     retry_of: str | None = None
     budget_snapshot: BudgetSnapshot | None = None
+    feedback: str | None = None
 
     def __post_init__(self) -> None:
         if self.action not in ACTIONS:
             raise ValueError("unsupported harness action")
         _identifier(self.reason_code, "reason_code")
+        if self.feedback is not None and (
+            not isinstance(self.feedback, str) or not self.feedback or len(self.feedback) > 256
+        ):
+            raise ValueError("feedback must be nonempty text of at most 256 characters")
         if not isinstance(self.evidence_refs, (tuple, list, set, frozenset)):
             raise ValueError("evidence_refs must be a collection of identifiers")
         refs = tuple(self.evidence_refs)
