@@ -9,6 +9,18 @@ from agentloop.doctor import run_doctor, run_production_check
 from agentloop.runtime import configure_from_env, reset_runtime
 
 
+@pytest.fixture(autouse=True)
+def isolate_runtime_configuration():
+    # Environment monkeypatches do not restore configure_from_env's process-wide
+    # state. In particular, the upload warning case must not make later offline
+    # workflow tests perform real network requests.
+    reset_runtime()
+    try:
+        yield
+    finally:
+        reset_runtime()
+
+
 def _reload_runtime_from_env() -> None:
     reset_runtime()
     configure_from_env()

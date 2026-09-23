@@ -10,6 +10,12 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added a versioned [finding trust benchmark](docs/FINDING_BENCHMARKS.md) with
+  independent synthetic labels, exact finding/span matching, per-rule precision,
+  false positives, coverage, abstentions, evidence completeness and saved judge
+  provenance. A frozen evaluation baseline and CI gate retain known failures and
+  prevent regressions from being hidden by missing cases or blanket abstention.
+
 - Added an [AI execution profiling guide](docs/AI_EXECUTION_PROFILING.md)
   connecting workflow tracing, caller-defined quality, optional judgments,
   findings, substitution experiments and paired studies, with source-checkout

@@ -81,6 +81,19 @@ jobs:
       - name: Test
         run: uv run --frozen --all-extras python -m pytest -q
 
+      - name: Finding trust regression gate
+        if: matrix.python-version == '3.13'
+        run: |
+          uv run --frozen python scripts/benchmark_findings.py examples/finding_benchmark_corpus.json --split evaluation --source-revision "$GITHUB_SHA" --baseline examples/finding_benchmark_baseline.json --out runs/finding-benchmark
+
+      - name: Upload finding benchmark evidence
+        if: always() && matrix.python-version == '3.13'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: finding-benchmark-evidence
+          path: runs/finding-benchmark/
+          if-no-files-found: ignore
+
       - name: Pinned LangGraph enforcement and tracing conformance
         if: matrix.python-version == '3.13'
         env:
