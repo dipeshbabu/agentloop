@@ -2,10 +2,10 @@
 
 `agentloop study ablation` summarizes a frozen host-run experiment. It does not
 execute agents, reset tools, score outputs, or turn stored traces into new runs.
-The offline protocol and synthetic example are available; the permission-cleared
-real-agent study required by [#188](https://github.com/dipeshbabu/agentloop/issues/188)
-still requires workload repositories, task data, owner-approved scorers, and
-provider budgets. No empirical harness-benefit claim is made here.
+The [real SQL-agent ablation](REAL_HARNESS_STUDY.md) applies this contract to
+counterbalanced local-model executions with independently scored public tasks,
+retained early stops and separate tracing/policy overhead measurements. The
+synthetic example below remains an offline contract fixture.
 
 ## Run the offline example
 
