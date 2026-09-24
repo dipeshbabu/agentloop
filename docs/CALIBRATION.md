@@ -5,12 +5,11 @@ It reads the existing intervention ledger and source traces; it never reruns
 today's estimator, reprices past calls, executes an agent, or changes a runtime
 policy. Ordinary interventions can be calibrated without harness controls.
 
-This supplies the offline portion of
-[#189](https://github.com/dipeshbabu/agentloop/issues/189). Empirical calibration
-still requires the permission-cleared workloads, scorers and outcomes in
-[#181](https://github.com/dipeshbabu/agentloop/issues/181); harness cohorts also need
-the real [ablation study](HARNESS_ABLATIONS.md). No real-workload calibration
-coefficients or benefit claims are shipped with this change.
+The [empirical calibration study](EMPIRICAL_CALIBRATION.md) applies this contract
+to original real-agent outcomes and a separate attributable decision experiment.
+It retains combined-intervention abstentions, failed quality and unknown costs;
+its small diagnostic fit changes no runtime coefficients. The real
+[harness ablation](REAL_HARNESS_STUDY.md) separately evaluates safety policies.
 
 ## Run the fixture example
 
