@@ -18,6 +18,12 @@ form must review and satisfy the licenses shipped in the final artifact.
 
 ## Direct runtime dependencies
 
+The optional [real-agent study evidence](docs/REAL_AGENT_STUDY.md) also retains
+UCI Wine Quality data under CC BY 4.0 and GSM8K task data under MIT. These datasets
+keep their own licenses; they are not relicensed as AgentLoop code. The study's
+bundle contains source attribution and the GSM8K license. It does not redistribute
+model weights, inference binaries or dependency implementations.
+
 This table records the licenses reported by the direct dependencies in the
 locked environment reviewed on 2026-07-13. It is a review aid, not a replacement
 for the complete license text and notices distributed by each dependency.

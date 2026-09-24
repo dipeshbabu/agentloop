@@ -10,6 +10,12 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Published a [real-agent intervention study](docs/REAL_AGENT_STUDY.md) using
+  released AgentLoop 0.7.0, LangGraph and custom Python agents. Frozen public
+  tasks, original predictions, all 36 held-out pairs, retained onboarding
+  failures and checksummed reproducibility artifacts show a faster model-routing
+  candidate failing independent quality requirements. No paid provider is used.
+
 - Added a versioned [finding trust benchmark](docs/FINDING_BENCHMARKS.md) with
   independent synthetic labels, exact finding/span matching, per-rule precision,
   false positives, coverage, abstentions, evidence completeness and saved judge

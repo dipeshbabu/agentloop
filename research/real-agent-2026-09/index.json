@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "parts": [
+    {
+      "file": "evidence-01.zip",
+      "bytes": 821509,
+      "sha256": "f51a9912aab7c30e5b1bc185bd2d58c7ad14b07e5dd7ada7c53caf5256dbf282",
+      "file_count": 352
+    },
+    {
+      "file": "evidence-02.zip",
+      "bytes": 358991,
+      "sha256": "d0503f1f4be13220284808f3536d969e684d8299c807ebb4ec724071fe05aa77",
+      "file_count": 176
+    },
+    {
+      "file": "evidence-03.zip",
+      "bytes": 790675,
+      "sha256": "885e4a5c9932a6f62afd2a5e1d47b388819844b931b4d6d4c3a0bd32fd4bdc1e",
+      "file_count": 177
+    }
+  ],
+  "total_files": 705
+}
