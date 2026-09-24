@@ -10,6 +10,11 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Published [empirical estimator calibration](docs/EMPIRICAL_CALIBRATION.md)
+  with 184 original finding registrations, explicit combined-outcome abstentions,
+  a separately measured single-decision cohort and held-out diagnostics. Failed
+  quality and unknown costs remain visible; no runtime coefficient is changed.
+
 - Added a [real SQL-agent harness ablation](docs/REAL_HARNESS_STUDY.md) using
   frozen public tasks, balanced condition order, independent query-result quality,
   actual local model usage and native policy/trace evidence. Explicit negative
