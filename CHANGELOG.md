@@ -10,6 +10,11 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added a [real SQL-agent harness ablation](docs/REAL_HARNESS_STUDY.md) using
+  frozen public tasks, balanced condition order, independent query-result quality,
+  actual local model usage and native policy/trace evidence. Explicit negative
+  controls retain early stops as failed tasks rather than optimization wins.
+
 - Published a [real-agent intervention study](docs/REAL_AGENT_STUDY.md) using
   released AgentLoop 0.7.0, LangGraph and custom Python agents. Frozen public
   tasks, original predictions, all 36 held-out pairs, retained onboarding
