@@ -37,6 +37,14 @@ The [read-only scheduling study](docs/SCHEDULING_STUDY.md) retains UCI Wine Qual
 CSV data and a derived SQLite database under CC BY 4.0, with attribution and
 the transformation described in its evidence bundle.
 
+The [non-agent CPU study](docs/NON_AGENT_STUDY.md) retains selected/derived samples
+from UCI Banknote Authentication (Volker Lohweg; DOI 10.24432/C55P57), Record Linkage
+Comparison Patterns (Irene Schmidtmann, Gael Hammer, Murat Sariyar and Aslihan
+Gerhold-Ay; DOI 10.24432/C51K6B), and Dry Bean (UCI, 2020; DOI 10.24432/C50S4B).
+All three are listed by UCI under CC BY 4.0. Source URLs, hashes, attribution,
+sampling transformations and identifier omissions are recorded in the study bundle.
+Learned study parameters are JSON; dependency implementations are not redistributed.
+
 This table records the licenses reported by the direct dependencies in the
 locked environment reviewed on 2026-07-13. It is a review aid, not a replacement
 for the complete license text and notices distributed by each dependency.
