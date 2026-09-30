@@ -107,7 +107,7 @@ def test_independent_investigation_identity_does_not_alias_different_criteria():
     evaluate_semantic_waste(trace, [second], judges=[judge()], enabled=True)
     results = findings(trace)
     assert len(results) == 2 and len({item["finding_id"] for item in results}) == 2
-    assert results[0]["finding_id"] == before
+    assert before in {item["finding_id"] for item in results}
 
 
 def test_unknown_findings_roundtrip_store_and_queue_without_auto_patch(tmp_path):
@@ -124,7 +124,8 @@ def test_unknown_findings_roundtrip_store_and_queue_without_auto_patch(tmp_path)
     )
     assert queue["estimated_latency_savings_ms"] is None
     assert queue["estimated_cost_savings_usd"] is None
-    assert queue["quality_risk"] == "high" and queue["requires_scorer"]
+    assert queue["quality_risk"] == "unknown" and queue["requires_scorer"]
+    assert queue["priority_score"] == 0
     assert queue["safe_to_auto_patch"] is False
     assert queue["unmodeled_latency_count"] == 1
 

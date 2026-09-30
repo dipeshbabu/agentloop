@@ -58,373 +58,104 @@ footer{margin-top:45px;padding-top:16px;border-top:1px solid var(--line);font-si
   &quot;selection_algorithm&quot;: &quot;exact_branch_and_bound&quot;,
   &quot;selection_optimal&quot;: true
 }</pre></details></article>
-<article class="prediction" id="finding-0"><span class="badge">inferred evidence</span><span class="badge">low confidence</span><h3>Parallelize repeated `retrieve` tool calls</h3><p>3 repeated calls. Repeated tool calls may be candidates for concurrent execution. Verify output independence and shared-state safety before changing them.</p><dl><dt>Finding ID</dt><dd>al_parallelize_tools_6a08b742dfb3</dd><dt>Estimated latency savings</dt><dd>360.000 ms</dd><dt>Estimated cost savings</dt><dd>$0.0000</dd><dt>Proposed change</dt><dd>After verifying output independence and shared-state safety, use asyncio.gather or ThreadPoolExecutor and validate the change with replay.</dd><dt>Validation</dt><dd>runtime decreases while tool outputs remain equivalent</dd></dl><p>Evidence spans: <a href="#span-0">evt_quickstart_01</a>, <a href="#span-6">evt_quickstart_02</a>, <a href="#span-12">evt_quickstart_03</a></p><details><summary>Estimator, assumptions, and observed inputs</summary><pre>{
-  &quot;assumptions&quot;: [
-    &quot;No call consumes another call&#x27;s output.&quot;,
-    &quot;Calls do not conflict through shared mutable state.&quot;,
-    &quot;Calls are on the runtime-limiting path and scheduling adds no overhead.&quot;,
-    &quot;The formula applies assuming concurrent execution has negligible scheduling overhead.&quot;
+<p>Investigation order: priority. Readiness and missing inputs are separate from estimated savings; ranking does not authorize a change.</p>
+<article class="prediction" id="finding-0"><span class="badge">inferred evidence</span><span class="badge">high confidence</span><h3>Reduce retry loop with structured outputs</h3><p>Observed 6 retry span(s), costing 0.36s.</p><dl><dt>Investigation priority</dt><dd>1</dd><dt>Test readiness</dt><dd>needs evidence or review</dd><dt>Why</dt><dd>cost opportunity unavailable; evidence weak or unknown; missing input:quality risk; missing input:reversible; missing input:validation cost usd; missing input:validation effort minutes</dd></dl><details><summary>Ranking components, input references and ordering</summary><pre>{
+  &quot;automatic_application_allowed&quot;: false,
+  &quot;components&quot;: {
+    &quot;confidence&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;rule:add_schema_validation:1.1&quot;,
+      &quot;value&quot;: &quot;high&quot;
+    },
+    &quot;cost&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;estimator:add_schema_validation:1.0&quot;,
+      &quot;unit&quot;: &quot;USD&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;evidence&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;rule_evidence_level_and_span_coverage&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;frequency&quot;: {
+      &quot;kind&quot;: &quot;observed&quot;,
+      &quot;source_ref&quot;: &quot;included_distinct_runs&quot;,
+      &quot;unit&quot;: &quot;included_runs&quot;,
+      &quot;value&quot;: 1
+    },
+    &quot;impact&quot;: {
+      &quot;kind&quot;: &quot;observed&quot;,
+      &quot;source_ref&quot;: &quot;recorded_span_durations_nonadditive&quot;,
+      &quot;unit&quot;: &quot;ms_of_recorded_span_work&quot;,
+      &quot;value&quot;: 360.0
+    },
+    &quot;latency&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;estimator:add_schema_validation:1.0&quot;,
+      &quot;unit&quot;: &quot;ms&quot;,
+      &quot;value&quot;: 288.0
+    },
+    &quot;quality_risk&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;reversible&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;tokens&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;tokens&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;validation_cost&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;USD&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;validation_effort&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;minutes&quot;,
+      &quot;value&quot;: null
+    }
+  },
+  &quot;invalid_inputs&quot;: [],
+  &quot;method&quot;: &quot;explicit_lexicographic&quot;,
+  &quot;order&quot;: [
+    &quot;ready_to_test&quot;,
+    &quot;confidence&quot;,
+    &quot;evidence&quot;,
+    &quot;quality_risk&quot;,
+    &quot;frequency&quot;,
+    &quot;impact&quot;,
+    &quot;validation_effort&quot;,
+    &quot;validation_cost&quot;,
+    &quot;latency&quot;,
+    &quot;cost&quot;,
+    &quot;tokens&quot;,
+    &quot;identity&quot;
   ],
-  &quot;calibrated&quot;: false,
-  &quot;confidence&quot;: &quot;low&quot;,
-  &quot;estimator_id&quot;: &quot;parallelize_tools&quot;,
-  &quot;estimator_version&quot;: &quot;1.0&quot;,
-  &quot;formula&quot;: &quot;sum_duration_ms - max_duration_ms&quot;,
-  &quot;inputs&quot;: {
-    &quot;cost_status&quot;: &quot;complete&quot;,
-    &quot;current_cost_usd&quot;: 0.03672,
-    &quot;max_duration_ms&quot;: 180.0,
-    &quot;repeated_context_ratio&quot;: 0.0571,
-    &quot;span_count&quot;: 3,
-    &quot;sum_duration_ms&quot;: 540.0,
-    &quot;token_status&quot;: &quot;unspecified&quot;
-  },
-  &quot;method&quot;: &quot;heuristic&quot;,
-  &quot;parameters&quot;: {},
-  &quot;unmodeled_metrics&quot;: [
-    &quot;cost&quot;
-  ]
-}</pre></details><details><summary>Recorded finding evidence</summary><pre>[
-  {
-    &quot;duration_ms&quot;: 180.0,
-    &quot;event_type&quot;: &quot;tool_call&quot;,
-    &quot;input_tokens&quot;: 0,
-    &quot;model&quot;: null,
-    &quot;name&quot;: &quot;retrieve&quot;,
-    &quot;operation_kind&quot;: &quot;tool&quot;,
-    &quot;output_tokens&quot;: 0,
-    &quot;span_id&quot;: &quot;evt_quickstart_01&quot;,
-    &quot;status&quot;: &quot;ok&quot;
-  },
-  {
-    &quot;duration_ms&quot;: 180.0,
-    &quot;event_type&quot;: &quot;tool_call&quot;,
-    &quot;input_tokens&quot;: 0,
-    &quot;model&quot;: null,
-    &quot;name&quot;: &quot;retrieve&quot;,
-    &quot;operation_kind&quot;: &quot;tool&quot;,
-    &quot;output_tokens&quot;: 0,
-    &quot;span_id&quot;: &quot;evt_quickstart_02&quot;,
-    &quot;status&quot;: &quot;ok&quot;
-  },
-  {
-    &quot;duration_ms&quot;: 180.0,
-    &quot;event_type&quot;: &quot;tool_call&quot;,
-    &quot;input_tokens&quot;: 0,
-    &quot;model&quot;: null,
-    &quot;name&quot;: &quot;retrieve&quot;,
-    &quot;operation_kind&quot;: &quot;tool&quot;,
-    &quot;output_tokens&quot;: 0,
-    &quot;span_id&quot;: &quot;evt_quickstart_03&quot;,
-    &quot;status&quot;: &quot;ok&quot;
-  }
-]</pre></details></article>
-<article class="prediction" id="finding-1"><span class="badge">inferred evidence</span><span class="badge">low confidence</span><h3>Parallelize repeated `retrieve-repeat0` tool calls</h3><p>3 repeated calls. Repeated tool calls may be candidates for concurrent execution. Verify output independence and shared-state safety before changing them.</p><dl><dt>Finding ID</dt><dd>al_parallelize_tools_8542ede550f6</dd><dt>Estimated latency savings</dt><dd>360.000 ms</dd><dt>Estimated cost savings</dt><dd>$0.0000</dd><dt>Proposed change</dt><dd>After verifying output independence and shared-state safety, use asyncio.gather or ThreadPoolExecutor and validate the change with replay.</dd><dt>Validation</dt><dd>runtime decreases while tool outputs remain equivalent</dd></dl><p>Evidence spans: <a href="#span-1">evt_quickstart_01-repeat0</a>, <a href="#span-7">evt_quickstart_02-repeat0</a>, <a href="#span-13">evt_quickstart_03-repeat0</a></p><details><summary>Estimator, assumptions, and observed inputs</summary><pre>{
-  &quot;assumptions&quot;: [
-    &quot;No call consumes another call&#x27;s output.&quot;,
-    &quot;Calls do not conflict through shared mutable state.&quot;,
-    &quot;Calls are on the runtime-limiting path and scheduling adds no overhead.&quot;,
-    &quot;The formula applies assuming concurrent execution has negligible scheduling overhead.&quot;
+  &quot;reasons&quot;: [
+    &quot;cost_opportunity_unavailable&quot;,
+    &quot;evidence_weak_or_unknown&quot;,
+    &quot;missing_input:quality_risk&quot;,
+    &quot;missing_input:reversible&quot;,
+    &quot;missing_input:validation_cost_usd&quot;,
+    &quot;missing_input:validation_effort_minutes&quot;
   ],
-  &quot;calibrated&quot;: false,
-  &quot;confidence&quot;: &quot;low&quot;,
-  &quot;estimator_id&quot;: &quot;parallelize_tools&quot;,
-  &quot;estimator_version&quot;: &quot;1.0&quot;,
-  &quot;formula&quot;: &quot;sum_duration_ms - max_duration_ms&quot;,
-  &quot;inputs&quot;: {
-    &quot;cost_status&quot;: &quot;complete&quot;,
-    &quot;current_cost_usd&quot;: 0.03672,
-    &quot;max_duration_ms&quot;: 180.0,
-    &quot;repeated_context_ratio&quot;: 0.0571,
-    &quot;span_count&quot;: 3,
-    &quot;sum_duration_ms&quot;: 540.0,
-    &quot;token_status&quot;: &quot;unspecified&quot;
-  },
-  &quot;method&quot;: &quot;heuristic&quot;,
-  &quot;parameters&quot;: {},
-  &quot;unmodeled_metrics&quot;: [
-    &quot;cost&quot;
+  &quot;required_inputs&quot;: [
+    &quot;quality_risk&quot;,
+    &quot;reversible&quot;,
+    &quot;validation_cost_usd&quot;,
+    &quot;validation_effort_minutes&quot;
   ]
-}</pre></details><details><summary>Recorded finding evidence</summary><pre>[
-  {
-    &quot;duration_ms&quot;: 180.0,
-    &quot;event_type&quot;: &quot;tool_call&quot;,
-    &quot;input_tokens&quot;: 0,
-    &quot;model&quot;: null,
-    &quot;name&quot;: &quot;retrieve-repeat0&quot;,
-    &quot;operation_kind&quot;: &quot;tool&quot;,
-    &quot;output_tokens&quot;: 0,
-    &quot;span_id&quot;: &quot;evt_quickstart_01-repeat0&quot;,
-    &quot;status&quot;: &quot;ok&quot;
-  },
-  {
-    &quot;duration_ms&quot;: 180.0,
-    &quot;event_type&quot;: &quot;tool_call&quot;,
-    &quot;input_tokens&quot;: 0,
-    &quot;model&quot;: null,
-    &quot;name&quot;: &quot;retrieve-repeat0&quot;,
-    &quot;operation_kind&quot;: &quot;tool&quot;,
-    &quot;output_tokens&quot;: 0,
-    &quot;span_id&quot;: &quot;evt_quickstart_02-repeat0&quot;,
-    &quot;status&quot;: &quot;ok&quot;
-  },
-  {
-    &quot;duration_ms&quot;: 180.0,
-    &quot;event_type&quot;: &quot;tool_call&quot;,
-    &quot;input_tokens&quot;: 0,
-    &quot;model&quot;: null,
-    &quot;name&quot;: &quot;retrieve-repeat0&quot;,
-    &quot;operation_kind&quot;: &quot;tool&quot;,
-    &quot;output_tokens&quot;: 0,
-    &quot;span_id&quot;: &quot;evt_quickstart_03-repeat0&quot;,
-    &quot;status&quot;: &quot;ok&quot;
-  }
-]</pre></details></article>
-<article class="prediction" id="finding-2"><span class="badge">inferred evidence</span><span class="badge">low confidence</span><h3>Parallelize repeated `retrieve-repeat1` tool calls</h3><p>3 repeated calls. Repeated tool calls may be candidates for concurrent execution. Verify output independence and shared-state safety before changing them.</p><dl><dt>Finding ID</dt><dd>al_parallelize_tools_2c1a691fb06a</dd><dt>Estimated latency savings</dt><dd>360.000 ms</dd><dt>Estimated cost savings</dt><dd>$0.0000</dd><dt>Proposed change</dt><dd>After verifying output independence and shared-state safety, use asyncio.gather or ThreadPoolExecutor and validate the change with replay.</dd><dt>Validation</dt><dd>runtime decreases while tool outputs remain equivalent</dd></dl><p>Evidence spans: <a href="#span-2">evt_quickstart_01-repeat1</a>, <a href="#span-8">evt_quickstart_02-repeat1</a>, <a href="#span-14">evt_quickstart_03-repeat1</a></p><details><summary>Estimator, assumptions, and observed inputs</summary><pre>{
-  &quot;assumptions&quot;: [
-    &quot;No call consumes another call&#x27;s output.&quot;,
-    &quot;Calls do not conflict through shared mutable state.&quot;,
-    &quot;Calls are on the runtime-limiting path and scheduling adds no overhead.&quot;,
-    &quot;The formula applies assuming concurrent execution has negligible scheduling overhead.&quot;
-  ],
-  &quot;calibrated&quot;: false,
-  &quot;confidence&quot;: &quot;low&quot;,
-  &quot;estimator_id&quot;: &quot;parallelize_tools&quot;,
-  &quot;estimator_version&quot;: &quot;1.0&quot;,
-  &quot;formula&quot;: &quot;sum_duration_ms - max_duration_ms&quot;,
-  &quot;inputs&quot;: {
-    &quot;cost_status&quot;: &quot;complete&quot;,
-    &quot;current_cost_usd&quot;: 0.03672,
-    &quot;max_duration_ms&quot;: 180.0,
-    &quot;repeated_context_ratio&quot;: 0.0571,
-    &quot;span_count&quot;: 3,
-    &quot;sum_duration_ms&quot;: 540.0,
-    &quot;token_status&quot;: &quot;unspecified&quot;
-  },
-  &quot;method&quot;: &quot;heuristic&quot;,
-  &quot;parameters&quot;: {},
-  &quot;unmodeled_metrics&quot;: [
-    &quot;cost&quot;
-  ]
-}</pre></details><details><summary>Recorded finding evidence</summary><pre>[
-  {
-    &quot;duration_ms&quot;: 180.0,
-    &quot;event_type&quot;: &quot;tool_call&quot;,
-    &quot;input_tokens&quot;: 0,
-    &quot;model&quot;: null,
-    &quot;name&quot;: &quot;retrieve-repeat1&quot;,
-    &quot;operation_kind&quot;: &quot;tool&quot;,
-    &quot;output_tokens&quot;: 0,
-    &quot;span_id&quot;: &quot;evt_quickstart_01-repeat1&quot;,
-    &quot;status&quot;: &quot;ok&quot;
-  },
-  {
-    &quot;duration_ms&quot;: 180.0,
-    &quot;event_type&quot;: &quot;tool_call&quot;,
-    &quot;input_tokens&quot;: 0,
-    &quot;model&quot;: null,
-    &quot;name&quot;: &quot;retrieve-repeat1&quot;,
-    &quot;operation_kind&quot;: &quot;tool&quot;,
-    &quot;output_tokens&quot;: 0,
-    &quot;span_id&quot;: &quot;evt_quickstart_02-repeat1&quot;,
-    &quot;status&quot;: &quot;ok&quot;
-  },
-  {
-    &quot;duration_ms&quot;: 180.0,
-    &quot;event_type&quot;: &quot;tool_call&quot;,
-    &quot;input_tokens&quot;: 0,
-    &quot;model&quot;: null,
-    &quot;name&quot;: &quot;retrieve-repeat1&quot;,
-    &quot;operation_kind&quot;: &quot;tool&quot;,
-    &quot;output_tokens&quot;: 0,
-    &quot;span_id&quot;: &quot;evt_quickstart_03-repeat1&quot;,
-    &quot;status&quot;: &quot;ok&quot;
-  }
-]</pre></details></article>
-<article class="prediction" id="finding-3"><span class="badge">inferred evidence</span><span class="badge">low confidence</span><h3>Parallelize repeated `retrieve-repeat2` tool calls</h3><p>3 repeated calls. Repeated tool calls may be candidates for concurrent execution. Verify output independence and shared-state safety before changing them.</p><dl><dt>Finding ID</dt><dd>al_parallelize_tools_7d06d1a068ee</dd><dt>Estimated latency savings</dt><dd>360.000 ms</dd><dt>Estimated cost savings</dt><dd>$0.0000</dd><dt>Proposed change</dt><dd>After verifying output independence and shared-state safety, use asyncio.gather or ThreadPoolExecutor and validate the change with replay.</dd><dt>Validation</dt><dd>runtime decreases while tool outputs remain equivalent</dd></dl><p>Evidence spans: <a href="#span-3">evt_quickstart_01-repeat2</a>, <a href="#span-9">evt_quickstart_02-repeat2</a>, <a href="#span-15">evt_quickstart_03-repeat2</a></p><details><summary>Estimator, assumptions, and observed inputs</summary><pre>{
-  &quot;assumptions&quot;: [
-    &quot;No call consumes another call&#x27;s output.&quot;,
-    &quot;Calls do not conflict through shared mutable state.&quot;,
-    &quot;Calls are on the runtime-limiting path and scheduling adds no overhead.&quot;,
-    &quot;The formula applies assuming concurrent execution has negligible scheduling overhead.&quot;
-  ],
-  &quot;calibrated&quot;: false,
-  &quot;confidence&quot;: &quot;low&quot;,
-  &quot;estimator_id&quot;: &quot;parallelize_tools&quot;,
-  &quot;estimator_version&quot;: &quot;1.0&quot;,
-  &quot;formula&quot;: &quot;sum_duration_ms - max_duration_ms&quot;,
-  &quot;inputs&quot;: {
-    &quot;cost_status&quot;: &quot;complete&quot;,
-    &quot;current_cost_usd&quot;: 0.03672,
-    &quot;max_duration_ms&quot;: 180.0,
-    &quot;repeated_context_ratio&quot;: 0.0571,
-    &quot;span_count&quot;: 3,
-    &quot;sum_duration_ms&quot;: 540.0,
-    &quot;token_status&quot;: &quot;unspecified&quot;
-  },
-  &quot;method&quot;: &quot;heuristic&quot;,
-  &quot;parameters&quot;: {},
-  &quot;unmodeled_metrics&quot;: [
-    &quot;cost&quot;
-  ]
-}</pre></details><details><summary>Recorded finding evidence</summary><pre>[
-  {
-    &quot;duration_ms&quot;: 180.0,
-    &quot;event_type&quot;: &quot;tool_call&quot;,
-    &quot;input_tokens&quot;: 0,
-    &quot;model&quot;: null,
-    &quot;name&quot;: &quot;retrieve-repeat2&quot;,
-    &quot;operation_kind&quot;: &quot;tool&quot;,
-    &quot;output_tokens&quot;: 0,
-    &quot;span_id&quot;: &quot;evt_quickstart_01-repeat2&quot;,
-    &quot;status&quot;: &quot;ok&quot;
-  },
-  {
-    &quot;duration_ms&quot;: 180.0,
-    &quot;event_type&quot;: &quot;tool_call&quot;,
-    &quot;input_tokens&quot;: 0,
-    &quot;model&quot;: null,
-    &quot;name&quot;: &quot;retrieve-repeat2&quot;,
-    &quot;operation_kind&quot;: &quot;tool&quot;,
-    &quot;output_tokens&quot;: 0,
-    &quot;span_id&quot;: &quot;evt_quickstart_02-repeat2&quot;,
-    &quot;status&quot;: &quot;ok&quot;
-  },
-  {
-    &quot;duration_ms&quot;: 180.0,
-    &quot;event_type&quot;: &quot;tool_call&quot;,
-    &quot;input_tokens&quot;: 0,
-    &quot;model&quot;: null,
-    &quot;name&quot;: &quot;retrieve-repeat2&quot;,
-    &quot;operation_kind&quot;: &quot;tool&quot;,
-    &quot;output_tokens&quot;: 0,
-    &quot;span_id&quot;: &quot;evt_quickstart_03-repeat2&quot;,
-    &quot;status&quot;: &quot;ok&quot;
-  }
-]</pre></details></article>
-<article class="prediction" id="finding-4"><span class="badge">inferred evidence</span><span class="badge">low confidence</span><h3>Parallelize repeated `retrieve-repeat3` tool calls</h3><p>3 repeated calls. Repeated tool calls may be candidates for concurrent execution. Verify output independence and shared-state safety before changing them.</p><dl><dt>Finding ID</dt><dd>al_parallelize_tools_21b66313a1f3</dd><dt>Estimated latency savings</dt><dd>360.000 ms</dd><dt>Estimated cost savings</dt><dd>$0.0000</dd><dt>Proposed change</dt><dd>After verifying output independence and shared-state safety, use asyncio.gather or ThreadPoolExecutor and validate the change with replay.</dd><dt>Validation</dt><dd>runtime decreases while tool outputs remain equivalent</dd></dl><p>Evidence spans: <a href="#span-4">evt_quickstart_01-repeat3</a>, <a href="#span-10">evt_quickstart_02-repeat3</a>, <a href="#span-16">evt_quickstart_03-repeat3</a></p><details><summary>Estimator, assumptions, and observed inputs</summary><pre>{
-  &quot;assumptions&quot;: [
-    &quot;No call consumes another call&#x27;s output.&quot;,
-    &quot;Calls do not conflict through shared mutable state.&quot;,
-    &quot;Calls are on the runtime-limiting path and scheduling adds no overhead.&quot;,
-    &quot;The formula applies assuming concurrent execution has negligible scheduling overhead.&quot;
-  ],
-  &quot;calibrated&quot;: false,
-  &quot;confidence&quot;: &quot;low&quot;,
-  &quot;estimator_id&quot;: &quot;parallelize_tools&quot;,
-  &quot;estimator_version&quot;: &quot;1.0&quot;,
-  &quot;formula&quot;: &quot;sum_duration_ms - max_duration_ms&quot;,
-  &quot;inputs&quot;: {
-    &quot;cost_status&quot;: &quot;complete&quot;,
-    &quot;current_cost_usd&quot;: 0.03672,
-    &quot;max_duration_ms&quot;: 180.0,
-    &quot;repeated_context_ratio&quot;: 0.0571,
-    &quot;span_count&quot;: 3,
-    &quot;sum_duration_ms&quot;: 540.0,
-    &quot;token_status&quot;: &quot;unspecified&quot;
-  },
-  &quot;method&quot;: &quot;heuristic&quot;,
-  &quot;parameters&quot;: {},
-  &quot;unmodeled_metrics&quot;: [
-    &quot;cost&quot;
-  ]
-}</pre></details><details><summary>Recorded finding evidence</summary><pre>[
-  {
-    &quot;duration_ms&quot;: 180.0,
-    &quot;event_type&quot;: &quot;tool_call&quot;,
-    &quot;input_tokens&quot;: 0,
-    &quot;model&quot;: null,
-    &quot;name&quot;: &quot;retrieve-repeat3&quot;,
-    &quot;operation_kind&quot;: &quot;tool&quot;,
-    &quot;output_tokens&quot;: 0,
-    &quot;span_id&quot;: &quot;evt_quickstart_01-repeat3&quot;,
-    &quot;status&quot;: &quot;ok&quot;
-  },
-  {
-    &quot;duration_ms&quot;: 180.0,
-    &quot;event_type&quot;: &quot;tool_call&quot;,
-    &quot;input_tokens&quot;: 0,
-    &quot;model&quot;: null,
-    &quot;name&quot;: &quot;retrieve-repeat3&quot;,
-    &quot;operation_kind&quot;: &quot;tool&quot;,
-    &quot;output_tokens&quot;: 0,
-    &quot;span_id&quot;: &quot;evt_quickstart_02-repeat3&quot;,
-    &quot;status&quot;: &quot;ok&quot;
-  },
-  {
-    &quot;duration_ms&quot;: 180.0,
-    &quot;event_type&quot;: &quot;tool_call&quot;,
-    &quot;input_tokens&quot;: 0,
-    &quot;model&quot;: null,
-    &quot;name&quot;: &quot;retrieve-repeat3&quot;,
-    &quot;operation_kind&quot;: &quot;tool&quot;,
-    &quot;output_tokens&quot;: 0,
-    &quot;span_id&quot;: &quot;evt_quickstart_03-repeat3&quot;,
-    &quot;status&quot;: &quot;ok&quot;
-  }
-]</pre></details></article>
-<article class="prediction" id="finding-5"><span class="badge">inferred evidence</span><span class="badge">low confidence</span><h3>Parallelize repeated `retrieve-repeat4` tool calls</h3><p>3 repeated calls. Repeated tool calls may be candidates for concurrent execution. Verify output independence and shared-state safety before changing them.</p><dl><dt>Finding ID</dt><dd>al_parallelize_tools_4daf13a58672</dd><dt>Estimated latency savings</dt><dd>360.000 ms</dd><dt>Estimated cost savings</dt><dd>$0.0000</dd><dt>Proposed change</dt><dd>After verifying output independence and shared-state safety, use asyncio.gather or ThreadPoolExecutor and validate the change with replay.</dd><dt>Validation</dt><dd>runtime decreases while tool outputs remain equivalent</dd></dl><p>Evidence spans: <a href="#span-5">evt_quickstart_01-repeat4</a>, <a href="#span-11">evt_quickstart_02-repeat4</a>, <a href="#span-17">evt_quickstart_03-repeat4</a></p><details><summary>Estimator, assumptions, and observed inputs</summary><pre>{
-  &quot;assumptions&quot;: [
-    &quot;No call consumes another call&#x27;s output.&quot;,
-    &quot;Calls do not conflict through shared mutable state.&quot;,
-    &quot;Calls are on the runtime-limiting path and scheduling adds no overhead.&quot;,
-    &quot;The formula applies assuming concurrent execution has negligible scheduling overhead.&quot;
-  ],
-  &quot;calibrated&quot;: false,
-  &quot;confidence&quot;: &quot;low&quot;,
-  &quot;estimator_id&quot;: &quot;parallelize_tools&quot;,
-  &quot;estimator_version&quot;: &quot;1.0&quot;,
-  &quot;formula&quot;: &quot;sum_duration_ms - max_duration_ms&quot;,
-  &quot;inputs&quot;: {
-    &quot;cost_status&quot;: &quot;complete&quot;,
-    &quot;current_cost_usd&quot;: 0.03672,
-    &quot;max_duration_ms&quot;: 180.0,
-    &quot;repeated_context_ratio&quot;: 0.0571,
-    &quot;span_count&quot;: 3,
-    &quot;sum_duration_ms&quot;: 540.0,
-    &quot;token_status&quot;: &quot;unspecified&quot;
-  },
-  &quot;method&quot;: &quot;heuristic&quot;,
-  &quot;parameters&quot;: {},
-  &quot;unmodeled_metrics&quot;: [
-    &quot;cost&quot;
-  ]
-}</pre></details><details><summary>Recorded finding evidence</summary><pre>[
-  {
-    &quot;duration_ms&quot;: 180.0,
-    &quot;event_type&quot;: &quot;tool_call&quot;,
-    &quot;input_tokens&quot;: 0,
-    &quot;model&quot;: null,
-    &quot;name&quot;: &quot;retrieve-repeat4&quot;,
-    &quot;operation_kind&quot;: &quot;tool&quot;,
-    &quot;output_tokens&quot;: 0,
-    &quot;span_id&quot;: &quot;evt_quickstart_01-repeat4&quot;,
-    &quot;status&quot;: &quot;ok&quot;
-  },
-  {
-    &quot;duration_ms&quot;: 180.0,
-    &quot;event_type&quot;: &quot;tool_call&quot;,
-    &quot;input_tokens&quot;: 0,
-    &quot;model&quot;: null,
-    &quot;name&quot;: &quot;retrieve-repeat4&quot;,
-    &quot;operation_kind&quot;: &quot;tool&quot;,
-    &quot;output_tokens&quot;: 0,
-    &quot;span_id&quot;: &quot;evt_quickstart_02-repeat4&quot;,
-    &quot;status&quot;: &quot;ok&quot;
-  },
-  {
-    &quot;duration_ms&quot;: 180.0,
-    &quot;event_type&quot;: &quot;tool_call&quot;,
-    &quot;input_tokens&quot;: 0,
-    &quot;model&quot;: null,
-    &quot;name&quot;: &quot;retrieve-repeat4&quot;,
-    &quot;operation_kind&quot;: &quot;tool&quot;,
-    &quot;output_tokens&quot;: 0,
-    &quot;span_id&quot;: &quot;evt_quickstart_03-repeat4&quot;,
-    &quot;status&quot;: &quot;ok&quot;
-  }
-]</pre></details></article>
-<article class="prediction" id="finding-6"><span class="badge">inferred evidence</span><span class="badge">high confidence</span><h3>Reduce retry loop with structured outputs</h3><p>Observed 6 retry span(s), costing 0.36s.</p><dl><dt>Finding ID</dt><dd>al_add_schema_validation_699d36a8ae4c</dd><dt>Estimated latency savings</dt><dd>288.000 ms</dd><dt>Estimated cost savings</dt><dd>$0.0000</dd><dt>Proposed change</dt><dd>Add schema validation, JSON mode, constrained decoding, or a cheap repair prompt before rerunning a full step.</dd><dt>Validation</dt><dd>retry count decreases and output schema validity stays at 100%</dd></dl><p>Evidence spans: <a href="#span-36">evt_quickstart_07</a>, <a href="#span-37">evt_quickstart_07-repeat0</a>, <a href="#span-38">evt_quickstart_07-repeat1</a>, <a href="#span-39">evt_quickstart_07-repeat2</a>, <a href="#span-40">evt_quickstart_07-repeat3</a>, <a href="#span-41">evt_quickstart_07-repeat4</a></p><details><summary>Estimator, assumptions, and observed inputs</summary><pre>{
+}</pre></details><dl><dt>Finding ID</dt><dd>al_add_schema_validation_699d36a8ae4c</dd><dt>Estimated latency savings</dt><dd>288.000 ms</dd><dt>Estimated cost savings</dt><dd>$0.0000</dd><dt>Proposed change</dt><dd>Add schema validation, JSON mode, constrained decoding, or a cheap repair prompt before rerunning a full step.</dd><dt>Validation</dt><dd>retry count decreases and output schema validity stays at 100%</dd></dl><p>Evidence spans: <a href="#span-36">evt_quickstart_07</a>, <a href="#span-37">evt_quickstart_07-repeat0</a>, <a href="#span-38">evt_quickstart_07-repeat1</a>, <a href="#span-39">evt_quickstart_07-repeat2</a>, <a href="#span-40">evt_quickstart_07-repeat3</a>, <a href="#span-41">evt_quickstart_07-repeat4</a></p><details><summary>Estimator, assumptions, and observed inputs</summary><pre>{
   &quot;assumptions&quot;: [
     &quot;Most observed retries are preventable with validation or repair.&quot;,
     &quot;Added validation overhead is smaller than avoided retry time.&quot;
@@ -518,190 +249,103 @@ footer{margin-top:45px;padding-top:16px;border-top:1px solid var(--line);font-si
     &quot;status&quot;: &quot;ok&quot;
   }
 ]</pre></details></article>
-<article class="prediction" id="finding-7"><span class="badge">inferred evidence</span><span class="badge">medium confidence</span><h3>Batch repeated `summarize` model calls</h3><p>3 `summarize` calls have the same role and may be batchable.</p><dl><dt>Finding ID</dt><dd>al_batch_model_calls_e2a487505f90</dd><dt>Estimated latency savings</dt><dd>115.500 ms</dd><dt>Estimated cost savings</dt><dd>$0.0000</dd><dt>Proposed change</dt><dd>Batch documents/items into one prompt or use map-reduce only when outputs truly need independent reasoning.</dd><dt>Validation</dt><dd>runtime decreases and item-level outputs remain equivalent</dd></dl><p>Evidence spans: <a href="#span-18">evt_quickstart_04</a>, <a href="#span-24">evt_quickstart_05</a>, <a href="#span-30">evt_quickstart_06</a></p><details><summary>Estimator, assumptions, and observed inputs</summary><pre>{
-  &quot;assumptions&quot;: [
-    &quot;Repeated calls accept a shared batch without changing item-level outputs.&quot;,
-    &quot;Batch size, token limits, and provider throughput permit the estimated reduction.&quot;
+<article class="prediction" id="finding-1"><span class="badge">inferred evidence</span><span class="badge">medium confidence</span><h3>Batch repeated `summarize-repeat2` model calls</h3><p>3 `summarize-repeat2` calls have the same role and may be batchable.</p><dl><dt>Investigation priority</dt><dd>2</dd><dt>Test readiness</dt><dd>needs evidence or review</dd><dt>Why</dt><dd>cost opportunity unavailable; evidence weak or unknown; missing input:quality risk; missing input:reversible; missing input:validation cost usd; missing input:validation effort minutes</dd></dl><details><summary>Ranking components, input references and ordering</summary><pre>{
+  &quot;automatic_application_allowed&quot;: false,
+  &quot;components&quot;: {
+    &quot;confidence&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;rule:batch_model_calls:1.1&quot;,
+      &quot;value&quot;: &quot;medium&quot;
+    },
+    &quot;cost&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;estimator:batch_model_calls:1.0&quot;,
+      &quot;unit&quot;: &quot;USD&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;evidence&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;rule_evidence_level_and_span_coverage&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;frequency&quot;: {
+      &quot;kind&quot;: &quot;observed&quot;,
+      &quot;source_ref&quot;: &quot;included_distinct_runs&quot;,
+      &quot;unit&quot;: &quot;included_runs&quot;,
+      &quot;value&quot;: 1
+    },
+    &quot;impact&quot;: {
+      &quot;kind&quot;: &quot;observed&quot;,
+      &quot;source_ref&quot;: &quot;recorded_span_durations_nonadditive&quot;,
+      &quot;unit&quot;: &quot;ms_of_recorded_span_work&quot;,
+      &quot;value&quot;: 330.0
+    },
+    &quot;latency&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;estimator:batch_model_calls:1.0&quot;,
+      &quot;unit&quot;: &quot;ms&quot;,
+      &quot;value&quot;: 115.5
+    },
+    &quot;quality_risk&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;reversible&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;tokens&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;tokens&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;validation_cost&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;USD&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;validation_effort&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;minutes&quot;,
+      &quot;value&quot;: null
+    }
+  },
+  &quot;invalid_inputs&quot;: [],
+  &quot;method&quot;: &quot;explicit_lexicographic&quot;,
+  &quot;order&quot;: [
+    &quot;ready_to_test&quot;,
+    &quot;confidence&quot;,
+    &quot;evidence&quot;,
+    &quot;quality_risk&quot;,
+    &quot;frequency&quot;,
+    &quot;impact&quot;,
+    &quot;validation_effort&quot;,
+    &quot;validation_cost&quot;,
+    &quot;latency&quot;,
+    &quot;cost&quot;,
+    &quot;tokens&quot;,
+    &quot;identity&quot;
   ],
-  &quot;calibrated&quot;: false,
-  &quot;confidence&quot;: &quot;medium&quot;,
-  &quot;estimator_id&quot;: &quot;batch_model_calls&quot;,
-  &quot;estimator_version&quot;: &quot;1.0&quot;,
-  &quot;formula&quot;: &quot;sum_duration_ms * latency_fraction&quot;,
-  &quot;inputs&quot;: {
-    &quot;cost_status&quot;: &quot;complete&quot;,
-    &quot;current_cost_usd&quot;: 0.03672,
-    &quot;max_duration_ms&quot;: 110.0,
-    &quot;repeated_context_ratio&quot;: 0.0571,
-    &quot;span_count&quot;: 3,
-    &quot;sum_duration_ms&quot;: 330.0,
-    &quot;token_status&quot;: &quot;unspecified&quot;
-  },
-  &quot;method&quot;: &quot;heuristic&quot;,
-  &quot;parameters&quot;: {
-    &quot;latency_fraction&quot;: 0.35
-  },
-  &quot;unmodeled_metrics&quot;: [
-    &quot;cost&quot;
-  ]
-}</pre></details><details><summary>Recorded finding evidence</summary><pre>[
-  {
-    &quot;duration_ms&quot;: 110.0,
-    &quot;event_type&quot;: &quot;model_call&quot;,
-    &quot;input_tokens&quot;: 700,
-    &quot;model&quot;: &quot;gpt-4.1&quot;,
-    &quot;name&quot;: &quot;summarize&quot;,
-    &quot;operation_kind&quot;: &quot;model&quot;,
-    &quot;output_tokens&quot;: 80,
-    &quot;span_id&quot;: &quot;evt_quickstart_04&quot;,
-    &quot;status&quot;: &quot;ok&quot;
-  },
-  {
-    &quot;duration_ms&quot;: 110.0,
-    &quot;event_type&quot;: &quot;model_call&quot;,
-    &quot;input_tokens&quot;: 700,
-    &quot;model&quot;: &quot;gpt-4.1&quot;,
-    &quot;name&quot;: &quot;summarize&quot;,
-    &quot;operation_kind&quot;: &quot;model&quot;,
-    &quot;output_tokens&quot;: 80,
-    &quot;span_id&quot;: &quot;evt_quickstart_05&quot;,
-    &quot;status&quot;: &quot;ok&quot;
-  },
-  {
-    &quot;duration_ms&quot;: 110.0,
-    &quot;event_type&quot;: &quot;model_call&quot;,
-    &quot;input_tokens&quot;: 700,
-    &quot;model&quot;: &quot;gpt-4.1&quot;,
-    &quot;name&quot;: &quot;summarize&quot;,
-    &quot;operation_kind&quot;: &quot;model&quot;,
-    &quot;output_tokens&quot;: 80,
-    &quot;span_id&quot;: &quot;evt_quickstart_06&quot;,
-    &quot;status&quot;: &quot;ok&quot;
-  }
-]</pre></details></article>
-<article class="prediction" id="finding-8"><span class="badge">inferred evidence</span><span class="badge">medium confidence</span><h3>Batch repeated `summarize-repeat0` model calls</h3><p>3 `summarize-repeat0` calls have the same role and may be batchable.</p><dl><dt>Finding ID</dt><dd>al_batch_model_calls_7c471b4e1a49</dd><dt>Estimated latency savings</dt><dd>115.500 ms</dd><dt>Estimated cost savings</dt><dd>$0.0000</dd><dt>Proposed change</dt><dd>Batch documents/items into one prompt or use map-reduce only when outputs truly need independent reasoning.</dd><dt>Validation</dt><dd>runtime decreases and item-level outputs remain equivalent</dd></dl><p>Evidence spans: <a href="#span-19">evt_quickstart_04-repeat0</a>, <a href="#span-25">evt_quickstart_05-repeat0</a>, <a href="#span-31">evt_quickstart_06-repeat0</a></p><details><summary>Estimator, assumptions, and observed inputs</summary><pre>{
-  &quot;assumptions&quot;: [
-    &quot;Repeated calls accept a shared batch without changing item-level outputs.&quot;,
-    &quot;Batch size, token limits, and provider throughput permit the estimated reduction.&quot;
+  &quot;reasons&quot;: [
+    &quot;cost_opportunity_unavailable&quot;,
+    &quot;evidence_weak_or_unknown&quot;,
+    &quot;missing_input:quality_risk&quot;,
+    &quot;missing_input:reversible&quot;,
+    &quot;missing_input:validation_cost_usd&quot;,
+    &quot;missing_input:validation_effort_minutes&quot;
   ],
-  &quot;calibrated&quot;: false,
-  &quot;confidence&quot;: &quot;medium&quot;,
-  &quot;estimator_id&quot;: &quot;batch_model_calls&quot;,
-  &quot;estimator_version&quot;: &quot;1.0&quot;,
-  &quot;formula&quot;: &quot;sum_duration_ms * latency_fraction&quot;,
-  &quot;inputs&quot;: {
-    &quot;cost_status&quot;: &quot;complete&quot;,
-    &quot;current_cost_usd&quot;: 0.03672,
-    &quot;max_duration_ms&quot;: 110.0,
-    &quot;repeated_context_ratio&quot;: 0.0571,
-    &quot;span_count&quot;: 3,
-    &quot;sum_duration_ms&quot;: 330.0,
-    &quot;token_status&quot;: &quot;unspecified&quot;
-  },
-  &quot;method&quot;: &quot;heuristic&quot;,
-  &quot;parameters&quot;: {
-    &quot;latency_fraction&quot;: 0.35
-  },
-  &quot;unmodeled_metrics&quot;: [
-    &quot;cost&quot;
+  &quot;required_inputs&quot;: [
+    &quot;quality_risk&quot;,
+    &quot;reversible&quot;,
+    &quot;validation_cost_usd&quot;,
+    &quot;validation_effort_minutes&quot;
   ]
-}</pre></details><details><summary>Recorded finding evidence</summary><pre>[
-  {
-    &quot;duration_ms&quot;: 110.0,
-    &quot;event_type&quot;: &quot;model_call&quot;,
-    &quot;input_tokens&quot;: 700,
-    &quot;model&quot;: &quot;gpt-4.1&quot;,
-    &quot;name&quot;: &quot;summarize-repeat0&quot;,
-    &quot;operation_kind&quot;: &quot;model&quot;,
-    &quot;output_tokens&quot;: 80,
-    &quot;span_id&quot;: &quot;evt_quickstart_04-repeat0&quot;,
-    &quot;status&quot;: &quot;ok&quot;
-  },
-  {
-    &quot;duration_ms&quot;: 110.0,
-    &quot;event_type&quot;: &quot;model_call&quot;,
-    &quot;input_tokens&quot;: 700,
-    &quot;model&quot;: &quot;gpt-4.1&quot;,
-    &quot;name&quot;: &quot;summarize-repeat0&quot;,
-    &quot;operation_kind&quot;: &quot;model&quot;,
-    &quot;output_tokens&quot;: 80,
-    &quot;span_id&quot;: &quot;evt_quickstart_05-repeat0&quot;,
-    &quot;status&quot;: &quot;ok&quot;
-  },
-  {
-    &quot;duration_ms&quot;: 110.0,
-    &quot;event_type&quot;: &quot;model_call&quot;,
-    &quot;input_tokens&quot;: 700,
-    &quot;model&quot;: &quot;gpt-4.1&quot;,
-    &quot;name&quot;: &quot;summarize-repeat0&quot;,
-    &quot;operation_kind&quot;: &quot;model&quot;,
-    &quot;output_tokens&quot;: 80,
-    &quot;span_id&quot;: &quot;evt_quickstart_06-repeat0&quot;,
-    &quot;status&quot;: &quot;ok&quot;
-  }
-]</pre></details></article>
-<article class="prediction" id="finding-9"><span class="badge">inferred evidence</span><span class="badge">medium confidence</span><h3>Batch repeated `summarize-repeat1` model calls</h3><p>3 `summarize-repeat1` calls have the same role and may be batchable.</p><dl><dt>Finding ID</dt><dd>al_batch_model_calls_9f11808b6947</dd><dt>Estimated latency savings</dt><dd>115.500 ms</dd><dt>Estimated cost savings</dt><dd>$0.0000</dd><dt>Proposed change</dt><dd>Batch documents/items into one prompt or use map-reduce only when outputs truly need independent reasoning.</dd><dt>Validation</dt><dd>runtime decreases and item-level outputs remain equivalent</dd></dl><p>Evidence spans: <a href="#span-20">evt_quickstart_04-repeat1</a>, <a href="#span-26">evt_quickstart_05-repeat1</a>, <a href="#span-32">evt_quickstart_06-repeat1</a></p><details><summary>Estimator, assumptions, and observed inputs</summary><pre>{
-  &quot;assumptions&quot;: [
-    &quot;Repeated calls accept a shared batch without changing item-level outputs.&quot;,
-    &quot;Batch size, token limits, and provider throughput permit the estimated reduction.&quot;
-  ],
-  &quot;calibrated&quot;: false,
-  &quot;confidence&quot;: &quot;medium&quot;,
-  &quot;estimator_id&quot;: &quot;batch_model_calls&quot;,
-  &quot;estimator_version&quot;: &quot;1.0&quot;,
-  &quot;formula&quot;: &quot;sum_duration_ms * latency_fraction&quot;,
-  &quot;inputs&quot;: {
-    &quot;cost_status&quot;: &quot;complete&quot;,
-    &quot;current_cost_usd&quot;: 0.03672,
-    &quot;max_duration_ms&quot;: 110.0,
-    &quot;repeated_context_ratio&quot;: 0.0571,
-    &quot;span_count&quot;: 3,
-    &quot;sum_duration_ms&quot;: 330.0,
-    &quot;token_status&quot;: &quot;unspecified&quot;
-  },
-  &quot;method&quot;: &quot;heuristic&quot;,
-  &quot;parameters&quot;: {
-    &quot;latency_fraction&quot;: 0.35
-  },
-  &quot;unmodeled_metrics&quot;: [
-    &quot;cost&quot;
-  ]
-}</pre></details><details><summary>Recorded finding evidence</summary><pre>[
-  {
-    &quot;duration_ms&quot;: 110.0,
-    &quot;event_type&quot;: &quot;model_call&quot;,
-    &quot;input_tokens&quot;: 700,
-    &quot;model&quot;: &quot;gpt-4.1&quot;,
-    &quot;name&quot;: &quot;summarize-repeat1&quot;,
-    &quot;operation_kind&quot;: &quot;model&quot;,
-    &quot;output_tokens&quot;: 80,
-    &quot;span_id&quot;: &quot;evt_quickstart_04-repeat1&quot;,
-    &quot;status&quot;: &quot;ok&quot;
-  },
-  {
-    &quot;duration_ms&quot;: 110.0,
-    &quot;event_type&quot;: &quot;model_call&quot;,
-    &quot;input_tokens&quot;: 700,
-    &quot;model&quot;: &quot;gpt-4.1&quot;,
-    &quot;name&quot;: &quot;summarize-repeat1&quot;,
-    &quot;operation_kind&quot;: &quot;model&quot;,
-    &quot;output_tokens&quot;: 80,
-    &quot;span_id&quot;: &quot;evt_quickstart_05-repeat1&quot;,
-    &quot;status&quot;: &quot;ok&quot;
-  },
-  {
-    &quot;duration_ms&quot;: 110.0,
-    &quot;event_type&quot;: &quot;model_call&quot;,
-    &quot;input_tokens&quot;: 700,
-    &quot;model&quot;: &quot;gpt-4.1&quot;,
-    &quot;name&quot;: &quot;summarize-repeat1&quot;,
-    &quot;operation_kind&quot;: &quot;model&quot;,
-    &quot;output_tokens&quot;: 80,
-    &quot;span_id&quot;: &quot;evt_quickstart_06-repeat1&quot;,
-    &quot;status&quot;: &quot;ok&quot;
-  }
-]</pre></details></article>
-<article class="prediction" id="finding-10"><span class="badge">inferred evidence</span><span class="badge">medium confidence</span><h3>Batch repeated `summarize-repeat2` model calls</h3><p>3 `summarize-repeat2` calls have the same role and may be batchable.</p><dl><dt>Finding ID</dt><dd>al_batch_model_calls_21f37b55def7</dd><dt>Estimated latency savings</dt><dd>115.500 ms</dd><dt>Estimated cost savings</dt><dd>$0.0000</dd><dt>Proposed change</dt><dd>Batch documents/items into one prompt or use map-reduce only when outputs truly need independent reasoning.</dd><dt>Validation</dt><dd>runtime decreases and item-level outputs remain equivalent</dd></dl><p>Evidence spans: <a href="#span-21">evt_quickstart_04-repeat2</a>, <a href="#span-27">evt_quickstart_05-repeat2</a>, <a href="#span-33">evt_quickstart_06-repeat2</a></p><details><summary>Estimator, assumptions, and observed inputs</summary><pre>{
+}</pre></details><dl><dt>Finding ID</dt><dd>al_batch_model_calls_21f37b55def7</dd><dt>Estimated latency savings</dt><dd>115.500 ms</dd><dt>Estimated cost savings</dt><dd>$0.0000</dd><dt>Proposed change</dt><dd>Batch documents/items into one prompt or use map-reduce only when outputs truly need independent reasoning.</dd><dt>Validation</dt><dd>runtime decreases and item-level outputs remain equivalent</dd></dl><p>Evidence spans: <a href="#span-21">evt_quickstart_04-repeat2</a>, <a href="#span-27">evt_quickstart_05-repeat2</a>, <a href="#span-33">evt_quickstart_06-repeat2</a></p><details><summary>Estimator, assumptions, and observed inputs</summary><pre>{
   &quot;assumptions&quot;: [
     &quot;Repeated calls accept a shared batch without changing item-level outputs.&quot;,
     &quot;Batch size, token limits, and provider throughput permit the estimated reduction.&quot;
@@ -762,7 +406,103 @@ footer{margin-top:45px;padding-top:16px;border-top:1px solid var(--line);font-si
     &quot;status&quot;: &quot;ok&quot;
   }
 ]</pre></details></article>
-<article class="prediction" id="finding-11"><span class="badge">inferred evidence</span><span class="badge">medium confidence</span><h3>Batch repeated `summarize-repeat3` model calls</h3><p>3 `summarize-repeat3` calls have the same role and may be batchable.</p><dl><dt>Finding ID</dt><dd>al_batch_model_calls_3fdfb611a12a</dd><dt>Estimated latency savings</dt><dd>115.500 ms</dd><dt>Estimated cost savings</dt><dd>$0.0000</dd><dt>Proposed change</dt><dd>Batch documents/items into one prompt or use map-reduce only when outputs truly need independent reasoning.</dd><dt>Validation</dt><dd>runtime decreases and item-level outputs remain equivalent</dd></dl><p>Evidence spans: <a href="#span-22">evt_quickstart_04-repeat3</a>, <a href="#span-28">evt_quickstart_05-repeat3</a>, <a href="#span-34">evt_quickstart_06-repeat3</a></p><details><summary>Estimator, assumptions, and observed inputs</summary><pre>{
+<article class="prediction" id="finding-2"><span class="badge">inferred evidence</span><span class="badge">medium confidence</span><h3>Batch repeated `summarize-repeat3` model calls</h3><p>3 `summarize-repeat3` calls have the same role and may be batchable.</p><dl><dt>Investigation priority</dt><dd>3</dd><dt>Test readiness</dt><dd>needs evidence or review</dd><dt>Why</dt><dd>cost opportunity unavailable; evidence weak or unknown; missing input:quality risk; missing input:reversible; missing input:validation cost usd; missing input:validation effort minutes</dd></dl><details><summary>Ranking components, input references and ordering</summary><pre>{
+  &quot;automatic_application_allowed&quot;: false,
+  &quot;components&quot;: {
+    &quot;confidence&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;rule:batch_model_calls:1.1&quot;,
+      &quot;value&quot;: &quot;medium&quot;
+    },
+    &quot;cost&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;estimator:batch_model_calls:1.0&quot;,
+      &quot;unit&quot;: &quot;USD&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;evidence&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;rule_evidence_level_and_span_coverage&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;frequency&quot;: {
+      &quot;kind&quot;: &quot;observed&quot;,
+      &quot;source_ref&quot;: &quot;included_distinct_runs&quot;,
+      &quot;unit&quot;: &quot;included_runs&quot;,
+      &quot;value&quot;: 1
+    },
+    &quot;impact&quot;: {
+      &quot;kind&quot;: &quot;observed&quot;,
+      &quot;source_ref&quot;: &quot;recorded_span_durations_nonadditive&quot;,
+      &quot;unit&quot;: &quot;ms_of_recorded_span_work&quot;,
+      &quot;value&quot;: 330.0
+    },
+    &quot;latency&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;estimator:batch_model_calls:1.0&quot;,
+      &quot;unit&quot;: &quot;ms&quot;,
+      &quot;value&quot;: 115.5
+    },
+    &quot;quality_risk&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;reversible&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;tokens&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;tokens&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;validation_cost&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;USD&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;validation_effort&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;minutes&quot;,
+      &quot;value&quot;: null
+    }
+  },
+  &quot;invalid_inputs&quot;: [],
+  &quot;method&quot;: &quot;explicit_lexicographic&quot;,
+  &quot;order&quot;: [
+    &quot;ready_to_test&quot;,
+    &quot;confidence&quot;,
+    &quot;evidence&quot;,
+    &quot;quality_risk&quot;,
+    &quot;frequency&quot;,
+    &quot;impact&quot;,
+    &quot;validation_effort&quot;,
+    &quot;validation_cost&quot;,
+    &quot;latency&quot;,
+    &quot;cost&quot;,
+    &quot;tokens&quot;,
+    &quot;identity&quot;
+  ],
+  &quot;reasons&quot;: [
+    &quot;cost_opportunity_unavailable&quot;,
+    &quot;evidence_weak_or_unknown&quot;,
+    &quot;missing_input:quality_risk&quot;,
+    &quot;missing_input:reversible&quot;,
+    &quot;missing_input:validation_cost_usd&quot;,
+    &quot;missing_input:validation_effort_minutes&quot;
+  ],
+  &quot;required_inputs&quot;: [
+    &quot;quality_risk&quot;,
+    &quot;reversible&quot;,
+    &quot;validation_cost_usd&quot;,
+    &quot;validation_effort_minutes&quot;
+  ]
+}</pre></details><dl><dt>Finding ID</dt><dd>al_batch_model_calls_3fdfb611a12a</dd><dt>Estimated latency savings</dt><dd>115.500 ms</dd><dt>Estimated cost savings</dt><dd>$0.0000</dd><dt>Proposed change</dt><dd>Batch documents/items into one prompt or use map-reduce only when outputs truly need independent reasoning.</dd><dt>Validation</dt><dd>runtime decreases and item-level outputs remain equivalent</dd></dl><p>Evidence spans: <a href="#span-22">evt_quickstart_04-repeat3</a>, <a href="#span-28">evt_quickstart_05-repeat3</a>, <a href="#span-34">evt_quickstart_06-repeat3</a></p><details><summary>Estimator, assumptions, and observed inputs</summary><pre>{
   &quot;assumptions&quot;: [
     &quot;Repeated calls accept a shared batch without changing item-level outputs.&quot;,
     &quot;Batch size, token limits, and provider throughput permit the estimated reduction.&quot;
@@ -823,7 +563,417 @@ footer{margin-top:45px;padding-top:16px;border-top:1px solid var(--line);font-si
     &quot;status&quot;: &quot;ok&quot;
   }
 ]</pre></details></article>
-<article class="prediction" id="finding-12"><span class="badge">inferred evidence</span><span class="badge">medium confidence</span><h3>Batch repeated `summarize-repeat4` model calls</h3><p>3 `summarize-repeat4` calls have the same role and may be batchable.</p><dl><dt>Finding ID</dt><dd>al_batch_model_calls_bf53be779a92</dd><dt>Estimated latency savings</dt><dd>115.500 ms</dd><dt>Estimated cost savings</dt><dd>$0.0000</dd><dt>Proposed change</dt><dd>Batch documents/items into one prompt or use map-reduce only when outputs truly need independent reasoning.</dd><dt>Validation</dt><dd>runtime decreases and item-level outputs remain equivalent</dd></dl><p>Evidence spans: <a href="#span-23">evt_quickstart_04-repeat4</a>, <a href="#span-29">evt_quickstart_05-repeat4</a>, <a href="#span-35">evt_quickstart_06-repeat4</a></p><details><summary>Estimator, assumptions, and observed inputs</summary><pre>{
+<article class="prediction" id="finding-3"><span class="badge">inferred evidence</span><span class="badge">medium confidence</span><h3>Batch repeated `summarize-repeat0` model calls</h3><p>3 `summarize-repeat0` calls have the same role and may be batchable.</p><dl><dt>Investigation priority</dt><dd>4</dd><dt>Test readiness</dt><dd>needs evidence or review</dd><dt>Why</dt><dd>cost opportunity unavailable; evidence weak or unknown; missing input:quality risk; missing input:reversible; missing input:validation cost usd; missing input:validation effort minutes</dd></dl><details><summary>Ranking components, input references and ordering</summary><pre>{
+  &quot;automatic_application_allowed&quot;: false,
+  &quot;components&quot;: {
+    &quot;confidence&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;rule:batch_model_calls:1.1&quot;,
+      &quot;value&quot;: &quot;medium&quot;
+    },
+    &quot;cost&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;estimator:batch_model_calls:1.0&quot;,
+      &quot;unit&quot;: &quot;USD&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;evidence&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;rule_evidence_level_and_span_coverage&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;frequency&quot;: {
+      &quot;kind&quot;: &quot;observed&quot;,
+      &quot;source_ref&quot;: &quot;included_distinct_runs&quot;,
+      &quot;unit&quot;: &quot;included_runs&quot;,
+      &quot;value&quot;: 1
+    },
+    &quot;impact&quot;: {
+      &quot;kind&quot;: &quot;observed&quot;,
+      &quot;source_ref&quot;: &quot;recorded_span_durations_nonadditive&quot;,
+      &quot;unit&quot;: &quot;ms_of_recorded_span_work&quot;,
+      &quot;value&quot;: 330.0
+    },
+    &quot;latency&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;estimator:batch_model_calls:1.0&quot;,
+      &quot;unit&quot;: &quot;ms&quot;,
+      &quot;value&quot;: 115.5
+    },
+    &quot;quality_risk&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;reversible&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;tokens&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;tokens&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;validation_cost&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;USD&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;validation_effort&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;minutes&quot;,
+      &quot;value&quot;: null
+    }
+  },
+  &quot;invalid_inputs&quot;: [],
+  &quot;method&quot;: &quot;explicit_lexicographic&quot;,
+  &quot;order&quot;: [
+    &quot;ready_to_test&quot;,
+    &quot;confidence&quot;,
+    &quot;evidence&quot;,
+    &quot;quality_risk&quot;,
+    &quot;frequency&quot;,
+    &quot;impact&quot;,
+    &quot;validation_effort&quot;,
+    &quot;validation_cost&quot;,
+    &quot;latency&quot;,
+    &quot;cost&quot;,
+    &quot;tokens&quot;,
+    &quot;identity&quot;
+  ],
+  &quot;reasons&quot;: [
+    &quot;cost_opportunity_unavailable&quot;,
+    &quot;evidence_weak_or_unknown&quot;,
+    &quot;missing_input:quality_risk&quot;,
+    &quot;missing_input:reversible&quot;,
+    &quot;missing_input:validation_cost_usd&quot;,
+    &quot;missing_input:validation_effort_minutes&quot;
+  ],
+  &quot;required_inputs&quot;: [
+    &quot;quality_risk&quot;,
+    &quot;reversible&quot;,
+    &quot;validation_cost_usd&quot;,
+    &quot;validation_effort_minutes&quot;
+  ]
+}</pre></details><dl><dt>Finding ID</dt><dd>al_batch_model_calls_7c471b4e1a49</dd><dt>Estimated latency savings</dt><dd>115.500 ms</dd><dt>Estimated cost savings</dt><dd>$0.0000</dd><dt>Proposed change</dt><dd>Batch documents/items into one prompt or use map-reduce only when outputs truly need independent reasoning.</dd><dt>Validation</dt><dd>runtime decreases and item-level outputs remain equivalent</dd></dl><p>Evidence spans: <a href="#span-19">evt_quickstart_04-repeat0</a>, <a href="#span-25">evt_quickstart_05-repeat0</a>, <a href="#span-31">evt_quickstart_06-repeat0</a></p><details><summary>Estimator, assumptions, and observed inputs</summary><pre>{
+  &quot;assumptions&quot;: [
+    &quot;Repeated calls accept a shared batch without changing item-level outputs.&quot;,
+    &quot;Batch size, token limits, and provider throughput permit the estimated reduction.&quot;
+  ],
+  &quot;calibrated&quot;: false,
+  &quot;confidence&quot;: &quot;medium&quot;,
+  &quot;estimator_id&quot;: &quot;batch_model_calls&quot;,
+  &quot;estimator_version&quot;: &quot;1.0&quot;,
+  &quot;formula&quot;: &quot;sum_duration_ms * latency_fraction&quot;,
+  &quot;inputs&quot;: {
+    &quot;cost_status&quot;: &quot;complete&quot;,
+    &quot;current_cost_usd&quot;: 0.03672,
+    &quot;max_duration_ms&quot;: 110.0,
+    &quot;repeated_context_ratio&quot;: 0.0571,
+    &quot;span_count&quot;: 3,
+    &quot;sum_duration_ms&quot;: 330.0,
+    &quot;token_status&quot;: &quot;unspecified&quot;
+  },
+  &quot;method&quot;: &quot;heuristic&quot;,
+  &quot;parameters&quot;: {
+    &quot;latency_fraction&quot;: 0.35
+  },
+  &quot;unmodeled_metrics&quot;: [
+    &quot;cost&quot;
+  ]
+}</pre></details><details><summary>Recorded finding evidence</summary><pre>[
+  {
+    &quot;duration_ms&quot;: 110.0,
+    &quot;event_type&quot;: &quot;model_call&quot;,
+    &quot;input_tokens&quot;: 700,
+    &quot;model&quot;: &quot;gpt-4.1&quot;,
+    &quot;name&quot;: &quot;summarize-repeat0&quot;,
+    &quot;operation_kind&quot;: &quot;model&quot;,
+    &quot;output_tokens&quot;: 80,
+    &quot;span_id&quot;: &quot;evt_quickstart_04-repeat0&quot;,
+    &quot;status&quot;: &quot;ok&quot;
+  },
+  {
+    &quot;duration_ms&quot;: 110.0,
+    &quot;event_type&quot;: &quot;model_call&quot;,
+    &quot;input_tokens&quot;: 700,
+    &quot;model&quot;: &quot;gpt-4.1&quot;,
+    &quot;name&quot;: &quot;summarize-repeat0&quot;,
+    &quot;operation_kind&quot;: &quot;model&quot;,
+    &quot;output_tokens&quot;: 80,
+    &quot;span_id&quot;: &quot;evt_quickstart_05-repeat0&quot;,
+    &quot;status&quot;: &quot;ok&quot;
+  },
+  {
+    &quot;duration_ms&quot;: 110.0,
+    &quot;event_type&quot;: &quot;model_call&quot;,
+    &quot;input_tokens&quot;: 700,
+    &quot;model&quot;: &quot;gpt-4.1&quot;,
+    &quot;name&quot;: &quot;summarize-repeat0&quot;,
+    &quot;operation_kind&quot;: &quot;model&quot;,
+    &quot;output_tokens&quot;: 80,
+    &quot;span_id&quot;: &quot;evt_quickstart_06-repeat0&quot;,
+    &quot;status&quot;: &quot;ok&quot;
+  }
+]</pre></details></article>
+<article class="prediction" id="finding-4"><span class="badge">inferred evidence</span><span class="badge">medium confidence</span><h3>Batch repeated `summarize-repeat1` model calls</h3><p>3 `summarize-repeat1` calls have the same role and may be batchable.</p><dl><dt>Investigation priority</dt><dd>5</dd><dt>Test readiness</dt><dd>needs evidence or review</dd><dt>Why</dt><dd>cost opportunity unavailable; evidence weak or unknown; missing input:quality risk; missing input:reversible; missing input:validation cost usd; missing input:validation effort minutes</dd></dl><details><summary>Ranking components, input references and ordering</summary><pre>{
+  &quot;automatic_application_allowed&quot;: false,
+  &quot;components&quot;: {
+    &quot;confidence&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;rule:batch_model_calls:1.1&quot;,
+      &quot;value&quot;: &quot;medium&quot;
+    },
+    &quot;cost&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;estimator:batch_model_calls:1.0&quot;,
+      &quot;unit&quot;: &quot;USD&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;evidence&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;rule_evidence_level_and_span_coverage&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;frequency&quot;: {
+      &quot;kind&quot;: &quot;observed&quot;,
+      &quot;source_ref&quot;: &quot;included_distinct_runs&quot;,
+      &quot;unit&quot;: &quot;included_runs&quot;,
+      &quot;value&quot;: 1
+    },
+    &quot;impact&quot;: {
+      &quot;kind&quot;: &quot;observed&quot;,
+      &quot;source_ref&quot;: &quot;recorded_span_durations_nonadditive&quot;,
+      &quot;unit&quot;: &quot;ms_of_recorded_span_work&quot;,
+      &quot;value&quot;: 330.0
+    },
+    &quot;latency&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;estimator:batch_model_calls:1.0&quot;,
+      &quot;unit&quot;: &quot;ms&quot;,
+      &quot;value&quot;: 115.5
+    },
+    &quot;quality_risk&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;reversible&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;tokens&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;tokens&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;validation_cost&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;USD&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;validation_effort&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;minutes&quot;,
+      &quot;value&quot;: null
+    }
+  },
+  &quot;invalid_inputs&quot;: [],
+  &quot;method&quot;: &quot;explicit_lexicographic&quot;,
+  &quot;order&quot;: [
+    &quot;ready_to_test&quot;,
+    &quot;confidence&quot;,
+    &quot;evidence&quot;,
+    &quot;quality_risk&quot;,
+    &quot;frequency&quot;,
+    &quot;impact&quot;,
+    &quot;validation_effort&quot;,
+    &quot;validation_cost&quot;,
+    &quot;latency&quot;,
+    &quot;cost&quot;,
+    &quot;tokens&quot;,
+    &quot;identity&quot;
+  ],
+  &quot;reasons&quot;: [
+    &quot;cost_opportunity_unavailable&quot;,
+    &quot;evidence_weak_or_unknown&quot;,
+    &quot;missing_input:quality_risk&quot;,
+    &quot;missing_input:reversible&quot;,
+    &quot;missing_input:validation_cost_usd&quot;,
+    &quot;missing_input:validation_effort_minutes&quot;
+  ],
+  &quot;required_inputs&quot;: [
+    &quot;quality_risk&quot;,
+    &quot;reversible&quot;,
+    &quot;validation_cost_usd&quot;,
+    &quot;validation_effort_minutes&quot;
+  ]
+}</pre></details><dl><dt>Finding ID</dt><dd>al_batch_model_calls_9f11808b6947</dd><dt>Estimated latency savings</dt><dd>115.500 ms</dd><dt>Estimated cost savings</dt><dd>$0.0000</dd><dt>Proposed change</dt><dd>Batch documents/items into one prompt or use map-reduce only when outputs truly need independent reasoning.</dd><dt>Validation</dt><dd>runtime decreases and item-level outputs remain equivalent</dd></dl><p>Evidence spans: <a href="#span-20">evt_quickstart_04-repeat1</a>, <a href="#span-26">evt_quickstart_05-repeat1</a>, <a href="#span-32">evt_quickstart_06-repeat1</a></p><details><summary>Estimator, assumptions, and observed inputs</summary><pre>{
+  &quot;assumptions&quot;: [
+    &quot;Repeated calls accept a shared batch without changing item-level outputs.&quot;,
+    &quot;Batch size, token limits, and provider throughput permit the estimated reduction.&quot;
+  ],
+  &quot;calibrated&quot;: false,
+  &quot;confidence&quot;: &quot;medium&quot;,
+  &quot;estimator_id&quot;: &quot;batch_model_calls&quot;,
+  &quot;estimator_version&quot;: &quot;1.0&quot;,
+  &quot;formula&quot;: &quot;sum_duration_ms * latency_fraction&quot;,
+  &quot;inputs&quot;: {
+    &quot;cost_status&quot;: &quot;complete&quot;,
+    &quot;current_cost_usd&quot;: 0.03672,
+    &quot;max_duration_ms&quot;: 110.0,
+    &quot;repeated_context_ratio&quot;: 0.0571,
+    &quot;span_count&quot;: 3,
+    &quot;sum_duration_ms&quot;: 330.0,
+    &quot;token_status&quot;: &quot;unspecified&quot;
+  },
+  &quot;method&quot;: &quot;heuristic&quot;,
+  &quot;parameters&quot;: {
+    &quot;latency_fraction&quot;: 0.35
+  },
+  &quot;unmodeled_metrics&quot;: [
+    &quot;cost&quot;
+  ]
+}</pre></details><details><summary>Recorded finding evidence</summary><pre>[
+  {
+    &quot;duration_ms&quot;: 110.0,
+    &quot;event_type&quot;: &quot;model_call&quot;,
+    &quot;input_tokens&quot;: 700,
+    &quot;model&quot;: &quot;gpt-4.1&quot;,
+    &quot;name&quot;: &quot;summarize-repeat1&quot;,
+    &quot;operation_kind&quot;: &quot;model&quot;,
+    &quot;output_tokens&quot;: 80,
+    &quot;span_id&quot;: &quot;evt_quickstart_04-repeat1&quot;,
+    &quot;status&quot;: &quot;ok&quot;
+  },
+  {
+    &quot;duration_ms&quot;: 110.0,
+    &quot;event_type&quot;: &quot;model_call&quot;,
+    &quot;input_tokens&quot;: 700,
+    &quot;model&quot;: &quot;gpt-4.1&quot;,
+    &quot;name&quot;: &quot;summarize-repeat1&quot;,
+    &quot;operation_kind&quot;: &quot;model&quot;,
+    &quot;output_tokens&quot;: 80,
+    &quot;span_id&quot;: &quot;evt_quickstart_05-repeat1&quot;,
+    &quot;status&quot;: &quot;ok&quot;
+  },
+  {
+    &quot;duration_ms&quot;: 110.0,
+    &quot;event_type&quot;: &quot;model_call&quot;,
+    &quot;input_tokens&quot;: 700,
+    &quot;model&quot;: &quot;gpt-4.1&quot;,
+    &quot;name&quot;: &quot;summarize-repeat1&quot;,
+    &quot;operation_kind&quot;: &quot;model&quot;,
+    &quot;output_tokens&quot;: 80,
+    &quot;span_id&quot;: &quot;evt_quickstart_06-repeat1&quot;,
+    &quot;status&quot;: &quot;ok&quot;
+  }
+]</pre></details></article>
+<article class="prediction" id="finding-5"><span class="badge">inferred evidence</span><span class="badge">medium confidence</span><h3>Batch repeated `summarize-repeat4` model calls</h3><p>3 `summarize-repeat4` calls have the same role and may be batchable.</p><dl><dt>Investigation priority</dt><dd>6</dd><dt>Test readiness</dt><dd>needs evidence or review</dd><dt>Why</dt><dd>cost opportunity unavailable; evidence weak or unknown; missing input:quality risk; missing input:reversible; missing input:validation cost usd; missing input:validation effort minutes</dd></dl><details><summary>Ranking components, input references and ordering</summary><pre>{
+  &quot;automatic_application_allowed&quot;: false,
+  &quot;components&quot;: {
+    &quot;confidence&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;rule:batch_model_calls:1.1&quot;,
+      &quot;value&quot;: &quot;medium&quot;
+    },
+    &quot;cost&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;estimator:batch_model_calls:1.0&quot;,
+      &quot;unit&quot;: &quot;USD&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;evidence&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;rule_evidence_level_and_span_coverage&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;frequency&quot;: {
+      &quot;kind&quot;: &quot;observed&quot;,
+      &quot;source_ref&quot;: &quot;included_distinct_runs&quot;,
+      &quot;unit&quot;: &quot;included_runs&quot;,
+      &quot;value&quot;: 1
+    },
+    &quot;impact&quot;: {
+      &quot;kind&quot;: &quot;observed&quot;,
+      &quot;source_ref&quot;: &quot;recorded_span_durations_nonadditive&quot;,
+      &quot;unit&quot;: &quot;ms_of_recorded_span_work&quot;,
+      &quot;value&quot;: 330.0
+    },
+    &quot;latency&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;estimator:batch_model_calls:1.0&quot;,
+      &quot;unit&quot;: &quot;ms&quot;,
+      &quot;value&quot;: 115.5
+    },
+    &quot;quality_risk&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;reversible&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;tokens&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;tokens&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;validation_cost&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;USD&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;validation_effort&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;minutes&quot;,
+      &quot;value&quot;: null
+    }
+  },
+  &quot;invalid_inputs&quot;: [],
+  &quot;method&quot;: &quot;explicit_lexicographic&quot;,
+  &quot;order&quot;: [
+    &quot;ready_to_test&quot;,
+    &quot;confidence&quot;,
+    &quot;evidence&quot;,
+    &quot;quality_risk&quot;,
+    &quot;frequency&quot;,
+    &quot;impact&quot;,
+    &quot;validation_effort&quot;,
+    &quot;validation_cost&quot;,
+    &quot;latency&quot;,
+    &quot;cost&quot;,
+    &quot;tokens&quot;,
+    &quot;identity&quot;
+  ],
+  &quot;reasons&quot;: [
+    &quot;cost_opportunity_unavailable&quot;,
+    &quot;evidence_weak_or_unknown&quot;,
+    &quot;missing_input:quality_risk&quot;,
+    &quot;missing_input:reversible&quot;,
+    &quot;missing_input:validation_cost_usd&quot;,
+    &quot;missing_input:validation_effort_minutes&quot;
+  ],
+  &quot;required_inputs&quot;: [
+    &quot;quality_risk&quot;,
+    &quot;reversible&quot;,
+    &quot;validation_cost_usd&quot;,
+    &quot;validation_effort_minutes&quot;
+  ]
+}</pre></details><dl><dt>Finding ID</dt><dd>al_batch_model_calls_bf53be779a92</dd><dt>Estimated latency savings</dt><dd>115.500 ms</dd><dt>Estimated cost savings</dt><dd>$0.0000</dd><dt>Proposed change</dt><dd>Batch documents/items into one prompt or use map-reduce only when outputs truly need independent reasoning.</dd><dt>Validation</dt><dd>runtime decreases and item-level outputs remain equivalent</dd></dl><p>Evidence spans: <a href="#span-23">evt_quickstart_04-repeat4</a>, <a href="#span-29">evt_quickstart_05-repeat4</a>, <a href="#span-35">evt_quickstart_06-repeat4</a></p><details><summary>Estimator, assumptions, and observed inputs</summary><pre>{
   &quot;assumptions&quot;: [
     &quot;Repeated calls accept a shared batch without changing item-level outputs.&quot;,
     &quot;Batch size, token limits, and provider throughput permit the estimated reduction.&quot;
@@ -884,7 +1034,1345 @@ footer{margin-top:45px;padding-top:16px;border-top:1px solid var(--line);font-si
     &quot;status&quot;: &quot;ok&quot;
   }
 ]</pre></details></article>
-<article class="prediction" id="finding-13"><span class="badge">inferred evidence</span><span class="badge">low confidence</span><h3>Route `summarize` to a cheaper model</h3><p>`summarize` is a relatively small model step using 780 tokens on gpt-4.1.</p><dl><dt>Finding ID</dt><dd>al_route_to_smaller_model_d6b9b5d11332</dd><dt>Estimated latency savings</dt><dd>27.500 ms</dd><dt>Estimated cost savings</dt><dd>$0.0000</dd><dt>Proposed change</dt><dd>Try a smaller model for planning, summarization, extraction, or verification steps and keep the larger model for final synthesis.</dd><dt>Validation</dt><dd>cost decreases while configured quality scorer passes</dd></dl><p>Evidence spans: <a href="#span-18">evt_quickstart_04</a></p><details><summary>Estimator, assumptions, and observed inputs</summary><pre>{
+<article class="prediction" id="finding-6"><span class="badge">inferred evidence</span><span class="badge">medium confidence</span><h3>Batch repeated `summarize` model calls</h3><p>3 `summarize` calls have the same role and may be batchable.</p><dl><dt>Investigation priority</dt><dd>7</dd><dt>Test readiness</dt><dd>needs evidence or review</dd><dt>Why</dt><dd>cost opportunity unavailable; evidence weak or unknown; missing input:quality risk; missing input:reversible; missing input:validation cost usd; missing input:validation effort minutes</dd></dl><details><summary>Ranking components, input references and ordering</summary><pre>{
+  &quot;automatic_application_allowed&quot;: false,
+  &quot;components&quot;: {
+    &quot;confidence&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;rule:batch_model_calls:1.1&quot;,
+      &quot;value&quot;: &quot;medium&quot;
+    },
+    &quot;cost&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;estimator:batch_model_calls:1.0&quot;,
+      &quot;unit&quot;: &quot;USD&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;evidence&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;rule_evidence_level_and_span_coverage&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;frequency&quot;: {
+      &quot;kind&quot;: &quot;observed&quot;,
+      &quot;source_ref&quot;: &quot;included_distinct_runs&quot;,
+      &quot;unit&quot;: &quot;included_runs&quot;,
+      &quot;value&quot;: 1
+    },
+    &quot;impact&quot;: {
+      &quot;kind&quot;: &quot;observed&quot;,
+      &quot;source_ref&quot;: &quot;recorded_span_durations_nonadditive&quot;,
+      &quot;unit&quot;: &quot;ms_of_recorded_span_work&quot;,
+      &quot;value&quot;: 330.0
+    },
+    &quot;latency&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;estimator:batch_model_calls:1.0&quot;,
+      &quot;unit&quot;: &quot;ms&quot;,
+      &quot;value&quot;: 115.5
+    },
+    &quot;quality_risk&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;reversible&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;tokens&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;tokens&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;validation_cost&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;USD&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;validation_effort&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;minutes&quot;,
+      &quot;value&quot;: null
+    }
+  },
+  &quot;invalid_inputs&quot;: [],
+  &quot;method&quot;: &quot;explicit_lexicographic&quot;,
+  &quot;order&quot;: [
+    &quot;ready_to_test&quot;,
+    &quot;confidence&quot;,
+    &quot;evidence&quot;,
+    &quot;quality_risk&quot;,
+    &quot;frequency&quot;,
+    &quot;impact&quot;,
+    &quot;validation_effort&quot;,
+    &quot;validation_cost&quot;,
+    &quot;latency&quot;,
+    &quot;cost&quot;,
+    &quot;tokens&quot;,
+    &quot;identity&quot;
+  ],
+  &quot;reasons&quot;: [
+    &quot;cost_opportunity_unavailable&quot;,
+    &quot;evidence_weak_or_unknown&quot;,
+    &quot;missing_input:quality_risk&quot;,
+    &quot;missing_input:reversible&quot;,
+    &quot;missing_input:validation_cost_usd&quot;,
+    &quot;missing_input:validation_effort_minutes&quot;
+  ],
+  &quot;required_inputs&quot;: [
+    &quot;quality_risk&quot;,
+    &quot;reversible&quot;,
+    &quot;validation_cost_usd&quot;,
+    &quot;validation_effort_minutes&quot;
+  ]
+}</pre></details><dl><dt>Finding ID</dt><dd>al_batch_model_calls_e2a487505f90</dd><dt>Estimated latency savings</dt><dd>115.500 ms</dd><dt>Estimated cost savings</dt><dd>$0.0000</dd><dt>Proposed change</dt><dd>Batch documents/items into one prompt or use map-reduce only when outputs truly need independent reasoning.</dd><dt>Validation</dt><dd>runtime decreases and item-level outputs remain equivalent</dd></dl><p>Evidence spans: <a href="#span-18">evt_quickstart_04</a>, <a href="#span-24">evt_quickstart_05</a>, <a href="#span-30">evt_quickstart_06</a></p><details><summary>Estimator, assumptions, and observed inputs</summary><pre>{
+  &quot;assumptions&quot;: [
+    &quot;Repeated calls accept a shared batch without changing item-level outputs.&quot;,
+    &quot;Batch size, token limits, and provider throughput permit the estimated reduction.&quot;
+  ],
+  &quot;calibrated&quot;: false,
+  &quot;confidence&quot;: &quot;medium&quot;,
+  &quot;estimator_id&quot;: &quot;batch_model_calls&quot;,
+  &quot;estimator_version&quot;: &quot;1.0&quot;,
+  &quot;formula&quot;: &quot;sum_duration_ms * latency_fraction&quot;,
+  &quot;inputs&quot;: {
+    &quot;cost_status&quot;: &quot;complete&quot;,
+    &quot;current_cost_usd&quot;: 0.03672,
+    &quot;max_duration_ms&quot;: 110.0,
+    &quot;repeated_context_ratio&quot;: 0.0571,
+    &quot;span_count&quot;: 3,
+    &quot;sum_duration_ms&quot;: 330.0,
+    &quot;token_status&quot;: &quot;unspecified&quot;
+  },
+  &quot;method&quot;: &quot;heuristic&quot;,
+  &quot;parameters&quot;: {
+    &quot;latency_fraction&quot;: 0.35
+  },
+  &quot;unmodeled_metrics&quot;: [
+    &quot;cost&quot;
+  ]
+}</pre></details><details><summary>Recorded finding evidence</summary><pre>[
+  {
+    &quot;duration_ms&quot;: 110.0,
+    &quot;event_type&quot;: &quot;model_call&quot;,
+    &quot;input_tokens&quot;: 700,
+    &quot;model&quot;: &quot;gpt-4.1&quot;,
+    &quot;name&quot;: &quot;summarize&quot;,
+    &quot;operation_kind&quot;: &quot;model&quot;,
+    &quot;output_tokens&quot;: 80,
+    &quot;span_id&quot;: &quot;evt_quickstart_04&quot;,
+    &quot;status&quot;: &quot;ok&quot;
+  },
+  {
+    &quot;duration_ms&quot;: 110.0,
+    &quot;event_type&quot;: &quot;model_call&quot;,
+    &quot;input_tokens&quot;: 700,
+    &quot;model&quot;: &quot;gpt-4.1&quot;,
+    &quot;name&quot;: &quot;summarize&quot;,
+    &quot;operation_kind&quot;: &quot;model&quot;,
+    &quot;output_tokens&quot;: 80,
+    &quot;span_id&quot;: &quot;evt_quickstart_05&quot;,
+    &quot;status&quot;: &quot;ok&quot;
+  },
+  {
+    &quot;duration_ms&quot;: 110.0,
+    &quot;event_type&quot;: &quot;model_call&quot;,
+    &quot;input_tokens&quot;: 700,
+    &quot;model&quot;: &quot;gpt-4.1&quot;,
+    &quot;name&quot;: &quot;summarize&quot;,
+    &quot;operation_kind&quot;: &quot;model&quot;,
+    &quot;output_tokens&quot;: 80,
+    &quot;span_id&quot;: &quot;evt_quickstart_06&quot;,
+    &quot;status&quot;: &quot;ok&quot;
+  }
+]</pre></details></article>
+<article class="prediction" id="finding-7"><span class="badge">inferred evidence</span><span class="badge">low confidence</span><h3>Parallelize repeated `retrieve-repeat3` tool calls</h3><p>3 repeated calls. Repeated tool calls may be candidates for concurrent execution. Verify output independence and shared-state safety before changing them.</p><dl><dt>Investigation priority</dt><dd>8</dd><dt>Test readiness</dt><dd>needs evidence or review</dd><dt>Why</dt><dd>confidence weak or unknown; cost opportunity unavailable; evidence weak or unknown; missing input:quality risk; missing input:reversible; missing input:validation cost usd; missing input:validation effort minutes</dd></dl><details><summary>Ranking components, input references and ordering</summary><pre>{
+  &quot;automatic_application_allowed&quot;: false,
+  &quot;components&quot;: {
+    &quot;confidence&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;rule:parallelize_tools:1.1&quot;,
+      &quot;value&quot;: &quot;low&quot;
+    },
+    &quot;cost&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;estimator:parallelize_tools:1.0&quot;,
+      &quot;unit&quot;: &quot;USD&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;evidence&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;rule_evidence_level_and_span_coverage&quot;,
+      &quot;value&quot;: &quot;inferred&quot;
+    },
+    &quot;frequency&quot;: {
+      &quot;kind&quot;: &quot;observed&quot;,
+      &quot;source_ref&quot;: &quot;included_distinct_runs&quot;,
+      &quot;unit&quot;: &quot;included_runs&quot;,
+      &quot;value&quot;: 1
+    },
+    &quot;impact&quot;: {
+      &quot;kind&quot;: &quot;observed&quot;,
+      &quot;source_ref&quot;: &quot;recorded_span_durations_nonadditive&quot;,
+      &quot;unit&quot;: &quot;ms_of_recorded_span_work&quot;,
+      &quot;value&quot;: 540.0
+    },
+    &quot;latency&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;estimator:parallelize_tools:1.0&quot;,
+      &quot;unit&quot;: &quot;ms&quot;,
+      &quot;value&quot;: 360.0
+    },
+    &quot;quality_risk&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;reversible&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;tokens&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;tokens&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;validation_cost&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;USD&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;validation_effort&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;minutes&quot;,
+      &quot;value&quot;: null
+    }
+  },
+  &quot;invalid_inputs&quot;: [],
+  &quot;method&quot;: &quot;explicit_lexicographic&quot;,
+  &quot;order&quot;: [
+    &quot;ready_to_test&quot;,
+    &quot;confidence&quot;,
+    &quot;evidence&quot;,
+    &quot;quality_risk&quot;,
+    &quot;frequency&quot;,
+    &quot;impact&quot;,
+    &quot;validation_effort&quot;,
+    &quot;validation_cost&quot;,
+    &quot;latency&quot;,
+    &quot;cost&quot;,
+    &quot;tokens&quot;,
+    &quot;identity&quot;
+  ],
+  &quot;reasons&quot;: [
+    &quot;confidence_weak_or_unknown&quot;,
+    &quot;cost_opportunity_unavailable&quot;,
+    &quot;evidence_weak_or_unknown&quot;,
+    &quot;missing_input:quality_risk&quot;,
+    &quot;missing_input:reversible&quot;,
+    &quot;missing_input:validation_cost_usd&quot;,
+    &quot;missing_input:validation_effort_minutes&quot;
+  ],
+  &quot;required_inputs&quot;: [
+    &quot;quality_risk&quot;,
+    &quot;reversible&quot;,
+    &quot;validation_cost_usd&quot;,
+    &quot;validation_effort_minutes&quot;
+  ]
+}</pre></details><dl><dt>Finding ID</dt><dd>al_parallelize_tools_21b66313a1f3</dd><dt>Estimated latency savings</dt><dd>360.000 ms</dd><dt>Estimated cost savings</dt><dd>$0.0000</dd><dt>Proposed change</dt><dd>After verifying output independence and shared-state safety, use asyncio.gather or ThreadPoolExecutor and validate the change with replay.</dd><dt>Validation</dt><dd>runtime decreases while tool outputs remain equivalent</dd></dl><p>Evidence spans: <a href="#span-4">evt_quickstart_01-repeat3</a>, <a href="#span-10">evt_quickstart_02-repeat3</a>, <a href="#span-16">evt_quickstart_03-repeat3</a></p><details><summary>Estimator, assumptions, and observed inputs</summary><pre>{
+  &quot;assumptions&quot;: [
+    &quot;No call consumes another call&#x27;s output.&quot;,
+    &quot;Calls do not conflict through shared mutable state.&quot;,
+    &quot;Calls are on the runtime-limiting path and scheduling adds no overhead.&quot;,
+    &quot;The formula applies assuming concurrent execution has negligible scheduling overhead.&quot;
+  ],
+  &quot;calibrated&quot;: false,
+  &quot;confidence&quot;: &quot;low&quot;,
+  &quot;estimator_id&quot;: &quot;parallelize_tools&quot;,
+  &quot;estimator_version&quot;: &quot;1.0&quot;,
+  &quot;formula&quot;: &quot;sum_duration_ms - max_duration_ms&quot;,
+  &quot;inputs&quot;: {
+    &quot;cost_status&quot;: &quot;complete&quot;,
+    &quot;current_cost_usd&quot;: 0.03672,
+    &quot;max_duration_ms&quot;: 180.0,
+    &quot;repeated_context_ratio&quot;: 0.0571,
+    &quot;span_count&quot;: 3,
+    &quot;sum_duration_ms&quot;: 540.0,
+    &quot;token_status&quot;: &quot;unspecified&quot;
+  },
+  &quot;method&quot;: &quot;heuristic&quot;,
+  &quot;parameters&quot;: {},
+  &quot;unmodeled_metrics&quot;: [
+    &quot;cost&quot;
+  ]
+}</pre></details><details><summary>Recorded finding evidence</summary><pre>[
+  {
+    &quot;duration_ms&quot;: 180.0,
+    &quot;event_type&quot;: &quot;tool_call&quot;,
+    &quot;input_tokens&quot;: 0,
+    &quot;model&quot;: null,
+    &quot;name&quot;: &quot;retrieve-repeat3&quot;,
+    &quot;operation_kind&quot;: &quot;tool&quot;,
+    &quot;output_tokens&quot;: 0,
+    &quot;span_id&quot;: &quot;evt_quickstart_01-repeat3&quot;,
+    &quot;status&quot;: &quot;ok&quot;
+  },
+  {
+    &quot;duration_ms&quot;: 180.0,
+    &quot;event_type&quot;: &quot;tool_call&quot;,
+    &quot;input_tokens&quot;: 0,
+    &quot;model&quot;: null,
+    &quot;name&quot;: &quot;retrieve-repeat3&quot;,
+    &quot;operation_kind&quot;: &quot;tool&quot;,
+    &quot;output_tokens&quot;: 0,
+    &quot;span_id&quot;: &quot;evt_quickstart_02-repeat3&quot;,
+    &quot;status&quot;: &quot;ok&quot;
+  },
+  {
+    &quot;duration_ms&quot;: 180.0,
+    &quot;event_type&quot;: &quot;tool_call&quot;,
+    &quot;input_tokens&quot;: 0,
+    &quot;model&quot;: null,
+    &quot;name&quot;: &quot;retrieve-repeat3&quot;,
+    &quot;operation_kind&quot;: &quot;tool&quot;,
+    &quot;output_tokens&quot;: 0,
+    &quot;span_id&quot;: &quot;evt_quickstart_03-repeat3&quot;,
+    &quot;status&quot;: &quot;ok&quot;
+  }
+]</pre></details></article>
+<article class="prediction" id="finding-8"><span class="badge">inferred evidence</span><span class="badge">low confidence</span><h3>Parallelize repeated `retrieve-repeat1` tool calls</h3><p>3 repeated calls. Repeated tool calls may be candidates for concurrent execution. Verify output independence and shared-state safety before changing them.</p><dl><dt>Investigation priority</dt><dd>9</dd><dt>Test readiness</dt><dd>needs evidence or review</dd><dt>Why</dt><dd>confidence weak or unknown; cost opportunity unavailable; evidence weak or unknown; missing input:quality risk; missing input:reversible; missing input:validation cost usd; missing input:validation effort minutes</dd></dl><details><summary>Ranking components, input references and ordering</summary><pre>{
+  &quot;automatic_application_allowed&quot;: false,
+  &quot;components&quot;: {
+    &quot;confidence&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;rule:parallelize_tools:1.1&quot;,
+      &quot;value&quot;: &quot;low&quot;
+    },
+    &quot;cost&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;estimator:parallelize_tools:1.0&quot;,
+      &quot;unit&quot;: &quot;USD&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;evidence&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;rule_evidence_level_and_span_coverage&quot;,
+      &quot;value&quot;: &quot;inferred&quot;
+    },
+    &quot;frequency&quot;: {
+      &quot;kind&quot;: &quot;observed&quot;,
+      &quot;source_ref&quot;: &quot;included_distinct_runs&quot;,
+      &quot;unit&quot;: &quot;included_runs&quot;,
+      &quot;value&quot;: 1
+    },
+    &quot;impact&quot;: {
+      &quot;kind&quot;: &quot;observed&quot;,
+      &quot;source_ref&quot;: &quot;recorded_span_durations_nonadditive&quot;,
+      &quot;unit&quot;: &quot;ms_of_recorded_span_work&quot;,
+      &quot;value&quot;: 540.0
+    },
+    &quot;latency&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;estimator:parallelize_tools:1.0&quot;,
+      &quot;unit&quot;: &quot;ms&quot;,
+      &quot;value&quot;: 360.0
+    },
+    &quot;quality_risk&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;reversible&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;tokens&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;tokens&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;validation_cost&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;USD&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;validation_effort&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;minutes&quot;,
+      &quot;value&quot;: null
+    }
+  },
+  &quot;invalid_inputs&quot;: [],
+  &quot;method&quot;: &quot;explicit_lexicographic&quot;,
+  &quot;order&quot;: [
+    &quot;ready_to_test&quot;,
+    &quot;confidence&quot;,
+    &quot;evidence&quot;,
+    &quot;quality_risk&quot;,
+    &quot;frequency&quot;,
+    &quot;impact&quot;,
+    &quot;validation_effort&quot;,
+    &quot;validation_cost&quot;,
+    &quot;latency&quot;,
+    &quot;cost&quot;,
+    &quot;tokens&quot;,
+    &quot;identity&quot;
+  ],
+  &quot;reasons&quot;: [
+    &quot;confidence_weak_or_unknown&quot;,
+    &quot;cost_opportunity_unavailable&quot;,
+    &quot;evidence_weak_or_unknown&quot;,
+    &quot;missing_input:quality_risk&quot;,
+    &quot;missing_input:reversible&quot;,
+    &quot;missing_input:validation_cost_usd&quot;,
+    &quot;missing_input:validation_effort_minutes&quot;
+  ],
+  &quot;required_inputs&quot;: [
+    &quot;quality_risk&quot;,
+    &quot;reversible&quot;,
+    &quot;validation_cost_usd&quot;,
+    &quot;validation_effort_minutes&quot;
+  ]
+}</pre></details><dl><dt>Finding ID</dt><dd>al_parallelize_tools_2c1a691fb06a</dd><dt>Estimated latency savings</dt><dd>360.000 ms</dd><dt>Estimated cost savings</dt><dd>$0.0000</dd><dt>Proposed change</dt><dd>After verifying output independence and shared-state safety, use asyncio.gather or ThreadPoolExecutor and validate the change with replay.</dd><dt>Validation</dt><dd>runtime decreases while tool outputs remain equivalent</dd></dl><p>Evidence spans: <a href="#span-2">evt_quickstart_01-repeat1</a>, <a href="#span-8">evt_quickstart_02-repeat1</a>, <a href="#span-14">evt_quickstart_03-repeat1</a></p><details><summary>Estimator, assumptions, and observed inputs</summary><pre>{
+  &quot;assumptions&quot;: [
+    &quot;No call consumes another call&#x27;s output.&quot;,
+    &quot;Calls do not conflict through shared mutable state.&quot;,
+    &quot;Calls are on the runtime-limiting path and scheduling adds no overhead.&quot;,
+    &quot;The formula applies assuming concurrent execution has negligible scheduling overhead.&quot;
+  ],
+  &quot;calibrated&quot;: false,
+  &quot;confidence&quot;: &quot;low&quot;,
+  &quot;estimator_id&quot;: &quot;parallelize_tools&quot;,
+  &quot;estimator_version&quot;: &quot;1.0&quot;,
+  &quot;formula&quot;: &quot;sum_duration_ms - max_duration_ms&quot;,
+  &quot;inputs&quot;: {
+    &quot;cost_status&quot;: &quot;complete&quot;,
+    &quot;current_cost_usd&quot;: 0.03672,
+    &quot;max_duration_ms&quot;: 180.0,
+    &quot;repeated_context_ratio&quot;: 0.0571,
+    &quot;span_count&quot;: 3,
+    &quot;sum_duration_ms&quot;: 540.0,
+    &quot;token_status&quot;: &quot;unspecified&quot;
+  },
+  &quot;method&quot;: &quot;heuristic&quot;,
+  &quot;parameters&quot;: {},
+  &quot;unmodeled_metrics&quot;: [
+    &quot;cost&quot;
+  ]
+}</pre></details><details><summary>Recorded finding evidence</summary><pre>[
+  {
+    &quot;duration_ms&quot;: 180.0,
+    &quot;event_type&quot;: &quot;tool_call&quot;,
+    &quot;input_tokens&quot;: 0,
+    &quot;model&quot;: null,
+    &quot;name&quot;: &quot;retrieve-repeat1&quot;,
+    &quot;operation_kind&quot;: &quot;tool&quot;,
+    &quot;output_tokens&quot;: 0,
+    &quot;span_id&quot;: &quot;evt_quickstart_01-repeat1&quot;,
+    &quot;status&quot;: &quot;ok&quot;
+  },
+  {
+    &quot;duration_ms&quot;: 180.0,
+    &quot;event_type&quot;: &quot;tool_call&quot;,
+    &quot;input_tokens&quot;: 0,
+    &quot;model&quot;: null,
+    &quot;name&quot;: &quot;retrieve-repeat1&quot;,
+    &quot;operation_kind&quot;: &quot;tool&quot;,
+    &quot;output_tokens&quot;: 0,
+    &quot;span_id&quot;: &quot;evt_quickstart_02-repeat1&quot;,
+    &quot;status&quot;: &quot;ok&quot;
+  },
+  {
+    &quot;duration_ms&quot;: 180.0,
+    &quot;event_type&quot;: &quot;tool_call&quot;,
+    &quot;input_tokens&quot;: 0,
+    &quot;model&quot;: null,
+    &quot;name&quot;: &quot;retrieve-repeat1&quot;,
+    &quot;operation_kind&quot;: &quot;tool&quot;,
+    &quot;output_tokens&quot;: 0,
+    &quot;span_id&quot;: &quot;evt_quickstart_03-repeat1&quot;,
+    &quot;status&quot;: &quot;ok&quot;
+  }
+]</pre></details></article>
+<article class="prediction" id="finding-9"><span class="badge">inferred evidence</span><span class="badge">low confidence</span><h3>Parallelize repeated `retrieve-repeat4` tool calls</h3><p>3 repeated calls. Repeated tool calls may be candidates for concurrent execution. Verify output independence and shared-state safety before changing them.</p><dl><dt>Investigation priority</dt><dd>10</dd><dt>Test readiness</dt><dd>needs evidence or review</dd><dt>Why</dt><dd>confidence weak or unknown; cost opportunity unavailable; evidence weak or unknown; missing input:quality risk; missing input:reversible; missing input:validation cost usd; missing input:validation effort minutes</dd></dl><details><summary>Ranking components, input references and ordering</summary><pre>{
+  &quot;automatic_application_allowed&quot;: false,
+  &quot;components&quot;: {
+    &quot;confidence&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;rule:parallelize_tools:1.1&quot;,
+      &quot;value&quot;: &quot;low&quot;
+    },
+    &quot;cost&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;estimator:parallelize_tools:1.0&quot;,
+      &quot;unit&quot;: &quot;USD&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;evidence&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;rule_evidence_level_and_span_coverage&quot;,
+      &quot;value&quot;: &quot;inferred&quot;
+    },
+    &quot;frequency&quot;: {
+      &quot;kind&quot;: &quot;observed&quot;,
+      &quot;source_ref&quot;: &quot;included_distinct_runs&quot;,
+      &quot;unit&quot;: &quot;included_runs&quot;,
+      &quot;value&quot;: 1
+    },
+    &quot;impact&quot;: {
+      &quot;kind&quot;: &quot;observed&quot;,
+      &quot;source_ref&quot;: &quot;recorded_span_durations_nonadditive&quot;,
+      &quot;unit&quot;: &quot;ms_of_recorded_span_work&quot;,
+      &quot;value&quot;: 540.0
+    },
+    &quot;latency&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;estimator:parallelize_tools:1.0&quot;,
+      &quot;unit&quot;: &quot;ms&quot;,
+      &quot;value&quot;: 360.0
+    },
+    &quot;quality_risk&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;reversible&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;tokens&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;tokens&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;validation_cost&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;USD&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;validation_effort&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;minutes&quot;,
+      &quot;value&quot;: null
+    }
+  },
+  &quot;invalid_inputs&quot;: [],
+  &quot;method&quot;: &quot;explicit_lexicographic&quot;,
+  &quot;order&quot;: [
+    &quot;ready_to_test&quot;,
+    &quot;confidence&quot;,
+    &quot;evidence&quot;,
+    &quot;quality_risk&quot;,
+    &quot;frequency&quot;,
+    &quot;impact&quot;,
+    &quot;validation_effort&quot;,
+    &quot;validation_cost&quot;,
+    &quot;latency&quot;,
+    &quot;cost&quot;,
+    &quot;tokens&quot;,
+    &quot;identity&quot;
+  ],
+  &quot;reasons&quot;: [
+    &quot;confidence_weak_or_unknown&quot;,
+    &quot;cost_opportunity_unavailable&quot;,
+    &quot;evidence_weak_or_unknown&quot;,
+    &quot;missing_input:quality_risk&quot;,
+    &quot;missing_input:reversible&quot;,
+    &quot;missing_input:validation_cost_usd&quot;,
+    &quot;missing_input:validation_effort_minutes&quot;
+  ],
+  &quot;required_inputs&quot;: [
+    &quot;quality_risk&quot;,
+    &quot;reversible&quot;,
+    &quot;validation_cost_usd&quot;,
+    &quot;validation_effort_minutes&quot;
+  ]
+}</pre></details><dl><dt>Finding ID</dt><dd>al_parallelize_tools_4daf13a58672</dd><dt>Estimated latency savings</dt><dd>360.000 ms</dd><dt>Estimated cost savings</dt><dd>$0.0000</dd><dt>Proposed change</dt><dd>After verifying output independence and shared-state safety, use asyncio.gather or ThreadPoolExecutor and validate the change with replay.</dd><dt>Validation</dt><dd>runtime decreases while tool outputs remain equivalent</dd></dl><p>Evidence spans: <a href="#span-5">evt_quickstart_01-repeat4</a>, <a href="#span-11">evt_quickstart_02-repeat4</a>, <a href="#span-17">evt_quickstart_03-repeat4</a></p><details><summary>Estimator, assumptions, and observed inputs</summary><pre>{
+  &quot;assumptions&quot;: [
+    &quot;No call consumes another call&#x27;s output.&quot;,
+    &quot;Calls do not conflict through shared mutable state.&quot;,
+    &quot;Calls are on the runtime-limiting path and scheduling adds no overhead.&quot;,
+    &quot;The formula applies assuming concurrent execution has negligible scheduling overhead.&quot;
+  ],
+  &quot;calibrated&quot;: false,
+  &quot;confidence&quot;: &quot;low&quot;,
+  &quot;estimator_id&quot;: &quot;parallelize_tools&quot;,
+  &quot;estimator_version&quot;: &quot;1.0&quot;,
+  &quot;formula&quot;: &quot;sum_duration_ms - max_duration_ms&quot;,
+  &quot;inputs&quot;: {
+    &quot;cost_status&quot;: &quot;complete&quot;,
+    &quot;current_cost_usd&quot;: 0.03672,
+    &quot;max_duration_ms&quot;: 180.0,
+    &quot;repeated_context_ratio&quot;: 0.0571,
+    &quot;span_count&quot;: 3,
+    &quot;sum_duration_ms&quot;: 540.0,
+    &quot;token_status&quot;: &quot;unspecified&quot;
+  },
+  &quot;method&quot;: &quot;heuristic&quot;,
+  &quot;parameters&quot;: {},
+  &quot;unmodeled_metrics&quot;: [
+    &quot;cost&quot;
+  ]
+}</pre></details><details><summary>Recorded finding evidence</summary><pre>[
+  {
+    &quot;duration_ms&quot;: 180.0,
+    &quot;event_type&quot;: &quot;tool_call&quot;,
+    &quot;input_tokens&quot;: 0,
+    &quot;model&quot;: null,
+    &quot;name&quot;: &quot;retrieve-repeat4&quot;,
+    &quot;operation_kind&quot;: &quot;tool&quot;,
+    &quot;output_tokens&quot;: 0,
+    &quot;span_id&quot;: &quot;evt_quickstart_01-repeat4&quot;,
+    &quot;status&quot;: &quot;ok&quot;
+  },
+  {
+    &quot;duration_ms&quot;: 180.0,
+    &quot;event_type&quot;: &quot;tool_call&quot;,
+    &quot;input_tokens&quot;: 0,
+    &quot;model&quot;: null,
+    &quot;name&quot;: &quot;retrieve-repeat4&quot;,
+    &quot;operation_kind&quot;: &quot;tool&quot;,
+    &quot;output_tokens&quot;: 0,
+    &quot;span_id&quot;: &quot;evt_quickstart_02-repeat4&quot;,
+    &quot;status&quot;: &quot;ok&quot;
+  },
+  {
+    &quot;duration_ms&quot;: 180.0,
+    &quot;event_type&quot;: &quot;tool_call&quot;,
+    &quot;input_tokens&quot;: 0,
+    &quot;model&quot;: null,
+    &quot;name&quot;: &quot;retrieve-repeat4&quot;,
+    &quot;operation_kind&quot;: &quot;tool&quot;,
+    &quot;output_tokens&quot;: 0,
+    &quot;span_id&quot;: &quot;evt_quickstart_03-repeat4&quot;,
+    &quot;status&quot;: &quot;ok&quot;
+  }
+]</pre></details></article>
+<article class="prediction" id="finding-10"><span class="badge">inferred evidence</span><span class="badge">low confidence</span><h3>Parallelize repeated `retrieve` tool calls</h3><p>3 repeated calls. Repeated tool calls may be candidates for concurrent execution. Verify output independence and shared-state safety before changing them.</p><dl><dt>Investigation priority</dt><dd>11</dd><dt>Test readiness</dt><dd>needs evidence or review</dd><dt>Why</dt><dd>confidence weak or unknown; cost opportunity unavailable; evidence weak or unknown; missing input:quality risk; missing input:reversible; missing input:validation cost usd; missing input:validation effort minutes</dd></dl><details><summary>Ranking components, input references and ordering</summary><pre>{
+  &quot;automatic_application_allowed&quot;: false,
+  &quot;components&quot;: {
+    &quot;confidence&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;rule:parallelize_tools:1.1&quot;,
+      &quot;value&quot;: &quot;low&quot;
+    },
+    &quot;cost&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;estimator:parallelize_tools:1.0&quot;,
+      &quot;unit&quot;: &quot;USD&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;evidence&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;rule_evidence_level_and_span_coverage&quot;,
+      &quot;value&quot;: &quot;inferred&quot;
+    },
+    &quot;frequency&quot;: {
+      &quot;kind&quot;: &quot;observed&quot;,
+      &quot;source_ref&quot;: &quot;included_distinct_runs&quot;,
+      &quot;unit&quot;: &quot;included_runs&quot;,
+      &quot;value&quot;: 1
+    },
+    &quot;impact&quot;: {
+      &quot;kind&quot;: &quot;observed&quot;,
+      &quot;source_ref&quot;: &quot;recorded_span_durations_nonadditive&quot;,
+      &quot;unit&quot;: &quot;ms_of_recorded_span_work&quot;,
+      &quot;value&quot;: 540.0
+    },
+    &quot;latency&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;estimator:parallelize_tools:1.0&quot;,
+      &quot;unit&quot;: &quot;ms&quot;,
+      &quot;value&quot;: 360.0
+    },
+    &quot;quality_risk&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;reversible&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;tokens&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;tokens&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;validation_cost&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;USD&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;validation_effort&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;minutes&quot;,
+      &quot;value&quot;: null
+    }
+  },
+  &quot;invalid_inputs&quot;: [],
+  &quot;method&quot;: &quot;explicit_lexicographic&quot;,
+  &quot;order&quot;: [
+    &quot;ready_to_test&quot;,
+    &quot;confidence&quot;,
+    &quot;evidence&quot;,
+    &quot;quality_risk&quot;,
+    &quot;frequency&quot;,
+    &quot;impact&quot;,
+    &quot;validation_effort&quot;,
+    &quot;validation_cost&quot;,
+    &quot;latency&quot;,
+    &quot;cost&quot;,
+    &quot;tokens&quot;,
+    &quot;identity&quot;
+  ],
+  &quot;reasons&quot;: [
+    &quot;confidence_weak_or_unknown&quot;,
+    &quot;cost_opportunity_unavailable&quot;,
+    &quot;evidence_weak_or_unknown&quot;,
+    &quot;missing_input:quality_risk&quot;,
+    &quot;missing_input:reversible&quot;,
+    &quot;missing_input:validation_cost_usd&quot;,
+    &quot;missing_input:validation_effort_minutes&quot;
+  ],
+  &quot;required_inputs&quot;: [
+    &quot;quality_risk&quot;,
+    &quot;reversible&quot;,
+    &quot;validation_cost_usd&quot;,
+    &quot;validation_effort_minutes&quot;
+  ]
+}</pre></details><dl><dt>Finding ID</dt><dd>al_parallelize_tools_6a08b742dfb3</dd><dt>Estimated latency savings</dt><dd>360.000 ms</dd><dt>Estimated cost savings</dt><dd>$0.0000</dd><dt>Proposed change</dt><dd>After verifying output independence and shared-state safety, use asyncio.gather or ThreadPoolExecutor and validate the change with replay.</dd><dt>Validation</dt><dd>runtime decreases while tool outputs remain equivalent</dd></dl><p>Evidence spans: <a href="#span-0">evt_quickstart_01</a>, <a href="#span-6">evt_quickstart_02</a>, <a href="#span-12">evt_quickstart_03</a></p><details><summary>Estimator, assumptions, and observed inputs</summary><pre>{
+  &quot;assumptions&quot;: [
+    &quot;No call consumes another call&#x27;s output.&quot;,
+    &quot;Calls do not conflict through shared mutable state.&quot;,
+    &quot;Calls are on the runtime-limiting path and scheduling adds no overhead.&quot;,
+    &quot;The formula applies assuming concurrent execution has negligible scheduling overhead.&quot;
+  ],
+  &quot;calibrated&quot;: false,
+  &quot;confidence&quot;: &quot;low&quot;,
+  &quot;estimator_id&quot;: &quot;parallelize_tools&quot;,
+  &quot;estimator_version&quot;: &quot;1.0&quot;,
+  &quot;formula&quot;: &quot;sum_duration_ms - max_duration_ms&quot;,
+  &quot;inputs&quot;: {
+    &quot;cost_status&quot;: &quot;complete&quot;,
+    &quot;current_cost_usd&quot;: 0.03672,
+    &quot;max_duration_ms&quot;: 180.0,
+    &quot;repeated_context_ratio&quot;: 0.0571,
+    &quot;span_count&quot;: 3,
+    &quot;sum_duration_ms&quot;: 540.0,
+    &quot;token_status&quot;: &quot;unspecified&quot;
+  },
+  &quot;method&quot;: &quot;heuristic&quot;,
+  &quot;parameters&quot;: {},
+  &quot;unmodeled_metrics&quot;: [
+    &quot;cost&quot;
+  ]
+}</pre></details><details><summary>Recorded finding evidence</summary><pre>[
+  {
+    &quot;duration_ms&quot;: 180.0,
+    &quot;event_type&quot;: &quot;tool_call&quot;,
+    &quot;input_tokens&quot;: 0,
+    &quot;model&quot;: null,
+    &quot;name&quot;: &quot;retrieve&quot;,
+    &quot;operation_kind&quot;: &quot;tool&quot;,
+    &quot;output_tokens&quot;: 0,
+    &quot;span_id&quot;: &quot;evt_quickstart_01&quot;,
+    &quot;status&quot;: &quot;ok&quot;
+  },
+  {
+    &quot;duration_ms&quot;: 180.0,
+    &quot;event_type&quot;: &quot;tool_call&quot;,
+    &quot;input_tokens&quot;: 0,
+    &quot;model&quot;: null,
+    &quot;name&quot;: &quot;retrieve&quot;,
+    &quot;operation_kind&quot;: &quot;tool&quot;,
+    &quot;output_tokens&quot;: 0,
+    &quot;span_id&quot;: &quot;evt_quickstart_02&quot;,
+    &quot;status&quot;: &quot;ok&quot;
+  },
+  {
+    &quot;duration_ms&quot;: 180.0,
+    &quot;event_type&quot;: &quot;tool_call&quot;,
+    &quot;input_tokens&quot;: 0,
+    &quot;model&quot;: null,
+    &quot;name&quot;: &quot;retrieve&quot;,
+    &quot;operation_kind&quot;: &quot;tool&quot;,
+    &quot;output_tokens&quot;: 0,
+    &quot;span_id&quot;: &quot;evt_quickstart_03&quot;,
+    &quot;status&quot;: &quot;ok&quot;
+  }
+]</pre></details></article>
+<article class="prediction" id="finding-11"><span class="badge">inferred evidence</span><span class="badge">low confidence</span><h3>Parallelize repeated `retrieve-repeat2` tool calls</h3><p>3 repeated calls. Repeated tool calls may be candidates for concurrent execution. Verify output independence and shared-state safety before changing them.</p><dl><dt>Investigation priority</dt><dd>12</dd><dt>Test readiness</dt><dd>needs evidence or review</dd><dt>Why</dt><dd>confidence weak or unknown; cost opportunity unavailable; evidence weak or unknown; missing input:quality risk; missing input:reversible; missing input:validation cost usd; missing input:validation effort minutes</dd></dl><details><summary>Ranking components, input references and ordering</summary><pre>{
+  &quot;automatic_application_allowed&quot;: false,
+  &quot;components&quot;: {
+    &quot;confidence&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;rule:parallelize_tools:1.1&quot;,
+      &quot;value&quot;: &quot;low&quot;
+    },
+    &quot;cost&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;estimator:parallelize_tools:1.0&quot;,
+      &quot;unit&quot;: &quot;USD&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;evidence&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;rule_evidence_level_and_span_coverage&quot;,
+      &quot;value&quot;: &quot;inferred&quot;
+    },
+    &quot;frequency&quot;: {
+      &quot;kind&quot;: &quot;observed&quot;,
+      &quot;source_ref&quot;: &quot;included_distinct_runs&quot;,
+      &quot;unit&quot;: &quot;included_runs&quot;,
+      &quot;value&quot;: 1
+    },
+    &quot;impact&quot;: {
+      &quot;kind&quot;: &quot;observed&quot;,
+      &quot;source_ref&quot;: &quot;recorded_span_durations_nonadditive&quot;,
+      &quot;unit&quot;: &quot;ms_of_recorded_span_work&quot;,
+      &quot;value&quot;: 540.0
+    },
+    &quot;latency&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;estimator:parallelize_tools:1.0&quot;,
+      &quot;unit&quot;: &quot;ms&quot;,
+      &quot;value&quot;: 360.0
+    },
+    &quot;quality_risk&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;reversible&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;tokens&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;tokens&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;validation_cost&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;USD&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;validation_effort&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;minutes&quot;,
+      &quot;value&quot;: null
+    }
+  },
+  &quot;invalid_inputs&quot;: [],
+  &quot;method&quot;: &quot;explicit_lexicographic&quot;,
+  &quot;order&quot;: [
+    &quot;ready_to_test&quot;,
+    &quot;confidence&quot;,
+    &quot;evidence&quot;,
+    &quot;quality_risk&quot;,
+    &quot;frequency&quot;,
+    &quot;impact&quot;,
+    &quot;validation_effort&quot;,
+    &quot;validation_cost&quot;,
+    &quot;latency&quot;,
+    &quot;cost&quot;,
+    &quot;tokens&quot;,
+    &quot;identity&quot;
+  ],
+  &quot;reasons&quot;: [
+    &quot;confidence_weak_or_unknown&quot;,
+    &quot;cost_opportunity_unavailable&quot;,
+    &quot;evidence_weak_or_unknown&quot;,
+    &quot;missing_input:quality_risk&quot;,
+    &quot;missing_input:reversible&quot;,
+    &quot;missing_input:validation_cost_usd&quot;,
+    &quot;missing_input:validation_effort_minutes&quot;
+  ],
+  &quot;required_inputs&quot;: [
+    &quot;quality_risk&quot;,
+    &quot;reversible&quot;,
+    &quot;validation_cost_usd&quot;,
+    &quot;validation_effort_minutes&quot;
+  ]
+}</pre></details><dl><dt>Finding ID</dt><dd>al_parallelize_tools_7d06d1a068ee</dd><dt>Estimated latency savings</dt><dd>360.000 ms</dd><dt>Estimated cost savings</dt><dd>$0.0000</dd><dt>Proposed change</dt><dd>After verifying output independence and shared-state safety, use asyncio.gather or ThreadPoolExecutor and validate the change with replay.</dd><dt>Validation</dt><dd>runtime decreases while tool outputs remain equivalent</dd></dl><p>Evidence spans: <a href="#span-3">evt_quickstart_01-repeat2</a>, <a href="#span-9">evt_quickstart_02-repeat2</a>, <a href="#span-15">evt_quickstart_03-repeat2</a></p><details><summary>Estimator, assumptions, and observed inputs</summary><pre>{
+  &quot;assumptions&quot;: [
+    &quot;No call consumes another call&#x27;s output.&quot;,
+    &quot;Calls do not conflict through shared mutable state.&quot;,
+    &quot;Calls are on the runtime-limiting path and scheduling adds no overhead.&quot;,
+    &quot;The formula applies assuming concurrent execution has negligible scheduling overhead.&quot;
+  ],
+  &quot;calibrated&quot;: false,
+  &quot;confidence&quot;: &quot;low&quot;,
+  &quot;estimator_id&quot;: &quot;parallelize_tools&quot;,
+  &quot;estimator_version&quot;: &quot;1.0&quot;,
+  &quot;formula&quot;: &quot;sum_duration_ms - max_duration_ms&quot;,
+  &quot;inputs&quot;: {
+    &quot;cost_status&quot;: &quot;complete&quot;,
+    &quot;current_cost_usd&quot;: 0.03672,
+    &quot;max_duration_ms&quot;: 180.0,
+    &quot;repeated_context_ratio&quot;: 0.0571,
+    &quot;span_count&quot;: 3,
+    &quot;sum_duration_ms&quot;: 540.0,
+    &quot;token_status&quot;: &quot;unspecified&quot;
+  },
+  &quot;method&quot;: &quot;heuristic&quot;,
+  &quot;parameters&quot;: {},
+  &quot;unmodeled_metrics&quot;: [
+    &quot;cost&quot;
+  ]
+}</pre></details><details><summary>Recorded finding evidence</summary><pre>[
+  {
+    &quot;duration_ms&quot;: 180.0,
+    &quot;event_type&quot;: &quot;tool_call&quot;,
+    &quot;input_tokens&quot;: 0,
+    &quot;model&quot;: null,
+    &quot;name&quot;: &quot;retrieve-repeat2&quot;,
+    &quot;operation_kind&quot;: &quot;tool&quot;,
+    &quot;output_tokens&quot;: 0,
+    &quot;span_id&quot;: &quot;evt_quickstart_01-repeat2&quot;,
+    &quot;status&quot;: &quot;ok&quot;
+  },
+  {
+    &quot;duration_ms&quot;: 180.0,
+    &quot;event_type&quot;: &quot;tool_call&quot;,
+    &quot;input_tokens&quot;: 0,
+    &quot;model&quot;: null,
+    &quot;name&quot;: &quot;retrieve-repeat2&quot;,
+    &quot;operation_kind&quot;: &quot;tool&quot;,
+    &quot;output_tokens&quot;: 0,
+    &quot;span_id&quot;: &quot;evt_quickstart_02-repeat2&quot;,
+    &quot;status&quot;: &quot;ok&quot;
+  },
+  {
+    &quot;duration_ms&quot;: 180.0,
+    &quot;event_type&quot;: &quot;tool_call&quot;,
+    &quot;input_tokens&quot;: 0,
+    &quot;model&quot;: null,
+    &quot;name&quot;: &quot;retrieve-repeat2&quot;,
+    &quot;operation_kind&quot;: &quot;tool&quot;,
+    &quot;output_tokens&quot;: 0,
+    &quot;span_id&quot;: &quot;evt_quickstart_03-repeat2&quot;,
+    &quot;status&quot;: &quot;ok&quot;
+  }
+]</pre></details></article>
+<article class="prediction" id="finding-12"><span class="badge">inferred evidence</span><span class="badge">low confidence</span><h3>Parallelize repeated `retrieve-repeat0` tool calls</h3><p>3 repeated calls. Repeated tool calls may be candidates for concurrent execution. Verify output independence and shared-state safety before changing them.</p><dl><dt>Investigation priority</dt><dd>13</dd><dt>Test readiness</dt><dd>needs evidence or review</dd><dt>Why</dt><dd>confidence weak or unknown; cost opportunity unavailable; evidence weak or unknown; missing input:quality risk; missing input:reversible; missing input:validation cost usd; missing input:validation effort minutes</dd></dl><details><summary>Ranking components, input references and ordering</summary><pre>{
+  &quot;automatic_application_allowed&quot;: false,
+  &quot;components&quot;: {
+    &quot;confidence&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;rule:parallelize_tools:1.1&quot;,
+      &quot;value&quot;: &quot;low&quot;
+    },
+    &quot;cost&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;estimator:parallelize_tools:1.0&quot;,
+      &quot;unit&quot;: &quot;USD&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;evidence&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;rule_evidence_level_and_span_coverage&quot;,
+      &quot;value&quot;: &quot;inferred&quot;
+    },
+    &quot;frequency&quot;: {
+      &quot;kind&quot;: &quot;observed&quot;,
+      &quot;source_ref&quot;: &quot;included_distinct_runs&quot;,
+      &quot;unit&quot;: &quot;included_runs&quot;,
+      &quot;value&quot;: 1
+    },
+    &quot;impact&quot;: {
+      &quot;kind&quot;: &quot;observed&quot;,
+      &quot;source_ref&quot;: &quot;recorded_span_durations_nonadditive&quot;,
+      &quot;unit&quot;: &quot;ms_of_recorded_span_work&quot;,
+      &quot;value&quot;: 540.0
+    },
+    &quot;latency&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;estimator:parallelize_tools:1.0&quot;,
+      &quot;unit&quot;: &quot;ms&quot;,
+      &quot;value&quot;: 360.0
+    },
+    &quot;quality_risk&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;reversible&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;tokens&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;tokens&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;validation_cost&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;USD&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;validation_effort&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;minutes&quot;,
+      &quot;value&quot;: null
+    }
+  },
+  &quot;invalid_inputs&quot;: [],
+  &quot;method&quot;: &quot;explicit_lexicographic&quot;,
+  &quot;order&quot;: [
+    &quot;ready_to_test&quot;,
+    &quot;confidence&quot;,
+    &quot;evidence&quot;,
+    &quot;quality_risk&quot;,
+    &quot;frequency&quot;,
+    &quot;impact&quot;,
+    &quot;validation_effort&quot;,
+    &quot;validation_cost&quot;,
+    &quot;latency&quot;,
+    &quot;cost&quot;,
+    &quot;tokens&quot;,
+    &quot;identity&quot;
+  ],
+  &quot;reasons&quot;: [
+    &quot;confidence_weak_or_unknown&quot;,
+    &quot;cost_opportunity_unavailable&quot;,
+    &quot;evidence_weak_or_unknown&quot;,
+    &quot;missing_input:quality_risk&quot;,
+    &quot;missing_input:reversible&quot;,
+    &quot;missing_input:validation_cost_usd&quot;,
+    &quot;missing_input:validation_effort_minutes&quot;
+  ],
+  &quot;required_inputs&quot;: [
+    &quot;quality_risk&quot;,
+    &quot;reversible&quot;,
+    &quot;validation_cost_usd&quot;,
+    &quot;validation_effort_minutes&quot;
+  ]
+}</pre></details><dl><dt>Finding ID</dt><dd>al_parallelize_tools_8542ede550f6</dd><dt>Estimated latency savings</dt><dd>360.000 ms</dd><dt>Estimated cost savings</dt><dd>$0.0000</dd><dt>Proposed change</dt><dd>After verifying output independence and shared-state safety, use asyncio.gather or ThreadPoolExecutor and validate the change with replay.</dd><dt>Validation</dt><dd>runtime decreases while tool outputs remain equivalent</dd></dl><p>Evidence spans: <a href="#span-1">evt_quickstart_01-repeat0</a>, <a href="#span-7">evt_quickstart_02-repeat0</a>, <a href="#span-13">evt_quickstart_03-repeat0</a></p><details><summary>Estimator, assumptions, and observed inputs</summary><pre>{
+  &quot;assumptions&quot;: [
+    &quot;No call consumes another call&#x27;s output.&quot;,
+    &quot;Calls do not conflict through shared mutable state.&quot;,
+    &quot;Calls are on the runtime-limiting path and scheduling adds no overhead.&quot;,
+    &quot;The formula applies assuming concurrent execution has negligible scheduling overhead.&quot;
+  ],
+  &quot;calibrated&quot;: false,
+  &quot;confidence&quot;: &quot;low&quot;,
+  &quot;estimator_id&quot;: &quot;parallelize_tools&quot;,
+  &quot;estimator_version&quot;: &quot;1.0&quot;,
+  &quot;formula&quot;: &quot;sum_duration_ms - max_duration_ms&quot;,
+  &quot;inputs&quot;: {
+    &quot;cost_status&quot;: &quot;complete&quot;,
+    &quot;current_cost_usd&quot;: 0.03672,
+    &quot;max_duration_ms&quot;: 180.0,
+    &quot;repeated_context_ratio&quot;: 0.0571,
+    &quot;span_count&quot;: 3,
+    &quot;sum_duration_ms&quot;: 540.0,
+    &quot;token_status&quot;: &quot;unspecified&quot;
+  },
+  &quot;method&quot;: &quot;heuristic&quot;,
+  &quot;parameters&quot;: {},
+  &quot;unmodeled_metrics&quot;: [
+    &quot;cost&quot;
+  ]
+}</pre></details><details><summary>Recorded finding evidence</summary><pre>[
+  {
+    &quot;duration_ms&quot;: 180.0,
+    &quot;event_type&quot;: &quot;tool_call&quot;,
+    &quot;input_tokens&quot;: 0,
+    &quot;model&quot;: null,
+    &quot;name&quot;: &quot;retrieve-repeat0&quot;,
+    &quot;operation_kind&quot;: &quot;tool&quot;,
+    &quot;output_tokens&quot;: 0,
+    &quot;span_id&quot;: &quot;evt_quickstart_01-repeat0&quot;,
+    &quot;status&quot;: &quot;ok&quot;
+  },
+  {
+    &quot;duration_ms&quot;: 180.0,
+    &quot;event_type&quot;: &quot;tool_call&quot;,
+    &quot;input_tokens&quot;: 0,
+    &quot;model&quot;: null,
+    &quot;name&quot;: &quot;retrieve-repeat0&quot;,
+    &quot;operation_kind&quot;: &quot;tool&quot;,
+    &quot;output_tokens&quot;: 0,
+    &quot;span_id&quot;: &quot;evt_quickstart_02-repeat0&quot;,
+    &quot;status&quot;: &quot;ok&quot;
+  },
+  {
+    &quot;duration_ms&quot;: 180.0,
+    &quot;event_type&quot;: &quot;tool_call&quot;,
+    &quot;input_tokens&quot;: 0,
+    &quot;model&quot;: null,
+    &quot;name&quot;: &quot;retrieve-repeat0&quot;,
+    &quot;operation_kind&quot;: &quot;tool&quot;,
+    &quot;output_tokens&quot;: 0,
+    &quot;span_id&quot;: &quot;evt_quickstart_03-repeat0&quot;,
+    &quot;status&quot;: &quot;ok&quot;
+  }
+]</pre></details></article>
+<article class="prediction" id="finding-13"><span class="badge">inferred evidence</span><span class="badge">low confidence</span><h3>Route `summarize-repeat1` to a cheaper model</h3><p>`summarize-repeat1` is a relatively small model step using 780 tokens on gpt-4.1.</p><dl><dt>Investigation priority</dt><dd>14</dd><dt>Test readiness</dt><dd>needs evidence or review</dd><dt>Why</dt><dd>confidence weak or unknown; cost opportunity unavailable; evidence weak or unknown; missing input:quality risk; missing input:reversible; missing input:validation cost usd; missing input:validation effort minutes</dd></dl><details><summary>Ranking components, input references and ordering</summary><pre>{
+  &quot;automatic_application_allowed&quot;: false,
+  &quot;components&quot;: {
+    &quot;confidence&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;rule:route_to_smaller_model:1.1&quot;,
+      &quot;value&quot;: &quot;low&quot;
+    },
+    &quot;cost&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;estimator:route_to_smaller_model:1.0&quot;,
+      &quot;unit&quot;: &quot;USD&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;evidence&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;rule_evidence_level_and_span_coverage&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;frequency&quot;: {
+      &quot;kind&quot;: &quot;observed&quot;,
+      &quot;source_ref&quot;: &quot;included_distinct_runs&quot;,
+      &quot;unit&quot;: &quot;included_runs&quot;,
+      &quot;value&quot;: 1
+    },
+    &quot;impact&quot;: {
+      &quot;kind&quot;: &quot;observed&quot;,
+      &quot;source_ref&quot;: &quot;recorded_span_durations_nonadditive&quot;,
+      &quot;unit&quot;: &quot;ms_of_recorded_span_work&quot;,
+      &quot;value&quot;: 110.0
+    },
+    &quot;latency&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;estimator:route_to_smaller_model:1.0&quot;,
+      &quot;unit&quot;: &quot;ms&quot;,
+      &quot;value&quot;: 27.5
+    },
+    &quot;quality_risk&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;reversible&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;tokens&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;tokens&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;validation_cost&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;USD&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;validation_effort&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;minutes&quot;,
+      &quot;value&quot;: null
+    }
+  },
+  &quot;invalid_inputs&quot;: [],
+  &quot;method&quot;: &quot;explicit_lexicographic&quot;,
+  &quot;order&quot;: [
+    &quot;ready_to_test&quot;,
+    &quot;confidence&quot;,
+    &quot;evidence&quot;,
+    &quot;quality_risk&quot;,
+    &quot;frequency&quot;,
+    &quot;impact&quot;,
+    &quot;validation_effort&quot;,
+    &quot;validation_cost&quot;,
+    &quot;latency&quot;,
+    &quot;cost&quot;,
+    &quot;tokens&quot;,
+    &quot;identity&quot;
+  ],
+  &quot;reasons&quot;: [
+    &quot;confidence_weak_or_unknown&quot;,
+    &quot;cost_opportunity_unavailable&quot;,
+    &quot;evidence_weak_or_unknown&quot;,
+    &quot;missing_input:quality_risk&quot;,
+    &quot;missing_input:reversible&quot;,
+    &quot;missing_input:validation_cost_usd&quot;,
+    &quot;missing_input:validation_effort_minutes&quot;
+  ],
+  &quot;required_inputs&quot;: [
+    &quot;quality_risk&quot;,
+    &quot;reversible&quot;,
+    &quot;validation_cost_usd&quot;,
+    &quot;validation_effort_minutes&quot;
+  ]
+}</pre></details><dl><dt>Finding ID</dt><dd>al_route_to_smaller_model_308dc1bf5fe3</dd><dt>Estimated latency savings</dt><dd>27.500 ms</dd><dt>Estimated cost savings</dt><dd>$0.0000</dd><dt>Proposed change</dt><dd>Try a smaller model for planning, summarization, extraction, or verification steps and keep the larger model for final synthesis.</dd><dt>Validation</dt><dd>cost decreases while configured quality scorer passes</dd></dl><p>Evidence spans: <a href="#span-20">evt_quickstart_04-repeat1</a></p><details><summary>Estimator, assumptions, and observed inputs</summary><pre>{
+  &quot;assumptions&quot;: [
+    &quot;A smaller model meets the task&#x27;s quality requirements.&quot;,
+    &quot;Its serving latency is lower under comparable load.&quot;
+  ],
+  &quot;calibrated&quot;: false,
+  &quot;confidence&quot;: &quot;low&quot;,
+  &quot;estimator_id&quot;: &quot;route_to_smaller_model&quot;,
+  &quot;estimator_version&quot;: &quot;1.0&quot;,
+  &quot;formula&quot;: &quot;sum_duration_ms * latency_fraction&quot;,
+  &quot;inputs&quot;: {
+    &quot;cost_status&quot;: &quot;complete&quot;,
+    &quot;current_cost_usd&quot;: 0.03672,
+    &quot;max_duration_ms&quot;: 110.0,
+    &quot;repeated_context_ratio&quot;: 0.0571,
+    &quot;span_count&quot;: 1,
+    &quot;sum_duration_ms&quot;: 110.0,
+    &quot;token_status&quot;: &quot;unspecified&quot;
+  },
+  &quot;method&quot;: &quot;heuristic&quot;,
+  &quot;parameters&quot;: {
+    &quot;latency_fraction&quot;: 0.25
+  },
+  &quot;unmodeled_metrics&quot;: [
+    &quot;cost&quot;
+  ]
+}</pre></details><details><summary>Recorded finding evidence</summary><pre>[
+  {
+    &quot;duration_ms&quot;: 110.0,
+    &quot;event_type&quot;: &quot;model_call&quot;,
+    &quot;input_tokens&quot;: 700,
+    &quot;model&quot;: &quot;gpt-4.1&quot;,
+    &quot;name&quot;: &quot;summarize-repeat1&quot;,
+    &quot;operation_kind&quot;: &quot;model&quot;,
+    &quot;output_tokens&quot;: 80,
+    &quot;span_id&quot;: &quot;evt_quickstart_04-repeat1&quot;,
+    &quot;status&quot;: &quot;ok&quot;
+  }
+]</pre></details></article>
+<article class="prediction" id="finding-14"><span class="badge">inferred evidence</span><span class="badge">low confidence</span><h3>Route `summarize` to a cheaper model</h3><p>`summarize` is a relatively small model step using 780 tokens on gpt-4.1.</p><dl><dt>Investigation priority</dt><dd>15</dd><dt>Test readiness</dt><dd>needs evidence or review</dd><dt>Why</dt><dd>confidence weak or unknown; cost opportunity unavailable; evidence weak or unknown; missing input:quality risk; missing input:reversible; missing input:validation cost usd; missing input:validation effort minutes</dd></dl><details><summary>Ranking components, input references and ordering</summary><pre>{
+  &quot;automatic_application_allowed&quot;: false,
+  &quot;components&quot;: {
+    &quot;confidence&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;rule:route_to_smaller_model:1.1&quot;,
+      &quot;value&quot;: &quot;low&quot;
+    },
+    &quot;cost&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;estimator:route_to_smaller_model:1.0&quot;,
+      &quot;unit&quot;: &quot;USD&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;evidence&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;rule_evidence_level_and_span_coverage&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;frequency&quot;: {
+      &quot;kind&quot;: &quot;observed&quot;,
+      &quot;source_ref&quot;: &quot;included_distinct_runs&quot;,
+      &quot;unit&quot;: &quot;included_runs&quot;,
+      &quot;value&quot;: 1
+    },
+    &quot;impact&quot;: {
+      &quot;kind&quot;: &quot;observed&quot;,
+      &quot;source_ref&quot;: &quot;recorded_span_durations_nonadditive&quot;,
+      &quot;unit&quot;: &quot;ms_of_recorded_span_work&quot;,
+      &quot;value&quot;: 110.0
+    },
+    &quot;latency&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;estimator:route_to_smaller_model:1.0&quot;,
+      &quot;unit&quot;: &quot;ms&quot;,
+      &quot;value&quot;: 27.5
+    },
+    &quot;quality_risk&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;reversible&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;tokens&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;tokens&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;validation_cost&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;USD&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;validation_effort&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;minutes&quot;,
+      &quot;value&quot;: null
+    }
+  },
+  &quot;invalid_inputs&quot;: [],
+  &quot;method&quot;: &quot;explicit_lexicographic&quot;,
+  &quot;order&quot;: [
+    &quot;ready_to_test&quot;,
+    &quot;confidence&quot;,
+    &quot;evidence&quot;,
+    &quot;quality_risk&quot;,
+    &quot;frequency&quot;,
+    &quot;impact&quot;,
+    &quot;validation_effort&quot;,
+    &quot;validation_cost&quot;,
+    &quot;latency&quot;,
+    &quot;cost&quot;,
+    &quot;tokens&quot;,
+    &quot;identity&quot;
+  ],
+  &quot;reasons&quot;: [
+    &quot;confidence_weak_or_unknown&quot;,
+    &quot;cost_opportunity_unavailable&quot;,
+    &quot;evidence_weak_or_unknown&quot;,
+    &quot;missing_input:quality_risk&quot;,
+    &quot;missing_input:reversible&quot;,
+    &quot;missing_input:validation_cost_usd&quot;,
+    &quot;missing_input:validation_effort_minutes&quot;
+  ],
+  &quot;required_inputs&quot;: [
+    &quot;quality_risk&quot;,
+    &quot;reversible&quot;,
+    &quot;validation_cost_usd&quot;,
+    &quot;validation_effort_minutes&quot;
+  ]
+}</pre></details><dl><dt>Finding ID</dt><dd>al_route_to_smaller_model_d6b9b5d11332</dd><dt>Estimated latency savings</dt><dd>27.500 ms</dd><dt>Estimated cost savings</dt><dd>$0.0000</dd><dt>Proposed change</dt><dd>Try a smaller model for planning, summarization, extraction, or verification steps and keep the larger model for final synthesis.</dd><dt>Validation</dt><dd>cost decreases while configured quality scorer passes</dd></dl><p>Evidence spans: <a href="#span-18">evt_quickstart_04</a></p><details><summary>Estimator, assumptions, and observed inputs</summary><pre>{
   &quot;assumptions&quot;: [
     &quot;A smaller model meets the task&#x27;s quality requirements.&quot;,
     &quot;Its serving latency is lower under comparable load.&quot;
@@ -923,7 +2411,104 @@ footer{margin-top:45px;padding-top:16px;border-top:1px solid var(--line);font-si
     &quot;status&quot;: &quot;ok&quot;
   }
 ]</pre></details></article>
-<article class="prediction" id="finding-14"><span class="badge">inferred evidence</span><span class="badge">low confidence</span><h3>Route `summarize-repeat0` to a cheaper model</h3><p>`summarize-repeat0` is a relatively small model step using 780 tokens on gpt-4.1.</p><dl><dt>Finding ID</dt><dd>al_route_to_smaller_model_d780bc81b192</dd><dt>Estimated latency savings</dt><dd>27.500 ms</dd><dt>Estimated cost savings</dt><dd>$0.0000</dd><dt>Proposed change</dt><dd>Try a smaller model for planning, summarization, extraction, or verification steps and keep the larger model for final synthesis.</dd><dt>Validation</dt><dd>cost decreases while configured quality scorer passes</dd></dl><p>Evidence spans: <a href="#span-19">evt_quickstart_04-repeat0</a></p><details><summary>Estimator, assumptions, and observed inputs</summary><pre>{
+<article class="prediction" id="finding-15"><span class="badge">inferred evidence</span><span class="badge">low confidence</span><h3>Route `summarize-repeat0` to a cheaper model</h3><p>`summarize-repeat0` is a relatively small model step using 780 tokens on gpt-4.1.</p><dl><dt>Investigation priority</dt><dd>16</dd><dt>Test readiness</dt><dd>needs evidence or review</dd><dt>Why</dt><dd>confidence weak or unknown; cost opportunity unavailable; evidence weak or unknown; missing input:quality risk; missing input:reversible; missing input:validation cost usd; missing input:validation effort minutes</dd></dl><details><summary>Ranking components, input references and ordering</summary><pre>{
+  &quot;automatic_application_allowed&quot;: false,
+  &quot;components&quot;: {
+    &quot;confidence&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;rule:route_to_smaller_model:1.1&quot;,
+      &quot;value&quot;: &quot;low&quot;
+    },
+    &quot;cost&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;estimator:route_to_smaller_model:1.0&quot;,
+      &quot;unit&quot;: &quot;USD&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;evidence&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;rule_evidence_level_and_span_coverage&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;frequency&quot;: {
+      &quot;kind&quot;: &quot;observed&quot;,
+      &quot;source_ref&quot;: &quot;included_distinct_runs&quot;,
+      &quot;unit&quot;: &quot;included_runs&quot;,
+      &quot;value&quot;: 1
+    },
+    &quot;impact&quot;: {
+      &quot;kind&quot;: &quot;observed&quot;,
+      &quot;source_ref&quot;: &quot;recorded_span_durations_nonadditive&quot;,
+      &quot;unit&quot;: &quot;ms_of_recorded_span_work&quot;,
+      &quot;value&quot;: 110.0
+    },
+    &quot;latency&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;estimator:route_to_smaller_model:1.0&quot;,
+      &quot;unit&quot;: &quot;ms&quot;,
+      &quot;value&quot;: 27.5
+    },
+    &quot;quality_risk&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;reversible&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;tokens&quot;: {
+      &quot;kind&quot;: &quot;estimated&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;tokens&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;validation_cost&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;USD&quot;,
+      &quot;value&quot;: null
+    },
+    &quot;validation_effort&quot;: {
+      &quot;kind&quot;: &quot;declared&quot;,
+      &quot;source_ref&quot;: &quot;unavailable&quot;,
+      &quot;unit&quot;: &quot;minutes&quot;,
+      &quot;value&quot;: null
+    }
+  },
+  &quot;invalid_inputs&quot;: [],
+  &quot;method&quot;: &quot;explicit_lexicographic&quot;,
+  &quot;order&quot;: [
+    &quot;ready_to_test&quot;,
+    &quot;confidence&quot;,
+    &quot;evidence&quot;,
+    &quot;quality_risk&quot;,
+    &quot;frequency&quot;,
+    &quot;impact&quot;,
+    &quot;validation_effort&quot;,
+    &quot;validation_cost&quot;,
+    &quot;latency&quot;,
+    &quot;cost&quot;,
+    &quot;tokens&quot;,
+    &quot;identity&quot;
+  ],
+  &quot;reasons&quot;: [
+    &quot;confidence_weak_or_unknown&quot;,
+    &quot;cost_opportunity_unavailable&quot;,
+    &quot;evidence_weak_or_unknown&quot;,
+    &quot;missing_input:quality_risk&quot;,
+    &quot;missing_input:reversible&quot;,
+    &quot;missing_input:validation_cost_usd&quot;,
+    &quot;missing_input:validation_effort_minutes&quot;
+  ],
+  &quot;required_inputs&quot;: [
+    &quot;quality_risk&quot;,
+    &quot;reversible&quot;,
+    &quot;validation_cost_usd&quot;,
+    &quot;validation_effort_minutes&quot;
+  ]
+}</pre></details><dl><dt>Finding ID</dt><dd>al_route_to_smaller_model_d780bc81b192</dd><dt>Estimated latency savings</dt><dd>27.500 ms</dd><dt>Estimated cost savings</dt><dd>$0.0000</dd><dt>Proposed change</dt><dd>Try a smaller model for planning, summarization, extraction, or verification steps and keep the larger model for final synthesis.</dd><dt>Validation</dt><dd>cost decreases while configured quality scorer passes</dd></dl><p>Evidence spans: <a href="#span-19">evt_quickstart_04-repeat0</a></p><details><summary>Estimator, assumptions, and observed inputs</summary><pre>{
   &quot;assumptions&quot;: [
     &quot;A smaller model meets the task&#x27;s quality requirements.&quot;,
     &quot;Its serving latency is lower under comparable load.&quot;
@@ -959,45 +2544,6 @@ footer{margin-top:45px;padding-top:16px;border-top:1px solid var(--line);font-si
     &quot;operation_kind&quot;: &quot;model&quot;,
     &quot;output_tokens&quot;: 80,
     &quot;span_id&quot;: &quot;evt_quickstart_04-repeat0&quot;,
-    &quot;status&quot;: &quot;ok&quot;
-  }
-]</pre></details></article>
-<article class="prediction" id="finding-15"><span class="badge">inferred evidence</span><span class="badge">low confidence</span><h3>Route `summarize-repeat1` to a cheaper model</h3><p>`summarize-repeat1` is a relatively small model step using 780 tokens on gpt-4.1.</p><dl><dt>Finding ID</dt><dd>al_route_to_smaller_model_308dc1bf5fe3</dd><dt>Estimated latency savings</dt><dd>27.500 ms</dd><dt>Estimated cost savings</dt><dd>$0.0000</dd><dt>Proposed change</dt><dd>Try a smaller model for planning, summarization, extraction, or verification steps and keep the larger model for final synthesis.</dd><dt>Validation</dt><dd>cost decreases while configured quality scorer passes</dd></dl><p>Evidence spans: <a href="#span-20">evt_quickstart_04-repeat1</a></p><details><summary>Estimator, assumptions, and observed inputs</summary><pre>{
-  &quot;assumptions&quot;: [
-    &quot;A smaller model meets the task&#x27;s quality requirements.&quot;,
-    &quot;Its serving latency is lower under comparable load.&quot;
-  ],
-  &quot;calibrated&quot;: false,
-  &quot;confidence&quot;: &quot;low&quot;,
-  &quot;estimator_id&quot;: &quot;route_to_smaller_model&quot;,
-  &quot;estimator_version&quot;: &quot;1.0&quot;,
-  &quot;formula&quot;: &quot;sum_duration_ms * latency_fraction&quot;,
-  &quot;inputs&quot;: {
-    &quot;cost_status&quot;: &quot;complete&quot;,
-    &quot;current_cost_usd&quot;: 0.03672,
-    &quot;max_duration_ms&quot;: 110.0,
-    &quot;repeated_context_ratio&quot;: 0.0571,
-    &quot;span_count&quot;: 1,
-    &quot;sum_duration_ms&quot;: 110.0,
-    &quot;token_status&quot;: &quot;unspecified&quot;
-  },
-  &quot;method&quot;: &quot;heuristic&quot;,
-  &quot;parameters&quot;: {
-    &quot;latency_fraction&quot;: 0.25
-  },
-  &quot;unmodeled_metrics&quot;: [
-    &quot;cost&quot;
-  ]
-}</pre></details><details><summary>Recorded finding evidence</summary><pre>[
-  {
-    &quot;duration_ms&quot;: 110.0,
-    &quot;event_type&quot;: &quot;model_call&quot;,
-    &quot;input_tokens&quot;: 700,
-    &quot;model&quot;: &quot;gpt-4.1&quot;,
-    &quot;name&quot;: &quot;summarize-repeat1&quot;,
-    &quot;operation_kind&quot;: &quot;model&quot;,
-    &quot;output_tokens&quot;: 80,
-    &quot;span_id&quot;: &quot;evt_quickstart_04-repeat1&quot;,
     &quot;status&quot;: &quot;ok&quot;
   }
 ]</pre></details></article>

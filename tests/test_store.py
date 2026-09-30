@@ -234,9 +234,10 @@ def test_optimization_queue_deduplicates_overlapping_findings_within_a_run(tmp_p
     item = queue[0]
     assert item["estimated_latency_savings_ms"] == 200.0
     assert item["occurrence_count"] == 3
-    # priority_score consumes the deduplicated savings, not the raw sum:
-    # 500 (medium) + 100 (patchable) + 200/100 + 3*25 = 677.
-    assert item["priority_score"] == 677.0
+    # Savings remain deduplicated, but missing ranking evidence cannot earn
+    # priority simply because a finding is patchable and has a large estimate.
+    assert item["priority_score"] == 0
+    assert item["ranking"]["status"] == "needs_evidence_or_review"
 
 
 def test_optimization_queue_sums_deduplicated_savings_across_runs(tmp_path):
@@ -283,7 +284,8 @@ def test_sqlite_persists_findings_and_optimization_queue(tmp_path):
     assert findings
     assert any(finding["type"] == "cache_context" for finding in findings)
     assert queue
-    assert queue[0]["priority_score"] > 0
+    assert queue[0]["priority_score"] == 0
+    assert queue[0]["quality_risk"] == "unknown"
     assert queue[0]["run_count"] == 1
     assert "quality_risk" in queue[0]
     assert "requires_scorer" in queue[0]

@@ -76,9 +76,9 @@ def test_default_estimators_are_self_contained_and_reproduce_predictions():
     assert plan["savings_aggregation"]["selection_optimal"] is True
     assert plan["savings_aggregation"]["selection_algorithm"]
     diagnosis = build_diagnosis(trace)
-    assert [card["estimate"] for card in cards] == [
-        finding["estimate"] for finding in diagnosis["findings"]
-    ]
+    assert sorted(json.dumps(card["estimate"], sort_keys=True) for card in cards) == sorted(
+        json.dumps(finding["estimate"], sort_keys=True) for finding in diagnosis["findings"]
+    )
     assert all(
         finding["savings"]["formula"] == finding["estimate"]["formula"]
         for finding in diagnosis["findings"]
