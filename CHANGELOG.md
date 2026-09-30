@@ -10,6 +10,11 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added [reviewed budget-policy promotion](docs/POLICY_PROMOTION.md) using native
+  ablation/calibration evidence, explicit approval and opt-in scopes, bounded
+  canaries, version invalidation, kill switches and rollback. Synthetic, stale,
+  incomplete or undersized evidence cannot authorize enforcement.
+
 - Added [host checkpoint recovery](docs/CHECKPOINT_RECOVERY.md) for a narrow
   LangGraph path, with owned host journal records, atomic resume claims, distinct
   attempt lineage and preserved budget/loop state. Quiescence, retry safety,
