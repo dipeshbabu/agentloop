@@ -1,0 +1,333 @@
+{
+  "schema_version": "1.0",
+  "synthetic": true,
+  "created_at": "2026-09-30T14:38:57.638333+00:00",
+  "environment": {
+    "python": "3.13.12",
+    "platform": "Windows-11-10.0.26200-SP0"
+  },
+  "protocol": {
+    "repetitions": 20,
+    "calls_per_condition": 100,
+    "warmup_rounds": 2,
+    "order": "rotated condition order",
+    "unit": "ms per local call or parsed OTLP payload import",
+    "active_trace_scope": "host boundary and event recording included; no store/upload/report rendering",
+    "baseline": "same local function returning a fixed synthetic SDK-shaped usage response"
+  },
+  "source_hash_encoding": "UTF-8 with universal newlines normalized to LF",
+  "source_sha256": {
+    "examples/onboarding_benchmark.py": "d00730f7462421c05751dfd756527a6647283c0fad503302610a2ed2ed43dd61",
+    "agentloop/autoinstrument.py": "8c182d530b1d22b79c8ca0e380a1c3fb6437be42565bf6c37eec548384514770",
+    "agentloop/integrations/openai.py": "2709f3d34deabff562c2708609e56f8eccc2c7612cbb3c2f9da807666ebc2565",
+    "agentloop/otel.py": "5a35261115eca670feeb2ee8f4d396b1d838775ec9a2faa982d5dc0e3bb5bb53",
+    "agentloop/otel_semantics.py": "0a20e58cd97ed57e2d016fdcd32c4fbe5e6fbcf3bb9519a2f0a9b558a4996b31",
+    "agentloop/tracer.py": "b41129b0af8e49d1ce07ebf16b785c9e314d55ca601e742583e0ccff3815c5fb",
+    "agentloop/onboarding.py": "e6e3ff6ba8652ec8ce65aa86bfe3a61f205ba4fd364119642020acb6b47aa96d"
+  },
+  "fixture_sha256": "7165b5e007dc753b0f88b53b2fdb04f533379a240052333376a075c3d463ec07",
+  "setup_steps": {
+    "sdk": {
+      "count": 3,
+      "steps": [
+        "install AgentLoop",
+        "instrument the existing client at startup",
+        "wrap the host execution in one trace boundary"
+      ]
+    },
+    "existing_otlp": {
+      "count": 2,
+      "steps": [
+        "export existing telemetry to OTLP JSON",
+        "run agentloop onboard with format otlp"
+      ]
+    }
+  },
+  "rows": [
+    {
+      "repeat": 0,
+      "active_trace": 0.011464,
+      "otlp_import": 0.271785,
+      "baseline": 0.00011599999999999999,
+      "installed_without_trace": 0.002497,
+      "active_increment_ms_per_call": 0.011348,
+      "inactive_increment_ms_per_call": 0.0023810000000000003
+    },
+    {
+      "repeat": 1,
+      "otlp_import": 0.27345600000000003,
+      "baseline": 0.000117,
+      "installed_without_trace": 0.002566,
+      "active_trace": 0.014656,
+      "active_increment_ms_per_call": 0.014539,
+      "inactive_increment_ms_per_call": 0.0024490000000000002
+    },
+    {
+      "repeat": 2,
+      "baseline": 0.000107,
+      "installed_without_trace": 0.0024690000000000003,
+      "active_trace": 0.011056,
+      "otlp_import": 0.282851,
+      "active_increment_ms_per_call": 0.010949,
+      "inactive_increment_ms_per_call": 0.0023620000000000004
+    },
+    {
+      "repeat": 3,
+      "installed_without_trace": 0.0025900000000000003,
+      "active_trace": 0.011621,
+      "otlp_import": 0.272565,
+      "baseline": 0.00011599999999999999,
+      "active_increment_ms_per_call": 0.011505,
+      "inactive_increment_ms_per_call": 0.0024740000000000005
+    },
+    {
+      "repeat": 4,
+      "active_trace": 0.011403000000000002,
+      "otlp_import": 0.272249,
+      "baseline": 0.00011599999999999999,
+      "installed_without_trace": 0.0024560000000000003,
+      "active_increment_ms_per_call": 0.011287000000000002,
+      "inactive_increment_ms_per_call": 0.0023400000000000005
+    },
+    {
+      "repeat": 5,
+      "otlp_import": 0.291389,
+      "baseline": 0.00011599999999999999,
+      "installed_without_trace": 0.002555,
+      "active_trace": 0.011765000000000001,
+      "active_increment_ms_per_call": 0.011649000000000001,
+      "inactive_increment_ms_per_call": 0.002439
+    },
+    {
+      "repeat": 6,
+      "baseline": 0.000104,
+      "installed_without_trace": 0.002445,
+      "active_trace": 0.011204,
+      "otlp_import": 0.32521700000000003,
+      "active_increment_ms_per_call": 0.0111,
+      "inactive_increment_ms_per_call": 0.002341
+    },
+    {
+      "repeat": 7,
+      "installed_without_trace": 0.002451,
+      "active_trace": 0.011591,
+      "otlp_import": 0.272098,
+      "baseline": 0.00012,
+      "active_increment_ms_per_call": 0.011471,
+      "inactive_increment_ms_per_call": 0.002331
+    },
+    {
+      "repeat": 8,
+      "active_trace": 0.011544,
+      "otlp_import": 0.282484,
+      "baseline": 0.000129,
+      "installed_without_trace": 0.0024879999999999998,
+      "active_increment_ms_per_call": 0.011415,
+      "inactive_increment_ms_per_call": 0.002359
+    },
+    {
+      "repeat": 9,
+      "otlp_import": 0.275252,
+      "baseline": 0.00011599999999999999,
+      "installed_without_trace": 0.002457,
+      "active_trace": 0.012105,
+      "active_increment_ms_per_call": 0.011989,
+      "inactive_increment_ms_per_call": 0.002341
+    },
+    {
+      "repeat": 10,
+      "baseline": 0.000105,
+      "installed_without_trace": 0.002403,
+      "active_trace": 0.011036999999999998,
+      "otlp_import": 0.368474,
+      "active_increment_ms_per_call": 0.010931999999999999,
+      "inactive_increment_ms_per_call": 0.002298
+    },
+    {
+      "repeat": 11,
+      "installed_without_trace": 0.007908,
+      "active_trace": 0.033226,
+      "otlp_import": 0.37083799999999995,
+      "baseline": 0.000115,
+      "active_increment_ms_per_call": 0.033111,
+      "inactive_increment_ms_per_call": 0.0077930000000000004
+    },
+    {
+      "repeat": 12,
+      "active_trace": 0.015205999999999999,
+      "otlp_import": 0.400644,
+      "baseline": 0.000121,
+      "installed_without_trace": 0.0024460000000000003,
+      "active_increment_ms_per_call": 0.015085,
+      "inactive_increment_ms_per_call": 0.0023250000000000002
+    },
+    {
+      "repeat": 13,
+      "otlp_import": 0.329769,
+      "baseline": 0.00012200000000000001,
+      "installed_without_trace": 0.003862,
+      "active_trace": 0.013505,
+      "active_increment_ms_per_call": 0.013382999999999999,
+      "inactive_increment_ms_per_call": 0.00374
+    },
+    {
+      "repeat": 14,
+      "baseline": 0.000111,
+      "installed_without_trace": 0.0025009999999999998,
+      "active_trace": 0.011770000000000001,
+      "otlp_import": 0.434653,
+      "active_increment_ms_per_call": 0.011659000000000001,
+      "inactive_increment_ms_per_call": 0.0023899999999999998
+    },
+    {
+      "repeat": 15,
+      "installed_without_trace": 0.0024749999999999998,
+      "active_trace": 0.011652000000000001,
+      "otlp_import": 0.351097,
+      "baseline": 0.00035099999999999997,
+      "active_increment_ms_per_call": 0.011301,
+      "inactive_increment_ms_per_call": 0.002124
+    },
+    {
+      "repeat": 16,
+      "active_trace": 0.019598,
+      "otlp_import": 0.282714,
+      "baseline": 0.000118,
+      "installed_without_trace": 0.002467,
+      "active_increment_ms_per_call": 0.01948,
+      "inactive_increment_ms_per_call": 0.002349
+    },
+    {
+      "repeat": 17,
+      "otlp_import": 0.298534,
+      "baseline": 0.00035299999999999996,
+      "installed_without_trace": 0.007443,
+      "active_trace": 0.015813,
+      "active_increment_ms_per_call": 0.015460000000000002,
+      "inactive_increment_ms_per_call": 0.00709
+    },
+    {
+      "repeat": 18,
+      "baseline": 0.000111,
+      "installed_without_trace": 0.002386,
+      "active_trace": 0.01125,
+      "otlp_import": 0.295053,
+      "active_increment_ms_per_call": 0.011139,
+      "inactive_increment_ms_per_call": 0.002275
+    },
+    {
+      "repeat": 19,
+      "installed_without_trace": 0.002452,
+      "active_trace": 0.015593,
+      "otlp_import": 0.287394,
+      "baseline": 0.000129,
+      "active_increment_ms_per_call": 0.015463999999999999,
+      "inactive_increment_ms_per_call": 0.0023230000000000004
+    }
+  ],
+  "summaries": {
+    "active_trace": {
+      "count": 20,
+      "median_ms": 0.0117085,
+      "min_ms": 0.011036999999999998,
+      "max_ms": 0.033226,
+      "p95_observed_ms": 0.019598
+    },
+    "otlp_import": {
+      "count": 20,
+      "median_ms": 0.2893915,
+      "min_ms": 0.271785,
+      "max_ms": 0.434653,
+      "p95_observed_ms": 0.400644
+    },
+    "baseline": {
+      "count": 20,
+      "median_ms": 0.00011599999999999999,
+      "min_ms": 0.000104,
+      "max_ms": 0.00035299999999999996,
+      "p95_observed_ms": 0.00035099999999999997
+    },
+    "installed_without_trace": {
+      "count": 20,
+      "median_ms": 0.0024720000000000002,
+      "min_ms": 0.002386,
+      "max_ms": 0.007908,
+      "p95_observed_ms": 0.007443
+    },
+    "active_increment_ms_per_call": {
+      "count": 20,
+      "median_ms": 0.011577,
+      "min_ms": 0.010931999999999999,
+      "max_ms": 0.033111,
+      "p95_observed_ms": 0.01948
+    },
+    "inactive_increment_ms_per_call": {
+      "count": 20,
+      "median_ms": 0.002354,
+      "min_ms": 0.002124,
+      "max_ms": 0.0077930000000000004,
+      "p95_observed_ms": 0.00709
+    }
+  },
+  "import_validation": {
+    "schema_version": "1.0",
+    "format": "otlp",
+    "source_sha256": "723acd3afdd74a009dc6c1b037a323c761cf17ff7e26c5d97b009a050ee40852",
+    "trace_count": 1,
+    "traces": [
+      {
+        "run_id": "run_cccccccccccccccccccccccccccccccc",
+        "source_sha256": "8aef43158ee6a9cd89c6643c0cfb7840d9b756f8b125899fba673fef60486f6f",
+        "validation": {
+          "schema_version": "1.0",
+          "status": "ready",
+          "analysis_allowed": true,
+          "checks": [
+            {
+              "code": "metadata_requires_review",
+              "severity": "notice",
+              "count": 9,
+              "detail": "Metadata and labels can contain private data, including imported attributes/logs; privacy has not been certified."
+            }
+          ],
+          "operation_counts": {
+            "agent": 1,
+            "evaluator": 1,
+            "guardrail": 1,
+            "model": 1,
+            "reranker": 1,
+            "retriever": 1,
+            "tool": 1,
+            "workflow": 1
+          },
+          "expected_operations": [],
+          "missing_expected_operations": [],
+          "event_count": 8,
+          "root_count": 1,
+          "usage_provenance_grades": {
+            "exact": 1
+          },
+          "privacy": {
+            "captured_text_field_count": 0,
+            "metadata_event_count": 8,
+            "certified_safe": false
+          },
+          "coverage": "Only supplied spans are observable; absence of warnings does not prove complete instrumentation."
+        },
+        "analysis": null,
+        "findings": [],
+        "analysis_status": "not_requested",
+        "analysis_limit_events": 2000
+      }
+    ],
+    "status": "ready",
+    "privacy": "Raw input/output/error text and arbitrary metadata are excluded. Run/span IDs must be opaque host identifiers.",
+    "interpretation": "Findings are estimates requiring validation; supplied telemetry is not a coverage or task-quality guarantee."
+  },
+  "limitations": [
+    "Local synthetic callback overhead; no provider/network/SDK service latency.",
+    "OTLP timing starts from parsed JSON; file IO and exporter overhead are excluded.",
+    "Descriptive single-machine repetitions, not confidence intervals or production overhead guarantees.",
+    "No paid calls; setup steps exclude application-specific exporter configuration and task-quality validation."
+  ]
+}

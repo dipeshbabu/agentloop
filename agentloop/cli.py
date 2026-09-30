@@ -63,6 +63,59 @@ app.add_typer(study_app, name="study")
 app.add_typer(aggregate_app, name="aggregate")
 
 
+@app.command("onboard")
+def onboard_command(
+    path: Path,
+    format: str = typer.Option(
+        "native", help="native or otlp; OTLP includes supported OpenInference attributes."
+    ),
+    out: Path = typer.Option(
+        Path("runs/onboarding.json"), help="Validation and payload-free analysis summary."
+    ),
+    expected_operation: list[str] | None = typer.Option(
+        None, help="Repeat for expected model/tool/classifier/etc. kinds."
+    ),
+    analyze: bool = typer.Option(
+        True, help="Analyze after validation; limited to 2000 spans per trace."
+    ),
+) -> None:
+    """Validate captured evidence and analyze existing telemetry without application changes."""
+    from agentloop.aggregates import read_json
+    from agentloop.onboarding import onboard
+
+    if path.resolve() == out.resolve():
+        raise typer.BadParameter("output must differ from the source telemetry", param_hint="out")
+    try:
+        result = onboard(
+            read_json(path),
+            format=format,
+            expected_operations=tuple(expected_operation or ()),
+            analyze=analyze,
+        )
+    except (OSError, ValueError, TypeError, OverflowError) as exc:
+        raise typer.BadParameter(str(exc), param_hint="path/format") from None
+    _write_json(out, result)
+    console.print(
+        f"Capture status: {result['status']}; traces: {result['trace_count']}", markup=False
+    )
+    for item in result["traces"]:
+        console.print(
+            f"Trace {item['run_id']}: {item['validation']['status']}; analysis {item['analysis_status']}",
+            markup=False,
+        )
+        for check in item["validation"]["checks"]:
+            console.print(f"- {check['code']} ({check['count']}): {check['detail']}", markup=False)
+        if item["analysis"] is not None:
+            report = item["analysis"]
+            console.print(
+                f"  Runtime {report['total_runtime_ms']} ms; model calls {report['model_call_count']}; token basis {report['token_status']}; findings {len(item['findings'])}",
+                markup=False,
+            )
+    console.print(f"Wrote onboarding evidence to {out}")
+    if result["status"] in {"invalid", "no_execution_data"}:
+        raise typer.Exit(code=1)
+
+
 @study_app.command("ablation")
 def study_ablation_command(
     bundle: Path,

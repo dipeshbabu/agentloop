@@ -10,6 +10,11 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added [standards-first onboarding](docs/ONBOARDING.md) with an explicit SDK
+  instrumentation entrypoint, first-use telemetry validation and payload-free
+  analysis summaries, shared adapter conformance and an offline setup/overhead
+  benchmark for existing telemetry and model-call paths.
+
 - Added [incremental trace aggregation](docs/INCREMENTAL_AGGREGATION.md) with bounded
   histogram/candidate state, compatible partition merges, explicit token/cost and
   sampling completeness, and streaming multi-file/manifest CLI commands.
