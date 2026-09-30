@@ -94,3 +94,33 @@ def test_unsupported_status_is_rejected() -> None:
         AgentTrace.from_dict(data)
 
     assert excinfo.value.field == "events[0].status"
+
+
+@pytest.mark.parametrize(
+    "value", [True, False, "100", {}, [], -1, float("nan"), float("inf"), -float("inf"), 10**400]
+)
+def test_invalid_elapsed_time_raises_schema_error(value):
+    data = _valid_04_trace()
+    data["elapsed_ms"] = value
+    with pytest.raises(TraceValidationError) as error:
+        AgentTrace.from_dict(data)
+    assert error.value.field == "elapsed_ms"
+    with pytest.raises(TraceValidationError):
+        AgentTrace("invalid-time", elapsed_ms=value)
+
+
+@pytest.mark.parametrize("value", [None, 0, 100, 1.5])
+def test_optional_elapsed_time_preserves_valid_values(value):
+    data = _valid_04_trace()
+    data["elapsed_ms"] = value
+    assert AgentTrace.from_dict(data).elapsed_ms == value
+    del data["elapsed_ms"]
+    assert AgentTrace.from_dict(data).elapsed_ms is None
+
+
+def test_duration_overflow_raises_schema_error():
+    data = _valid_04_trace()
+    data["events"][0]["duration_ms"] = 10**400
+    with pytest.raises(TraceValidationError) as error:
+        AgentTrace.from_dict(data)
+    assert error.value.field == "events[0].duration_ms"

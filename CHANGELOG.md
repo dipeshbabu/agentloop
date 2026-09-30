@@ -337,6 +337,10 @@ Project history from before the first public release remains available in Git.
 
 ### Fixed
 
+- Validate trace elapsed time before import and HTTP coercion, rejecting boolean,
+  nonnumeric, negative, non-finite and overflowing values before storage. Duration
+  overflow now raises a field-specific schema error instead of `OverflowError`.
+
 - Preserve token provenance in execution graphs and suppress cheaper-model
   recommendations when usage is explicitly unavailable. Missing usage no longer
   appears as a measured zero-token step or crowds out eligible recommendations.
