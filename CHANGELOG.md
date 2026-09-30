@@ -10,6 +10,12 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added opt-in [context transformation controls](docs/CONTEXT_CONTROLS.md) for
+  caller-selected optional tool results, with owned requests, protected evidence,
+  atomic rollback, shared summary budgets and payload-free receipts. A frozen
+  local-model ablation evaluates held-out SQL answers with independent scoring
+  and includes summarizer usage in every total.
+
 - Published [empirical estimator calibration](docs/EMPIRICAL_CALIBRATION.md)
   with 184 original finding registrations, explicit combined-outcome abstentions,
   a separately measured single-decision cohort and held-out diagnostics. Failed

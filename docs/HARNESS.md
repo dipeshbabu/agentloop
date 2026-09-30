@@ -128,6 +128,9 @@ fingerprints, with bounded retry and optional repetition/oscillation rules.
 `Decision.retry_of` annotates a host-declared relationship; nothing automatically
 executes a retry or replans the workflow.
 
-Policy transformations, provider routing, scheduling, checkpoint recovery, and
-automatic completion repair require later explicit capability extensions. The
-initial adapter supports only the actions above and introduces no required SDK.
+[Explicit context controls](CONTEXT_CONTROLS.md) bind an opt-in synchronous
+before-model adapter for caller-selected optional tool-result summaries. They
+preserve message roles and protected evidence, charge summaries to the same run,
+and retain transformation receipts without adding generic policy actions.
+Provider routing, scheduling, checkpoint recovery and automatic completion
+repair require later explicit extensions. No required provider SDK is introduced.
