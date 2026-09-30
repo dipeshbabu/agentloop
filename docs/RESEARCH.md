@@ -12,6 +12,10 @@ The [capability-checked routing study](ROUTING_STUDY.md) preserves original
 predictions and all outcomes for a manually configured smaller-model route,
 including held-out quality losses and unknown operating costs.
 
+The [read-only scheduling study](SCHEDULING_STUDY.md) checks ordered SQL outputs
+under explicit dependency/resource declarations, retaining measured control
+overhead as well as the effect of parallel execution.
+
 AgentLoop can be used as execution-level instrumentation and evaluation infrastructure for agentic systems. It is useful when the research question depends on what an agent did during a run, how much work it performed, and whether a runtime intervention changed efficiency or reliability.
 
 AgentLoop does not provide mechanistic interpretability, model training, causal identification by itself, benchmark dataset management, statistical significance testing, or human-evaluation assignment. Treat it as the trace and intervention-evidence layer inside a larger research workflow.
