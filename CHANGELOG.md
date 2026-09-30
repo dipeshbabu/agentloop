@@ -10,6 +10,10 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added [incremental trace aggregation](docs/INCREMENTAL_AGGREGATION.md) with bounded
+  histogram/candidate state, compatible partition merges, explicit token/cost and
+  sampling completeness, and streaming multi-file/manifest CLI commands.
+
 - Added [versioned trace retention](docs/TRACE_RETENTION.md) with seeded sampling,
   protected cases, bounded representative buckets, payload omission/redaction,
   compact and metric-only native artifacts, preserved aggregate measurements,
