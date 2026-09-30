@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import inspect
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from types import SimpleNamespace
 from typing import Any, Callable
 
 import pytest
 
+from agentloop.autoinstrument import instrument
 from agentloop.integrations.crewai import instrument_task
 from agentloop.integrations.langgraph import instrument_state_graph
 from agentloop.integrations.openai import instrument_openai_client
@@ -32,14 +33,18 @@ class AdapterContract:
             pytest.skip(f"{self.name}: {capability} unsupported: {value}")
 
 
-def _openai(fn, repetitions):
+def _openai(fn, repetitions, *, generic=False):
     client = SimpleNamespace(responses=SimpleNamespace(create=fn))
     for _ in range(repetitions):
-        assert instrument_openai_client(client) is client
+        assert (
+            instrument(client, integration="openai", enabled=True)
+            if generic
+            else instrument_openai_client(client)
+        ) is client
     return client.responses.create
 
 
-def _langgraph(fn, repetitions):
+def _langgraph(fn, repetitions, *, generic=False):
     class Builder:
         def __init__(self):
             self.nodes = {}
@@ -50,16 +55,24 @@ def _langgraph(fn, repetitions):
 
     graph = Builder()
     for _ in range(repetitions):
-        assert instrument_state_graph(graph) is graph
+        assert (
+            instrument(graph, integration="langgraph_builder", enabled=True)
+            if generic
+            else instrument_state_graph(graph)
+        ) is graph
     graph.add_node("conformance", fn)
     return graph.nodes["conformance"]
 
 
-def _crewai(fn, repetitions):
+def _crewai(fn, repetitions, *, generic=False):
     method = "execute_async" if inspect.iscoroutinefunction(fn) else "execute"
     task = SimpleNamespace(name="conformance", **{method: fn})
     for _ in range(repetitions):
-        assert instrument_task(task) is task
+        assert (
+            instrument(task, integration="crewai_task", enabled=True)
+            if generic
+            else instrument_task(task)
+        ) is task
     return getattr(task, method)
 
 
@@ -93,6 +106,16 @@ ADAPTERS = (
         "requires_active_trace",
         "tool_call",
     ),
+)
+
+
+ADAPTERS += tuple(
+    replace(
+        adapter,
+        name=adapter.name + "-generic",
+        wrap=lambda fn, repetitions, wrap=adapter.wrap: wrap(fn, repetitions, generic=True),
+    )
+    for adapter in ADAPTERS
 )
 
 
