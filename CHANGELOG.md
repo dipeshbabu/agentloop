@@ -10,6 +10,11 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added [context-reduction and result-reuse experiment templates](docs/CONTEXT_REUSE_EXPERIMENTS.md)
+  on the generic contract, with protected selections, token/quality separation,
+  versioned exact-key snapshots, explicit invalidation/fallback and loss-aware
+  observation summaries that preserve predictions and measured deltas separately.
+
 - Added [finding-linked optimization experiments](docs/OPTIMIZATION_EXPERIMENTS.md)
   with frozen baseline predictions, explicit caller runners, conservative execution
   budgets, idempotent journals, retained failure states and native intervention/

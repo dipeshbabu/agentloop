@@ -16,6 +16,7 @@ from agentloop.experiment_artifacts import (
     write_bytes_once,
     write_once,
 )
+from agentloop.experiment_observations import summarize_observations
 from agentloop.experiment_types import canonical, fingerprint
 from agentloop.experiments import slot_id
 from agentloop.harness_evidence import METADATA_KEY, validate_evidence
@@ -263,6 +264,20 @@ def summarize_experiment(root):
                 "gates_pass_count": sum(row["receipt"]["gates_passed"] for row in complete),
                 "all_planned_gates_passed": len(complete) == len(selected)
                 and all(row["receipt"]["gates_passed"] for row in complete),
+                "observations": summarize_observations(selected),
+                "measured_pairs": [
+                    {
+                        "case_id": row["case_id"],
+                        "quality_passed": row["receipt"]["quality_passed"],
+                        "gates_passed": row["receipt"]["gates_passed"],
+                        "deltas": row["intervention"]["measured"]["deltas"],
+                    }
+                    for row in complete
+                ],
+                "predicted_effects": [
+                    {"case_id": case["case_id"], "findings": case["expected_effects"]}
+                    for case in evidence["specification"]["cases"]
+                ],
             }
         )
     result = {
@@ -314,6 +329,23 @@ def experiment_to_markdown(report):
             item["all_planned_gates_passed"],
         ]
         lines.append("| " + " | ".join(markdown_table_cell(str(value)) for value in values) + " |")
+    for item in report["comparisons"]:
+        lines += [
+            "",
+            "## Observations: " + markdown_heading(item["candidate_id"]),
+            "",
+            "Realized pair deltas remain separate from frozen predicted effects. Quality-preserving observations are conditional and retain the full planned denominator.",
+            "",
+            "```json",
+            canonical(
+                {
+                    "observations": item.get("observations", {}),
+                    "measured_pairs": item.get("measured_pairs", []),
+                    "predicted_effects": item.get("predicted_effects", []),
+                }
+            ),
+            "```",
+        ]
     lines += [
         "",
         "## Retained attempt states",
@@ -376,6 +408,22 @@ def experiment_to_html(report):
         if report["synthetic"]
         else ""
     )
+    detail = "".join(
+        "<details><summary>Observations, measured deltas and separate predictions: "
+        + html.escape(item["candidate_id"])
+        + "</summary><pre>"
+        + html.escape(
+            canonical(
+                {
+                    "observations": item.get("observations", {}),
+                    "measured_pairs": item.get("measured_pairs", []),
+                    "predicted_effects": item.get("predicted_effects", []),
+                }
+            )
+        )
+        + "</pre></details>"
+        for item in report["comparisons"]
+    )
     return (
         '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; base-uri \'none\'"><title>Experiment evidence</title><style>body{font:16px/1.5 system-ui;margin:2rem auto;max-width:72rem;padding:0 1rem}table{border-collapse:collapse;width:100%}th,td{text-align:left;border-bottom:1px solid #ccc;padding:.6rem}pre{white-space:pre-wrap;overflow-wrap:anywhere}</style></head><body><main><h1>'
         + html.escape(report["name"])
@@ -385,6 +433,7 @@ def experiment_to_html(report):
         + html.escape(report["interpretation"])
         + "</p><h2>Candidate comparisons</h2>"
         + summary
+        + detail
         + "<h2>Retained attempts</h2>"
         + attempts
         + "<details><summary>Budget and measurement scope</summary><pre>"
