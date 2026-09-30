@@ -39,6 +39,14 @@ Current version: **`1.1`**.
 `1.1` added the optional event field `token_provenance` (see below). It is a
 backward-compatible addition: `1.0` traces omit it and stay readable.
 
+## Trace timing
+
+The optional `elapsed_ms` field is either `null` or a finite, nonnegative JSON
+number. Boolean values, numeric strings, collections, and numbers that overflow
+the supported floating-point range are rejected with `TraceValidationError`
+before conversion or storage. HTTP ingestion returns `422` with the same field
+and reason. Missing or `null` elapsed time continues to use timing fallbacks.
+
 ## Event fields
 
 Each event object has these fields. Required fields must be present and non-null.

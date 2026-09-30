@@ -2,10 +2,31 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from agentloop.server import app
 from agentloop.tracer import AgentTrace, trace_agent, trace_model_call
+
+
+@pytest.mark.parametrize(
+    "value", ["true", "false", '"100"', "{}", "[]", "-1", "1e400", "-1e400", "NaN", "1" + "0" * 400]
+)
+def test_invalid_elapsed_time_is_rejected_before_storage(monkeypatch, value):
+    from agentloop.server import store
+
+    class RejectStorage:
+        def save_trace(self, *args, **kwargs):
+            pytest.fail("invalid trace reached storage")
+
+    monkeypatch.setitem(app.dependency_overrides, store, lambda: RejectStorage())
+    response = TestClient(app).post(
+        "/v1/traces",
+        content='{"name":"bad-time","run_id":"bad-time","elapsed_ms":' + value + "}",
+        headers={"content-type": "application/json"},
+    )
+    assert response.status_code == 422
+    assert response.json()["detail"]["field"] == "elapsed_ms"
 
 
 def test_health() -> None:
