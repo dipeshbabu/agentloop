@@ -10,6 +10,10 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Documented the completed [optimization evidence roadmap review](docs/OPTIMIZATION_EVIDENCE_REVIEW.md),
+  linking all eleven workstreams to merged implementations, conformance checks,
+  reproducible studies and remaining evidence/release limitations.
+
 - Added [real non-agent workload validation](docs/NON_AGENT_STUDY.md) using learned
   CPU classification, record matching and conditional-fallback pipelines on public
   data, with frozen findings, negative candidates, recording-disabled controls
