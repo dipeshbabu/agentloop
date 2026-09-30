@@ -4,6 +4,9 @@ The harness controls only callables explicitly wrapped by the host application.
 Creating a run does not intercept other model, tool, framework, or provider calls.
 Ordinary AgentLoop tracing has no harness dependency and remains unchanged.
 
+The [implementation and evidence review](GUARDED_HARNESS_REVIEW.md) maps the
+completed roadmap to supported capabilities, tests and retained workload results.
+
 ```python
 from agentloop.harness import Decision, Harness, HarnessConfig, Hook, Policy
 

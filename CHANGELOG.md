@@ -10,6 +10,10 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Documented the completed [guarded-harness roadmap review](docs/GUARDED_HARNESS_REVIEW.md),
+  linking supported contracts, conformance tests, empirical results and remaining
+  deployment limitations. The controls remain Unreleased source-checkout APIs.
+
 - Added [reviewed budget-policy promotion](docs/POLICY_PROMOTION.md) using native
   ablation/calibration evidence, explicit approval and opt-in scopes, bounded
   canaries, version invalidation, kill switches and rollback. Synthetic, stale,
