@@ -138,4 +138,6 @@ adds bounded tool concurrency with explicit dependencies and resource safety.
 [Completion verification](COMPLETION.md) checks explicit criteria and bounds repair
 on the same run. [Host checkpoint recovery](CHECKPOINT_RECOVERY.md) preserves
 built-in policy state through one explicit LangGraph checkpoint path.
+[Reviewed policy promotion](POLICY_PROMOTION.md) gates one budget-policy family
+on held-out evidence, explicit operator approval and bounded canary rollback.
 No required provider SDK is introduced.
