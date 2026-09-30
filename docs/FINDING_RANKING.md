@@ -111,5 +111,6 @@ no automatic application permission. No storage migration or estimator coefficie
 change is introduced.
 
 See [finding rules](FINDING_RULES.md), the [trust benchmark](FINDING_BENCHMARKS.md),
+the [generic experiment contract](OPTIMIZATION_EXPERIMENTS.md),
 and [reviewed policy promotion](POLICY_PROMOTION.md) for separate detection,
 validation and deployment contracts.
