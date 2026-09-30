@@ -10,6 +10,12 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added explicit [model-routing controls](docs/MODEL_ROUTING.md) with allowlisted
+  model/provider bindings, capability checks, bounded fallback, shared budgets
+  and streaming cancellation. Optional harness error-usage readers preserve SDK
+  failure and close usage. A [paired local study](docs/ROUTING_STUDY.md) retains
+  a faster route that loses held-out answer quality and is not promoted.
+
 - Added opt-in [context transformation controls](docs/CONTEXT_CONTROLS.md) for
   caller-selected optional tool results, with owned requests, protected evidence,
   atomic rollback, shared summary budgets and payload-free receipts. A frozen
