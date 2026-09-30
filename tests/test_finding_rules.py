@@ -1,9 +1,84 @@
 from __future__ import annotations
 
+import pytest
+
 from agentloop.entrypoint import _quickstart_trace
 from agentloop.findings import build_diagnosis, diagnosis_to_markdown
+from agentloop.graph import ExecutionGraph
 from agentloop.optimizer import OptimizationCard, build_optimization_plan
 from agentloop.rules import BUILTIN_RULES, AnalysisContext, FindingCandidate, FindingRule, run_rules
+from agentloop.tracer import AgentTrace, record_model_call
+
+
+@pytest.mark.parametrize("model", ["gpt-4.1", "local-knn"])
+@pytest.mark.parametrize("input_tokens", [0, 100])
+def test_unavailable_usage_does_not_recommend_smaller_models(model, input_tokens):
+    trace = AgentTrace("missing-usage")
+    record_model_call(
+        "predict",
+        started_at="2026-01-01T00:00:00+00:00",
+        duration_ms=100,
+        model=model,
+        input_tokens=input_tokens,
+        token_provenance="unavailable",
+        trace=trace,
+    )
+    report = trace.report()
+    surfaces = (
+        report["finding_candidates"],
+        build_optimization_plan(trace, report)["optimization_cards"],
+        build_diagnosis(trace)["findings"],
+    )
+    assert report["analysis_complete"] is True
+    for findings in surfaces:
+        assert not any(item["type"] == "route_to_smaller_model" for item in findings)
+
+
+@pytest.mark.parametrize(
+    "provenance", ["provider", "tokenizer", "user_supplied", "estimated_words", None]
+)
+def test_available_usage_still_routes_after_missing_calls(provenance):
+    trace = AgentTrace("mixed-usage")
+    for index in range(4):
+        record_model_call(
+            f"predict-{index}",
+            started_at="2026-01-01T00:00:00+00:00",
+            duration_ms=100,
+            model="gpt-4.1",
+            input_tokens=100 if index == 3 else 0,
+            token_provenance="unavailable",
+            trace=trace,
+        )
+    trace.events[-1].token_provenance = provenance
+    graph = ExecutionGraph.from_trace(trace)
+    assert [node.to_dict()["token_provenance"] for node in graph.nodes] == [
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        provenance,
+    ]
+    routes = [
+        item
+        for item in trace.report()["finding_candidates"]
+        if item["type"] == "route_to_smaller_model"
+    ]
+    assert len(routes) == 1
+    assert routes[0]["affected_nodes"] == [trace.events[-1].event_id]
+
+
+def test_provider_reported_zero_is_distinct_from_unavailable_usage():
+    trace = AgentTrace("known-zero")
+    record_model_call(
+        "predict",
+        started_at="2026-01-01T00:00:00+00:00",
+        duration_ms=100,
+        model="gpt-4.1",
+        token_provenance="provider",
+        trace=trace,
+    )
+    assert any(
+        item["type"] == "route_to_smaller_model" for item in trace.report()["finding_candidates"]
+    )
 
 
 def test_report_optimizer_and_diagnosis_share_rule_identity_and_findings():

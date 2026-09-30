@@ -337,6 +337,10 @@ Project history from before the first public release remains available in Git.
 
 ### Fixed
 
+- Preserve token provenance in execution graphs and suppress cheaper-model
+  recommendations when usage is explicitly unavailable. Missing usage no longer
+  appears as a measured zero-token step or crowds out eligible recommendations.
+
 - Fixed critical paths being truncated when repeated edges, including different
   relationship kinds between the same spans, released a node before all of its
   predecessors were processed.

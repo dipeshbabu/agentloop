@@ -12,6 +12,7 @@ from agentloop.estimates import ESTIMATORS, estimate_snapshot
 from agentloop.graph import ExecutionGraph
 from agentloop.parallelism import PARALLELISM_REWRITE
 from agentloop.ranking import requirements
+from agentloop.tokens import UNAVAILABLE
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -253,6 +254,8 @@ def _routing_cards(graph: ExecutionGraph) -> list[FindingCandidate]:
     for node in graph.nodes:
         if node.operation_kind != "model" or not node.model:
             continue
+        if node.token_provenance == UNAVAILABLE:
+            continue
         if "mini" in node.model.lower():
             continue
         if node.output_tokens <= 400 and node.input_tokens <= 2500:
@@ -375,7 +378,7 @@ BUILTIN_RULES = (
     FindingRule("cache_context", "1.1", lambda ctx: _context_cache_cards(ctx.report, ctx.graph)),
     FindingRule("add_schema_validation", "1.1", lambda ctx: _retry_cards(ctx.graph)),
     FindingRule("batch_model_calls", "1.1", lambda ctx: _batch_model_cards(ctx.graph)),
-    FindingRule("route_to_smaller_model", "1.1", lambda ctx: _routing_cards(ctx.graph)),
+    FindingRule("route_to_smaller_model", "1.2", lambda ctx: _routing_cards(ctx.graph)),
     FindingRule("split_large_step", "1.1", lambda ctx: _split_large_step_cards(ctx.graph)),
     FindingRule("runaway_loop", "1.1", lambda ctx: _runaway_loop_cards(ctx.graph)),
     FindingRule("tool_oscillation", "1.1", lambda ctx: _tool_oscillation_cards(ctx.graph)),
