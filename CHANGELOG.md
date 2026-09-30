@@ -10,6 +10,11 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added [declared tool scheduling](docs/TOOL_SCHEDULING.md) with explicit DAG and
+  resource safety, bounded shared-budget admission, ordered results, cooperative
+  stopping and retained partial work. A [read-only SQL ablation](docs/SCHEDULING_STUDY.md)
+  preserves all outputs and records the adapter overhead alongside actual concurrency.
+
 - Added explicit [model-routing controls](docs/MODEL_ROUTING.md) with allowlisted
   model/provider bindings, capability checks, bounded fallback, shared budgets
   and streaming cancellation. Optional harness error-usage readers preserve SDK

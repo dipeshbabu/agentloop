@@ -133,6 +133,7 @@ before-model adapter for caller-selected optional tool-result summaries. They
 preserve message roles and protected evidence, charge summaries to the same run,
 and retain transformation receipts without adding generic policy actions.
 [Explicit routing](MODEL_ROUTING.md) adds reviewed model bindings, capability
-checks and bounded fallback on the same run budget. Scheduling, checkpoint
-recovery and automatic completion repair require later explicit extensions.
+checks and bounded fallback on the same run budget. [Declared scheduling](TOOL_SCHEDULING.md)
+adds bounded tool concurrency with explicit dependencies and resource safety.
+Checkpoint recovery and automatic completion repair require later explicit extensions.
 No required provider SDK is introduced.
