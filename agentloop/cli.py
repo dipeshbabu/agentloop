@@ -23,6 +23,7 @@ from agentloop.client import AgentLoopClient, AgentLoopClientError
 from agentloop.costs import format_cost_usd, is_cost_evaluable
 from agentloop.demo import run_baseline, run_langgraph_style, run_optimized, run_proof_pair
 from agentloop.doctor import run_doctor, run_production_check
+from agentloop.drift_cli import drift_app
 from agentloop.exporters import export_report_markdown
 from agentloop.findings import build_diagnosis, diagnosis_to_markdown
 from agentloop.intervention_service import create_stored_intervention
@@ -61,6 +62,7 @@ console = Console()
 study_app = typer.Typer(help="Summarize offline studies and preserved intervention evidence.")
 app.add_typer(study_app, name="study")
 app.add_typer(aggregate_app, name="aggregate")
+app.add_typer(drift_app, name="drift")
 
 
 @app.command("onboard")

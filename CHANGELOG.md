@@ -10,6 +10,11 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added [reviewed-window drift reports](docs/DRIFT.md) for cohort-level latency,
+  usage, cost, failures, distributions, caller quality/proxies, finding incidence
+  and capture completeness, with immutable baseline/threshold references and
+  explicit small-sample, missing-evidence and incompatible-sampling outcomes.
+
 - Added [standards-first onboarding](docs/ONBOARDING.md) with an explicit SDK
   instrumentation entrypoint, first-use telemetry validation and payload-free
   analysis summaries, shared adapter conformance and an offline setup/overhead
