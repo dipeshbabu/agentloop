@@ -7,6 +7,7 @@ from dataclasses import dataclass, fields
 from enum import Enum
 from typing import Any
 
+from agentloop.batching import model_batch_groups
 from agentloop.costs import is_cost_evaluable
 from agentloop.estimates import ESTIMATORS, estimate_snapshot
 from agentloop.graph import ExecutionGraph
@@ -225,14 +226,8 @@ def _retry_cards(graph: ExecutionGraph) -> list[FindingCandidate]:
 
 
 def _batch_model_cards(graph: ExecutionGraph) -> list[FindingCandidate]:
-    groups: dict[str, list[Any]] = {}
-    for node in graph.nodes:
-        if node.operation_kind == "model":
-            groups.setdefault(node.name, []).append(node)
     cards = []
-    for name, nodes in groups.items():
-        if len(nodes) < 3:
-            continue
+    for name, nodes in model_batch_groups(graph):
         duration = sum(node.duration_ms for node in nodes)
         cards.append(
             FindingCandidate(
@@ -377,7 +372,7 @@ BUILTIN_RULES = (
     FindingRule("parallelize_tools", "1.1", lambda ctx: _parallelization_cards(ctx.graph)),
     FindingRule("cache_context", "1.1", lambda ctx: _context_cache_cards(ctx.report, ctx.graph)),
     FindingRule("add_schema_validation", "1.1", lambda ctx: _retry_cards(ctx.graph)),
-    FindingRule("batch_model_calls", "1.1", lambda ctx: _batch_model_cards(ctx.graph)),
+    FindingRule("batch_model_calls", "1.2", lambda ctx: _batch_model_cards(ctx.graph)),
     FindingRule("route_to_smaller_model", "1.2", lambda ctx: _routing_cards(ctx.graph)),
     FindingRule("split_large_step", "1.1", lambda ctx: _split_large_step_cards(ctx.graph)),
     FindingRule("runaway_loop", "1.1", lambda ctx: _runaway_loop_cards(ctx.graph)),
