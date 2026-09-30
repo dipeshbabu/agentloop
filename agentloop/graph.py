@@ -32,6 +32,7 @@ class ExecutionNode:
     started_at: str | None = None
     ended_at: str | None = None
     parent_id: str | None = None
+    token_provenance: str | None = None
 
     @property
     def operation_kind(self) -> str:
@@ -55,6 +56,7 @@ class ExecutionNode:
             "input_tokens": self.input_tokens,
             "output_tokens": self.output_tokens,
             "total_tokens": self.total_tokens,
+            "token_provenance": self.token_provenance,
             "status": self.status,
             "metadata": self.metadata,
         }
@@ -119,6 +121,7 @@ class ExecutionGraph:
                     model=event.model,
                     input_tokens=event.input_tokens,
                     output_tokens=event.output_tokens,
+                    token_provenance=getattr(event, "token_provenance", None),
                     status=event.status,
                     metadata=event.metadata or {},
                     started_at=event.started_at,
