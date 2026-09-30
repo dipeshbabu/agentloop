@@ -33,6 +33,10 @@ The [capability-checked routing study](docs/ROUTING_STUDY.md) retains a separate
 GSM8K sample under MIT with its complete license and source revision. Its evidence
 bundle does not redistribute model weights or inference binaries.
 
+The [read-only scheduling study](docs/SCHEDULING_STUDY.md) retains UCI Wine Quality
+CSV data and a derived SQLite database under CC BY 4.0, with attribution and
+the transformation described in its evidence bundle.
+
 This table records the licenses reported by the direct dependencies in the
 locked environment reviewed on 2026-07-13. It is a review aid, not a replacement
 for the complete license text and notices distributed by each dependency.
