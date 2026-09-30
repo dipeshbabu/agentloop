@@ -36,6 +36,10 @@ def build_replay_report(
     which input was missing.
     """
 
+    from agentloop.retention import require_complete_evidence
+
+    require_complete_evidence(baseline_trace, "replay")
+    require_complete_evidence(candidate_trace, "replay")
     gates = gates or ReplayGates()
     baseline_report = baseline_trace.report()
     candidate_report = candidate_trace.report()

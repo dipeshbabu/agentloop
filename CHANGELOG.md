@@ -10,6 +10,11 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added [versioned trace retention](docs/TRACE_RETENTION.md) with seeded sampling,
+  protected cases, bounded representative buckets, payload omission/redaction,
+  compact and metric-only native artifacts, preserved aggregate measurements,
+  and explicit rejection of incomplete replay/study evidence.
+
 - Added [structural experiment templates](docs/STRUCTURAL_EXPERIMENTS.md) for
   declared stage removal, conditional routing, bounded batches and scheduler-backed
   parallelism, with retained downstream/item failures, cohort quality and measured

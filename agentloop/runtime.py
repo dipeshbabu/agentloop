@@ -3,7 +3,10 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from agentloop.retention import RetentionSession
 
 _TRUE_VALUES = {"1", "true", "yes", "on"}
 
@@ -53,6 +56,7 @@ class AgentLoopRuntimeConfig:
     auto_store: bool = False
     fail_silently: bool = True
     export_dir: Path | None = None
+    retention: RetentionSession | None = None
 
 
 _runtime = AgentLoopRuntimeConfig()
@@ -75,6 +79,7 @@ def init(
     auto_store: bool | None = None,
     fail_silently: bool | None = None,
     export_dir: str | Path | _ClearSentinel | None = None,
+    retention: RetentionSession | _ClearSentinel | None = None,
 ) -> AgentLoopRuntimeConfig:
     """Configure AgentLoop once at process startup.
 
@@ -100,6 +105,15 @@ def init(
     """
 
     global _runtime
+
+    from agentloop.retention import RetentionSession
+
+    if (
+        retention is not None
+        and retention is not CLEAR
+        and not isinstance(retention, RetentionSession)
+    ):
+        raise TypeError("retention must be RetentionSession, CLEAR or None")
 
     if api_key is CLEAR:
         resolved_api_key: str | None = None
@@ -130,6 +144,11 @@ def init(
         if fail_silently is not None
         else _env_bool("AGENTLOOP_FAIL_SILENTLY", _runtime.fail_silently),
         export_dir=resolved_export_dir,
+        retention=None
+        if retention is CLEAR
+        else retention
+        if retention is not None
+        else _runtime.retention,
     )
     return _runtime
 
@@ -181,6 +200,29 @@ def finalize_trace(trace: Any) -> dict[str, Any]:
         "uploaded": False,
         "errors": [],
     }
+    if _runtime.retention is not None:
+        try:
+            trace = _runtime.retention.retain(trace)
+            result["retention"] = {
+                "retained": trace is not None,
+                "sampling": _runtime.retention.summary(),
+            }
+        except Exception as exc:
+            # Never fall back to raw export after a privacy/retention failure.
+            errors = [
+                {
+                    "destination": "retention",
+                    "error": "Retention failed; no destinations attempted.",
+                }
+            ]
+            result["errors"] = errors
+            _last_error = errors[0]["error"]
+            if not _runtime.fail_silently:
+                raise FinalizationError(_last_error, result=result, errors=errors) from exc
+            return result
+        if trace is None:
+            _last_error = None
+            return result
 
     def _do_export() -> None:
         export_dir = _runtime.export_dir

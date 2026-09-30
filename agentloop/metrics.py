@@ -22,14 +22,19 @@ from agentloop.tokens import (
 from agentloop.workflow_types import stage_summary, workflow_summary
 
 
-def build_report(trace: Any) -> dict[str, Any]:
+def build_report(trace: Any, *, _aggregate_only: bool = False) -> dict[str, Any]:
+    from agentloop.retention import read_retention, retained_report
+
+    retained = retained_report(trace)
+    if retained is not None:
+        return retained
     events = trace.events
     model_events = [e for e in events if e.event_type == "model_call"]
     tool_events = [e for e in events if e.event_type == "tool_call"]
     retry_events = [e for e in events if e.event_type == "retry"]
 
     repeated = repeated_context_stats([e for e in model_events if operation_kind(e) == "model"])
-    parallel = parallelism_opportunities(events)
+    parallel = [] if _aggregate_only else parallelism_opportunities(events)
     cumulative_time = cumulative_span_time_ms(events)
     cost = cost_breakdown(model_events)
     tokens = token_breakdown(model_events)
@@ -68,8 +73,10 @@ def build_report(trace: Any) -> dict[str, Any]:
         "repeated_context_ratio": repeated["repeated_context_ratio"],
         "parallelism_opportunities": parallel,
         "recommendations": [],
-        "events": [e.to_dict() for e in events],
+        "events": [] if _aggregate_only else [e.to_dict() for e in events],
     }
+    if _aggregate_only:
+        return report
     execution = workflow_summary(getattr(trace, "metadata", {}))
     if execution is not None:
         report["execution"] = execution
@@ -133,6 +140,9 @@ def build_report(trace: Any) -> dict[str, Any]:
                 "description": "Collect more traces for stronger recommendations.",
             }
         ]
+    retention = read_retention(trace)
+    if retention is not None:
+        report["retention"] = retention
     return report
 
 
