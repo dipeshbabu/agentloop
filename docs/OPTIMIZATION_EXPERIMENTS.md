@@ -1,5 +1,8 @@
 # Finding-linked optimization experiments
 
+Use the [context-reduction and result-reuse templates](CONTEXT_REUSE_EXPERIMENTS.md)
+for explicit field changes or frozen-key reuse on this same evidence contract.
+
 Available from an **Unreleased source checkout**. Schema 1.0 links frozen baseline
 traces/findings to explicit caller-run candidates, then reuses native quality,
 replay, intervention and study artifacts. It does not deploy candidates or execute
