@@ -243,7 +243,16 @@ def onboard(
         )
     if type(analyze) is not bool:
         raise TypeError("analyze must be boolean")
-    traces = [AgentTrace.from_dict(payload)] if format == "native" else traces_from_otel(payload)
+    if format == "otlp" and not isinstance(payload, (dict, list)):
+        raise ValueError("OTLP telemetry must be an object or a list of spans")
+    try:
+        traces = (
+            [AgentTrace.from_dict(payload)] if format == "native" else traces_from_otel(payload)
+        )
+    except (AttributeError, KeyError, IndexError):
+        raise ValueError(
+            "Malformed telemetry structure; expected supported trace/span fields"
+        ) from None
     results = []
     for trace in traces:
         validation = validate_capture(trace, expected_operations=expected_operations)

@@ -170,3 +170,17 @@ def test_onboarding_cli_output_and_input_protection(tmp_path):
     response = CliRunner().invoke(app, ["onboard", str(source), "--out", str(source)])
     assert response.exit_code != 0
     assert AgentTrace.from_json(source).events
+
+
+@pytest.mark.parametrize("payload", ["not an envelope", [1], {"resourceSpans": [7]}])
+def test_malformed_otlp_has_a_validation_error_without_output(tmp_path, payload):
+    with pytest.raises(ValueError, match="telemetry"):
+        onboard(payload, format="otlp")
+    source = tmp_path / "bad.json"
+    output = tmp_path / "out.json"
+    source.write_text(json.dumps(payload))
+    result = CliRunner().invoke(
+        app, ["onboard", str(source), "--format", "otlp", "--out", str(output)]
+    )
+    assert result.exit_code == 2
+    assert not output.exists()

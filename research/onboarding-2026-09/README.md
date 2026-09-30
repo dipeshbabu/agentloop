@@ -1,6 +1,6 @@
 # Offline onboarding measurement
 
-The [raw benchmark](benchmark.json) records 20 measured rounds of 100 calls per
+The [raw benchmark](benchmark-final.json) records 20 measured rounds of 100 calls per
 condition after two warm-up rounds, on September 30, 2026. Conditions rotate in
 order. Measurements use the maintained OpenAI-shaped local response fixture and
 the version-pinned synthetic OpenInference telemetry fixture. No model provider
@@ -8,11 +8,11 @@ or remote service is called.
 
 | Condition | Median | Observed p95 |
 | --- | ---: | ---: |
-| Unchanged local callback | 0.116 microseconds/call | 0.351 microseconds/call |
-| Installed adapter, no active trace | 2.472 microseconds/call | 7.443 microseconds/call |
-| Active recording, including host boundary | 11.709 microseconds/call | 19.598 microseconds/call |
-| Paired active-minus-baseline increment | 11.577 microseconds/call | 19.480 microseconds/call |
-| Parsed OpenInference payload import | 0.289 milliseconds/import | 0.401 milliseconds/import |
+| Unchanged local callback | 0.122 microseconds/call | 0.279 microseconds/call |
+| Installed adapter, no active trace | 2.533 microseconds/call | 7.228 microseconds/call |
+| Active recording, including host boundary | 11.680 microseconds/call | 23.803 microseconds/call |
+| Paired active-minus-baseline increment | 11.556 microseconds/call | 23.442 microseconds/call |
+| Parsed OpenInference payload import | 0.288 milliseconds/import | 0.369 milliseconds/import |
 
 These are descriptive local timings, not a production latency or overhead
 guarantee. The baseline callback does almost no work; its relative slowdown would
@@ -20,6 +20,9 @@ not model a provider-backed application. Import timing excludes JSON parsing,
 file IO and exporter work. The conformance suite was also running locally during
 this measurement; raw slower repetitions remain in the artifact. The result is
 not a controlled comparison across machines or a confidence interval.
+An [earlier source-bound measurement](benchmark.json) is retained as well. Its
+validator predates the final malformed-OTLP input guard; it is not a before/after
+performance comparison or a replaced observation.
 
 Setup definitions count three SDK steps (install, initialize the explicit adapter,
 add a host boundary) and two existing-telemetry steps (export, onboard). Exporter
