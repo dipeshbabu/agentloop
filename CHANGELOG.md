@@ -10,6 +10,11 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added [real non-agent workload validation](docs/NON_AGENT_STUDY.md) using learned
+  CPU classification, record matching and conditional-fallback pipelines on public
+  data, with frozen findings, negative candidates, recording-disabled controls
+  and native finding/calibration feedback.
+
 - Added a [cross-workload usefulness benchmark](docs/USEFULNESS_BENCHMARK.md) with
   frozen reference experiments, separate real-agent archive analysis, native
   finding labels, preserved original predictions/outcomes, task-level uncertainty,
