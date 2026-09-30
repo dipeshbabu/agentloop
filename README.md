@@ -289,6 +289,9 @@ reports from untrusted traces.
 
 For existing telemetry, [OTLP conformance](docs/TELEMETRY_CONFORMANCE.md) covers
 GenAI, OpenInference, and MCP JSON, including operation kinds and evidence metadata.
+From an unreleased source checkout, [standards-first onboarding](docs/ONBOARDING.md)
+validates existing telemetry before analysis and provides one explicit SDK
+instrumentation entrypoint with documented coverage and measured local overhead.
 
 | Integration | How it connects |
 |---|---|

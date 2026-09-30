@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import warnings
 from dataclasses import dataclass, field
 from typing import Any
@@ -100,3 +101,45 @@ def auto_instrument(**kwargs: Any) -> DetectionResult:
         stacklevel=2,
     )
     return detect_integrations()
+
+
+def instrument(target: Any, *, integration: str, enabled: bool | None = None) -> Any:
+    """Enable a supported adapter on an explicitly supplied application object.
+
+    This startup call is required even when environment configuration is used.
+    False disables installation on this call; it does not unwrap an object that
+    was previously instrumented. Execution boundaries remain host-owned.
+    """
+    if integration not in {"openai", "langgraph_builder", "crewai_task"}:
+        raise ValueError("integration must be openai, langgraph_builder or crewai_task")
+    if enabled is None:
+        setting = os.getenv("AGENTLOOP_INSTRUMENTATION_ENABLED", "true").strip().lower()
+        if setting not in {"true", "false", "1", "0"}:
+            raise ValueError("AGENTLOOP_INSTRUMENTATION_ENABLED must be true/false/1/0")
+        enabled = setting in {"true", "1"}
+    if type(enabled) is not bool:
+        raise TypeError("enabled must be boolean or None")
+    if not enabled:
+        return target
+    if integration == "openai":
+        from agentloop.integrations.openai import instrument_openai_client
+
+        responses = getattr(target, "responses", None)
+        completions = getattr(getattr(target, "chat", None), "completions", None)
+        if not any(
+            callable(getattr(resource, "create", None)) for resource in (responses, completions)
+        ):
+            raise TypeError("OpenAI-like client exposes no supported create method")
+        return instrument_openai_client(target)
+    if integration == "langgraph_builder":
+        from agentloop.integrations.langgraph import instrument_state_graph
+
+        return instrument_state_graph(target)
+    from agentloop.integrations.crewai import instrument_task
+
+    if not any(
+        callable(getattr(target, name, None))
+        for name in ("execute", "execute_sync", "execute_async", "run")
+    ):
+        raise TypeError("CrewAI-like task exposes no supported execution method")
+    return instrument_task(target)

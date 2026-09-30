@@ -3,6 +3,7 @@ from agentloop.autoinstrument import (
     InstrumentationResult,
     auto_instrument,
     detect_integrations,
+    instrument,
 )
 from agentloop.client import AgentLoopClient, AgentLoopClientError
 from agentloop.decorators import trace_model, trace_tool, traceable
@@ -108,6 +109,7 @@ __all__ = [
     "auto_instrument",
     "bind_trace_context",
     "detect_integrations",
+    "instrument",
     "build_value_report",
     "build_diagnosis",
     "build_patch_plan",

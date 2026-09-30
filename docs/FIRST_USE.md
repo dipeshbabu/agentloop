@@ -1,6 +1,9 @@
 # First useful result
 
 AgentLoop has two orchestration commands for people who do not yet need the lower-level workflow.
+For existing OTLP/OpenInference telemetry or a client already used by your
+application, the Unreleased [onboarding path](ONBOARDING.md) adds capture validation
+and an explicit SDK startup helper before these analysis steps.
 
 For classifiers, rules and decision pipelines, see the
 [AI execution profiling guide](AI_EXECUTION_PROFILING.md). Those workflow APIs
