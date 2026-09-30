@@ -2,6 +2,8 @@
 
 Use the [context-reduction and result-reuse templates](CONTEXT_REUSE_EXPERIMENTS.md)
 for explicit field changes or frozen-key reuse on this same evidence contract.
+The [structural templates](STRUCTURAL_EXPERIMENTS.md) cover stage removal,
+conditional execution, bounded batching and declared-safe parallelism.
 
 Available from an **Unreleased source checkout**. Schema 1.0 links frozen baseline
 traces/findings to explicit caller-run candidates, then reuses native quality,
