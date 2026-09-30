@@ -119,6 +119,14 @@ collector errors become safe unknown-usage diagnostics; raw results and exceptio
 messages are not retained. Cancellation/process-control exceptions keep their
 identity.
 
+An optional synchronous `error_usage_reader(exception)` can return exclusive
+usage reported by a failed SDK call or stream close. It runs after attempted
+dispatch, before the after-hook, across all supported callable lifecycles. It
+never runs for denied or successful work. Error-reader failure leaves usage
+unknown and preserves the original provider exception or cancellation; exception
+objects and messages are not serialized into hook evidence. Existing callers
+without this optional reader retain their behavior.
+
 ## Unknown usage and repeated reports
 
 | `unknown_usage` | Before dispatch | After attempted work with unavailable required usage |
