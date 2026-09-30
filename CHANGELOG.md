@@ -337,6 +337,11 @@ Project history from before the first public release remains available in Git.
 
 ### Fixed
 
+- Model batching advice now respects direct and transitive dependencies, parent
+  scopes, and model identities. Missing, malformed or cyclic dependency evidence
+  suppresses affected groups; inferred execution order alone does not prove a
+  dependency or independence.
+
 - Validate trace elapsed time before import and HTTP coercion, rejecting boolean,
   nonnumeric, negative, non-finite and overflowing values before storage. Duration
   overflow now raises a field-specific schema error instead of `OverflowError`.

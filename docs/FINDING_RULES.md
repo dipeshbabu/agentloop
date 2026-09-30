@@ -27,6 +27,23 @@ registry as a fallback. Diagnosis, patch planning, CLI, dashboard, API, and CI
 therefore use the same finding types and wording. For example, report context
 caching now uses the optimizer's title, `Cache repeated prompt/context prefix`.
 
+## Batching eligibility
+
+`batch_model_calls` version `1.2` groups at least three calls with the same name,
+model identity, and parent scope. It excludes groups where a call depends on
+another group member, including dependencies through tools or other spans.
+Native `depends_on` metadata, declared workflow-stage dependencies, explicit
+graph dependency edges, and parent relationships all contribute to this check.
+Missing references, malformed declarations, duplicate span IDs, and cyclic
+ancestry prevent recommendations for affected groups. A shared external input
+does not by itself make the calls dependent on one another.
+
+Inferred sequence edges describe observed order and are not treated as causal
+dependencies. Traces without dependency declarations can still produce batching
+hypotheses; verify output independence, shared-state safety, and task quality
+before applying them. This rule does not infer hidden dependencies from prompts
+or tool outputs, and it does not rewrite historical findings or study evidence.
+
 ## Failures and completeness
 
 Each detector failure is isolated. Other rules still return their findings, and
