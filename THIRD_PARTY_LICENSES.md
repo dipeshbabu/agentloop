@@ -24,6 +24,11 @@ keep their own licenses; they are not relicensed as AgentLoop code. The study's
 bundle contains source attribution and the GSM8K license. It does not redistribute
 model weights, inference binaries or dependency implementations.
 
+The [context transformation study](docs/CONTEXT_STUDY.md) reuses the same public
+UCI Wine Quality measurements under CC BY 4.0, with attribution in its evidence
+bundle. Its summaries and task outputs come from local inference; model weights
+and inference binaries are not redistributed.
+
 This table records the licenses reported by the direct dependencies in the
 locked environment reviewed on 2026-07-13. It is a review aid, not a replacement
 for the complete license text and notices distributed by each dependency.

@@ -4,6 +4,10 @@ The [real-agent routing study](REAL_AGENT_STUDY.md) applies the released 0.7.0
 evidence workflow to three local-model agents, retaining a rejected intervention,
 failed tasks, unknown costs, original predictions and a reproducibility bundle.
 
+The [context transformation study](CONTEXT_STUDY.md) compares explicit optional
+tool-result summaries with tracing, shadow and budget controls. It measures
+independent answer quality and total usage including the summarizer.
+
 AgentLoop can be used as execution-level instrumentation and evaluation infrastructure for agentic systems. It is useful when the research question depends on what an agent did during a run, how much work it performed, and whether a runtime intervention changed efficiency or reliability.
 
 AgentLoop does not provide mechanistic interpretability, model training, causal identification by itself, benchmark dataset management, statistical significance testing, or human-evaluation assignment. Treat it as the trace and intervention-evidence layer inside a larger research workflow.

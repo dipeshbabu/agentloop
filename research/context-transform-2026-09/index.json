@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0",
+  "parts": [
+    {
+      "file": "evidence-01.zip",
+      "bytes": 544082,
+      "sha256": "8e2b9d1fd88739ceeb6cadf5976a791f3d749094fac79ab8a8ddb8cd1be919f5",
+      "file_count": 185
+    },
+    {
+      "file": "evidence-02.zip",
+      "bytes": 701260,
+      "sha256": "e35f98f39d4ae44b30a24d638e9f101acb52096e4137f36e28b856c15be8211e",
+      "file_count": 185
+    }
+  ],
+  "total_files": 370
+}
