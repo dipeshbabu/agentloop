@@ -135,5 +135,6 @@ and retain transformation receipts without adding generic policy actions.
 [Explicit routing](MODEL_ROUTING.md) adds reviewed model bindings, capability
 checks and bounded fallback on the same run budget. [Declared scheduling](TOOL_SCHEDULING.md)
 adds bounded tool concurrency with explicit dependencies and resource safety.
-Checkpoint recovery and automatic completion repair require later explicit extensions.
+[Completion verification](COMPLETION.md) checks explicit criteria and bounds repair
+on the same run. Checkpoint recovery requires a later explicit extension.
 No required provider SDK is introduced.
