@@ -123,9 +123,47 @@ def summarize_observations(rows):
                     for value, row in zip(row_values, rows)
                 ]
             )
+            if units == ["completed_items"] and kinds == ["observed"]:
+                rates = []
+                for value, row in zip(row_values, rows):
+                    elapsed = (
+                        None
+                        if row["intervention"] is None
+                        else row["intervention"]["measured"]["candidate"]["runtime_ms"]
+                    )
+                    rate = (
+                        value * 1000 / elapsed
+                        if value is not None and elapsed is not None and elapsed > 0
+                        else None
+                    )
+                    rates.append(rate if rate is not None and math.isfinite(rate) else None)
+                summary["per_second_of_end_to_end_candidate_runtime"] = summarize_values(rates)
+                summary["quality_preserving_per_second"] = summarize_values(
+                    [
+                        value
+                        if row["receipt"] is not None and row["receipt"]["quality_passed"]
+                        else None
+                        for value, row in zip(rates, rows)
+                    ]
+                )
         elif compatible:
             summary["value_counts"] = dict(
                 sorted(Counter(str(value) for value in row_values if value is not None).items())
             )
+            summary["quality_pass_counts_by_value"] = dict(
+                sorted(
+                    Counter(
+                        str(value)
+                        for value, row in zip(row_values, rows)
+                        if value is not None
+                        and row["receipt"] is not None
+                        and row["receipt"]["quality_passed"]
+                    ).items()
+                )
+            )
+            summary["quality_fraction_by_value"] = {
+                key: summary["quality_pass_counts_by_value"].get(key, 0) / count
+                for key, count in summary["value_counts"].items()
+            }
         result[name] = summary
     return result

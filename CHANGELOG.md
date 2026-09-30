@@ -10,6 +10,11 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added [structural experiment templates](docs/STRUCTURAL_EXPERIMENTS.md) for
+  declared stage removal, conditional routing, bounded batches and scheduler-backed
+  parallelism, with retained downstream/item failures, cohort quality and measured
+  end-to-end throughput on the common experiment artifacts.
+
 - Added [context-reduction and result-reuse experiment templates](docs/CONTEXT_REUSE_EXPERIMENTS.md)
   on the generic contract, with protected selections, token/quality separation,
   versioned exact-key snapshots, explicit invalidation/fallback and loss-aware
