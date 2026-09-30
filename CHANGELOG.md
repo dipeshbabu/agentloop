@@ -10,6 +10,11 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added a [cross-workload usefulness benchmark](docs/USEFULNESS_BENCHMARK.md) with
+  frozen reference experiments, separate real-agent archive analysis, native
+  finding labels, preserved original predictions/outcomes, task-level uncertainty,
+  recording/analysis overhead and offline evidence reconstruction.
+
 - Added [reviewed-window drift reports](docs/DRIFT.md) for cohort-level latency,
   usage, cost, failures, distributions, caller quality/proxies, finding incidence
   and capture completeness, with immutable baseline/threshold references and

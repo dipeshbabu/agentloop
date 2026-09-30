@@ -1,0 +1,2642 @@
+{
+  "analyzer": {
+    "package_version": "0.7.0",
+    "source_hash_encoding": "UTF-8 with universal newlines normalized to LF",
+    "source_revision": "8af65da781029a581c6cf01cf8700cdea99da12c",
+    "sources": {
+      "agentloop/__init__.py": "d4130eae963581092cc36f6132fbbe46f3488f2c69ea564d1abe5ed02f9c2e92",
+      "agentloop/ablation_protocol.py": "af2ef758ae8b8833f78f477aff0bd1519139108dc61dd95b88b763d8adcdc9bf",
+      "agentloop/ablations.py": "25194c4cc1f0602d0e5a52f36a827650bbb55472cdf3ecd836de5bcd7ffca75e",
+      "agentloop/aggregate_cli.py": "0ce82bd98415a003cc9ff9f14715b84ae1f906762e62802daecaa76d56591aa9",
+      "agentloop/aggregate_stats.py": "77d8b349550294268be64655654ccc99957e078851097b87f38c952d937f388a",
+      "agentloop/aggregates.py": "ebe97914d07a529a28455df7f6f15977c9564c65189de72a60797ca1155d89a4",
+      "agentloop/audit.py": "795f1c03173644289e0bf339f15d2b3a8f82eeaa948f1edf18a600904799ea39",
+      "agentloop/autoinstrument.py": "8c182d530b1d22b79c8ca0e380a1c3fb6437be42565bf6c37eec548384514770",
+      "agentloop/batch_experiments.py": "d4862ff69a62c6665d2a30cee12eec00ff9a7b394df382b93896a1647dc8cb80",
+      "agentloop/budget_types.py": "b6e355b28aaa5c3dcb04bd3abd197d5f1bd5a814669b254063739797363e3833",
+      "agentloop/budgets.py": "bc6497285f18b5a127b7a4a1567709463cdab1ba1abf7dcaadb6a22450768312",
+      "agentloop/calibration.py": "0bf67011158a7aa4fd2ac8f2efe50d7d9d777c474b4ab0a60176e0cf895602ab",
+      "agentloop/checkpoint_state.py": "0efdc43e82b47bd3b148808bb6c9662c6e8ad7467cb677926d51d7fde28f9f6c",
+      "agentloop/checkpoint_store.py": "7f2c3717cf3e16a2c60d53db61256d3558278ae98b96c303a9b991de6312ec8f",
+      "agentloop/ci.py": "a8bb7c31a9771251481407add364ae4c5ccacb0f0eba57bcc500395308cf5736",
+      "agentloop/cli.py": "68b5ad1ec57bd9db6832cf01a4372d7e5939b20226f352d1418c2772da235999",
+      "agentloop/client.py": "2de07c7b97f7153a9184d1cd76924d322e89aee02a85d4a29da3aa1d106443a2",
+      "agentloop/completion.py": "6fc750f779b29705afc0e1e5bcccad2c5ca51c0924b9fd538cf1daff9733fc01",
+      "agentloop/completion_types.py": "b8bdfb30efc4b15b566aab37659f1d8877756b227053a9f90dacbf5c17de3439",
+      "agentloop/config.py": "d9e2b4b002dc28dab94920cd927edb0788527ba32206d7f2270353d2a47dacb1",
+      "agentloop/context_controls.py": "ffb69191dcecc282972a0a171f7f913e1e2a9958421ede351a6e512d5d78dda7",
+      "agentloop/context_experiments.py": "2f595679759bda3cc197b37ed8e816ae2a0c8948c23083609fcb54aad4e7fd95",
+      "agentloop/context_types.py": "771559033954b388eafcecdb18b0babc9c21f22e00ddbd958ddc77a5aba52c33",
+      "agentloop/costs.py": "3ea169e266cbee13d1d0444b4c5b8201771f48c1e05101c04f7d9b786a277ebf",
+      "agentloop/cursor_validation.py": "8fe36eec9366ccae5bc6f887fb93fada63db02321bd9a4c90ccb1dd1d34652b2",
+      "agentloop/decorators.py": "ba50210d96a97c44deb9fd4dac13d381cef717b881c51de02cc29a5058c606f6",
+      "agentloop/demo.py": "7ccb161dd6d7a2117f759f282c217acf0710d9d2fb3a3cc5349729f4301bb395",
+      "agentloop/doctor.py": "f5f67e380603e4c414e7ea7633d4044384769fa45783661d10992862728e020e",
+      "agentloop/drift.py": "54f73f40af04b37e2e414f012b6ef41262d38b125305cba80ef0bbf9fa3e6c3d",
+      "agentloop/drift_cli.py": "8b10af766853c8dbc141c19ee66d1ad58d8f383407fc732db0326e4703103edc",
+      "agentloop/drift_types.py": "d8da666c99cb90ce39d20e43fae9a932cc41a8bc9ab789f7819c1edb4ddad254",
+      "agentloop/drift_windows.py": "c032d693a881c45e25007036f22d2086bb37aca24c8ef682e55dd485e29a8f1a",
+      "agentloop/entrypoint.py": "8ea144b92dd1a7354bfa6cb770c51d6680f9f71c25e4956f7c8c2a96aefc4344",
+      "agentloop/estimates.py": "e4e9b014958ad69433ba342e1a1cc44c4fab82011cf6dee5619b4a03095e2f18",
+      "agentloop/events.py": "f93a5ea0d16f375d28a4f89c7c80f80e3b9043b7b419f923df9f68d5ec8d7bea",
+      "agentloop/experiment_artifacts.py": "30ceea36965a2a484820a6c0e492bd6770b5b986d5bfdd5ed0f73d555c9bf3d3",
+      "agentloop/experiment_observations.py": "230e4cf8df688598b1b643dc10eae626803d9d8a5f6ff1851fa8c00baa82b6a2",
+      "agentloop/experiment_reports.py": "c2f8848d706d41e306503942643a9579bb6f3a56994bb9560df73ddff20d09ac",
+      "agentloop/experiment_types.py": "3fea8b784d18977166ced2e08f557ccc80ab176e4922ad74998b88b7d499bd5f",
+      "agentloop/experiments.py": "ca0c92eeaca0d67c6ab4c8c761f0a8d3708635079f47c8ca42a80c7c4d497a8b",
+      "agentloop/exporters.py": "c9909594f6a412632da45b104d35f5ae72a01ec63ca40b05995422581b5db0de",
+      "agentloop/finding_benchmark_types.py": "eb1cad7b6addfe5528d6d828e1d1066f5fad479f0d975f8d10a7f75fafe56b58",
+      "agentloop/finding_benchmarks.py": "c88d5121442999349015f33cf6c7974eb874e98f8a2ba6615704dc353aa98a91",
+      "agentloop/findings.py": "33fe4711edd11d187b2302989288fb757d9353fbb58e02f0d81809cfb74213e8",
+      "agentloop/graph.py": "86f20b8cc86038709a0d5b7aa200d9a00ccfa35602bc30442933f32cda06569c",
+      "agentloop/harness.py": "b8ce18708703ff9caef9cf01276c488bd957bbe3f85ca84c5c494fb8eebbb98e",
+      "agentloop/harness_evidence.py": "a8fd2b073de01d4ffa4c6a57d19b86a93bdf16814e839b884514cae08c2da429",
+      "agentloop/harness_usage.py": "9455ed2f009dbe85d1272f8e08ce7c14e292cf19a864862cb7d719ad40de2cf3",
+      "agentloop/html_report.py": "4212cfdf3f3808eab149a969e1fc01a82881917de555bc8056353acccea2c6f1",
+      "agentloop/integrations/__init__.py": "3958968456bf3765791510756d1aa2d53f44ac7030cd0a83640a10571a9fadec",
+      "agentloop/integrations/crewai.py": "797e579a50ec471872f035622887b6b4b838a88071952b9a716a3924279e3947",
+      "agentloop/integrations/langgraph.py": "7d193b2688983e1a1568004374605b8a4a2ab81dc6a69ce3c21070365820daf8",
+      "agentloop/integrations/langgraph_harness.py": "60186536846e85983a6115a82fc5947b9b71212ca7219c1d6efe52cb23046988",
+      "agentloop/integrations/langgraph_recovery.py": "a73c9373cd155e54dd05ce533ff19528da9bcdfea451be2076feadb2278898b3",
+      "agentloop/integrations/openai.py": "2709f3d34deabff562c2708609e56f8eccc2c7612cbb3c2f9da807666ebc2565",
+      "agentloop/integrations/openai_agents.py": "fc9d74a4916e7fd5ac02cabe258f85b77d06dbd02780838348fbdf8eff72ae01",
+      "agentloop/integrations/sdk.py": "571b0d9e628d601750e76121839e6decdd686de8b6c4532ce309bbe8c8420143",
+      "agentloop/integrations/vercel_ai.py": "41a08e4e6c2ca26ff52e54d5908e4527f7952ee0bf198b79af5201ef3ec73e9b",
+      "agentloop/intervention_service.py": "e25a78241f61a99faf297f196bad417bed4bc94444649e6fe964e2b7cf8f285b",
+      "agentloop/intervention_store.py": "e6122a5b83fa63ad7e2095efbcef18631e15863838a6d60be27a1fa1cb77864a",
+      "agentloop/interventions.py": "f5461ec2e04f275896dccf985fcf31a247845dfcd15aae79a7d182cc94c9a72d",
+      "agentloop/issues.py": "0b5e345524a51e45a88283b3f712778d9a1c491359732bacf04454b5c30bd5e4",
+      "agentloop/judgment_adapters.py": "83176f42e7dfe09e76e2278dae32b9616a21ab6d6ebe7f67b1599384b664f774",
+      "agentloop/judgment_benchmark_types.py": "4842b229bfa6340e4136209ff06c2023eca02b2a74a132c69482d036ff626f64",
+      "agentloop/judgment_benchmarks.py": "d274c12cc5494d9d8aa91c12a68527c5c32bdb466062e264046225b4549d64c7",
+      "agentloop/judgment_types.py": "cd234ab37be04225c129123df3ec91411463ae14a77a61ce42cca291798076cb",
+      "agentloop/judgment_views.py": "999030fc5b44f13dd365c54481e126585ebaba58acc8b2e5d2c709bfa3da1675",
+      "agentloop/judgments.py": "0e90c5465d9405d3a934d8bae4a516230ef47fdb8c5164c63c1e9e36b296a8d5",
+      "agentloop/loop_guards.py": "4135f16c8eb21ccaaa29851eff01c1fcefef54003b003e8565e6fb9256abf33c",
+      "agentloop/loop_types.py": "9cb5b5554de71d2aff73a8f2fc2ad510cf3eb76ccc0f9681ab9b48dfc09faad5",
+      "agentloop/markdown.py": "192a882695dd9687f312254afcc63fd8f997126285671eae8858e5fb45f24074",
+      "agentloop/metrics.py": "691aee57b90182f37d9d6241aa2e5e63384fd1b590df31cb1ef2fa8262975109",
+      "agentloop/migrations.py": "0d377a33326b4432a725d2a2ec4183e97f50ffa44139c30666336f7ba24d28ed",
+      "agentloop/model_routing.py": "d9447928b31d315ad4efe0964a94212c741c7d6301fa7f362bf1ffb5d7b65274",
+      "agentloop/onboarding.py": "863383d19e5b5385f1e7354b1f3cd3d7c81a76030b6063986aa6cc1f55813c8b",
+      "agentloop/operations.py": "d0ca167b5cb883d1c1a02c70836c43c6885a8a0ff514be240b37fefc34bc7020",
+      "agentloop/optimizer.py": "0366588d25572ff86864f8d7f316f1dc257765be2b631f5df38ca467861abe5d",
+      "agentloop/otel.py": "5a35261115eca670feeb2ee8f4d396b1d838775ec9a2faa982d5dc0e3bb5bb53",
+      "agentloop/otel_ids.py": "f0336672e2a09574b59f57604bd679bf1926a57de3e7db7ad26fa13d99f41094",
+      "agentloop/otel_semantics.py": "0a20e58cd97ed57e2d016fdcd32c4fbe5e6fbcf3bb9519a2f0a9b558a4996b31",
+      "agentloop/parallelism.py": "c4bfc347a765abe6902b33a2f20d63c2bd64759bb2c6b8b7dccbc26f8cc76cd2",
+      "agentloop/patches.py": "553c9932e5bea063c7c3fc0ff914d018116a6281926c1d29a955b628da8748dc",
+      "agentloop/plan_export.py": "eae29929de30d3092cf56b56c17d9b3996b28eab067a834e437a541e17dccb36",
+      "agentloop/policy_promotion.py": "311599219681353fd59bcc59515e57595a2caa35aa798e3e21dcc0fffbdc4386",
+      "agentloop/promotion_evidence.py": "cc65b28b7cfbf016385e08085ef54dea1a70cacc72668026d09270c8d1bd566f",
+      "agentloop/promotion_types.py": "bcc056f20640cee03bae3f4caa2dafb1587f2d447f8a27ed6b5091876e3c86e8",
+      "agentloop/quality.py": "264b8141e13bab1f2910e16c097249d7071981a834ccd26fc45a07b7dc12c1ac",
+      "agentloop/ranking.py": "1166b32d09fdac81f0c8513226966eafc2e8e43118bce883a8847c54658759d8",
+      "agentloop/recovery_evidence.py": "7a2aae70711cdfaa6fab3893c7e9282b70f29a87086f5b4bd6c4d35fc42b57ef",
+      "agentloop/replay.py": "d3ce28e9f65cc6dd1543eda28c64aa7ea54efe98199176b1aed0068b96689b24",
+      "agentloop/retention.py": "30c41feb32d9d0fa30a6d4a3a374f855c0e24c84ef87c30531300df065463a06",
+      "agentloop/retention_types.py": "1728d81108bc77403a67ec30320a1a1d639ecd5e7ca9b480871a058a8637a805",
+      "agentloop/reuse_experiments.py": "939416564ffd3032936d931d489c17048365f0119ad0c1011285ddac76e7fc4d",
+      "agentloop/routing_checks.py": "2a453697d92df4ada51ddb52679fd097b38da4ab4c328a1d6cf03027d86aed55",
+      "agentloop/routing_types.py": "49028201e052bd843fda31ecc053b0539e682abd4acf0230bf36df53a7c88bdb",
+      "agentloop/rules.py": "4a3c508d92639f7a34d8dde9028b09b49f02071c4fc7590e254b02a479465bf8",
+      "agentloop/runtime.py": "27dbaa9b8d8d290e8726b2133e3f2c320f2ea05d4b7627882b4acd6103dfade9",
+      "agentloop/savings.py": "096572d8989ef703cab55844f9c9746385515acde90e37b7e496bc53aad3ba80",
+      "agentloop/scheduling_plan.py": "5daadb20ce7b92bcb700ce8f4eec426999ed9015ae3224da5c7e1ec1bdaf80d4",
+      "agentloop/scheduling_types.py": "1ad972d10536a473cc55fd377a4e95089282597359728307f97e345741732ccf",
+      "agentloop/schema.py": "95c6df144ae4bb539c98657ad37b32a03bb409bd69c66ac722a175db416f779a",
+      "agentloop/semantic_rules.py": "f63599cfe4e4798922a8570812f68bf88e2f52174335c548f80c33b0c6ae0a26",
+      "agentloop/semantic_waste.py": "55a8a05edfcd685c7c882f49777d36bf139a906d071655aff245d4858cf99bf8",
+      "agentloop/semantic_waste_types.py": "aaba939f6ee76fa0fbb4d6ec94d3a9e6b662b5e2494eb281b522193200c8fe64",
+      "agentloop/server.py": "d1f6024af58af6aea040690034b742af6eb9af8409d1b980c5e1e9c5e512c60e",
+      "agentloop/store.py": "ff253ed5575789c9619d3863bfdd0d9e5f093b7b4f7b57129b92c8754d9610e9",
+      "agentloop/structural_experiments.py": "ad2b5b7e59afb3e0144aba881147b2dc9a391bfe3f33e2d07eca5495c24bfc42",
+      "agentloop/structural_types.py": "3b00f8afe9204fc34f2b775ff385589f6015b254d4802a62dc527a3523259e5d",
+      "agentloop/structured_quality.py": "6bed66a0f29ca48967b27916c9c19ebd1f152f8190e5947b9a00636894d5aaa2",
+      "agentloop/studies.py": "cb5afe157864b42aef6497aac9ef6eeb6fc5f841f3e2f345942b755d3834741b",
+      "agentloop/study_statistics.py": "5c472649b267d0d9de7fb7b7e175e4a845a4a5d4e186d24b6ee240f6a0704a0c",
+      "agentloop/substitution_evidence.py": "eda89a4cc8007d67e837372da9c74912996d15fd8fdc4898ac5280e81efa076c",
+      "agentloop/substitution_export.py": "5d4dbc3719300dfd44358bbe64807bab2f5bae94562616dbd9a6d77598f930eb",
+      "agentloop/substitution_reports.py": "67307ae2845445c4ce2ea65463b2430c15d5d2e46d5492d8c56660614fb5cc2c",
+      "agentloop/substitution_types.py": "86948831bc2186b9cb0e234f66bbc8730a1eefaf6065d125b8b2c437a1352bf6",
+      "agentloop/substitutions.py": "471be9e3f637033dc5eefaf71303ff5fbd7f299afac2415e8c4c0e95bb060c9d",
+      "agentloop/timing.py": "9d284176df0950389cf92000803069dce7870f0b03d1a5dc43a751a3e99ca061",
+      "agentloop/tokens.py": "8037452fd544004e8321ba60070486a2ff8eceaee111ed0ee3c1080dad479e75",
+      "agentloop/tool_scheduling.py": "24ef8f59685ccc3186d8e3e67dc3b96ae9858808eded22fdd264f93be38354fe",
+      "agentloop/trace_sources.py": "8482d058e1712476271f22471c4ce48512d8f10fa458e4a8c494b0b09f6d9339",
+      "agentloop/tracer.py": "b41129b0af8e49d1ce07ebf16b785c9e314d55ca601e742583e0ccff3815c5fb",
+      "agentloop/value.py": "a530ea11d4f3e412844eb525983d70e14fb45350451ae9499331b26aa2c1e855",
+      "agentloop/version.py": "d00f5789b442fd3f04a895922e5fa2bd93bda4102b69b7ef2fde6c5b3bf33203",
+      "agentloop/workflow_types.py": "f5ac6dfec32e9f0f9665cf961bf82453fd12af49b6ae9baa6dda2cad189e1200",
+      "agentloop/workflows.py": "aa4fd5a3306f82aa72b5afd5561dae23179dd6a384c16a21776e64ad2d0efe8c",
+      "examples/batch_data_pipeline.py": "b250453bc078112243f213a1c0c8b55bdf2114bb3f300af528a57ddbda8de67c",
+      "examples/email_workflow.py": "576633f2c23e7f74013472bec857b0f567a685023db803473ec1c9f899357135",
+      "examples/incident_triage.py": "3c1b0ff5f03d652dc63365827232b8cd076fef17dca77c619273918390877e1f",
+      "examples/marketplace_workflow.py": "e0135371ff286dbb0de9d716a14e05fdd2d07ec6dfa04bd0a635ba6d50c265eb",
+      "examples/payment_review.py": "0c792ba5193aded7ea14233abd86832c560c77573a157c61f58dca19cca1e204",
+      "examples/reference_support.py": "d14b0b48f599063c2c2cdafad28d7b16c5010b2842f1ec2eb8d99144ca089624",
+      "examples/usefulness_benchmark/__init__.py": "810e007b2125ec972c5470251bcda8ac17b9973c2e0d91639a82256864ad137b",
+      "examples/usefulness_benchmark/historical.py": "7cf3a986c6772ebdbf8d4a677cf470f503be5033614d982cc92e282b4435b701",
+      "examples/usefulness_benchmark/protocol.py": "ac13e71d1bfe1ef8343ea0d79d12289a6105da67a048ed6670c0bef109dac7c4",
+      "examples/usefulness_benchmark/reference.py": "b8fdf1f27e01d270062de526604564bf84e6c6df48f9c75d2b57b57afc069198",
+      "examples/usefulness_benchmark/report.py": "a5f435afeda19f5073e851535bfccd84cec0be814a147552618ab21307715900",
+      "examples/usefulness_benchmark/run.py": "a3877aa89716af41a8bc49930b48c7fe91e10a5c1d1e75a67eb61297624302ee"
+    }
+  },
+  "bootstrap": {
+    "confidence": 0.95,
+    "samples": 1000,
+    "seed": 20260930
+  },
+  "created_at": "2026-09-30T16:33:35.134794+00:00",
+  "execution_order": "Freeze protocol; for each reference case/repetition save baseline and original diagnosis before any candidate; all named variants including negative controls run. Existing historical observations/predictions remain untouched.",
+  "finding_label_sampling": "First repetition only per distinct task; all repetitions remain in emission, quality and resource inventories.",
+  "historical": {
+    "calibration_index": {
+      "path": "research/empirical-calibration-2026-09/index.json",
+      "sha256": "ea1cac466bc5c578941d31fb371613fe86e90e27af43939e8f34edd8ccee9668"
+    },
+    "labels": [
+      {
+        "label": "no_opportunity",
+        "rationale": "Archived agents consume previous tool outputs between model decisions; batching sequential decisions is invalid.",
+        "rule_id": "batch_model_calls",
+        "spans": []
+      },
+      {
+        "label": "ambiguous",
+        "rationale": "A routing investigation is not proof of a quality-preserving optimization; historical results are reported independently.",
+        "rule_id": "route_to_smaller_model",
+        "spans": []
+      }
+    ],
+    "mode": "retrospective_reanalysis_without_new_inference",
+    "phases": [
+      "retired_onboarding",
+      "pilot",
+      "evaluation"
+    ],
+    "real_agent_index": {
+      "path": "research/real-agent-2026-09/index.json",
+      "sha256": "cb6abab88e1dbf1944b0222a69df83eae51e6621f4cf7eee0c22e42bbaef1888"
+    },
+    "workloads": [
+      "repository",
+      "sql",
+      "math"
+    ]
+  },
+  "instrumentation_control": "Matched reference run with span recording disabled; root lifecycle, hashing and fixture tokenization remain. Batch prompt capture is also disabled in this control. This is a partial recording-cost comparison, not total SDK overhead.",
+  "limits": "No new provider inference. Reference billing is synthetic fixture accounting; real self-hosted operating cost stays unknown. Do not credit new diagnoses with historical candidate outcomes or fit combined-intervention effects per finding.",
+  "manual_effort": {
+    "operator_minutes": null,
+    "orchestration_steps": [
+      "freeze protocol",
+      "execute/import evidence",
+      "summarize and inspect per-workload results"
+    ],
+    "status": "not_timed"
+  },
+  "name": "AgentLoop cross-workload usefulness",
+  "paid_provider_budget_usd": 0,
+  "pairing_keys": [
+    "workload",
+    "task_id",
+    "repetition",
+    "variant",
+    "protocol_sha256"
+  ],
+  "schema_version": "1.0",
+  "sha256": "8b5ec58ad690cd8ecc046c234e858d4274e45d97feadfd54f625d7a543d888a7",
+  "split_policy": "Whole reference workloads are assigned once to development/evaluation; no fitting or tuning is done. These public maintained fixtures and retrospective archives are not blind unseen data.",
+  "version": "1.0",
+  "workloads": [
+    {
+      "attribution": "combined_configuration_unattributed",
+      "cases": [
+        {
+          "expected": {
+            "category": "support",
+            "priority": "high",
+            "route": "support",
+            "spam": false,
+            "verified": false
+          },
+          "finding_labels": [
+            {
+              "label": "no_opportunity",
+              "rationale": "The decision stages consume prior stage outputs; serial decisions cannot be batched together.",
+              "rule_id": "batch_model_calls",
+              "spans": []
+            },
+            {
+              "label": "ambiguous",
+              "rationale": "A model/rule substitution is testable, but correctness and whole-configuration effects cannot be assumed from span duration.",
+              "rule_id": "route_to_smaller_model",
+              "spans": []
+            },
+            {
+              "label": "opportunity",
+              "rationale": "The repeated label computation has no independent verification obligation; the fixture backend computes the same decision.",
+              "rule_id": "semantic_redundancy",
+              "spans": [
+                "priority_repeat"
+              ]
+            },
+            {
+              "label": "opportunity",
+              "rationale": "The declared fixture context is unrelated to the supplied decision inputs and is never needed by the gold rule.",
+              "rule_id": "context_relevance",
+              "spans": [
+                "category"
+              ]
+            }
+          ],
+          "id": "support",
+          "input": {
+            "body": "I cannot access my account",
+            "bulk": false,
+            "sender": "customer",
+            "subject": "Password reset",
+            "verification": false
+          }
+        },
+        {
+          "expected": {
+            "category": "billing",
+            "priority": "normal",
+            "route": "finance",
+            "spam": false,
+            "verified": false
+          },
+          "finding_labels": [
+            {
+              "label": "no_opportunity",
+              "rationale": "The decision stages consume prior stage outputs; serial decisions cannot be batched together.",
+              "rule_id": "batch_model_calls",
+              "spans": []
+            },
+            {
+              "label": "ambiguous",
+              "rationale": "A model/rule substitution is testable, but correctness and whole-configuration effects cannot be assumed from span duration.",
+              "rule_id": "route_to_smaller_model",
+              "spans": []
+            },
+            {
+              "label": "opportunity",
+              "rationale": "The repeated label computation has no independent verification obligation; the fixture backend computes the same decision.",
+              "rule_id": "semantic_redundancy",
+              "spans": [
+                "priority_repeat"
+              ]
+            },
+            {
+              "label": "opportunity",
+              "rationale": "The declared fixture context is unrelated to the supplied decision inputs and is never needed by the gold rule.",
+              "rule_id": "context_relevance",
+              "spans": [
+                "category"
+              ]
+            }
+          ],
+          "id": "billing",
+          "input": {
+            "body": "Please explain this invoice",
+            "bulk": false,
+            "sender": "customer",
+            "subject": "Invoice question",
+            "verification": false
+          }
+        },
+        {
+          "expected": {
+            "category": "news",
+            "priority": "low",
+            "route": "archive",
+            "spam": false,
+            "verified": false
+          },
+          "finding_labels": [
+            {
+              "label": "no_opportunity",
+              "rationale": "The decision stages consume prior stage outputs; serial decisions cannot be batched together.",
+              "rule_id": "batch_model_calls",
+              "spans": []
+            },
+            {
+              "label": "ambiguous",
+              "rationale": "A model/rule substitution is testable, but correctness and whole-configuration effects cannot be assumed from span duration.",
+              "rule_id": "route_to_smaller_model",
+              "spans": []
+            },
+            {
+              "label": "opportunity",
+              "rationale": "The repeated label computation has no independent verification obligation; the fixture backend computes the same decision.",
+              "rule_id": "semantic_redundancy",
+              "spans": [
+                "priority_repeat"
+              ]
+            },
+            {
+              "label": "opportunity",
+              "rationale": "The declared fixture context is unrelated to the supplied decision inputs and is never needed by the gold rule.",
+              "rule_id": "context_relevance",
+              "spans": [
+                "category"
+              ]
+            }
+          ],
+          "id": "newsletter",
+          "input": {
+            "body": "Our weekly release digest",
+            "bulk": true,
+            "sender": "known",
+            "subject": "Urgent product news",
+            "verification": false
+          }
+        },
+        {
+          "expected": {
+            "category": "spam",
+            "priority": "low",
+            "route": "quarantine",
+            "spam": true,
+            "verified": false
+          },
+          "finding_labels": [
+            {
+              "label": "no_opportunity",
+              "rationale": "The decision stages consume prior stage outputs; serial decisions cannot be batched together.",
+              "rule_id": "batch_model_calls",
+              "spans": []
+            },
+            {
+              "label": "ambiguous",
+              "rationale": "A model/rule substitution is testable, but correctness and whole-configuration effects cannot be assumed from span duration.",
+              "rule_id": "route_to_smaller_model",
+              "spans": []
+            },
+            {
+              "label": "opportunity",
+              "rationale": "The repeated label computation has no independent verification obligation; the fixture backend computes the same decision.",
+              "rule_id": "semantic_redundancy",
+              "spans": [
+                "priority_repeat"
+              ]
+            },
+            {
+              "label": "opportunity",
+              "rationale": "The declared fixture context is unrelated to the supplied decision inputs and is never needed by the gold rule.",
+              "rule_id": "context_relevance",
+              "spans": [
+                "category"
+              ]
+            }
+          ],
+          "id": "spam",
+          "input": {
+            "body": "Free gift for a random winner",
+            "bulk": true,
+            "sender": "unknown",
+            "subject": "Claim a prize",
+            "verification": false
+          }
+        },
+        {
+          "expected": {
+            "category": "support",
+            "priority": "high",
+            "route": "support",
+            "spam": false,
+            "verified": true
+          },
+          "finding_labels": [
+            {
+              "label": "no_opportunity",
+              "rationale": "The decision stages consume prior stage outputs; serial decisions cannot be batched together.",
+              "rule_id": "batch_model_calls",
+              "spans": []
+            },
+            {
+              "label": "ambiguous",
+              "rationale": "A model/rule substitution is testable, but correctness and whole-configuration effects cannot be assumed from span duration.",
+              "rule_id": "route_to_smaller_model",
+              "spans": []
+            },
+            {
+              "label": "no_opportunity",
+              "rationale": "The fixture explicitly requires independent verification.",
+              "rule_id": "semantic_redundancy",
+              "spans": []
+            },
+            {
+              "label": "opportunity",
+              "rationale": "The declared fixture context is unrelated to the supplied decision inputs and is never needed by the gold rule.",
+              "rule_id": "context_relevance",
+              "spans": [
+                "category"
+              ]
+            }
+          ],
+          "id": "verification",
+          "input": {
+            "body": "Customer service outage",
+            "bulk": false,
+            "sender": "customer",
+            "subject": "Outage report",
+            "verification": true
+          }
+        },
+        {
+          "expected": {
+            "category": "other",
+            "priority": "normal",
+            "route": "manual_review",
+            "spam": false,
+            "verified": false
+          },
+          "finding_labels": [
+            {
+              "label": "no_opportunity",
+              "rationale": "The decision stages consume prior stage outputs; serial decisions cannot be batched together.",
+              "rule_id": "batch_model_calls",
+              "spans": []
+            },
+            {
+              "label": "ambiguous",
+              "rationale": "A model/rule substitution is testable, but correctness and whole-configuration effects cannot be assumed from span duration.",
+              "rule_id": "route_to_smaller_model",
+              "spans": []
+            },
+            {
+              "label": "opportunity",
+              "rationale": "The repeated label computation has no independent verification obligation; the fixture backend computes the same decision.",
+              "rule_id": "semantic_redundancy",
+              "spans": [
+                "priority_repeat"
+              ]
+            },
+            {
+              "label": "opportunity",
+              "rationale": "The declared fixture context is unrelated to the supplied decision inputs and is never needed by the gold rule.",
+              "rule_id": "context_relevance",
+              "spans": [
+                "category"
+              ]
+            }
+          ],
+          "id": "ordinary",
+          "input": {
+            "body": "Planning notes for next week",
+            "bulk": false,
+            "sender": "known",
+            "subject": "Meeting invitation",
+            "verification": false
+          }
+        }
+      ],
+      "id": "email",
+      "kind": "synthetic_reference",
+      "repetitions": 2,
+      "scorer": {
+        "min_score": 1,
+        "type": "fields",
+        "version": "1.0"
+      },
+      "selection_families": [
+        "semantic_redundancy",
+        "context_relevance",
+        "route_to_smaller_model",
+        "batch_model_calls"
+      ],
+      "split": "development",
+      "variants": [
+        "hybrid",
+        "cheap",
+        "failing"
+      ],
+      "version": "1.0"
+    },
+    {
+      "attribution": "combined_configuration_unattributed",
+      "cases": [
+        {
+          "expected": {
+            "category": "apparel",
+            "duplicate": false,
+            "moderation": "clear",
+            "route": "listing_review",
+            "verified": false
+          },
+          "finding_labels": [
+            {
+              "label": "no_opportunity",
+              "rationale": "The decision stages consume prior stage outputs; serial decisions cannot be batched together.",
+              "rule_id": "batch_model_calls",
+              "spans": []
+            },
+            {
+              "label": "ambiguous",
+              "rationale": "A model/rule substitution is testable, but correctness and whole-configuration effects cannot be assumed from span duration.",
+              "rule_id": "route_to_smaller_model",
+              "spans": []
+            },
+            {
+              "label": "opportunity",
+              "rationale": "The repeated label computation has no independent verification obligation; the fixture backend computes the same decision.",
+              "rule_id": "semantic_redundancy",
+              "spans": [
+                "identity_recheck"
+              ]
+            }
+          ],
+          "id": "ordinary",
+          "input": {
+            "category_hint": "apparel",
+            "evidence_complete": true,
+            "identity": "new-shirt",
+            "match_identity": "other-shirt",
+            "match_title": "other fixture shirt",
+            "policy_flag": false,
+            "title": "plain fixture shirt",
+            "verification": false
+          }
+        },
+        {
+          "expected": {
+            "category": "accessories",
+            "duplicate": true,
+            "moderation": "clear",
+            "route": "duplicate_review",
+            "verified": false
+          },
+          "finding_labels": [
+            {
+              "label": "no_opportunity",
+              "rationale": "The decision stages consume prior stage outputs; serial decisions cannot be batched together.",
+              "rule_id": "batch_model_calls",
+              "spans": []
+            },
+            {
+              "label": "ambiguous",
+              "rationale": "A model/rule substitution is testable, but correctness and whole-configuration effects cannot be assumed from span duration.",
+              "rule_id": "route_to_smaller_model",
+              "spans": []
+            },
+            {
+              "label": "opportunity",
+              "rationale": "The repeated label computation has no independent verification obligation; the fixture backend computes the same decision.",
+              "rule_id": "semantic_redundancy",
+              "spans": [
+                "identity_recheck"
+              ]
+            }
+          ],
+          "id": "exact-duplicate",
+          "input": {
+            "category_hint": "accessories",
+            "evidence_complete": true,
+            "identity": "same-bag",
+            "match_identity": "same-bag",
+            "match_title": "canvas fixture bag",
+            "policy_flag": false,
+            "title": "canvas fixture bag",
+            "verification": false
+          }
+        },
+        {
+          "expected": {
+            "category": "apparel",
+            "duplicate": false,
+            "moderation": "clear",
+            "route": "listing_review",
+            "verified": false
+          },
+          "finding_labels": [
+            {
+              "label": "no_opportunity",
+              "rationale": "The decision stages consume prior stage outputs; serial decisions cannot be batched together.",
+              "rule_id": "batch_model_calls",
+              "spans": []
+            },
+            {
+              "label": "ambiguous",
+              "rationale": "A model/rule substitution is testable, but correctness and whole-configuration effects cannot be assumed from span duration.",
+              "rule_id": "route_to_smaller_model",
+              "spans": []
+            },
+            {
+              "label": "opportunity",
+              "rationale": "The repeated label computation has no independent verification obligation; the fixture backend computes the same decision.",
+              "rule_id": "semantic_redundancy",
+              "spans": [
+                "identity_recheck"
+              ]
+            }
+          ],
+          "id": "near-variant",
+          "input": {
+            "category_hint": "apparel",
+            "evidence_complete": true,
+            "identity": "blue-medium",
+            "match_identity": "red-medium",
+            "match_title": "cotton fixture shirt",
+            "policy_flag": false,
+            "title": "cotton fixture shirt",
+            "verification": false
+          }
+        },
+        {
+          "expected": {
+            "category": "apparel",
+            "duplicate": false,
+            "moderation": "clear",
+            "route": "listing_review",
+            "verified": false
+          },
+          "finding_labels": [
+            {
+              "label": "no_opportunity",
+              "rationale": "The decision stages consume prior stage outputs; serial decisions cannot be batched together.",
+              "rule_id": "batch_model_calls",
+              "spans": []
+            },
+            {
+              "label": "ambiguous",
+              "rationale": "A model/rule substitution is testable, but correctness and whole-configuration effects cannot be assumed from span duration.",
+              "rule_id": "route_to_smaller_model",
+              "spans": []
+            },
+            {
+              "label": "opportunity",
+              "rationale": "The repeated label computation has no independent verification obligation; the fixture backend computes the same decision.",
+              "rule_id": "semantic_redundancy",
+              "spans": [
+                "identity_recheck"
+              ]
+            }
+          ],
+          "id": "benign-keyword",
+          "input": {
+            "category_hint": "apparel",
+            "evidence_complete": true,
+            "identity": "pattern-shirt",
+            "match_identity": "plain-shirt",
+            "match_title": "plain fixture shirt",
+            "policy_flag": false,
+            "title": "flag patterned fixture shirt",
+            "verification": false
+          }
+        },
+        {
+          "expected": {
+            "category": "accessories",
+            "duplicate": false,
+            "moderation": "flagged",
+            "route": "policy_review",
+            "verified": false
+          },
+          "finding_labels": [
+            {
+              "label": "no_opportunity",
+              "rationale": "The decision stages consume prior stage outputs; serial decisions cannot be batched together.",
+              "rule_id": "batch_model_calls",
+              "spans": []
+            },
+            {
+              "label": "ambiguous",
+              "rationale": "A model/rule substitution is testable, but correctness and whole-configuration effects cannot be assumed from span duration.",
+              "rule_id": "route_to_smaller_model",
+              "spans": []
+            },
+            {
+              "label": "opportunity",
+              "rationale": "The repeated label computation has no independent verification obligation; the fixture backend computes the same decision.",
+              "rule_id": "semantic_redundancy",
+              "spans": [
+                "identity_recheck"
+              ]
+            }
+          ],
+          "id": "policy-flag",
+          "input": {
+            "category_hint": "accessories",
+            "evidence_complete": true,
+            "identity": "new-accessory",
+            "match_identity": "other-accessory",
+            "match_title": "other fixture accessory",
+            "policy_flag": true,
+            "title": "generic fixture accessory",
+            "verification": false
+          }
+        },
+        {
+          "expected": {
+            "category": null,
+            "duplicate": false,
+            "moderation": "clear",
+            "route": "manual_review",
+            "verified": false
+          },
+          "finding_labels": [
+            {
+              "label": "no_opportunity",
+              "rationale": "The decision stages consume prior stage outputs; serial decisions cannot be batched together.",
+              "rule_id": "batch_model_calls",
+              "spans": []
+            },
+            {
+              "label": "ambiguous",
+              "rationale": "A model/rule substitution is testable, but correctness and whole-configuration effects cannot be assumed from span duration.",
+              "rule_id": "route_to_smaller_model",
+              "spans": []
+            },
+            {
+              "label": "opportunity",
+              "rationale": "The repeated label computation has no independent verification obligation; the fixture backend computes the same decision.",
+              "rule_id": "semantic_redundancy",
+              "spans": [
+                "identity_recheck"
+              ]
+            }
+          ],
+          "id": "category-ambiguity",
+          "input": {
+            "category_hint": null,
+            "evidence_complete": true,
+            "identity": "mixed-lot",
+            "match_identity": "other-lot",
+            "match_title": "other fixture lot",
+            "policy_flag": false,
+            "title": "assorted fixture lot",
+            "verification": false
+          }
+        },
+        {
+          "expected": {
+            "category": null,
+            "duplicate": null,
+            "moderation": "unknown",
+            "route": "manual_review",
+            "verified": false
+          },
+          "finding_labels": [
+            {
+              "label": "no_opportunity",
+              "rationale": "The decision stages consume prior stage outputs; serial decisions cannot be batched together.",
+              "rule_id": "batch_model_calls",
+              "spans": []
+            },
+            {
+              "label": "ambiguous",
+              "rationale": "A model/rule substitution is testable, but correctness and whole-configuration effects cannot be assumed from span duration.",
+              "rule_id": "route_to_smaller_model",
+              "spans": []
+            },
+            {
+              "label": "opportunity",
+              "rationale": "The repeated label computation has no independent verification obligation; the fixture backend computes the same decision.",
+              "rule_id": "semantic_redundancy",
+              "spans": [
+                "identity_recheck"
+              ]
+            }
+          ],
+          "id": "missing-evidence",
+          "input": {
+            "category_hint": null,
+            "evidence_complete": false,
+            "identity": null,
+            "match_identity": null,
+            "match_title": "unverified fixture item",
+            "policy_flag": null,
+            "title": "unverified fixture item",
+            "verification": false
+          }
+        },
+        {
+          "expected": {
+            "category": "home",
+            "duplicate": false,
+            "moderation": "clear",
+            "route": "listing_review",
+            "verified": true
+          },
+          "finding_labels": [
+            {
+              "label": "no_opportunity",
+              "rationale": "The decision stages consume prior stage outputs; serial decisions cannot be batched together.",
+              "rule_id": "batch_model_calls",
+              "spans": []
+            },
+            {
+              "label": "ambiguous",
+              "rationale": "A model/rule substitution is testable, but correctness and whole-configuration effects cannot be assumed from span duration.",
+              "rule_id": "route_to_smaller_model",
+              "spans": []
+            },
+            {
+              "label": "no_opportunity",
+              "rationale": "The fixture explicitly requires independent verification.",
+              "rule_id": "semantic_redundancy",
+              "spans": []
+            }
+          ],
+          "id": "required-verification",
+          "input": {
+            "category_hint": "home",
+            "evidence_complete": true,
+            "identity": "lamp-a",
+            "match_identity": "lamp-b",
+            "match_title": "different fixture lamp",
+            "policy_flag": false,
+            "title": "fixture lamp",
+            "verification": true
+          }
+        }
+      ],
+      "id": "marketplace",
+      "kind": "synthetic_reference",
+      "repetitions": 2,
+      "scorer": {
+        "min_score": 1,
+        "type": "fields",
+        "version": "1.0"
+      },
+      "selection_families": [
+        "semantic_redundancy",
+        "context_relevance",
+        "route_to_smaller_model",
+        "batch_model_calls"
+      ],
+      "split": "evaluation",
+      "variants": [
+        "hybrid",
+        "cheap",
+        "failing"
+      ],
+      "version": "1.0"
+    },
+    {
+      "attribution": "combined_configuration_unattributed",
+      "cases": [
+        {
+          "expected": {
+            "eligible": true,
+            "manual_review": false,
+            "route": "refund_review",
+            "suspicious": false
+          },
+          "finding_labels": [
+            {
+              "label": "no_opportunity",
+              "rationale": "The decision stages consume prior stage outputs; serial decisions cannot be batched together.",
+              "rule_id": "batch_model_calls",
+              "spans": []
+            },
+            {
+              "label": "ambiguous",
+              "rationale": "A model/rule substitution is testable, but correctness and whole-configuration effects cannot be assumed from span duration.",
+              "rule_id": "route_to_smaller_model",
+              "spans": []
+            }
+          ],
+          "id": "ordinary",
+          "input": {
+            "amount_band": "normal",
+            "conflicting_evidence": false,
+            "duplicate_signal": false,
+            "evidence_complete": true,
+            "proof_present": true,
+            "required_review": false,
+            "within_fixture_window": true
+          }
+        },
+        {
+          "expected": {
+            "eligible": true,
+            "manual_review": false,
+            "route": "refund_review",
+            "suspicious": false
+          },
+          "finding_labels": [
+            {
+              "label": "no_opportunity",
+              "rationale": "The decision stages consume prior stage outputs; serial decisions cannot be batched together.",
+              "rule_id": "batch_model_calls",
+              "spans": []
+            },
+            {
+              "label": "ambiguous",
+              "rationale": "A model/rule substitution is testable, but correctness and whole-configuration effects cannot be assumed from span duration.",
+              "rule_id": "route_to_smaller_model",
+              "spans": []
+            }
+          ],
+          "id": "high-value-legitimate",
+          "input": {
+            "amount_band": "high",
+            "conflicting_evidence": false,
+            "duplicate_signal": false,
+            "evidence_complete": true,
+            "proof_present": true,
+            "required_review": false,
+            "within_fixture_window": true
+          }
+        },
+        {
+          "expected": {
+            "eligible": null,
+            "manual_review": true,
+            "route": "manual_review",
+            "suspicious": true
+          },
+          "finding_labels": [
+            {
+              "label": "no_opportunity",
+              "rationale": "The decision stages consume prior stage outputs; serial decisions cannot be batched together.",
+              "rule_id": "batch_model_calls",
+              "spans": []
+            },
+            {
+              "label": "ambiguous",
+              "rationale": "A model/rule substitution is testable, but correctness and whole-configuration effects cannot be assumed from span duration.",
+              "rule_id": "route_to_smaller_model",
+              "spans": []
+            }
+          ],
+          "id": "small-duplicate",
+          "input": {
+            "amount_band": "low",
+            "conflicting_evidence": false,
+            "duplicate_signal": true,
+            "evidence_complete": true,
+            "proof_present": true,
+            "required_review": false,
+            "within_fixture_window": true
+          }
+        },
+        {
+          "expected": {
+            "eligible": null,
+            "manual_review": true,
+            "route": "manual_review",
+            "suspicious": null
+          },
+          "finding_labels": [
+            {
+              "label": "no_opportunity",
+              "rationale": "The decision stages consume prior stage outputs; serial decisions cannot be batched together.",
+              "rule_id": "batch_model_calls",
+              "spans": []
+            },
+            {
+              "label": "ambiguous",
+              "rationale": "A model/rule substitution is testable, but correctness and whole-configuration effects cannot be assumed from span duration.",
+              "rule_id": "route_to_smaller_model",
+              "spans": []
+            }
+          ],
+          "id": "missing-evidence",
+          "input": {
+            "amount_band": "normal",
+            "conflicting_evidence": false,
+            "duplicate_signal": false,
+            "evidence_complete": false,
+            "proof_present": null,
+            "required_review": false,
+            "within_fixture_window": null
+          }
+        },
+        {
+          "expected": {
+            "eligible": null,
+            "manual_review": true,
+            "route": "manual_review",
+            "suspicious": false
+          },
+          "finding_labels": [
+            {
+              "label": "no_opportunity",
+              "rationale": "The decision stages consume prior stage outputs; serial decisions cannot be batched together.",
+              "rule_id": "batch_model_calls",
+              "spans": []
+            },
+            {
+              "label": "ambiguous",
+              "rationale": "A model/rule substitution is testable, but correctness and whole-configuration effects cannot be assumed from span duration.",
+              "rule_id": "route_to_smaller_model",
+              "spans": []
+            }
+          ],
+          "id": "conflicting-evidence",
+          "input": {
+            "amount_band": "normal",
+            "conflicting_evidence": true,
+            "duplicate_signal": false,
+            "evidence_complete": true,
+            "proof_present": true,
+            "required_review": false,
+            "within_fixture_window": true
+          }
+        },
+        {
+          "expected": {
+            "eligible": false,
+            "manual_review": false,
+            "route": "standard_review",
+            "suspicious": false
+          },
+          "finding_labels": [
+            {
+              "label": "no_opportunity",
+              "rationale": "The decision stages consume prior stage outputs; serial decisions cannot be batched together.",
+              "rule_id": "batch_model_calls",
+              "spans": []
+            },
+            {
+              "label": "ambiguous",
+              "rationale": "A model/rule substitution is testable, but correctness and whole-configuration effects cannot be assumed from span duration.",
+              "rule_id": "route_to_smaller_model",
+              "spans": []
+            }
+          ],
+          "id": "outside-fixture-window",
+          "input": {
+            "amount_band": "normal",
+            "conflicting_evidence": false,
+            "duplicate_signal": false,
+            "evidence_complete": true,
+            "proof_present": true,
+            "required_review": false,
+            "within_fixture_window": false
+          }
+        },
+        {
+          "expected": {
+            "eligible": true,
+            "manual_review": true,
+            "route": "manual_review",
+            "suspicious": false
+          },
+          "finding_labels": [
+            {
+              "label": "no_opportunity",
+              "rationale": "The decision stages consume prior stage outputs; serial decisions cannot be batched together.",
+              "rule_id": "batch_model_calls",
+              "spans": []
+            },
+            {
+              "label": "ambiguous",
+              "rationale": "A model/rule substitution is testable, but correctness and whole-configuration effects cannot be assumed from span duration.",
+              "rule_id": "route_to_smaller_model",
+              "spans": []
+            }
+          ],
+          "id": "required-review",
+          "input": {
+            "amount_band": "normal",
+            "conflicting_evidence": false,
+            "duplicate_signal": false,
+            "evidence_complete": true,
+            "proof_present": true,
+            "required_review": true,
+            "within_fixture_window": true
+          }
+        },
+        {
+          "expected": {
+            "eligible": false,
+            "manual_review": false,
+            "route": "standard_review",
+            "suspicious": false
+          },
+          "finding_labels": [
+            {
+              "label": "no_opportunity",
+              "rationale": "The decision stages consume prior stage outputs; serial decisions cannot be batched together.",
+              "rule_id": "batch_model_calls",
+              "spans": []
+            },
+            {
+              "label": "ambiguous",
+              "rationale": "A model/rule substitution is testable, but correctness and whole-configuration effects cannot be assumed from span duration.",
+              "rule_id": "route_to_smaller_model",
+              "spans": []
+            }
+          ],
+          "id": "missing-proof",
+          "input": {
+            "amount_band": "normal",
+            "conflicting_evidence": false,
+            "duplicate_signal": false,
+            "evidence_complete": true,
+            "proof_present": false,
+            "required_review": false,
+            "within_fixture_window": true
+          }
+        }
+      ],
+      "id": "payment",
+      "kind": "synthetic_reference",
+      "repetitions": 2,
+      "scorer": {
+        "min_score": 1,
+        "type": "fields",
+        "version": "1.0"
+      },
+      "selection_families": [
+        "semantic_redundancy",
+        "context_relevance",
+        "route_to_smaller_model",
+        "batch_model_calls"
+      ],
+      "split": "development",
+      "variants": [
+        "hybrid",
+        "cheap",
+        "failing"
+      ],
+      "version": "1.0"
+    },
+    {
+      "attribution": "combined_configuration_unattributed",
+      "cases": [
+        {
+          "expected": {
+            "anomaly": false,
+            "disposition": {
+              "escalate": false,
+              "execution_permitted": false,
+              "rollback_proposed": false
+            },
+            "response": {
+              "execute": false,
+              "proposal": "observe"
+            },
+            "severity": "normal",
+            "verified": false
+          },
+          "finding_labels": [
+            {
+              "label": "no_opportunity",
+              "rationale": "The decision stages consume prior stage outputs; serial decisions cannot be batched together.",
+              "rule_id": "batch_model_calls",
+              "spans": []
+            },
+            {
+              "label": "ambiguous",
+              "rationale": "A model/rule substitution is testable, but correctness and whole-configuration effects cannot be assumed from span duration.",
+              "rule_id": "route_to_smaller_model",
+              "spans": []
+            },
+            {
+              "label": "opportunity",
+              "rationale": "The repeated label computation has no independent verification obligation; the fixture backend computes the same decision.",
+              "rule_id": "semantic_redundancy",
+              "spans": [
+                "severity_repeat"
+              ]
+            },
+            {
+              "label": "opportunity",
+              "rationale": "The declared fixture context is unrelated to the supplied decision inputs and is never needed by the gold rule.",
+              "rule_id": "context_relevance",
+              "spans": [
+                "severity"
+              ]
+            }
+          ],
+          "id": "normal",
+          "input": {
+            "critical_dependency": false,
+            "evidence_complete": true,
+            "latency_spike": false,
+            "noise_only": false,
+            "recent_change": false,
+            "rollback_candidate_documented": false,
+            "sustained_error": false,
+            "verification": false
+          }
+        },
+        {
+          "expected": {
+            "anomaly": false,
+            "disposition": {
+              "escalate": false,
+              "execution_permitted": false,
+              "rollback_proposed": false
+            },
+            "response": {
+              "execute": false,
+              "proposal": "observe"
+            },
+            "severity": "normal",
+            "verified": false
+          },
+          "finding_labels": [
+            {
+              "label": "no_opportunity",
+              "rationale": "The decision stages consume prior stage outputs; serial decisions cannot be batched together.",
+              "rule_id": "batch_model_calls",
+              "spans": []
+            },
+            {
+              "label": "ambiguous",
+              "rationale": "A model/rule substitution is testable, but correctness and whole-configuration effects cannot be assumed from span duration.",
+              "rule_id": "route_to_smaller_model",
+              "spans": []
+            },
+            {
+              "label": "opportunity",
+              "rationale": "The repeated label computation has no independent verification obligation; the fixture backend computes the same decision.",
+              "rule_id": "semantic_redundancy",
+              "spans": [
+                "severity_repeat"
+              ]
+            },
+            {
+              "label": "opportunity",
+              "rationale": "The declared fixture context is unrelated to the supplied decision inputs and is never needed by the gold rule.",
+              "rule_id": "context_relevance",
+              "spans": [
+                "severity"
+              ]
+            }
+          ],
+          "id": "noisy",
+          "input": {
+            "critical_dependency": false,
+            "evidence_complete": true,
+            "latency_spike": true,
+            "noise_only": true,
+            "recent_change": false,
+            "rollback_candidate_documented": false,
+            "sustained_error": false,
+            "verification": false
+          }
+        },
+        {
+          "expected": {
+            "anomaly": null,
+            "disposition": {
+              "escalate": true,
+              "execution_permitted": false,
+              "rollback_proposed": null
+            },
+            "response": {
+              "execute": false,
+              "proposal": "gather_evidence"
+            },
+            "severity": "unknown",
+            "verified": false
+          },
+          "finding_labels": [
+            {
+              "label": "no_opportunity",
+              "rationale": "The decision stages consume prior stage outputs; serial decisions cannot be batched together.",
+              "rule_id": "batch_model_calls",
+              "spans": []
+            },
+            {
+              "label": "ambiguous",
+              "rationale": "A model/rule substitution is testable, but correctness and whole-configuration effects cannot be assumed from span duration.",
+              "rule_id": "route_to_smaller_model",
+              "spans": []
+            },
+            {
+              "label": "opportunity",
+              "rationale": "The repeated label computation has no independent verification obligation; the fixture backend computes the same decision.",
+              "rule_id": "semantic_redundancy",
+              "spans": [
+                "severity_repeat"
+              ]
+            },
+            {
+              "label": "opportunity",
+              "rationale": "The declared fixture context is unrelated to the supplied decision inputs and is never needed by the gold rule.",
+              "rule_id": "context_relevance",
+              "spans": [
+                "severity"
+              ]
+            }
+          ],
+          "id": "ambiguous",
+          "input": {
+            "critical_dependency": true,
+            "evidence_complete": false,
+            "latency_spike": true,
+            "noise_only": false,
+            "recent_change": true,
+            "rollback_candidate_documented": false,
+            "sustained_error": true,
+            "verification": false
+          }
+        },
+        {
+          "expected": {
+            "anomaly": true,
+            "disposition": {
+              "escalate": true,
+              "execution_permitted": false,
+              "rollback_proposed": true
+            },
+            "response": {
+              "execute": false,
+              "proposal": "review_rollback"
+            },
+            "severity": "critical",
+            "verified": true
+          },
+          "finding_labels": [
+            {
+              "label": "no_opportunity",
+              "rationale": "The decision stages consume prior stage outputs; serial decisions cannot be batched together.",
+              "rule_id": "batch_model_calls",
+              "spans": []
+            },
+            {
+              "label": "ambiguous",
+              "rationale": "A model/rule substitution is testable, but correctness and whole-configuration effects cannot be assumed from span duration.",
+              "rule_id": "route_to_smaller_model",
+              "spans": []
+            },
+            {
+              "label": "no_opportunity",
+              "rationale": "The fixture explicitly requires independent verification.",
+              "rule_id": "semantic_redundancy",
+              "spans": []
+            },
+            {
+              "label": "opportunity",
+              "rationale": "The declared fixture context is unrelated to the supplied decision inputs and is never needed by the gold rule.",
+              "rule_id": "context_relevance",
+              "spans": [
+                "severity"
+              ]
+            }
+          ],
+          "id": "critical-error",
+          "input": {
+            "critical_dependency": true,
+            "evidence_complete": true,
+            "latency_spike": false,
+            "noise_only": false,
+            "recent_change": true,
+            "rollback_candidate_documented": true,
+            "sustained_error": true,
+            "verification": true
+          }
+        },
+        {
+          "expected": {
+            "anomaly": true,
+            "disposition": {
+              "escalate": false,
+              "execution_permitted": false,
+              "rollback_proposed": false
+            },
+            "response": {
+              "execute": false,
+              "proposal": "investigate"
+            },
+            "severity": "warning",
+            "verified": false
+          },
+          "finding_labels": [
+            {
+              "label": "no_opportunity",
+              "rationale": "The decision stages consume prior stage outputs; serial decisions cannot be batched together.",
+              "rule_id": "batch_model_calls",
+              "spans": []
+            },
+            {
+              "label": "ambiguous",
+              "rationale": "A model/rule substitution is testable, but correctness and whole-configuration effects cannot be assumed from span duration.",
+              "rule_id": "route_to_smaller_model",
+              "spans": []
+            },
+            {
+              "label": "opportunity",
+              "rationale": "The repeated label computation has no independent verification obligation; the fixture backend computes the same decision.",
+              "rule_id": "semantic_redundancy",
+              "spans": [
+                "severity_repeat"
+              ]
+            },
+            {
+              "label": "opportunity",
+              "rationale": "The declared fixture context is unrelated to the supplied decision inputs and is never needed by the gold rule.",
+              "rule_id": "context_relevance",
+              "spans": [
+                "severity"
+              ]
+            }
+          ],
+          "id": "warning",
+          "input": {
+            "critical_dependency": false,
+            "evidence_complete": true,
+            "latency_spike": true,
+            "noise_only": false,
+            "recent_change": false,
+            "rollback_candidate_documented": false,
+            "sustained_error": false,
+            "verification": false
+          }
+        },
+        {
+          "expected": {
+            "anomaly": true,
+            "disposition": {
+              "escalate": true,
+              "execution_permitted": false,
+              "rollback_proposed": false
+            },
+            "response": {
+              "execute": false,
+              "proposal": "escalate"
+            },
+            "severity": "critical",
+            "verified": true
+          },
+          "finding_labels": [
+            {
+              "label": "no_opportunity",
+              "rationale": "The decision stages consume prior stage outputs; serial decisions cannot be batched together.",
+              "rule_id": "batch_model_calls",
+              "spans": []
+            },
+            {
+              "label": "ambiguous",
+              "rationale": "A model/rule substitution is testable, but correctness and whole-configuration effects cannot be assumed from span duration.",
+              "rule_id": "route_to_smaller_model",
+              "spans": []
+            },
+            {
+              "label": "no_opportunity",
+              "rationale": "The fixture explicitly requires independent verification.",
+              "rule_id": "semantic_redundancy",
+              "spans": []
+            },
+            {
+              "label": "opportunity",
+              "rationale": "The declared fixture context is unrelated to the supplied decision inputs and is never needed by the gold rule.",
+              "rule_id": "context_relevance",
+              "spans": [
+                "severity"
+              ]
+            }
+          ],
+          "id": "critical-no-rollback",
+          "input": {
+            "critical_dependency": true,
+            "evidence_complete": true,
+            "latency_spike": false,
+            "noise_only": false,
+            "recent_change": false,
+            "rollback_candidate_documented": false,
+            "sustained_error": true,
+            "verification": true
+          }
+        },
+        {
+          "expected": {
+            "anomaly": false,
+            "disposition": {
+              "escalate": false,
+              "execution_permitted": false,
+              "rollback_proposed": false
+            },
+            "response": {
+              "execute": false,
+              "proposal": "observe"
+            },
+            "severity": "normal",
+            "verified": false
+          },
+          "finding_labels": [
+            {
+              "label": "no_opportunity",
+              "rationale": "The decision stages consume prior stage outputs; serial decisions cannot be batched together.",
+              "rule_id": "batch_model_calls",
+              "spans": []
+            },
+            {
+              "label": "ambiguous",
+              "rationale": "A model/rule substitution is testable, but correctness and whole-configuration effects cannot be assumed from span duration.",
+              "rule_id": "route_to_smaller_model",
+              "spans": []
+            },
+            {
+              "label": "opportunity",
+              "rationale": "The repeated label computation has no independent verification obligation; the fixture backend computes the same decision.",
+              "rule_id": "semantic_redundancy",
+              "spans": [
+                "severity_repeat"
+              ]
+            },
+            {
+              "label": "opportunity",
+              "rationale": "The declared fixture context is unrelated to the supplied decision inputs and is never needed by the gold rule.",
+              "rule_id": "context_relevance",
+              "spans": [
+                "severity"
+              ]
+            }
+          ],
+          "id": "recovered",
+          "input": {
+            "critical_dependency": false,
+            "evidence_complete": true,
+            "latency_spike": false,
+            "noise_only": false,
+            "recent_change": true,
+            "rollback_candidate_documented": true,
+            "sustained_error": false,
+            "verification": false
+          }
+        }
+      ],
+      "id": "incident",
+      "kind": "synthetic_reference",
+      "repetitions": 2,
+      "scorer": {
+        "min_score": 1,
+        "type": "fields",
+        "version": "1.0"
+      },
+      "selection_families": [
+        "semantic_redundancy",
+        "context_relevance",
+        "route_to_smaller_model",
+        "batch_model_calls"
+      ],
+      "split": "evaluation",
+      "variants": [
+        "hybrid",
+        "cheap",
+        "failing"
+      ],
+      "version": "1.0"
+    },
+    {
+      "attribution": "combined_configuration_unattributed",
+      "cases": [
+        {
+          "expected": {
+            "record-00000": {
+              "category": "hardware",
+              "fields": {
+                "entity": "alpha",
+                "kind": "widget",
+                "units": 0
+              },
+              "matches": [
+                [
+                  "record-00000",
+                  "entity-a"
+                ]
+              ]
+            },
+            "record-00001": {
+              "category": "hardware",
+              "fields": {
+                "entity": "beta",
+                "kind": "gear",
+                "units": 7
+              },
+              "matches": [
+                [
+                  "record-00001",
+                  "entity-b"
+                ]
+              ]
+            },
+            "record-00002": {
+              "category": "service",
+              "fields": {
+                "entity": "ambiguous",
+                "kind": "service",
+                "units": 14
+              },
+              "matches": []
+            },
+            "record-00003": {
+              "category": "unknown",
+              "fields": {
+                "entity": "unlisted",
+                "kind": "unlisted",
+                "units": 21
+              },
+              "matches": []
+            }
+          },
+          "finding_labels": [
+            {
+              "label": "ambiguous",
+              "rationale": "Independent records permit some batching, but one cross-stage batch is not justified; exact generic detector scope remains ambiguous.",
+              "rule_id": "batch_model_calls",
+              "spans": []
+            },
+            {
+              "label": "ambiguous",
+              "rationale": "A model/rule substitution is testable, but correctness and whole-configuration effects cannot be assumed from span duration.",
+              "rule_id": "route_to_smaller_model",
+              "spans": []
+            }
+          ],
+          "id": "chunk-00",
+          "input": [
+            {
+              "expected": {
+                "category": "hardware",
+                "fields": {
+                  "entity": "alpha",
+                  "kind": "widget",
+                  "units": 0
+                },
+                "matches": [
+                  [
+                    "record-00000",
+                    "entity-a"
+                  ]
+                ]
+              },
+              "id": "record-00000",
+              "text": "kind=widget;units=0;entity=alpha"
+            },
+            {
+              "expected": {
+                "category": "hardware",
+                "fields": {
+                  "entity": "beta",
+                  "kind": "gear",
+                  "units": 7
+                },
+                "matches": [
+                  [
+                    "record-00001",
+                    "entity-b"
+                  ]
+                ]
+              },
+              "id": "record-00001",
+              "text": "kind=gear;units=7;entity=beta"
+            },
+            {
+              "expected": {
+                "category": "service",
+                "fields": {
+                  "entity": "ambiguous",
+                  "kind": "service",
+                  "units": 14
+                },
+                "matches": []
+              },
+              "id": "record-00002",
+              "text": "kind=service;units=14;entity=ambiguous"
+            },
+            {
+              "expected": {
+                "category": "unknown",
+                "fields": {
+                  "entity": "unlisted",
+                  "kind": "unlisted",
+                  "units": 21
+                },
+                "matches": []
+              },
+              "id": "record-00003",
+              "text": "kind=unlisted;units=21;entity=unlisted"
+            }
+          ]
+        },
+        {
+          "expected": {
+            "record-00004": {
+              "category": "hardware",
+              "fields": {
+                "entity": "alpha",
+                "kind": "widget",
+                "units": 28
+              },
+              "matches": [
+                [
+                  "record-00004",
+                  "entity-a"
+                ]
+              ]
+            },
+            "record-00005": {
+              "category": "hardware",
+              "fields": {
+                "entity": "beta",
+                "kind": "gear",
+                "units": 35
+              },
+              "matches": [
+                [
+                  "record-00005",
+                  "entity-b"
+                ]
+              ]
+            },
+            "record-00006": {
+              "category": "service",
+              "fields": {
+                "entity": "ambiguous",
+                "kind": "service",
+                "units": 42
+              },
+              "matches": []
+            },
+            "record-00007": {
+              "category": "unknown",
+              "fields": {
+                "entity": "unlisted",
+                "kind": "unlisted",
+                "units": 49
+              },
+              "matches": []
+            }
+          },
+          "finding_labels": [
+            {
+              "label": "ambiguous",
+              "rationale": "Independent records permit some batching, but one cross-stage batch is not justified; exact generic detector scope remains ambiguous.",
+              "rule_id": "batch_model_calls",
+              "spans": []
+            },
+            {
+              "label": "ambiguous",
+              "rationale": "A model/rule substitution is testable, but correctness and whole-configuration effects cannot be assumed from span duration.",
+              "rule_id": "route_to_smaller_model",
+              "spans": []
+            }
+          ],
+          "id": "chunk-01",
+          "input": [
+            {
+              "expected": {
+                "category": "hardware",
+                "fields": {
+                  "entity": "alpha",
+                  "kind": "widget",
+                  "units": 28
+                },
+                "matches": [
+                  [
+                    "record-00004",
+                    "entity-a"
+                  ]
+                ]
+              },
+              "id": "record-00004",
+              "text": "kind=widget;units=28;entity=alpha"
+            },
+            {
+              "expected": {
+                "category": "hardware",
+                "fields": {
+                  "entity": "beta",
+                  "kind": "gear",
+                  "units": 35
+                },
+                "matches": [
+                  [
+                    "record-00005",
+                    "entity-b"
+                  ]
+                ]
+              },
+              "id": "record-00005",
+              "text": "kind=gear;units=35;entity=beta"
+            },
+            {
+              "expected": {
+                "category": "service",
+                "fields": {
+                  "entity": "ambiguous",
+                  "kind": "service",
+                  "units": 42
+                },
+                "matches": []
+              },
+              "id": "record-00006",
+              "text": "kind=service;units=42;entity=ambiguous"
+            },
+            {
+              "expected": {
+                "category": "unknown",
+                "fields": {
+                  "entity": "unlisted",
+                  "kind": "unlisted",
+                  "units": 49
+                },
+                "matches": []
+              },
+              "id": "record-00007",
+              "text": "kind=unlisted;units=49;entity=unlisted"
+            }
+          ]
+        },
+        {
+          "expected": {
+            "record-00008": {
+              "category": "hardware",
+              "fields": {
+                "entity": "alpha",
+                "kind": "widget",
+                "units": 56
+              },
+              "matches": [
+                [
+                  "record-00008",
+                  "entity-a"
+                ]
+              ]
+            },
+            "record-00009": {
+              "category": "hardware",
+              "fields": {
+                "entity": "beta",
+                "kind": "gear",
+                "units": 63
+              },
+              "matches": [
+                [
+                  "record-00009",
+                  "entity-b"
+                ]
+              ]
+            },
+            "record-00010": {
+              "category": "service",
+              "fields": {
+                "entity": "ambiguous",
+                "kind": "service",
+                "units": 70
+              },
+              "matches": []
+            },
+            "record-00011": {
+              "category": "unknown",
+              "fields": {
+                "entity": "unlisted",
+                "kind": "unlisted",
+                "units": 77
+              },
+              "matches": []
+            }
+          },
+          "finding_labels": [
+            {
+              "label": "ambiguous",
+              "rationale": "Independent records permit some batching, but one cross-stage batch is not justified; exact generic detector scope remains ambiguous.",
+              "rule_id": "batch_model_calls",
+              "spans": []
+            },
+            {
+              "label": "ambiguous",
+              "rationale": "A model/rule substitution is testable, but correctness and whole-configuration effects cannot be assumed from span duration.",
+              "rule_id": "route_to_smaller_model",
+              "spans": []
+            }
+          ],
+          "id": "chunk-02",
+          "input": [
+            {
+              "expected": {
+                "category": "hardware",
+                "fields": {
+                  "entity": "alpha",
+                  "kind": "widget",
+                  "units": 56
+                },
+                "matches": [
+                  [
+                    "record-00008",
+                    "entity-a"
+                  ]
+                ]
+              },
+              "id": "record-00008",
+              "text": "kind=widget;units=56;entity=alpha"
+            },
+            {
+              "expected": {
+                "category": "hardware",
+                "fields": {
+                  "entity": "beta",
+                  "kind": "gear",
+                  "units": 63
+                },
+                "matches": [
+                  [
+                    "record-00009",
+                    "entity-b"
+                  ]
+                ]
+              },
+              "id": "record-00009",
+              "text": "kind=gear;units=63;entity=beta"
+            },
+            {
+              "expected": {
+                "category": "service",
+                "fields": {
+                  "entity": "ambiguous",
+                  "kind": "service",
+                  "units": 70
+                },
+                "matches": []
+              },
+              "id": "record-00010",
+              "text": "kind=service;units=70;entity=ambiguous"
+            },
+            {
+              "expected": {
+                "category": "unknown",
+                "fields": {
+                  "entity": "unlisted",
+                  "kind": "unlisted",
+                  "units": 77
+                },
+                "matches": []
+              },
+              "id": "record-00011",
+              "text": "kind=unlisted;units=77;entity=unlisted"
+            }
+          ]
+        },
+        {
+          "expected": {
+            "record-00012": {
+              "category": "hardware",
+              "fields": {
+                "entity": "alpha",
+                "kind": "widget",
+                "units": 84
+              },
+              "matches": [
+                [
+                  "record-00012",
+                  "entity-a"
+                ]
+              ]
+            },
+            "record-00013": {
+              "category": "hardware",
+              "fields": {
+                "entity": "beta",
+                "kind": "gear",
+                "units": 91
+              },
+              "matches": [
+                [
+                  "record-00013",
+                  "entity-b"
+                ]
+              ]
+            },
+            "record-00014": {
+              "category": "service",
+              "fields": {
+                "entity": "ambiguous",
+                "kind": "service",
+                "units": 1
+              },
+              "matches": []
+            },
+            "record-00015": {
+              "category": "unknown",
+              "fields": {
+                "entity": "unlisted",
+                "kind": "unlisted",
+                "units": 8
+              },
+              "matches": []
+            }
+          },
+          "finding_labels": [
+            {
+              "label": "ambiguous",
+              "rationale": "Independent records permit some batching, but one cross-stage batch is not justified; exact generic detector scope remains ambiguous.",
+              "rule_id": "batch_model_calls",
+              "spans": []
+            },
+            {
+              "label": "ambiguous",
+              "rationale": "A model/rule substitution is testable, but correctness and whole-configuration effects cannot be assumed from span duration.",
+              "rule_id": "route_to_smaller_model",
+              "spans": []
+            }
+          ],
+          "id": "chunk-03",
+          "input": [
+            {
+              "expected": {
+                "category": "hardware",
+                "fields": {
+                  "entity": "alpha",
+                  "kind": "widget",
+                  "units": 84
+                },
+                "matches": [
+                  [
+                    "record-00012",
+                    "entity-a"
+                  ]
+                ]
+              },
+              "id": "record-00012",
+              "text": "kind=widget;units=84;entity=alpha"
+            },
+            {
+              "expected": {
+                "category": "hardware",
+                "fields": {
+                  "entity": "beta",
+                  "kind": "gear",
+                  "units": 91
+                },
+                "matches": [
+                  [
+                    "record-00013",
+                    "entity-b"
+                  ]
+                ]
+              },
+              "id": "record-00013",
+              "text": "kind=gear;units=91;entity=beta"
+            },
+            {
+              "expected": {
+                "category": "service",
+                "fields": {
+                  "entity": "ambiguous",
+                  "kind": "service",
+                  "units": 1
+                },
+                "matches": []
+              },
+              "id": "record-00014",
+              "text": "kind=service;units=1;entity=ambiguous"
+            },
+            {
+              "expected": {
+                "category": "unknown",
+                "fields": {
+                  "entity": "unlisted",
+                  "kind": "unlisted",
+                  "units": 8
+                },
+                "matches": []
+              },
+              "id": "record-00015",
+              "text": "kind=unlisted;units=8;entity=unlisted"
+            }
+          ]
+        },
+        {
+          "expected": {
+            "record-00016": {
+              "category": "hardware",
+              "fields": {
+                "entity": "alpha",
+                "kind": "widget",
+                "units": 15
+              },
+              "matches": [
+                [
+                  "record-00016",
+                  "entity-a"
+                ]
+              ]
+            },
+            "record-00017": {
+              "category": "hardware",
+              "fields": {
+                "entity": "beta",
+                "kind": "gear",
+                "units": 22
+              },
+              "matches": [
+                [
+                  "record-00017",
+                  "entity-b"
+                ]
+              ]
+            },
+            "record-00018": {
+              "category": "service",
+              "fields": {
+                "entity": "ambiguous",
+                "kind": "service",
+                "units": 29
+              },
+              "matches": []
+            },
+            "record-00019": {
+              "category": "unknown",
+              "fields": {
+                "entity": "unlisted",
+                "kind": "unlisted",
+                "units": 36
+              },
+              "matches": []
+            }
+          },
+          "finding_labels": [
+            {
+              "label": "ambiguous",
+              "rationale": "Independent records permit some batching, but one cross-stage batch is not justified; exact generic detector scope remains ambiguous.",
+              "rule_id": "batch_model_calls",
+              "spans": []
+            },
+            {
+              "label": "ambiguous",
+              "rationale": "A model/rule substitution is testable, but correctness and whole-configuration effects cannot be assumed from span duration.",
+              "rule_id": "route_to_smaller_model",
+              "spans": []
+            }
+          ],
+          "id": "chunk-04",
+          "input": [
+            {
+              "expected": {
+                "category": "hardware",
+                "fields": {
+                  "entity": "alpha",
+                  "kind": "widget",
+                  "units": 15
+                },
+                "matches": [
+                  [
+                    "record-00016",
+                    "entity-a"
+                  ]
+                ]
+              },
+              "id": "record-00016",
+              "text": "kind=widget;units=15;entity=alpha"
+            },
+            {
+              "expected": {
+                "category": "hardware",
+                "fields": {
+                  "entity": "beta",
+                  "kind": "gear",
+                  "units": 22
+                },
+                "matches": [
+                  [
+                    "record-00017",
+                    "entity-b"
+                  ]
+                ]
+              },
+              "id": "record-00017",
+              "text": "kind=gear;units=22;entity=beta"
+            },
+            {
+              "expected": {
+                "category": "service",
+                "fields": {
+                  "entity": "ambiguous",
+                  "kind": "service",
+                  "units": 29
+                },
+                "matches": []
+              },
+              "id": "record-00018",
+              "text": "kind=service;units=29;entity=ambiguous"
+            },
+            {
+              "expected": {
+                "category": "unknown",
+                "fields": {
+                  "entity": "unlisted",
+                  "kind": "unlisted",
+                  "units": 36
+                },
+                "matches": []
+              },
+              "id": "record-00019",
+              "text": "kind=unlisted;units=36;entity=unlisted"
+            }
+          ]
+        },
+        {
+          "expected": {
+            "record-00020": {
+              "category": "hardware",
+              "fields": {
+                "entity": "alpha",
+                "kind": "widget",
+                "units": 43
+              },
+              "matches": [
+                [
+                  "record-00020",
+                  "entity-a"
+                ]
+              ]
+            },
+            "record-00021": {
+              "category": "hardware",
+              "fields": {
+                "entity": "beta",
+                "kind": "gear",
+                "units": 50
+              },
+              "matches": [
+                [
+                  "record-00021",
+                  "entity-b"
+                ]
+              ]
+            },
+            "record-00022": {
+              "category": "service",
+              "fields": {
+                "entity": "ambiguous",
+                "kind": "service",
+                "units": 57
+              },
+              "matches": []
+            },
+            "record-00023": {
+              "category": "unknown",
+              "fields": {
+                "entity": "unlisted",
+                "kind": "unlisted",
+                "units": 64
+              },
+              "matches": []
+            }
+          },
+          "finding_labels": [
+            {
+              "label": "ambiguous",
+              "rationale": "Independent records permit some batching, but one cross-stage batch is not justified; exact generic detector scope remains ambiguous.",
+              "rule_id": "batch_model_calls",
+              "spans": []
+            },
+            {
+              "label": "ambiguous",
+              "rationale": "A model/rule substitution is testable, but correctness and whole-configuration effects cannot be assumed from span duration.",
+              "rule_id": "route_to_smaller_model",
+              "spans": []
+            }
+          ],
+          "id": "chunk-05",
+          "input": [
+            {
+              "expected": {
+                "category": "hardware",
+                "fields": {
+                  "entity": "alpha",
+                  "kind": "widget",
+                  "units": 43
+                },
+                "matches": [
+                  [
+                    "record-00020",
+                    "entity-a"
+                  ]
+                ]
+              },
+              "id": "record-00020",
+              "text": "kind=widget;units=43;entity=alpha"
+            },
+            {
+              "expected": {
+                "category": "hardware",
+                "fields": {
+                  "entity": "beta",
+                  "kind": "gear",
+                  "units": 50
+                },
+                "matches": [
+                  [
+                    "record-00021",
+                    "entity-b"
+                  ]
+                ]
+              },
+              "id": "record-00021",
+              "text": "kind=gear;units=50;entity=beta"
+            },
+            {
+              "expected": {
+                "category": "service",
+                "fields": {
+                  "entity": "ambiguous",
+                  "kind": "service",
+                  "units": 57
+                },
+                "matches": []
+              },
+              "id": "record-00022",
+              "text": "kind=service;units=57;entity=ambiguous"
+            },
+            {
+              "expected": {
+                "category": "unknown",
+                "fields": {
+                  "entity": "unlisted",
+                  "kind": "unlisted",
+                  "units": 64
+                },
+                "matches": []
+              },
+              "id": "record-00023",
+              "text": "kind=unlisted;units=64;entity=unlisted"
+            }
+          ]
+        },
+        {
+          "expected": {
+            "record-00024": {
+              "category": "hardware",
+              "fields": {
+                "entity": "alpha",
+                "kind": "widget",
+                "units": 71
+              },
+              "matches": [
+                [
+                  "record-00024",
+                  "entity-a"
+                ]
+              ]
+            },
+            "record-00025": {
+              "category": "hardware",
+              "fields": {
+                "entity": "beta",
+                "kind": "gear",
+                "units": 78
+              },
+              "matches": [
+                [
+                  "record-00025",
+                  "entity-b"
+                ]
+              ]
+            },
+            "record-00026": {
+              "category": "service",
+              "fields": {
+                "entity": "ambiguous",
+                "kind": "service",
+                "units": 85
+              },
+              "matches": []
+            },
+            "record-00027": {
+              "category": "unknown",
+              "fields": {
+                "entity": "unlisted",
+                "kind": "unlisted",
+                "units": 92
+              },
+              "matches": []
+            }
+          },
+          "finding_labels": [
+            {
+              "label": "ambiguous",
+              "rationale": "Independent records permit some batching, but one cross-stage batch is not justified; exact generic detector scope remains ambiguous.",
+              "rule_id": "batch_model_calls",
+              "spans": []
+            },
+            {
+              "label": "ambiguous",
+              "rationale": "A model/rule substitution is testable, but correctness and whole-configuration effects cannot be assumed from span duration.",
+              "rule_id": "route_to_smaller_model",
+              "spans": []
+            }
+          ],
+          "id": "chunk-06",
+          "input": [
+            {
+              "expected": {
+                "category": "hardware",
+                "fields": {
+                  "entity": "alpha",
+                  "kind": "widget",
+                  "units": 71
+                },
+                "matches": [
+                  [
+                    "record-00024",
+                    "entity-a"
+                  ]
+                ]
+              },
+              "id": "record-00024",
+              "text": "kind=widget;units=71;entity=alpha"
+            },
+            {
+              "expected": {
+                "category": "hardware",
+                "fields": {
+                  "entity": "beta",
+                  "kind": "gear",
+                  "units": 78
+                },
+                "matches": [
+                  [
+                    "record-00025",
+                    "entity-b"
+                  ]
+                ]
+              },
+              "id": "record-00025",
+              "text": "kind=gear;units=78;entity=beta"
+            },
+            {
+              "expected": {
+                "category": "service",
+                "fields": {
+                  "entity": "ambiguous",
+                  "kind": "service",
+                  "units": 85
+                },
+                "matches": []
+              },
+              "id": "record-00026",
+              "text": "kind=service;units=85;entity=ambiguous"
+            },
+            {
+              "expected": {
+                "category": "unknown",
+                "fields": {
+                  "entity": "unlisted",
+                  "kind": "unlisted",
+                  "units": 92
+                },
+                "matches": []
+              },
+              "id": "record-00027",
+              "text": "kind=unlisted;units=92;entity=unlisted"
+            }
+          ]
+        },
+        {
+          "expected": {
+            "record-00028": {
+              "category": "hardware",
+              "fields": {
+                "entity": "alpha",
+                "kind": "widget",
+                "units": 2
+              },
+              "matches": [
+                [
+                  "record-00028",
+                  "entity-a"
+                ]
+              ]
+            },
+            "record-00029": {
+              "category": "hardware",
+              "fields": {
+                "entity": "beta",
+                "kind": "gear",
+                "units": 9
+              },
+              "matches": [
+                [
+                  "record-00029",
+                  "entity-b"
+                ]
+              ]
+            },
+            "record-00030": {
+              "category": "service",
+              "fields": {
+                "entity": "ambiguous",
+                "kind": "service",
+                "units": 16
+              },
+              "matches": []
+            },
+            "record-00031": {
+              "category": "unknown",
+              "fields": {
+                "entity": "unlisted",
+                "kind": "unlisted",
+                "units": 23
+              },
+              "matches": []
+            }
+          },
+          "finding_labels": [
+            {
+              "label": "ambiguous",
+              "rationale": "Independent records permit some batching, but one cross-stage batch is not justified; exact generic detector scope remains ambiguous.",
+              "rule_id": "batch_model_calls",
+              "spans": []
+            },
+            {
+              "label": "ambiguous",
+              "rationale": "A model/rule substitution is testable, but correctness and whole-configuration effects cannot be assumed from span duration.",
+              "rule_id": "route_to_smaller_model",
+              "spans": []
+            }
+          ],
+          "id": "chunk-07",
+          "input": [
+            {
+              "expected": {
+                "category": "hardware",
+                "fields": {
+                  "entity": "alpha",
+                  "kind": "widget",
+                  "units": 2
+                },
+                "matches": [
+                  [
+                    "record-00028",
+                    "entity-a"
+                  ]
+                ]
+              },
+              "id": "record-00028",
+              "text": "kind=widget;units=2;entity=alpha"
+            },
+            {
+              "expected": {
+                "category": "hardware",
+                "fields": {
+                  "entity": "beta",
+                  "kind": "gear",
+                  "units": 9
+                },
+                "matches": [
+                  [
+                    "record-00029",
+                    "entity-b"
+                  ]
+                ]
+              },
+              "id": "record-00029",
+              "text": "kind=gear;units=9;entity=beta"
+            },
+            {
+              "expected": {
+                "category": "service",
+                "fields": {
+                  "entity": "ambiguous",
+                  "kind": "service",
+                  "units": 16
+                },
+                "matches": []
+              },
+              "id": "record-00030",
+              "text": "kind=service;units=16;entity=ambiguous"
+            },
+            {
+              "expected": {
+                "category": "unknown",
+                "fields": {
+                  "entity": "unlisted",
+                  "kind": "unlisted",
+                  "units": 23
+                },
+                "matches": []
+              },
+              "id": "record-00031",
+              "text": "kind=unlisted;units=23;entity=unlisted"
+            }
+          ]
+        }
+      ],
+      "id": "batch",
+      "kind": "synthetic_reference",
+      "repetitions": 2,
+      "scorer": {
+        "min_score": 1,
+        "type": "structured_per_field",
+        "version": "1.0"
+      },
+      "selection_families": [
+        "semantic_redundancy",
+        "context_relevance",
+        "route_to_smaller_model",
+        "batch_model_calls"
+      ],
+      "split": "evaluation",
+      "variants": [
+        "optimized",
+        "cheap",
+        "failing"
+      ],
+      "version": "1.0"
+    }
+  ]
+}
