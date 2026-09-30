@@ -27,16 +27,28 @@ answer the roadmap's nine evidence questions. The example includes successful,
 failed-quality, and unknown-cost cases. Its fixture outcomes demonstrate the
 contracts and are not empirical performance claims.
 
+## Completed optimization evidence roadmap
+
+The [#208 implementation and evidence review](OPTIMIZATION_EVIDENCE_REVIEW.md)
+maps all eleven completed workstreams to merged changes and validation artifacts:
+finding trust/ranking, candidate experiments, context/reuse and structural
+families, retention/aggregation, onboarding, drift and cross-workload studies.
+The [cross-workload benchmark](USEFULNESS_BENCHMARK.md) and
+[non-agent CPU study](NON_AGENT_STUDY.md) preserve false positives, quality losses,
+unknown costs and attribution limits alongside successful cases. These features
+remain Unreleased source-checkout APIs; completion does not announce a package
+release or authorize deployment.
+
 ## Future work to scope separately
 
-- Calibrate estimator families using accumulated real intervention evidence and
-  suitable research designs.
+- Extend the existing offline calibration with larger independent task sets and
+  attributable interventions before adopting fitted runtime coefficients.
 - Track changing telemetry conventions and expand SDK/framework conformance
   coverage with pinned, reproducible inputs.
 - Consider splitting storage behind a compatibility facade and organizing
   CLI/dashboard features without changing their contracts.
-- Refine impact scenarios, retention, and operational tooling based on concrete
-  workload requirements.
+- Refine impact scenarios and the implemented retention, aggregation and drift
+  contracts based on new concrete workload evidence.
 - Add constrained rewrite guidance where recorded evidence and task-specific
   quality gates can validate it.
 
