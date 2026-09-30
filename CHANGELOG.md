@@ -10,6 +10,11 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added [finding-linked optimization experiments](docs/OPTIMIZATION_EXPERIMENTS.md)
+  with frozen baseline predictions, explicit caller runners, conservative execution
+  budgets, idempotent journals, retained failure states and native intervention/
+  study exports in JSON, HTML and Markdown.
+
 - Added [evidence-aware finding ranking](docs/FINDING_RANKING.md) with explicit
   readiness, provenance, risk and validation effort, deterministic dimension
   sorting across reports/CLI/API/dashboard, and compatible queue aggregation.
