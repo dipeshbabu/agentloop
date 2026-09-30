@@ -42,6 +42,7 @@ from agentloop.quality import (
     load_quality_fixtures,
     quality_report_to_markdown,
 )
+from agentloop.ranking import RankingSort, sort_ranked
 from agentloop.replay import ReplayGates, build_replay_report, replay_report_to_markdown
 from agentloop.store import (
     DEFAULT_PAGE_SIZE,
@@ -662,9 +663,12 @@ def diagnose(
     json_out: Path | None = typer.Option(None, help="Optional machine-readable diagnosis output."),
     otel: bool = typer.Option(False, help="Read the input path as OTLP/GenAI-style JSON."),
     name: str | None = typer.Option(None, help="Trace name to use when importing OTLP JSON."),
+    sort_by: RankingSort = typer.Option(
+        RankingSort.PRIORITY, help="Finding ranking dimension; unknown values stay explicit."
+    ),
 ) -> None:
     trace = _load_trace(path, otel=otel, name=name, param_hint="--path")
-    diagnosis = build_diagnosis(trace)
+    diagnosis = build_diagnosis(trace, sort_by=sort_by.value)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(diagnosis_to_markdown(diagnosis), encoding="utf-8")
     if json_out is not None:
@@ -959,16 +963,20 @@ def remote_update_finding_status(
 
 @app.command("optimization-queue")
 def optimization_queue(
-    project_id: str | None = None, json_out: Path | None = typer.Option(None)
+    project_id: str | None = None,
+    json_out: Path | None = typer.Option(None),
+    sort_by: RankingSort = typer.Option(
+        RankingSort.PRIORITY, help="Investigation ranking dimension."
+    ),
 ) -> None:
     db = get_store()
-    queue = db.optimization_queue(project_id=project_id)
-    payload = {"project_id": project_id, "queue": queue}
+    queue = sort_ranked(db.optimization_queue(project_id=project_id), sort_by.value)
+    payload = {"project_id": project_id, "sort_by": sort_by.value, "queue": queue}
     if json_out is not None:
         _write_json(json_out, payload)
         console.print(f"Wrote optimization queue JSON to {json_out}")
     table = Table(title="AgentLoop Optimization Queue")
-    table.add_column("Priority")
+    table.add_column("Priority / readiness")
     table.add_column("Severity")
     table.add_column("Type")
     table.add_column("Title")
@@ -977,7 +985,7 @@ def optimization_queue(
     table.add_column("Savings")
     for item in queue:
         table.add_row(
-            f"{item['priority_score']:.1f}",
+            f"{item['ranking']['priority_rank']} / {item['ranking']['status']}",
             str(item["severity"]),
             str(item["type"]),
             str(item["title"]),
@@ -987,6 +995,13 @@ def optimization_queue(
             f"{format_cost_usd(item.get('estimated_cost_savings_usd'))}",
         )
     console.print(table)
+
+    for item in queue:
+        console.print(
+            f"{item['title']}: "
+            + (", ".join(item["ranking"]["reasons"]) or "Required ranking inputs are complete."),
+            markup=False,
+        )
 
 
 @app.command("github-issue-drafts")

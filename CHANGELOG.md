@@ -10,6 +10,11 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added [evidence-aware finding ranking](docs/FINDING_RANKING.md) with explicit
+  readiness, provenance, risk and validation effort, deterministic dimension
+  sorting across reports/CLI/API/dashboard, and compatible queue aggregation.
+  Unknown inputs no longer inherit low risk or high priority from large estimates.
+
 - Documented the completed [guarded-harness roadmap review](docs/GUARDED_HARNESS_REVIEW.md),
   linking supported contracts, conformance tests, empirical results and remaining
   deployment limitations. The controls remain Unreleased source-checkout APIs.

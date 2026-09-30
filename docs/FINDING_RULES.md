@@ -1,5 +1,10 @@
 # Canonical finding rules
 
+The [investigation ranking contract](FINDING_RANKING.md) preserves canonical
+predictions while exposing evidence, quality risk and validation effort. Rule
+authors can declare required ranking inputs without adding domain logic to the
+ranking engine.
+
 The [finding trust benchmark](FINDING_BENCHMARKS.md) evaluates versioned rules
 against independently labeled fixtures, preserving false positives, abstentions,
 unknown labels and backend provenance in a release regression gate.

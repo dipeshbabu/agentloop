@@ -273,6 +273,12 @@ def analysis_to_html(payload: dict[str, Any], *, include_content: bool = False) 
         + "</details></article>"
     )
     findings = diagnosis.get("findings", [])
+    if diagnosis.get("ranking"):
+        sections.append(
+            "<p>Investigation order: "
+            + _text(diagnosis["ranking"]["sort_by"])
+            + ". Readiness and missing inputs are separate from estimated savings; ranking does not authorize a change.</p>"
+        )
     if not findings:
         sections.append("<p>No optimization findings were detected.</p>")
     for index, finding in enumerate(findings):
@@ -491,6 +497,37 @@ def _finding(finding: dict[str, Any], index: int, anchors: dict[str, str]) -> st
     evidence = finding.get("evidence_level", "inferred")
     result = f'<article class="prediction" id="finding-{index}"><span class="badge">{_text(evidence)} evidence</span><span class="badge">{_text(finding["confidence"])} confidence</span><h3>{_text(finding["title"])}</h3>'
     result += f"<p>{_text(finding.get('metadata', {}).get('why', ''))}</p>"
+    if finding.get("ranking"):
+        ranking = finding["ranking"]
+        result += _definition(
+            [
+                ("Investigation priority", ranking["priority_rank"]),
+                ("Test readiness", ranking["status"].replace("_", " ")),
+                (
+                    "Why",
+                    "; ".join(reason.replace("_", " ") for reason in ranking["reasons"])
+                    or "Required inputs are complete; compare the declared ranking components.",
+                ),
+            ]
+        )
+        result += (
+            "<details><summary>Ranking components, input references and ordering</summary>"
+            + _json(
+                {
+                    key: ranking[key]
+                    for key in (
+                        "method",
+                        "order",
+                        "components",
+                        "required_inputs",
+                        "reasons",
+                        "invalid_inputs",
+                        "automatic_application_allowed",
+                    )
+                }
+            )
+            + "</details>"
+        )
     result += _definition(
         [
             ("Finding ID", finding["finding_id"]),

@@ -16,9 +16,9 @@ def test_report_optimizer_and_diagnosis_share_rule_identity_and_findings():
     assert [item["title"] for item in candidates] == [
         item["title"] for item in report["recommendations"]
     ]
-    assert [item["rule_id"] for item in candidates] == [
+    assert sorted(item["rule_id"] for item in candidates) == sorted(
         item["rule_id"] for item in diagnosis["findings"]
-    ]
+    )
     versions = {rule.rule_id: rule.version for rule in BUILTIN_RULES}
     assert all(item["rule_version"] == versions[item["rule_id"]] for item in candidates)
     assert (

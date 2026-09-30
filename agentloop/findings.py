@@ -10,6 +10,7 @@ from agentloop.costs import format_cost_usd
 from agentloop.estimates import estimate_markdown
 from agentloop.markdown import markdown_code_span, markdown_heading, markdown_text
 from agentloop.optimizer import build_optimization_plan
+from agentloop.ranking import RANKING_KEY, RANKING_VERSION, rank_findings
 from agentloop.timing import format_duration_ms
 
 
@@ -32,6 +33,7 @@ class OptimizationFinding:
     rule_id: str | None = None
     rule_version: str | None = None
     estimate: dict[str, Any] | None = None
+    ranking_requirements: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         result = {
@@ -57,13 +59,23 @@ class OptimizationFinding:
             result.update(rule_id=self.rule_id, rule_version=self.rule_version)
         if self.estimate is not None:
             result["estimate"] = deepcopy(self.estimate)
+        if self.ranking_requirements:
+            result["ranking_requirements"] = list(self.ranking_requirements)
         return result
 
 
-def build_diagnosis(trace: Any) -> dict[str, Any]:
+def build_diagnosis(trace: Any, *, sort_by="priority", ranking_inputs=None) -> dict[str, Any]:
     plan = build_optimization_plan(trace)
-    findings = [_finding_from_card(card, plan) for card in plan.get("optimization_cards", [])]
+    node_lookup = {node["node_id"]: node for node in plan.get("graph", {}).get("nodes", [])}
+    findings = [
+        _finding_from_card(card, plan, node_lookup=node_lookup)
+        for card in plan.get("optimization_cards", [])
+    ]
     findings = [finding for finding in findings if finding is not None]
+    annotations = trace.metadata.get(RANKING_KEY, {}) if ranking_inputs is None else ranking_inputs
+    ranked = rank_findings(
+        [finding.to_dict() for finding in findings], inputs=annotations, sort_by=sort_by
+    )
     return {
         **({"semantic_waste": plan["semantic_waste"]} if "semantic_waste" in plan else {}),
         **(
@@ -81,7 +93,15 @@ def build_diagnosis(trace: Any) -> dict[str, Any]:
         "current": plan["current"],
         "estimated_after": plan["estimated_after"],
         "summary": _summary(plan, findings),
-        "findings": [finding.to_dict() for finding in findings],
+        "findings": ranked,
+        "ranking": {
+            "schema_version": RANKING_VERSION,
+            "sort_by": sort_by,
+            "ready_to_test_count": sum(
+                finding["ranking"]["status"] == "ready_to_test" for finding in ranked
+            ),
+            "interpretation": "Investigation ordering only. Unknown inputs remain explicit; estimated savings are not measured outcomes.",
+        },
         "graph": plan["graph"],
         "rule_errors": plan.get("rule_errors", []),
         "analysis_complete": plan.get("analysis_complete", True),
@@ -153,6 +173,20 @@ def diagnosis_to_markdown(diagnosis: dict[str, Any]) -> str:
             lines.append(
                 f"- Rule: {markdown_code_span(finding['rule_id'])} version {markdown_text(finding['rule_version'])}"
             )
+        if finding.get("ranking"):
+            ranking = finding["ranking"]
+            lines.extend(
+                [
+                    f"- Investigation priority: {ranking['priority_rank']} ({markdown_text(ranking['status'])})",
+                    "- Ranking reasons: "
+                    + markdown_text(
+                        ", ".join(ranking["reasons"])
+                        or "Required inputs are complete; use the declared component order."
+                    ),
+                    "- Ranking components and provenance: "
+                    + markdown_code_span(json.dumps(ranking["components"], sort_keys=True)),
+                ]
+            )
         if finding.get("evidence_level") and finding.get("estimate"):
             lines.append(f"- Evidence level: {markdown_text(finding['evidence_level'])}")
         lines.extend(estimate_markdown(finding.get("estimate")))
@@ -200,7 +234,9 @@ def _stable_finding_id(
     return f"al_{finding_type}_{digest}"
 
 
-def _finding_from_card(card: dict[str, Any], plan: dict[str, Any]) -> OptimizationFinding | None:
+def _finding_from_card(
+    card: dict[str, Any], plan: dict[str, Any], *, node_lookup=None
+) -> OptimizationFinding | None:
     affected_spans = list(card.get("affected_nodes", []))
     finding_type = str(card.get("type", "optimization"))
     title = str(card.get("title", "Optimization opportunity"))
@@ -208,7 +244,8 @@ def _finding_from_card(card: dict[str, Any], plan: dict[str, Any]) -> Optimizati
     raw_cost_savings = card.get("estimated_cost_savings_usd")
     cost_savings = None if raw_cost_savings is None else float(raw_cost_savings)
     severity = _severity(latency_savings, cost_savings, str(card.get("confidence", "low")), plan)
-    node_lookup = {node["node_id"]: node for node in plan.get("graph", {}).get("nodes", [])}
+    if node_lookup is None:
+        node_lookup = {node["node_id"]: node for node in plan.get("graph", {}).get("nodes", [])}
     evidence = [
         _evidence_row(node_lookup[node_id]) for node_id in affected_spans if node_id in node_lookup
     ]
@@ -296,6 +333,7 @@ def _finding_from_card(card: dict[str, Any], plan: dict[str, Any]) -> Optimizati
         rule_id=card.get("rule_id"),
         rule_version=card.get("rule_version"),
         estimate=deepcopy(card.get("estimate")),
+        ranking_requirements=tuple(card.get("ranking_requirements", ())),
     )
 
 

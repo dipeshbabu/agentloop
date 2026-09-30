@@ -18,6 +18,7 @@ from agentloop.interventions import (
 from agentloop.issues import build_issue_drafts
 from agentloop.optimizer import build_optimization_plan
 from agentloop.quality import QualityValidationError, build_quality_report
+from agentloop.ranking import RankingSort, sort_ranked
 from agentloop.schema import TraceValidationError
 from agentloop.store import (
     DEFAULT_PAGE_SIZE,
@@ -263,22 +264,24 @@ def optimize_trace(
 @legacy.get("/traces/{run_id}/diagnosis")
 def diagnose_trace(
     run_id: str,
+    sort_by: RankingSort = RankingSort.PRIORITY,
     project_id: str = Depends(resolve_project),
     db: TraceStore = Depends(store),
 ) -> dict[str, Any]:
     """Compute current diagnosis without changing persisted findings."""
-    return build_diagnosis(_load_trace_or_404(db, run_id, project_id))
+    return build_diagnosis(_load_trace_or_404(db, run_id, project_id), sort_by=sort_by.value)
 
 
 @versioned.post("/traces/{run_id}/diagnosis")
 @legacy.post("/traces/{run_id}/diagnosis")
 def persist_trace_diagnosis(
     run_id: str,
+    sort_by: RankingSort = RankingSort.PRIORITY,
     project_id: str = Depends(resolve_project),
     db: TraceStore = Depends(store),
 ) -> dict[str, Any]:
     """Recompute and persist findings, preserving existing lifecycle decisions."""
-    diagnosis = build_diagnosis(_load_trace_or_404(db, run_id, project_id))
+    diagnosis = build_diagnosis(_load_trace_or_404(db, run_id, project_id), sort_by=sort_by.value)
     db.save_diagnosis(diagnosis, project_id=project_id)
     return diagnosis
 
@@ -378,6 +381,7 @@ def update_finding_status(
 @versioned.get("/optimization-queue")
 @legacy.get("/optimization-queue")
 def optimization_queue(
+    sort_by: RankingSort = RankingSort.PRIORITY,
     project_id_filter: str | None = Query(default=None, alias="project_id"),
     project_id: str = Depends(resolve_project),
     db: TraceStore = Depends(store),
@@ -385,7 +389,8 @@ def optimization_queue(
     selected_project = _selected_project(project_id_filter, project_id)
     return {
         "project_id": selected_project,
-        "queue": db.optimization_queue(project_id=selected_project),
+        "sort_by": sort_by.value,
+        "queue": sort_ranked(db.optimization_queue(project_id=selected_project), sort_by.value),
     }
 
 

@@ -10,6 +10,7 @@ from agentloop.events import AgentEvent
 from agentloop.findings import build_diagnosis
 from agentloop.html_report import analysis_to_html
 from agentloop.optimizer import build_optimization_plan
+from agentloop.ranking import RankingSort
 from agentloop.replay import ReplayGates, build_replay_report
 from agentloop.tracer import AgentTrace
 
@@ -91,16 +92,17 @@ def _print_analysis(trace: AgentTrace, diagnosis: dict, plan: dict) -> None:
     console.print("\nTop findings:")
     for finding in findings[:5]:
         console.print(
-            f"- [{finding['severity']}] {finding['title']} ({finding['confidence']} confidence)"
+            f"- [{finding['ranking']['status'].replace('_', ' ')}] {finding['title']} ({finding['confidence']} confidence)",
+            markup=False,
         )
     aggregation = plan.get("savings_aggregation", {})
     if aggregation.get("selection_optimal") is False:
         console.print("Savings selection includes an approximate large-component fallback.")
 
 
-def _analysis_payload(trace: AgentTrace) -> dict:
+def _analysis_payload(trace: AgentTrace, *, sort_by="priority") -> dict:
     report = trace.report()
-    diagnosis = build_diagnosis(trace)
+    diagnosis = build_diagnosis(trace, sort_by=sort_by)
     plan = build_optimization_plan(trace, report=report)
     return {
         "trace": trace.to_dict(),
@@ -151,6 +153,9 @@ def analyze_command(
     include_content: bool = typer.Option(
         False, help="Include raw event text and full event metadata in HTML."
     ),
+    sort_by: RankingSort = typer.Option(
+        RankingSort.PRIORITY, help="Order findings by an explicit ranking dimension."
+    ),
 ) -> None:
     """Analyze one existing AgentLoop trace in a single command."""
     trace = _load_trace(path, param_hint="path")
@@ -158,7 +163,7 @@ def analyze_command(
         raise typer.BadParameter("quality comparison options require --baseline")
     if include_content and html_out is None:
         raise typer.BadParameter("--include-content requires --html")
-    payload = _analysis_payload(trace)
+    payload = _analysis_payload(trace, sort_by=sort_by.value)
     if baseline is not None:
         baseline_trace = _load_trace(baseline, param_hint="--baseline")
         quality = (
