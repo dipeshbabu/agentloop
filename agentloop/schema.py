@@ -207,6 +207,8 @@ def validate_trace_dict(data: Any) -> None:
     if not isinstance(metadata, dict):
         raise TraceValidationError("metadata", "must be an object")
 
+    validate_elapsed_ms(data.get("elapsed_ms"))
+
     events = data.get("events", [])
     if not isinstance(events, list):
         raise TraceValidationError("events", "must be a list")
@@ -230,10 +232,18 @@ def validate_trace_dict(data: Any) -> None:
             )
 
 
+def validate_elapsed_ms(value: Any) -> float | None:
+    """Validate optional trace runtime before constructors or HTTP models coerce it."""
+    return None if value is None else _non_negative_number(value, "elapsed_ms")
+
+
 def _non_negative_number(value: Any, field: str) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise TraceValidationError(field, "must be a number")
-    number = float(value)
+    try:
+        number = float(value)
+    except OverflowError:
+        raise TraceValidationError(field, "must be a finite, non-negative number") from None
     if not math.isfinite(number) or number < 0:
         raise TraceValidationError(field, "must be a finite, non-negative number")
     return number

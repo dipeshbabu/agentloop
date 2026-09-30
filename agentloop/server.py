@@ -19,7 +19,7 @@ from agentloop.issues import build_issue_drafts
 from agentloop.optimizer import build_optimization_plan
 from agentloop.quality import QualityValidationError, build_quality_report
 from agentloop.ranking import RankingSort, sort_ranked
-from agentloop.schema import TraceValidationError
+from agentloop.schema import TraceValidationError, validate_elapsed_ms
 from agentloop.store import (
     DEFAULT_PAGE_SIZE,
     MAX_PAGE_SIZE,
@@ -64,6 +64,18 @@ class TracePayload(BaseModel):
     elapsed_ms: float | None = Field(default=None, ge=0)
     metadata: dict[str, Any] = Field(default_factory=dict)
     events: list[dict[str, Any]] = Field(default_factory=list)
+
+    @field_validator("elapsed_ms", mode="before")
+    @classmethod
+    def validate_elapsed(cls, value):
+        try:
+            return validate_elapsed_ms(value)
+        except TraceValidationError as exc:
+            # Keep non-finite input out of Pydantic's JSON error response as well
+            # as storage, and preserve the native schema's field/reason contract.
+            raise HTTPException(
+                status_code=422, detail={"field": exc.field, "reason": exc.reason}
+            ) from None
 
 
 class CreateApiKeyPayload(BaseModel):

@@ -66,15 +66,22 @@ def test_transport_boundary_ambiguity_is_not_analyzed():
     source.events[0].metadata["otel_trace_id"] = None
     source.events[1].metadata["otel_trace_id"] = "a" * 32
     source.events[2].metadata["otel_trace_id"] = "b" * 32
-    source.elapsed_ms = -1
     validation = validate_capture(source)
     codes = {item["code"] for item in validation["checks"]}
     assert {
         "transport_trace_id_missing",
         "transport_trace_ids_mixed",
-        "invalid_elapsed_time",
     } <= codes
     assert validation["analysis_allowed"] is False
+
+
+@pytest.mark.parametrize("value", [-1, True, "1", {}, float("inf"), 10**400])
+def test_invalid_elapsed_time_is_reported_as_invalid_native_schema(value):
+    source = _quickstart_trace()
+    source.elapsed_ms = value
+    validation = validate_capture(source)
+    assert validation["analysis_allowed"] is False
+    assert validation["checks"][0]["code"] == "invalid_native_schema"
 
 
 def test_empty_and_compacted_evidence_do_not_produce_analysis():

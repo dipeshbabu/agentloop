@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import math
 from collections import Counter
 
 from agentloop.metrics import build_report
@@ -75,15 +74,6 @@ def validate_capture(trace: AgentTrace, *, expected_operations: tuple[str, ...] 
         "error",
         int(len({value for value in transport_ids if isinstance(value, str) and value}) > 1),
         "One native trace contains spans with several source trace IDs; keep those executions separate.",
-    )
-    add(
-        "invalid_elapsed_time",
-        "error",
-        int(
-            trace.elapsed_ms is not None
-            and (not math.isfinite(trace.elapsed_ms) or trace.elapsed_ms < 0)
-        ),
-        "Recorded trace elapsed time must be finite and nonnegative.",
     )
     add(
         "no_execution_spans",

@@ -16,7 +16,7 @@ from agentloop.events import (
     utc_now_iso,
 )
 from agentloop.metrics import build_report
-from agentloop.schema import SCHEMA_VERSION, validate_trace_dict
+from agentloop.schema import SCHEMA_VERSION, validate_elapsed_ms, validate_trace_dict
 from agentloop.tokens import (
     ESTIMATED_WORDS,
     UNAVAILABLE,
@@ -92,7 +92,7 @@ class AgentTrace:
         self.events: list[AgentEvent] = []
         self.started_at = started_at or utc_now_iso()
         self.ended_at = ended_at
-        self.elapsed_ms = float(elapsed_ms) if elapsed_ms is not None else None
+        self.elapsed_ms = validate_elapsed_ms(elapsed_ms)
         self._start_perf = time.perf_counter()
         self._timing_active = False
         self.finalize_result: dict[str, Any] | None = None
