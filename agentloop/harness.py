@@ -437,6 +437,7 @@ class _WrapperMarker:
     function: ReferenceType
     dispatch: DispatchOptions
     usage_reader: Callable | None
+    error_usage_reader: Callable | None
 
 
 def _failure_status(exc: BaseException) -> str:
@@ -646,6 +647,7 @@ class HarnessRun:
         branch_id: str,
         dispatch: DispatchOptions,
         usage_reader: Callable | None,
+        error_usage_reader: Callable | None = None,
     ) -> _Invocation:
         if _IN_POLICY.get():
             raise RuntimeError("protected dispatch from a policy is unsupported")
@@ -658,7 +660,7 @@ class HarnessRun:
             current_event_id() if trace else None,
             trace,
             dispatch,
-            UsageTracker(usage_reader, _invoke_usage_reader),
+            UsageTracker(usage_reader, _invoke_usage_reader, error_usage_reader),
         )
         try:
             self._apply(self._hook(invocation, "before", "pending"))
@@ -692,8 +694,13 @@ class HarnessRun:
         branch_id: str = "main",
         dispatch: DispatchOptions | None = None,
         usage_reader: Callable[[Any], ResourceUsage | None] | None = None,
+        error_usage_reader: Callable[[BaseException], ResourceUsage | None] | None = None,
     ) -> F:
-        """Wrap an explicit dispatch, preserving each Python callable lifecycle."""
+        """Wrap a dispatch, optionally reading exclusive usage from SDK failures.
+
+        Error readers run only after dispatch and cannot replace the original
+        failure/cancellation. They receive an exception locally, never in hooks.
+        """
         if not callable(function):
             raise ValueError("protected work must be callable")
         Hook(boundary)
@@ -705,6 +712,10 @@ class HarnessRun:
             not callable(usage_reader) or _callable_kind(usage_reader) != "sync"
         ):
             raise ValueError("usage_reader must be a synchronous callable")
+        if error_usage_reader is not None and (
+            not callable(error_usage_reader) or _callable_kind(error_usage_reader) != "sync"
+        ):
+            raise ValueError("error_usage_reader must be a synchronous callable")
         if self.harness.config.mode == "disabled":
             return function
         marker = getattr(function, "__agentloop_harness__", None)
@@ -715,7 +726,11 @@ class HarnessRun:
             and marker.branch_id == branch_id
             and marker.function() is function
         ):
-            if marker.dispatch == options and marker.usage_reader is usage_reader:
+            if (
+                marker.dispatch == options
+                and marker.usage_reader is usage_reader
+                and marker.error_usage_reader is error_usage_reader
+            ):
                 return function
             raise ValueError("wrap the original callable to change dispatch or usage options")
         kind = _callable_kind(function)
@@ -728,7 +743,9 @@ class HarnessRun:
 
             @wraps(function)
             async def wrapped(*args, **kwargs):
-                invocation = self._begin(boundary, branch_id, options, usage_reader)
+                invocation = self._begin(
+                    boundary, branch_id, options, usage_reader, error_usage_reader
+                )
                 try:
                     generator = function(*args, **kwargs)
                     item = await generator.__anext__()
@@ -746,13 +763,16 @@ class HarnessRun:
                 except StopAsyncIteration:
                     self._finish(invocation, "ok")
                 except BaseException as exc:
+                    invocation.usage.observe_error(exc)
                     self._finish(invocation, _failure_status(exc), exc)
                     raise
         elif kind == "generator":
 
             @wraps(function)
             def wrapped(*args, **kwargs):
-                invocation = self._begin(boundary, branch_id, options, usage_reader)
+                invocation = self._begin(
+                    boundary, branch_id, options, usage_reader, error_usage_reader
+                )
                 try:
                     source = function(*args, **kwargs)
                     result = yield from (
@@ -761,6 +781,7 @@ class HarnessRun:
                         else ObservedGenerator(source, invocation.usage)
                     )
                 except BaseException as exc:
+                    invocation.usage.observe_error(exc)
                     self._finish(invocation, _failure_status(exc), exc)
                     raise
                 self._finish(invocation, "ok")
@@ -769,11 +790,14 @@ class HarnessRun:
 
             @wraps(function)
             async def wrapped(*args, **kwargs):
-                invocation = self._begin(boundary, branch_id, options, usage_reader)
+                invocation = self._begin(
+                    boundary, branch_id, options, usage_reader, error_usage_reader
+                )
                 try:
                     result = await function(*args, **kwargs)
                     invocation.usage.observe(result)
                 except BaseException as exc:
+                    invocation.usage.observe_error(exc)
                     self._finish(invocation, _failure_status(exc), exc)
                     raise
                 self._finish(invocation, "ok")
@@ -782,17 +806,20 @@ class HarnessRun:
 
             @wraps(function)
             def wrapped(*args, **kwargs):
-                invocation = self._begin(boundary, branch_id, options, usage_reader)
+                invocation = self._begin(
+                    boundary, branch_id, options, usage_reader, error_usage_reader
+                )
                 try:
                     result = function(*args, **kwargs)
                     invocation.usage.observe(result)
                 except BaseException as exc:
+                    invocation.usage.observe_error(exc)
                     self._finish(invocation, _failure_status(exc), exc)
                     raise
                 self._finish(invocation, "ok")
                 return result
 
         wrapped.__agentloop_harness__ = _WrapperMarker(
-            self, boundary, branch_id, ref(wrapped), options, usage_reader
+            self, boundary, branch_id, ref(wrapped), options, usage_reader, error_usage_reader
         )
         return wrapped  # type: ignore[return-value]

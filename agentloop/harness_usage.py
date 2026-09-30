@@ -11,18 +11,32 @@ from agentloop.budget_types import ResourceUsage
 
 class UsageTracker:
     def __init__(
-        self, reader: Callable[[Any], ResourceUsage | None] | None, invoke: Callable
+        self,
+        reader: Callable[[Any], ResourceUsage | None] | None,
+        invoke: Callable,
+        error_reader: Callable[[BaseException], ResourceUsage | None] | None = None,
     ) -> None:
         self.reader = reader
         self.invoke = invoke
+        self.error_reader = error_reader
         self.latest: ResourceUsage | None = None
         self.error: str | None = None
 
     def observe(self, value: Any) -> None:
-        if self.reader is None:
+        self._observe(value, self.reader)
+
+    def observe_error(self, error: BaseException) -> None:
+        """Retain available failure usage without replacing the original failure."""
+        try:
+            self._observe(error, self.error_reader)
+        except BaseException:
+            self.error = "collector_cancelled"
+
+    def _observe(self, value: Any, reader: Callable | None) -> None:
+        if reader is None:
             return
         try:
-            report = self.invoke(self.reader, value)
+            report = self.invoke(reader, value)
             if report is None:
                 return
             if type(report) is not ResourceUsage:

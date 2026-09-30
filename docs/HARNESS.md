@@ -132,5 +132,7 @@ executes a retry or replans the workflow.
 before-model adapter for caller-selected optional tool-result summaries. They
 preserve message roles and protected evidence, charge summaries to the same run,
 and retain transformation receipts without adding generic policy actions.
-Provider routing, scheduling, checkpoint recovery and automatic completion
-repair require later explicit extensions. No required provider SDK is introduced.
+[Explicit routing](MODEL_ROUTING.md) adds reviewed model bindings, capability
+checks and bounded fallback on the same run budget. Scheduling, checkpoint
+recovery and automatic completion repair require later explicit extensions.
+No required provider SDK is introduced.
