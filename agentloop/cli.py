@@ -10,6 +10,7 @@ from rich.table import Table
 
 from agentloop.ablation_protocol import AblationValidationError
 from agentloop.ablations import ablation_to_markdown, summarize_ablation
+from agentloop.aggregate_cli import aggregate_app
 from agentloop.audit import estimate_improvement
 from agentloop.autoinstrument import detect_integrations
 from agentloop.calibration import (
@@ -59,6 +60,7 @@ app = typer.Typer(help="AgentLoop profiler CLI")
 console = Console()
 study_app = typer.Typer(help="Summarize offline studies and preserved intervention evidence.")
 app.add_typer(study_app, name="study")
+app.add_typer(aggregate_app, name="aggregate")
 
 
 @study_app.command("ablation")

@@ -85,6 +85,8 @@ independence or uncertainty model is inferred. Reused keys select clusters;
 protected/representative cases further change the sampling distribution. Do not
 multiply counts by `1/sample_rate` or treat sampled quality as population quality.
 Persist the final session summary alongside a batch if final denominators matter.
+Use [incremental aggregation](INCREMENTAL_AGGREGATION.md) for bounded summaries of
+multiple retained artifacts; it does not add overlapping session-prefix counts.
 
 ## Payloads and identity
 

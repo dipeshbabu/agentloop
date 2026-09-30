@@ -170,7 +170,7 @@ class RetentionSession:
 
     def retain(self, trace, *, context: RetentionContext | None = None):
         """Return an owned native trace or None. Failures never return raw data."""
-        from agentloop.schema import validate_trace_dict
+        from agentloop.schema import coerce_event_dict, validate_trace_dict
         from agentloop.tracer import AgentTrace
 
         if not isinstance(trace, AgentTrace):
@@ -184,6 +184,8 @@ class RetentionSession:
             raise TypeError("context must be RetentionContext")
         with self._lock:
             validate_trace_dict(trace.to_dict())
+            for index, event in enumerate(trace.events):
+                coerce_event_dict(event.to_dict(), index=index)
             return self._retain(trace, context)
 
     def _retain(self, trace, context):
@@ -194,6 +196,7 @@ class RetentionSession:
         status = execution.get("status") if execution else None
         failure = (
             context.outcome in {"failure", "timeout"}
+            or trace.metadata.get("success") is False
             or metrics["error_span_count"] > 0
             or status in {"failed", "cancelled", "interrupted"}
         )
@@ -270,6 +273,13 @@ class RetentionSession:
             "original_event_order_sha256": _digest([event.event_id for event in trace.events]),
             "retained_original_indices": indices,
             "complete_evidence": policy.mode == "full" and policy.payloads == "capture",
+            "execution_outcome": "failure"
+            if failure
+            else "success"
+            if status == "completed"
+            or execution is None
+            and (context.outcome == "success" or trace.metadata.get("success") is True)
+            else "unknown",
             "metrics": metrics,
             "reasons": reasons,
             "base_sample_rate": policy.sample_rate,
