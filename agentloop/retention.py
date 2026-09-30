@@ -132,7 +132,9 @@ class RetentionSession:
     def __init__(self, policy: RetentionPolicy, *, redactor: Callable[[str], str] | None = None):
         if not isinstance(policy, RetentionPolicy):
             raise TypeError("policy must be RetentionPolicy")
-        if (policy.payloads == "redact") != callable(redactor):
+        if (policy.payloads == "redact" and not callable(redactor)) or (
+            policy.payloads != "redact" and redactor is not None
+        ):
             raise ValueError(
                 "redact mode requires an explicit trusted redactor, and only that mode accepts one"
             )
@@ -177,7 +179,7 @@ class RetentionSession:
             raise ValueError("cannot retain an already retained trace")
         if trace.ended_at is None or trace.elapsed_ms is None:
             raise ValueError("retention requires a finished trace")
-        context = context or RetentionContext()
+        context = RetentionContext() if context is None else context
         if not isinstance(context, RetentionContext):
             raise TypeError("context must be RetentionContext")
         with self._lock:

@@ -395,3 +395,11 @@ def test_redactor_source_mutation_rejected_without_committing_session():
     with pytest.raises(ValueError, match="source trace changed"):
         session.retain(source)
     assert session.summary()["observed_input_count"] == 0
+
+
+@pytest.mark.parametrize("value", [0, "", {}, []])
+def test_falsey_invalid_options_are_not_silently_ignored(value):
+    with pytest.raises(ValueError, match="explicit trusted redactor"):
+        RetentionSession(policy(), redactor=value)
+    with pytest.raises(TypeError, match="context must be"):
+        RetentionSession(policy()).retain(trace(), context=value)
