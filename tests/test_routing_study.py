@@ -4,6 +4,7 @@ import hashlib
 import json
 import zipfile
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -55,7 +56,9 @@ class FakeClient:
             "fixture",
             trace=self.trace,
             started_at=utc_now_iso(),
-            duration_ms=1.0,
+            # This fake does no provider work. Inventing 1 ms can exceed the
+            # entire host decision duration on a fast CI runner.
+            duration_ms=0.0,
             model=identity(self.condition).model,
             input_tokens=10,
             output_tokens=5,
@@ -182,11 +185,16 @@ def test_real_adapter_retains_tokenizer_mismatch_as_failed_but_billed_usage(monk
     assert client.calls[0]["status"] == "failed"
 
 
-def test_empty_and_partial_exports_keep_the_full_planned_denominator(plan, tmp_path):
+@pytest.mark.parametrize("decision_seconds", [0.0, 0.0005])
+def test_empty_and_partial_exports_keep_the_full_planned_denominator(
+    plan, tmp_path, monkeypatch, decision_seconds
+):
     root, value = plan
     empty = export(root / "plan.json", tmp_path / "empty")
     assert empty["planned_trials"] == 32 and empty["observed_trials"] == 0
     assert empty["held_out_pairs"] == 12 and not empty["all_candidate_tasks_correct"]
+    ticks = iter([0.0, decision_seconds, 0.0, decision_seconds])
+    monkeypatch.setattr(runner, "time", SimpleNamespace(perf_counter=lambda: next(ticks)))
     task = value["tasks"][2]
     runner.execute(value, task, "baseline", 0, root, "http://127.0.0.1", client_factory=FakeClient)
     runner.execute(value, task, "candidate", 0, root, "http://127.0.0.1", client_factory=FakeClient)
