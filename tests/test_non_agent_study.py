@@ -122,7 +122,8 @@ def test_multistage_fallback_preserved_by_batching():
     assert any(event.event_id == "fallback-batch" for event in batched.events)
 
 
-def test_study_executes_and_exports_native_evidence(tmp_path):
+@pytest.mark.parametrize("cheap_family", ["route_to_smaller_model", "batch_model_calls"])
+def test_study_executes_and_exports_native_evidence(tmp_path, cheap_family):
     from examples.non_agent_study.data import write_new
     from examples.non_agent_study.export import export
     from examples.non_agent_study.run import execute
@@ -155,7 +156,7 @@ def test_study_executes_and_exports_native_evidence(tmp_path):
         "repetitions": 1,
         "variants": ["batched", "cheap"],
         "quality": {"scorer": "decision", "minimum_score": 0.5},
-        "selection": {"batched": "batch_model_calls", "cheap": "route_to_smaller_model"},
+        "selection": {"batched": "batch_model_calls", "cheap": cheap_family},
         "attribution": {
             "batched": "isolated_batching",
             "cheap": "combined_configuration_unattributed",
@@ -182,7 +183,8 @@ def test_study_executes_and_exports_native_evidence(tmp_path):
     result = export(plan, tmp_path / "fit", tmp_path / "held_out", tmp_path / "report")
     assert sum(row["recorded_pairs"] for row in result["workloads"]) == 8
     assert result["selection_counts"]["selected"] > 0
-    assert result["selection_counts"]["rejected"] > 0
+    if cheap_family == "route_to_smaller_model":
+        assert result["selection_counts"]["rejected"] > 0
     assert (tmp_path / "report" / "finding-results.json").exists()
     assert (tmp_path / "report" / "calibration-results.json").exists()
     from examples.non_agent_study.reproduce import reconstruct
@@ -191,8 +193,15 @@ def test_study_executes_and_exports_native_evidence(tmp_path):
     from examples.non_agent_study.data import read
 
     exclusions = read(tmp_path / "report" / "calibration-exclusions.json")
-    assert exclusions and all(item["outcome_retained"] for item in exclusions)
+    if cheap_family == "batch_model_calls":
+        assert exclusions and all(item["outcome_retained"] for item in exclusions)
+    else:
+        # Numeric models have unavailable token usage, so no routing advice is emitted.
+        assert exclusions == []
     manifest = read(tmp_path / "report" / "calibration-manifest.json")
+    assert all(
+        item["prediction"]["type"] != "route_to_smaller_model" for item in manifest["registrations"]
+    )
     assert all(
         item["outcome"] is None
         for item in manifest["registrations"]
