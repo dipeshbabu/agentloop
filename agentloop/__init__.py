@@ -28,6 +28,7 @@ from agentloop.judgments import (
 from agentloop.otel import trace_from_otel, trace_to_otel, traces_from_otel
 from agentloop.patches import RepositoryPathError, build_patch_plan
 from agentloop.replay import ReplayGates, build_replay_report
+from agentloop.retention import RetentionContext, RetentionPolicy, RetentionSession, read_retention
 from agentloop.runtime import (
     CLEAR,
     FinalizationError,
@@ -99,6 +100,10 @@ __all__ = [
     "DetectionResult",
     "InstrumentationResult",
     "ReplayGates",
+    "RetentionContext",
+    "RetentionPolicy",
+    "RetentionSession",
+    "read_retention",
     "RepositoryPathError",
     "auto_instrument",
     "bind_trace_context",

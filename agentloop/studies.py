@@ -159,8 +159,11 @@ def _pair_key(metadata: dict[str, Any], keys: list[str]) -> str | None:
 
 
 def _run(path: Path, keys: list[str]) -> dict[str, Any]:
+    from agentloop.retention import require_complete_evidence
+
     try:
         trace = AgentTrace.from_dict(json.loads(path.read_text(encoding="utf-8")))
+        require_complete_evidence(trace, "study")
         report = trace.report()
     except (OSError, ValueError, TypeError, KeyError) as exc:
         raise StudyValidationError(f"invalid trace {path}: {exc}") from exc
