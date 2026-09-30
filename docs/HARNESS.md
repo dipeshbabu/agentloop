@@ -136,5 +136,6 @@ and retain transformation receipts without adding generic policy actions.
 checks and bounded fallback on the same run budget. [Declared scheduling](TOOL_SCHEDULING.md)
 adds bounded tool concurrency with explicit dependencies and resource safety.
 [Completion verification](COMPLETION.md) checks explicit criteria and bounds repair
-on the same run. Checkpoint recovery requires a later explicit extension.
+on the same run. [Host checkpoint recovery](CHECKPOINT_RECOVERY.md) preserves
+built-in policy state through one explicit LangGraph checkpoint path.
 No required provider SDK is introduced.

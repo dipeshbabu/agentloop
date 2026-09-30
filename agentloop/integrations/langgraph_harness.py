@@ -201,8 +201,14 @@ class LangGraphHarness:
             self._branch.reset(branch_token)
             self._session.reset(session_token)
 
-    def _start(self):
-        session = _Session(self._harness.start_run(), current_trace(), current_event_id())
+    def _start(self, run=None):
+        if run is not None and (
+            not isinstance(run, HarnessRun) or run.harness is not self._harness
+        ):
+            raise ValueError("recovered run must belong to this adapter")
+        session = _Session(
+            self._harness.start_run() if run is None else run, current_trace(), current_event_id()
+        )
         self._last_run.set(session.run)
         return session
 
@@ -379,20 +385,46 @@ class ControlledRunnable:
 
     def __init__(self, adapter, app):
         self._adapter, self.app = adapter, app
+        self._last_invocation = ContextVar("langgraph_root_invocation", default=None)
+        self._recovery_bound = False
+
+    def _ordinary_entry(self):
+        if self._recovery_bound:
+            raise ValueError("checkpoint-owned runnable requires LangGraphRecovery.resume")
 
     def invoke(self, *args, **kwargs):
+        self._ordinary_entry()
         adapter = self._adapter
         session = adapter._start()
-        with adapter._scope(session, "main", root=True):
-            return adapter._complete(session, self.app.invoke(*args, **kwargs))
+        config = kwargs.get("config", args[1] if len(args) > 1 else None)
+        selected = config.get("configurable", {}) if isinstance(config, dict) else {}
+        selected = selected if isinstance(selected, dict) else {}
+        identity = {
+            "run_id": session.run.run_id,
+            "thread_id": selected.get("thread_id"),
+            "checkpoint_ns": selected.get("checkpoint_ns", ""),
+            "trace_id": None if session.trace is None else session.trace.run_id,
+            "durability": kwargs.get("durability"),
+            "finished": False,
+        }
+        self._last_invocation.set(identity)
+        try:
+            with adapter._scope(session, "main", root=True):
+                return adapter._complete(session, self.app.invoke(*args, **kwargs))
+        finally:
+            self._last_invocation.set({**identity, "finished": True})
 
     async def ainvoke(self, *args, **kwargs):
+        self._ordinary_entry()
+        self._last_invocation.set(None)
         adapter = self._adapter
         session = adapter._start()
         with adapter._scope(session, "main", root=True):
             return adapter._complete(session, await self.app.ainvoke(*args, **kwargs))
 
     def stream(self, *args, **kwargs):
+        self._ordinary_entry()
+        self._last_invocation.set(None)
         adapter = self._adapter
         session = adapter._start()
 
@@ -406,6 +438,8 @@ class ControlledRunnable:
             return adapter._complete(session, result)
 
     async def astream(self, *args, **kwargs):
+        self._ordinary_entry()
+        self._last_invocation.set(None)
         adapter = self._adapter
         session = adapter._start()
 

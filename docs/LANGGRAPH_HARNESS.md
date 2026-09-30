@@ -107,6 +107,11 @@ a supported trace-ownership arrangement; put the trace outside instead.
 
 ## Rollback and compatibility evidence
 
+For an explicitly checkpointed synchronous root, see
+[host checkpoint recovery](CHECKPOINT_RECOVERY.md). It carries supported built-in
+budgets and loop state across distinct attempts and requires atomic host claims;
+ordinary root invocation alone creates a fresh run and is not a recovery API.
+
 Start with shadow mode. To disable controls, rebuild the same graph from the
 original functions with `HarnessConfig("disabled")`: decorators and runnable
 wrapping then return the originals. Changing a separate adapter cannot remove

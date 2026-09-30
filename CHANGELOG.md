@@ -10,6 +10,11 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added [host checkpoint recovery](docs/CHECKPOINT_RECOVERY.md) for a narrow
+  LangGraph path, with owned host journal records, atomic resume claims, distinct
+  attempt lineage and preserved budget/loop state. Quiescence, retry safety,
+  configuration and clock compatibility checks prevent unsafe automatic replay.
+
 - Added [bounded completion verification](docs/COMPLETION.md) with versioned
   deterministic and trusted checks, cooperative deadlines, shared-budget repair,
   bounded feedback and native decision evidence. An offline example retains

@@ -100,8 +100,9 @@ jobs:
           LANGSMITH_TRACING: "false"
           LANGCHAIN_TRACING_V2: "false"
         run: |
-          uv run --isolated --frozen --with langgraph==1.2.11 python -m pytest tests/test_langgraph_harness.py tests/test_langgraph_conformance.py tests/test_enforcement_conformance.py tests/test_real_agent_study.py -q
+          uv run --isolated --frozen --with langgraph==1.2.11 python -m pytest tests/test_langgraph_harness.py tests/test_langgraph_conformance.py tests/test_enforcement_conformance.py tests/test_real_agent_study.py tests/test_langgraph_recovery.py -q
           uv run --isolated --frozen --with langgraph==1.2.11 python examples/langgraph_harness.py
+          uv run --isolated --frozen --with langgraph==1.2.11 python -m examples.langgraph_recovery
 
       - name: Smoke CLI workflows
         if: matrix.python-version == '3.13'
