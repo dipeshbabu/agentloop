@@ -11,6 +11,7 @@ from agentloop.costs import is_cost_evaluable
 from agentloop.estimates import ESTIMATORS, estimate_snapshot
 from agentloop.graph import ExecutionGraph
 from agentloop.parallelism import PARALLELISM_REWRITE
+from agentloop.ranking import requirements
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -63,6 +64,7 @@ class FindingCandidate:
     rule_id: str | None = None
     rule_version: str | None = None
     estimate: dict[str, Any] | None = None
+    ranking_requirements: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         result = {
@@ -92,6 +94,8 @@ class FindingCandidate:
             result.update(rule_id=self.rule_id, rule_version=self.rule_version)
         if self.estimate is not None:
             result["estimate"] = deepcopy(self.estimate)
+        if self.ranking_requirements:
+            result["ranking_requirements"] = list(self.ranking_requirements)
         return result
 
     @classmethod
@@ -112,6 +116,10 @@ class FindingRule:
     rule_id: str
     version: str
     detect: Callable[[AnalysisContext], list[FindingCandidate]]
+    ranking_requirements: tuple[str, ...] = ()
+
+    def __post_init__(self):
+        object.__setattr__(self, "ranking_requirements", requirements(self.ranking_requirements))
 
 
 def run_rules(
@@ -128,6 +136,7 @@ def run_rules(
             for item in detected:
                 item.rule_id = rule.rule_id
                 item.rule_version = rule.version
+                item.ranking_requirements = rule.ranking_requirements
                 if rule in BUILTIN_RULES and item.estimate is None:
                     item.estimate = estimate_snapshot(item, context.report, context.graph.nodes)
             candidates.extend(detected)

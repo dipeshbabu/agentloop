@@ -43,7 +43,7 @@ def diagnosis_api(tmp_path, monkeypatch):
         "run_id": trace.run_id,
         "findings": [_finding("kept", "Updated finding"), _finding("new")],
     }
-    monkeypatch.setattr(server, "build_diagnosis", lambda trace: diagnosis)
+    monkeypatch.setattr(server, "build_diagnosis", lambda trace, *, sort_by="priority": diagnosis)
     return TestClient(server.app), db, trace.run_id, diagnosis
 
 

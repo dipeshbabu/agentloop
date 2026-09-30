@@ -20,6 +20,7 @@ from agentloop.quality import (
     parse_quality_fixtures,
     quality_report_to_markdown,
 )
+from agentloop.ranking import SORT_FIELDS, sort_ranked
 from agentloop.replay import ReplayGates, build_replay_report
 from agentloop.store import (
     ALLOWED_FINDING_TRANSITIONS,
@@ -280,7 +281,10 @@ elif page == "Traces":
 
 elif page == "Optimization Queue":
     st.subheader("Optimization queue")
-    queue = store.optimization_queue(project_id=project_id)
+    dimension = st.selectbox(
+        "Sort investigations by", SORT_FIELDS, format_func=lambda value: value.replace("_", " ")
+    )
+    queue = sort_ranked(store.optimization_queue(project_id=project_id), dimension)
     findings = store.list_findings(project_id=project_id)
 
     c1, c2, c3, c4 = st.columns(4)
@@ -302,8 +306,10 @@ elif page == "Optimization Queue":
         )
     else:
         queue_df = pd.DataFrame(queue)
+        queue_df["readiness"] = [item["ranking"]["status"].replace("_", " ") for item in queue]
         visible_cols = [
             "priority_score",
+            "readiness",
             "severity",
             "type",
             "title",
@@ -322,13 +328,16 @@ elif page == "Optimization Queue":
         item = next(row for row in queue if row["title"] == selected_title)
         st.markdown(f"### {item['title']}")
         c5, c6, c7, c8 = st.columns(4)
-        c5.metric("Priority", item["priority_score"])
+        c5.metric("Investigation rank", item["ranking"]["priority_rank"])
         c6.metric("Severity", item["severity"])
         c7.metric("Affected runs", item["run_count"])
         c8.metric("Patchable", item["patchable_count"])
         st.write(f"Type: `{item['type']}`")
         st.write(f"Status: `{item['status']}`")
         st.write(f"Quality risk: `{item['quality_risk']}`")
+        st.write("Test readiness: " + item["ranking"]["status"].replace("_", " "))
+        with st.expander("Ranking inputs and provenance"):
+            st.json(item["ranking"])
         st.write(f"Requires scorer: `{item['requires_scorer']}`")
         st.write(f"Safe to auto-patch: `{item['safe_to_auto_patch']}`")
         st.write(
@@ -491,7 +500,10 @@ elif page == "Diagnosis":
     else:
         trace = selected_trace_from_options(traces, "Choose trace for diagnosis")
         if trace is not None:
-            diagnosis = build_diagnosis(trace)
+            dimension = st.selectbox(
+                "Sort findings by", SORT_FIELDS, format_func=lambda value: value.replace("_", " ")
+            )
+            diagnosis = build_diagnosis(trace, sort_by=dimension)
             if diagnosis.get("rule_errors"):
                 st.warning(
                     "Analysis incomplete; failed rules: "
@@ -512,6 +524,8 @@ elif page == "Diagnosis":
                 with st.expander(label, expanded=finding["severity"] == "high"):
                     st.write(finding["metadata"].get("why", ""))
                     render_estimate_details(finding)
+                    st.write("Test readiness: " + finding["ranking"]["status"].replace("_", " "))
+                    st.json(finding["ranking"])
                     st.write(f"Finding ID: `{finding['finding_id']}`")
                     st.write(f"Confidence: `{finding['confidence']}`")
                     st.write(f"Affected spans: `{', '.join(finding['affected_spans'])}`")

@@ -24,6 +24,7 @@ from agentloop.findings import build_diagnosis
 from agentloop.intervention_store import InterventionStoreMixin
 from agentloop.interventions import InterventionRecord
 from agentloop.migrations import apply_postgres_migrations, apply_sqlite_migrations
+from agentloop.ranking import cluster_ranking, finalize_ranking
 from agentloop.savings import SavingsItem, select_compatible
 from agentloop.tracer import AgentTrace
 
@@ -322,17 +323,6 @@ def _max_severity(left: str, right: str) -> str:
     return left if rank.get(left, 0) >= rank.get(right, 0) else right
 
 
-def _priority_score(item: dict[str, Any]) -> float:
-    severity_weight = {"high": 1000.0, "medium": 500.0, "low": 100.0}.get(item["severity"], 0.0)
-    patch_weight = 100.0 if item["patchable_count"] else 0.0
-    latency_weight = float(item["estimated_latency_savings_ms"] or 0.0) / 100.0
-    cost_weight = float(item["estimated_cost_savings_usd"] or 0.0) * 1000.0
-    occurrence_weight = float(item["occurrence_count"]) * 25.0
-    return round(
-        severity_weight + patch_weight + latency_weight + cost_weight + occurrence_weight, 3
-    )
-
-
 def _build_optimization_queue(
     findings: list[dict[str, Any]], project_id: str | None
 ) -> list[dict[str, Any]]:
@@ -342,12 +332,15 @@ def _build_optimization_queue(
     spans are the same underlying problem reported per occurrence — summing
     their savings would double-count. Each cluster's savings therefore come
     from the compatible (span-disjoint) selection per run, summed across runs,
-    and ``priority_score`` consumes those deduplicated totals.
+    and ranking retains the same compatible-span accounting.
     """
     clusters: dict[tuple[str, str], dict[str, Any]] = {}
     cluster_items: dict[tuple[str, str], dict[str, list[SavingsItem]]] = {}
+    members = {}
+    run_scopes, run_ids = {}, {}
     for finding in findings:
         key = (finding["type"], finding["title"])
+        members.setdefault(key, []).append(finding)
         cluster = clusters.setdefault(
             key,
             {
@@ -360,23 +353,29 @@ def _build_optimization_queue(
                 "occurrence_count": 0,
                 "run_count": 0,
                 "affected_runs": [],
+                "affected_run_refs": [],
                 "patchable_count": 0,
                 "estimated_latency_savings_ms": 0.0,
                 "estimated_cost_savings_usd": 0.0,
                 "cost_status": None,
                 "latest_created_at": finding["created_at"],
                 "project_id": project_id,
-                "quality_risk": _quality_risk(finding["type"]),
-                "requires_scorer": _quality_risk(finding["type"]) in {"high", "medium"},
+                "quality_risk": "unknown",
+                "requires_scorer": True,
                 "safe_to_auto_patch": False,
             },
         )
         cluster["occurrence_count"] += 1
         if finding["estimated_latency_savings_ms"] is None:
             cluster["unmodeled_latency_count"] = cluster.get("unmodeled_latency_count", 0) + 1
-        if finding["run_id"] not in cluster["affected_runs"]:
-            cluster["affected_runs"].append(finding["run_id"])
+        scope = (finding.get("project_id"), finding["run_id"])
+        if scope not in run_scopes.setdefault(key, set()):
+            run_scopes[key].add(scope)
+            cluster["affected_run_refs"].append({"project_id": scope[0], "run_id": scope[1]})
             cluster["run_count"] += 1
+        if finding["run_id"] not in run_ids.setdefault(key, set()):
+            run_ids[key].add(finding["run_id"])
+            cluster["affected_runs"].append(finding["run_id"])
         cluster["patchable_count"] += 1 if finding["patchable"] else 0
         cluster["severity"] = _max_severity(cluster["severity"], finding["severity"])
         cluster["latest_created_at"] = max(
@@ -391,7 +390,7 @@ def _build_optimization_queue(
                 "complete" if finding["estimated_cost_savings_usd"] is not None else "unknown"
             )
         cluster["cost_status"] = _merge_cost_status(cluster["cost_status"], finding_status)
-        cluster_items.setdefault(key, {}).setdefault(finding["run_id"], []).append(
+        cluster_items.setdefault(key, {}).setdefault(scope, []).append(
             SavingsItem(
                 spans=frozenset(payload.get("affected_spans") or []),
                 latency_ms=float(finding["estimated_latency_savings_ms"] or 0.0),
@@ -399,11 +398,17 @@ def _build_optimization_queue(
             )
         )
 
+    selection_cache = {}
     for key, cluster in clusters.items():
+        cluster["affected_runs"].sort()
+        cluster["affected_run_refs"].sort(
+            key=lambda value: (str(value["project_id"]), value["run_id"])
+        )
         latency = 0.0
         cost = 0.0
-        for run_items in cluster_items[key].values():
+        for scope, run_items in cluster_items[key].items():
             selection = select_compatible(run_items)
+            selection_cache.setdefault(key, {})[scope] = (run_items, selection)
             latency += selection.latency_ms
             cost += selection.cost_usd
         cluster["estimated_latency_savings_ms"] = (
@@ -416,30 +421,12 @@ def _build_optimization_queue(
 
     queue = list(clusters.values())
     for item in queue:
-        item["safe_to_auto_patch"] = item["patchable_count"] > 0 and item["quality_risk"] == "low"
-        item["priority_score"] = _priority_score(item)
-    return sorted(queue, key=lambda item: item["priority_score"], reverse=True)
-
-
-def _quality_risk(finding_type: str) -> str:
-    if finding_type in {
-        "semantic_redundancy",
-        "low_contribution",
-        "semantic_no_progress",
-        "retry_usefulness",
-        "context_relevance",
-    }:
-        return "high"
-    if finding_type in {"route_to_smaller_model", "split_large_step", "batch_model_calls"}:
-        return "high"
-    if finding_type in {
-        "cache_context",
-        "add_schema_validation",
-        "runaway_loop",
-        "tool_oscillation",
-    }:
-        return "medium"
-    return "low"
+        key = (item["type"], item["title"])
+        item["ranking"] = cluster_ranking(members[key], selection_cache=selection_cache[key])
+        item["quality_risk"] = item["ranking"]["components"]["quality_risk"]["value"] or "unknown"
+        item["requires_scorer"] = True
+        item["safe_to_auto_patch"] = False
+    return finalize_ranking(queue)
 
 
 @dataclass
