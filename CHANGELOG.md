@@ -10,6 +10,12 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added [bounded completion verification](docs/COMPLETION.md) with versioned
+  deterministic and trusted checks, cooperative deadlines, shared-budget repair,
+  bounded feedback and native decision evidence. An offline example retains
+  acceptance, repair, exhausted-budget and escalation outcomes separately from
+  independent task evaluation.
+
 - Added [declared tool scheduling](docs/TOOL_SCHEDULING.md) with explicit DAG and
   resource safety, bounded shared-budget admission, ordered results, cooperative
   stopping and retained partial work. A [read-only SQL ablation](docs/SCHEDULING_STUDY.md)
