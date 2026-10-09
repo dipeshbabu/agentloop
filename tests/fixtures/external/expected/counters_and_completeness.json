@@ -4,9 +4,6 @@
   "without_native_traces": 2,
   "verifier_available": 1,
   "external_quality_uninterpreted": 1,
-  "quality_pass": 0,
-  "quality_fail": 0,
-  "quality_indeterminate": 2,
   "notices_by_code": {
     "missing_trajectory": 1,
     "untimed_operations": 1
@@ -19,5 +16,8 @@
       "format": "harbor_trial",
       "format_version": null
     }
-  ]
+  ],
+  "quality_pass": 0,
+  "quality_fail": 0,
+  "quality_indeterminate": 2
 }

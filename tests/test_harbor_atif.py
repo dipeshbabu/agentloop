@@ -515,6 +515,14 @@ def test_cli_import_and_existing_analyze_work_offline(tmp_path):
         app, ["harbor", "inspect-atif", str(FIXTURES / "atif_v17_simple.json")]
     )
     assert inspected.exit_code == 0 and "timing_unavailable" in inspected.output
+    for command in ("diagnose", "optimize"):
+        rendered = runner.invoke(
+            app, [command, "--path", str(trace), "--out", str(out / (command + ".md"))]
+        )
+        assert rendered.exit_code == 0, rendered.output
+        assert "unavailable latency" in rendered.output
+    reported = runner.invoke(app, ["report", str(trace)])
+    assert reported.exit_code == 0 and "unavailable" in reported.output
 
 
 def test_core_help_and_adapter_do_not_import_external_runtimes():

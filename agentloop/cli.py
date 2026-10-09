@@ -715,7 +715,12 @@ def optimize(
         console.print(f"Wrote optimization JSON to {json_out}")
     after = plan["estimated_after"]
     console.print(
-        f"Estimated improvement: {after['latency_reduction_pct']:.1f}% latency, "
+        "Estimated improvement: "
+        + (
+            "unavailable latency, "
+            if after["latency_reduction_pct"] is None
+            else f"{after['latency_reduction_pct']:.1f}% latency, "
+        )
         + (
             "unavailable cost"
             if after["cost_reduction_pct"] is None
@@ -748,7 +753,12 @@ def diagnose(
     console.print(
         f"Findings: {summary['finding_count']} "
         f"({summary['patchable_count']} patchable), "
-        f"estimated improvement: {summary['estimated_latency_reduction_pct']:.1f}% latency, "
+        "estimated improvement: "
+        + (
+            "unavailable latency, "
+            if summary["estimated_latency_reduction_pct"] is None
+            else f"{summary['estimated_latency_reduction_pct']:.1f}% latency, "
+        )
         + (
             "unavailable cost"
             if summary["estimated_cost_reduction_pct"] is None
