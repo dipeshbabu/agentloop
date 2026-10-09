@@ -44,6 +44,10 @@ includes read-only [Harbor ATIF](docs/HARBOR_ATIF.md) and
 and pinned offline fixtures. Omnigent telemetry and complete cross-harness
 comparisons remain dependent workstreams.
 
+The [bounded OTLP JSONL importer](docs/OTLP_JSONL.md) joins split telemetry traces
+and keeps duplicate/conflicting records, conversion losses and inferred timing
+explicit. It works offline without upstream runtimes or OpenTelemetry packages.
+
 ## Without and with AgentLoop
 
 <picture>
