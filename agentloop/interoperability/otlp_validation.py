@@ -273,6 +273,25 @@ def flatten(
                             if canonical in item and item[canonical] != item[alias]:
                                 fail(canonical, "contradictory source field aliases")
                             item[canonical] = item[alias]
+                    if items_field == "spans":
+                        for field_name in ("startTimeUnixNano", "endTimeUnixNano"):
+                            value = item.get(field_name)
+                            if value is not None:
+                                if type(value) not in {int, str}:
+                                    fail(
+                                        field_name, "timestamp must be an unsigned decimal integer"
+                                    )
+                                try:
+                                    number = int(value)
+                                except ValueError:
+                                    fail(
+                                        field_name, "timestamp must be an unsigned decimal integer"
+                                    )
+                                if number < 0:
+                                    fail(
+                                        field_name, "timestamp must be an unsigned decimal integer"
+                                    )
+                                item[field_name] = str(number)
                     trace_id = wire_id(item.get("traceId"), "traceId", 32, missing=True)
                     span_id = wire_id(item.get("spanId"), "spanId", 16, missing=True)
                     if items_field == "spans":

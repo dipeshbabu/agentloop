@@ -495,6 +495,30 @@ def test_native_round_trip_stable_export_and_mutation_guard(tmp_path):
         first.write(tmp_path / "out")
 
 
+def test_sparse_and_converter_timestamps_never_use_the_import_clock(tmp_path):
+    missing = span()
+    missing.pop("startTimeUnixNano")
+    missing.pop("endTimeUnixNano")
+    path = source(tmp_path, [document(missing)])
+    first, second = import_otlp(path), import_otlp(path)
+    assert first.traces[0].events[0].started_at == "unknown"
+    assert first.traces[0].events[0].ended_at == "unknown"
+    assert first.traces[0].to_dict() == second.traces[0].to_dict()
+    converter_path = FIXTURES / "converter_atif_v18_multimodal.jsonl"
+    first, second = import_otlp(converter_path), import_otlp(converter_path)
+    assert [trace.to_dict() for trace in first.traces] == [
+        trace.to_dict() for trace in second.traces
+    ]
+    first.write(tmp_path / "converter-out")
+    second.write(tmp_path / "converter-out")
+
+
+def test_explicit_zero_epoch_timestamp_is_preserved(tmp_path):
+    result = import_otlp(source(tmp_path, [document(span(start=0, end=1_000_000_000))]))
+    assert result.traces[0].events[0].started_at.startswith("1970-01-01")
+    assert result.traces[0].report()["total_runtime_ms"] == 1000
+
+
 def test_unknown_operation_is_not_manufactured_model_inference(tmp_path):
     value = span()
     value["attributes"] = {}

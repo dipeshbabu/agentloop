@@ -309,6 +309,10 @@ class _BatchImporter:
         if any(value is not None for value in native_identity.values()):
             event.metadata["source_native_identity"] = native_identity
         start, end = span.get("startTimeUnixNano"), span.get("endTimeUnixNano")
+        if start is None:
+            event.started_at = "unknown"
+        if end is None:
+            event.ended_at = "unknown"
         timing = start is not None and end is not None and not converter
         if timing:
             try:
