@@ -10,6 +10,12 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added [full-population task-paired source cohorts](docs/CROSS_HARNESS_STUDIES.md),
+  retaining failed/missing/unpaired attempts, exact task/config/scorer identity,
+  independent correctness/source-coverage gates and task-cluster uncertainty through
+  native studies. Faster incorrect candidates cannot win; phases, reported spend,
+  source confounders and original intervention snapshots remain distinct.
+
 - Added an [executable offline harness bench](docs/HARNESS_BENCH.md), with
   callable-side DENY counters, lazy streaming/close, cancellation, policy failure,
   error/return preservation and declaration drift proofs. Missing pinned SDKs and

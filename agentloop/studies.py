@@ -298,8 +298,21 @@ def _run(path: Path, keys: list[str]) -> dict[str, Any]:
             categories["external_quality_rejected"] += 1
         elif external_trial["outcome"]["quality_pass"] is None:
             categories["external_quality_indeterminate"] += 1
+    from agentloop.interoperability.cohort_evidence import COHORT_PAIRING_KEYS, read_cohort
+
+    cohort = read_cohort(trace)
+    if cohort is not None:
+        if not set(COHORT_PAIRING_KEYS) <= set(keys):
+            raise StudyValidationError(
+                "cohort studies require exact task/digest/scorer/verifier/environment/protocol/repetition keys"
+            )
+        success_value = cohort["accepted"]
+        success_basis = "external_correctness_execution_and_source_coverage"
+        if success_value is not True:
+            categories["cohort_rejected" if success_value is False else "cohort_indeterminate"] += 1
     return {
         "path": str(path),
+        **({"external_cohort": cohort} if cohort is not None else {}),
         **(
             {"external_trial": external_trial, "quality_basis": "configured_binary_acceptance"}
             if external_trial is not None
