@@ -10,6 +10,12 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added [offline Harbor job/trial import](docs/HARBOR_TRIALS.md), complete source
+  inventories, multi-step outcomes, hashed explicit verifier thresholds, qualified
+  agent-phase measurements and native study exports with retained excluded trials.
+  Missing rewards/trajectories remain explicit; incompatible pairs are refused,
+  and faster externally incorrect candidates cannot pass replay correctness gates.
+
 - Added [read-only Harbor ATIF import](docs/HARBOR_ATIF.md) for v1.7/v1.8 and
   legacy v1.6, with embedded/local trajectories, source-qualified native events,
   separate aggregates, bounded privacy defaults, immutable receipts and offline

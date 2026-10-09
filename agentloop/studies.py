@@ -273,8 +273,38 @@ def _run(path: Path, keys: list[str]) -> dict[str, Any]:
             if quality_evidence is not None
             else "substitution_trial_without_quality"
         )
+    from agentloop.integrations.harbor.trial_evidence import (
+        PAIRING_KEYS,
+        read_trial,
+        trial_study_values,
+    )
+
+    external_trial = read_trial(trace)
+    if external_trial is not None:
+        if not set(PAIRING_KEYS) <= set(keys):
+            raise StudyValidationError(
+                "external trial studies require task/scorer/environment/protocol/repetition pairing keys"
+            )
+        quality, success_value = trial_study_values(external_trial)
+        success_basis = "external_verifier_contract_and_execution"
+        measurement = external_trial["measurement"]
+        trial_metrics = {
+            "runtime_ms": measurement["runtime_ms"],
+            "input_tokens": measurement["input_tokens"],
+            "output_tokens": measurement["output_tokens"],
+            "cost_usd": measurement["cost_usd"],
+        }
+        if external_trial["outcome"]["quality_pass"] is False:
+            categories["external_quality_rejected"] += 1
+        elif external_trial["outcome"]["quality_pass"] is None:
+            categories["external_quality_indeterminate"] += 1
     return {
         "path": str(path),
+        **(
+            {"external_trial": external_trial, "quality_basis": "configured_binary_acceptance"}
+            if external_trial is not None
+            else {}
+        ),
         **(
             {"decision_trial": trial, "measurement_scope": "declared_decision_step"}
             if trial is not None
