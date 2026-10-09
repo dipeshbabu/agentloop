@@ -382,8 +382,19 @@ def test_selected_symlinked_parent_root_works_but_file_references_remain_checked
 
 
 def test_inspection_output_errors_are_parameter_errors(tmp_path):
+    from click.utils import strip_ansi
+    from typer import BadParameter
+
+    from agentloop.integrations.harbor.cli import inspect_atif_command
+
     blocked = tmp_path / "not-a-directory"
     blocked.write_text("file", encoding="utf-8")
+    with pytest.raises(BadParameter) as exc:
+        inspect_atif_command(
+            FIXTURES / "atif_v17_simple.json", json_out=blocked / "output.json", root=None
+        )
+    assert exc.value.param_hint == "--json-out"
+    assert exc.value.message == "Inspection output could not be written"
     result = CliRunner().invoke(
         app,
         [
@@ -395,8 +406,9 @@ def test_inspection_output_errors_are_parameter_errors(tmp_path):
         ],
     )
     assert result.exit_code == 2
-    assert "--json-out" in result.output
-    assert "could not be written" in result.output
+    rendered = strip_ansi(result.output)
+    assert "--json-out" in rendered
+    assert "could not be written" in rendered
 
 
 @pytest.mark.parametrize("flag", ["event_timing_complete", "usage_complete"])
