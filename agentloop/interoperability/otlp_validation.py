@@ -22,6 +22,7 @@ _STRUCTURAL_STRINGS = frozenset(
         "gen_ai.conversation.id",
         "gen_ai.tool.name",
         "gen_ai.tool.call.id",
+        "gen_ai.agent.name",
         "openinference.span.kind",
         "service.name",
         "service.version",
@@ -31,6 +32,36 @@ _STRUCTURAL_STRINGS = frozenset(
         "telemetry.sdk.language",
         "agent.name",
         "agent.version",
+        "agent.id",
+        "parent.agent.id",
+        "parent.agent.name",
+        "parent.session.id",
+        "parent_span_id",
+        "request.id",
+        "turn.id",
+        "harness.name",
+        "harness.type",
+        "harness.version",
+        "runtime.harness",
+        "runtime.version",
+        "omnigent.harness",
+        "omnigent.harness.version",
+        "omnigent.integration_mode",
+        "omnigent.agent.id",
+        "omnigent.parent_agent.id",
+        "omnigent.parent_session.id",
+        "omnigent.request.id",
+        "omnigent.turn.id",
+        "omnigent.skill.name",
+        "omnigent.span.role",
+        "policy.name",
+        "policy.phase",
+        "policy.action",
+        "policy.tool_call_id",
+        "policy.dispatch_phase",
+        "approval.id",
+        "approval.resolution",
+        "relationship",
         "session.id",
         "trajectory.id",
         "atif.schema_version",
@@ -149,6 +180,7 @@ def _any_value(value: Any, field: str) -> None:
 
 def minimized_value(value: Any, key: str, *, capture_content: bool) -> Any:
     """Retain structural/numeric attributes; content opt-in never captures secrets."""
+    key = key.removeprefix("agentloop.metadata.")
     compact = key.lower().replace("_", "").replace("-", "")
     sensitive = any(
         word in compact
