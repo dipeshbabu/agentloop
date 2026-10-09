@@ -26,6 +26,7 @@ CONTRACT_REVISION = "a2956be0e97bb175a60b274053d836f07d494c6c"
 _ALIASES = {
     "agent_name": ("gen_ai.agent.name", "agent.name"),
     "agent_id": ("omnigent.agent.id", "agent.id"),
+    "agent_role": ("omnigent.agent.role", "agent.role"),
     "parent_agent_id": ("omnigent.parent_agent.id", "parent.agent.id"),
     "parent_agent_name": ("parent.agent.name",),
     "session_id": ("session.id", "gen_ai.conversation.id"),
@@ -160,6 +161,9 @@ class OmnigentImportResult:
         write_artifact(
             inventory.parent, "omnigent-sessions.json", (self._sessions_json + "\n").encode()
         )
+        from agentloop.interoperability.coordination import write_coordination_report
+
+        write_coordination_report(self.traces, self.source_receipts, inventory.parent)
         return inventory
 
 
