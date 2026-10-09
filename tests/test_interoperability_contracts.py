@@ -10,6 +10,7 @@ from copy import deepcopy
 from dataclasses import replace
 from hashlib import sha256
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -376,6 +377,25 @@ def test_symlink_sources_and_symlink_directories_are_rejected(tmp_path):
             load_json_artifact(root, reference)
         assert exc.value.code == "unsafe_path"
         assert "OUTSIDE" not in str(exc.value)
+
+
+def test_windows_reparse_attributes_are_rejected_without_new_path_apis(tmp_path, monkeypatch):
+    file = tmp_path / "reparse.json"
+    file.write_text('{"source":"MUST_NOT_BE_READ"}', encoding="utf-8")
+    original_lstat = Path.lstat
+
+    def lstat(path):
+        result = original_lstat(path)
+        if path == file:
+            return SimpleNamespace(st_mode=result.st_mode, st_file_attributes=0x400)
+        return result
+
+    monkeypatch.setattr(Path, "lstat", lstat)
+    monkeypatch.setattr(Path, "is_junction", lambda path: False, raising=False)
+    with pytest.raises(ImportValidationError) as exc:
+        load_json_artifact(tmp_path, "reparse.json")
+    assert exc.value.code == "unsafe_path"
+    assert "MUST_NOT_BE_READ" not in str(exc.value)
 
 
 def test_frozen_fixture_inventory_is_complete_and_pinned():

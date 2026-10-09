@@ -251,7 +251,17 @@ def safe_artifact_path(
         candidate = base
         for part in reference.split("/"):
             candidate = candidate / part
-            if candidate.is_symlink() or getattr(candidate, "is_junction", lambda: False)():
+            # Path.is_junction() is absent on Python 3.10/3.11. Windows lstat
+            # exposes reparse attributes on those interpreters too, so do not
+            # accidentally allow in-root junctions on our oldest supported API.
+            reparse = getattr(candidate.lstat(), "st_file_attributes", 0) & getattr(
+                stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400
+            )
+            if (
+                candidate.is_symlink()
+                or reparse
+                or getattr(candidate, "is_junction", lambda: False)()
+            ):
                 raise ImportValidationError(
                     "unsafe_path", "reference", "symlinks and junctions are unsupported"
                 )
