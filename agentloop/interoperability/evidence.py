@@ -101,6 +101,8 @@ def require_external_comparison(trace: Any, operation: str) -> None:
         not evidence["comparison_eligible"]
         or evidence["runtime_ms"] is None
         or evidence["execution_status"] == "unknown"
+        or not evidence["event_timing_complete"]
+        or not evidence["usage_complete"]
     ):
         raise ValueError(
             f"{operation} requires complete external trial measurements and independent quality evidence"

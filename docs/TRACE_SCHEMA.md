@@ -97,7 +97,7 @@ value this build does not recognize. Producers never write it.
 Aggregating those per-event values over a trace's model calls gives the
 `token_status` reported in `report()["token_status"]` and in
 `cost_breakdown.token_status`: one of `exact`, `partial`, `estimated`,
-`unavailable`, `unspecified`, or `empty`. Only treat token totals — and any cost
+`unavailable`, `unspecified`, `empty`, or `external_reported`. Only treat token totals — and any cost
 calculated from them — as a measurement when `token_status` is `exact` or
 `empty`. See [`agentloop/tokens.py`](../agentloop/tokens.py).
 

@@ -207,12 +207,37 @@ class _Importer:
             }
             for key, item in value.items():
                 normalized = key.lower().replace("-", "_")
-                sensitive = any(
-                    word in normalized
-                    for word in ("password", "authorization", "api_key", "secret", "credential")
+                compact = normalized.replace("_", "")
+                token_ids = "token_ids" in normalized or normalized == "logprobs"
+                sensitive = (
+                    any(
+                        word in compact
+                        for word in (
+                            "password",
+                            "passwd",
+                            "authorization",
+                            "apikey",
+                            "secret",
+                            "credential",
+                            "bearer",
+                            "cookie",
+                            "privatekey",
+                        )
+                    )
+                    or "token" in compact
+                    and not token_ids
+                    and normalized
+                    not in {
+                        "prompt_tokens",
+                        "completion_tokens",
+                        "input_tokens",
+                        "output_tokens",
+                        "cached_tokens",
+                        "max_tokens",
+                        "total_tokens",
+                    }
                 )
                 reasoning = any(word in normalized for word in ("reasoning", "chain_of_thought"))
-                token_ids = "token_ids" in normalized or normalized == "logprobs"
                 if (
                     sensitive
                     or reasoning
@@ -714,7 +739,8 @@ class _Importer:
                             "source_receipt_id": receipt["receipt_id"],
                             "timing_available": interval is not None,
                             "timing_provenance": "external_reported" if interval else "unknown",
-                            "source_status_available": status != "unknown",
+                            "source_status_available": status
+                            in {"completed", "failed", "timed_out", "cancelled"},
                             "source_execution_status": status,
                             **(metadata or {}),
                         },
@@ -975,13 +1001,18 @@ def import_atif(
 ) -> AtifImportResult:
     """Import one ATIF graph; no binary, remote, verifier or task code is loaded."""
     input_path = Path(path).absolute()
-    source_root = Path(root).resolve() if root is not None else input_path.parent.resolve()
-    try:
-        reference = input_path.relative_to(source_root).as_posix()
-    except ValueError as exc:
-        raise ImportValidationError(
-            "unsafe_path", "path", "input lies outside the source root"
-        ) from exc
+    if root is None:
+        source_root = input_path.parent.resolve()
+        reference = input_path.name
+    else:
+        root_path = Path(root).absolute()
+        source_root = root_path.resolve()
+        try:
+            reference = input_path.relative_to(root_path).as_posix()
+        except ValueError as exc:
+            raise ImportValidationError(
+                "unsafe_path", "path", "input lies outside the source root"
+            ) from exc
     context = dict(identity or {})
     if set(context) - {"job_id", "trial_id", "task_id", "task_digest", "step_id"}:
         fail("identity", "unsupported caller identity field")

@@ -69,6 +69,11 @@ def inspect_atif_command(
     result = _import(path, strict=False, root=root)
     payload = result.inventory()
     if json_out is not None:
-        json_out.parent.mkdir(parents=True, exist_ok=True)
-        json_out.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        try:
+            json_out.parent.mkdir(parents=True, exist_ok=True)
+            json_out.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        except OSError:
+            raise typer.BadParameter(
+                "Inspection output could not be written", param_hint="--json-out"
+            ) from None
     typer.echo(json.dumps(payload, indent=2))

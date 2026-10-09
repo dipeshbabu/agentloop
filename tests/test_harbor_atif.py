@@ -332,6 +332,84 @@ def test_frozen_legacy_and_source_interval_variants():
     assert timed.traces[0].report()["total_runtime_ms"] == 1000
 
 
+@pytest.mark.parametrize("status", ["partial", "missing"])
+def test_incomplete_source_status_is_not_displayed_as_success(tmp_path, status):
+    value = payload()
+    value["steps"][1]["extra"] = {"agentloop": {"execution_status": status}}
+    trace = import_atif(source(tmp_path, value)).traces[0]
+    assert trace.events[1].metadata["source_execution_status"] == status
+    assert trace.events[1].metadata["source_status_available"] is False
+    assert trace.report()["events"][1]["status"] == "unknown"
+    assert ExecutionGraph.from_trace(trace).to_dict()["nodes"][1]["status"] == "unknown"
+
+
+@pytest.mark.parametrize(
+    "key",
+    [
+        "token",
+        "access_token",
+        "refresh_token",
+        "bearer",
+        "cookie",
+        "session_token",
+        "private_key",
+        "apikey",
+        "apiKey",
+    ],
+)
+def test_credentials_stay_redacted_with_content_capture(tmp_path, key):
+    value = payload()
+    value["extra"] = {key: "TEST_CREDENTIAL_VALUE", "max_tokens": 512}
+    result = import_atif(source(tmp_path, value), options=AtifOptions(capture_content=True))
+    extra = result.source_receipts[0].to_dict()["source_metadata"]["extra"]
+    assert extra[key]["capture"] == "omitted"
+    assert extra["max_tokens"] == 512
+    assert "TEST_CREDENTIAL_VALUE" not in json.dumps(extra)
+
+
+def test_selected_symlinked_parent_root_works_but_file_references_remain_checked(tmp_path):
+    real = tmp_path / "real"
+    real.mkdir()
+    file = source(real, payload())
+    link = tmp_path / "linked-root"
+    try:
+        link.symlink_to(real, target_is_directory=True)
+    except OSError:
+        pytest.skip("OS does not permit directory symlink creation")
+    for root in (None, link):
+        result = import_atif(link / file.name, root=root)
+        assert len(result.traces) == 1
+
+
+def test_inspection_output_errors_are_parameter_errors(tmp_path):
+    blocked = tmp_path / "not-a-directory"
+    blocked.write_text("file", encoding="utf-8")
+    result = CliRunner().invoke(
+        app,
+        [
+            "harbor",
+            "inspect-atif",
+            str(FIXTURES / "atif_v17_simple.json"),
+            "--json-out",
+            str(blocked / "output.json"),
+        ],
+    )
+    assert result.exit_code == 2
+    assert "--json-out" in result.output
+    assert "could not be written" in result.output
+
+
+@pytest.mark.parametrize("flag", ["event_timing_complete", "usage_complete"])
+def test_eligibility_cannot_override_incomplete_measurements(flag):
+    from agentloop.interoperability.evidence import require_external_comparison
+
+    trace = import_atif(FIXTURES / "atif_source_intervals.json").traces[0]
+    trace.metadata[EXTERNAL_KEY]["comparison_eligible"] = True
+    trace.metadata[EXTERNAL_KEY][flag] = False
+    with pytest.raises(ValueError, match="complete external trial"):
+        require_external_comparison(trace, "compare")
+
+
 @pytest.mark.parametrize(
     "reference",
     [
