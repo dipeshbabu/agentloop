@@ -6,9 +6,10 @@ artifacts can supply evidence without making either runtime a core dependency.
 
 This document freezes the **internal receipt 1.0 boundary and synthetic fixture
 contracts** for [workstream #271](https://github.com/dipeshbabu/agentloop/issues/271)
-of [roadmap #270](https://github.com/dipeshbabu/agentloop/issues/270). ATIF/job/JSONL
-importers, capability validation, coordination analysis and cross-harness studies
-are dependent workstreams. These source-checkout contracts are not in the
+of [roadmap #270](https://github.com/dipeshbabu/agentloop/issues/270). The
+[Harbor ATIF adapter](HARBOR_ATIF.md) adds qualified native projections.
+Job/JSONL importers, capability validation, coordination analysis and
+cross-harness studies remain dependent workstreams. These capabilities are not in the
 published `agentloop-profiler==0.7.0` wheel.
 
 ## Existing contracts reused
@@ -44,12 +45,13 @@ Native trace schema 1.1 and study manifest 1.0 remain unchanged:
   trace fingerprints. Receipt snapshots reuse the existing canonical JSON helper
   without changing replay, finding, storage or calibration semantics.
 
-Native timing fallbacks can report empty/untimed traces as zero. Timestamp-only
-ATIF steps therefore need source-sidecar evidence until a supported measurement
-can represent them honestly. Receipt 1.0 uses `traces: []` and an explicit reason
-when measurable native artifacts are absent. No empty artifact may establish a
-measured zero-cost, zero-latency successful execution. Untimed trajectory analysis
-remains a native representation gap for the dependent ATIF workstream to resolve.
+Native timing fallbacks can report empty/untimed traces as zero. The ATIF adapter
+uses qualified incomplete native events and sidecars; the current reader displays
+missing latency/status/usage as unavailable and refuses incomplete comparisons.
+Receipt 1.0 also supports `traces: []` with a reason when no projection is available.
+No empty artifact establishes measured zero-cost, zero-latency success.
+Older readers must not analyze these projections without qualification support;
+see [ATIF compatibility](HARBOR_ATIF.md).
 
 ## Receipt 1.0
 

@@ -26,6 +26,7 @@ from agentloop.doctor import run_doctor, run_production_check
 from agentloop.drift_cli import drift_app
 from agentloop.exporters import export_report_markdown
 from agentloop.findings import build_diagnosis, diagnosis_to_markdown
+from agentloop.integrations.harbor.cli import harbor_app
 from agentloop.intervention_service import create_stored_intervention
 from agentloop.interventions import (
     InterventionConflictError,
@@ -63,6 +64,7 @@ study_app = typer.Typer(help="Summarize offline studies and preserved interventi
 app.add_typer(study_app, name="study")
 app.add_typer(aggregate_app, name="aggregate")
 app.add_typer(drift_app, name="drift")
+app.add_typer(harbor_app, name="harbor")
 
 
 @app.command("onboard")
@@ -347,8 +349,17 @@ def compare(
     baseline: Path = Path("runs/research_agent_baseline.json"),
     optimized: Path = Path("runs/research_agent_optimized.json"),
 ) -> None:
-    base = _load_trace(baseline, param_hint="--baseline").report()
-    opt = _load_trace(optimized, param_hint="--optimized").report()
+    base_trace = _load_trace(baseline, param_hint="--baseline")
+    opt_trace = _load_trace(optimized, param_hint="--optimized")
+    from agentloop.interoperability.evidence import require_external_comparison
+
+    try:
+        require_external_comparison(base_trace, "compare")
+        require_external_comparison(opt_trace, "compare")
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc), param_hint="--baseline/--optimized") from None
+    base = base_trace.report()
+    opt = opt_trace.report()
     table = Table(title="AgentLoop Comparison")
     table.add_column("Metric")
     table.add_column("Baseline")
@@ -934,7 +945,9 @@ def list_stored_traces(
             str(item.get("project_id", "")),
             str(item.get("run_id", "")),
             str(item.get("name", "")),
-            f"{float(item.get('total_runtime_ms', 0)):.2f}",
+            "unavailable"
+            if item.get("total_runtime_ms") is None
+            else f"{float(item.get('total_runtime_ms', 0)):.2f}",
             format_cost_usd(item.get("estimated_cost_usd"), item.get("cost_status", "complete")),
         )
     console.print(table)

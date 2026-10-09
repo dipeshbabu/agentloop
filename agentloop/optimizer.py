@@ -35,6 +35,14 @@ def build_optimization_plan(trace: Any, report: dict[str, Any] | None = None) ->
     )
     total_latency_savings = aggregate["latency_savings_ms"]
     total_cost_savings = aggregate["cost_savings_usd"]
+    external = report.get("external_evidence")
+    if external is not None and not external["event_timing_complete"]:
+        total_latency_savings = None
+        aggregate["explanation"].update(
+            latency_estimate_complete=False,
+            raw_latency_savings_ms=None,
+            effective_latency_savings_ms=None,
+        )
 
     return {
         **({"semantic_waste": report["semantic_waste"]} if "semantic_waste" in report else {}),
@@ -59,16 +67,22 @@ def build_optimization_plan(trace: Any, report: dict[str, Any] | None = None) ->
             "repeated_context_ratio": report.get("repeated_context_ratio", 0.0),
         },
         "estimated_after": {
-            "runtime_ms": round(max(0.0, current_runtime - total_latency_savings), 3),
+            "runtime_ms": round(max(0.0, current_runtime - total_latency_savings), 3)
+            if current_runtime is not None and total_latency_savings is not None
+            else None,
             "estimated_cost_usd": (
                 round(max(0.0, current_cost - total_cost_savings), 6)
                 if total_cost_savings is not None
                 else None
             ),
             "cost_status": cost_status,
-            "latency_reduction_pct": round((total_latency_savings / current_runtime) * 100, 2)
-            if current_runtime
-            else 0.0,
+            "latency_reduction_pct": None
+            if total_latency_savings is None
+            else (
+                round((total_latency_savings / current_runtime) * 100, 2)
+                if current_runtime
+                else 0.0
+            ),
             "cost_reduction_pct": (
                 round((total_cost_savings / current_cost) * 100, 2)
                 if total_cost_savings is not None and current_cost
@@ -85,8 +99,8 @@ def build_optimization_plan(trace: Any, report: dict[str, Any] | None = None) ->
 
 def _aggregate_savings(
     cards: list[OptimizationCard],
-    current_runtime: float,
-    current_cost: float,
+    current_runtime: float | None,
+    current_cost: float | None,
     *,
     cost_evaluable: bool = True,
 ) -> dict[str, Any]:
@@ -109,7 +123,13 @@ def _aggregate_savings(
         for card in cards
     ]
     selection = select_compatible(items)
-    capped_latency = min(selection.latency_ms, current_runtime) if current_runtime else 0.0
+    capped_latency = (
+        None
+        if current_runtime is None
+        else min(selection.latency_ms, current_runtime)
+        if current_runtime
+        else 0.0
+    )
     capped_cost = (
         (min(selection.cost_usd, current_cost) if current_cost else 0.0) if cost_evaluable else None
     )
@@ -170,7 +190,9 @@ def _aggregate_savings(
             "selection_algorithm": selection.algorithm,
             "exact_component_limit": selection.exact_component_limit,
             "raw_latency_savings_ms": round(raw_latency, 3),
-            "effective_latency_savings_ms": round(capped_latency, 3),
+            "effective_latency_savings_ms": None
+            if capped_latency is None
+            else round(capped_latency, 3),
             "raw_cost_savings_usd": None if raw_cost is None else round(raw_cost, 6),
             "effective_cost_savings_usd": (None if capped_cost is None else round(capped_cost, 6)),
         },

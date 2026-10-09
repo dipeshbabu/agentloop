@@ -11,6 +11,7 @@ from agentloop.markdown import (
     markdown_table_cell,
     markdown_text,
 )
+from agentloop.timing import format_duration_ms
 
 
 def export_report_json(report: dict[str, Any], path: str | Path) -> Path:
@@ -27,7 +28,7 @@ def export_report_markdown(report: dict[str, Any], path: str | Path) -> Path:
         f"# AgentLoop Report: {markdown_heading(report['name'])}",
         "",
         f"- Run ID: {markdown_code_span(report['run_id'])}",
-        f"- Runtime: {report['total_runtime_ms'] / 1000:.2f}s",
+        f"- Runtime: {format_duration_ms(report['total_runtime_ms'])}",
         "- Estimated cost: "
         + format_cost_usd(report.get("estimated_cost_usd"), report.get("cost_status", "complete")),
         f"- Model calls: {report['model_call_count']}",
@@ -35,7 +36,12 @@ def export_report_markdown(report: dict[str, Any], path: str | Path) -> Path:
         f"- Retries: {report['retry_count']}",
         f"- Input tokens: {report['input_tokens']}",
         f"- Output tokens: {report['output_tokens']}",
-        f"- Repeated context: {report['repeated_context_ratio']:.1%}",
+        "- Repeated context: "
+        + (
+            "unavailable"
+            if report["repeated_context_ratio"] is None
+            else f"{report['repeated_context_ratio']:.1%}"
+        ),
         "",
         "## Recommendations",
     ]
@@ -64,7 +70,9 @@ def export_report_markdown(report: dict[str, Any], path: str | Path) -> Path:
     for event in report["events"]:
         lines.append(
             f"| {markdown_table_cell(event['event_type'])} | "
-            f"{markdown_table_cell(event['name'])} | {event['duration_ms']:.2f} | "
+            f"{markdown_table_cell(event['name'])} | "
+            + ("unavailable" if event["duration_ms"] is None else f"{event['duration_ms']:.2f}")
+            + " | "
             f"{markdown_table_cell(event.get('model') or '')} | "
             f"{event.get('input_tokens', 0)} | {event.get('output_tokens', 0)} | "
             f"{markdown_table_cell(event.get('status', 'ok'))} |"

@@ -10,6 +10,13 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added [read-only Harbor ATIF import](docs/HARBOR_ATIF.md) for v1.7/v1.8 and
+  legacy v1.6, with embedded/local trajectories, source-qualified native events,
+  separate aggregates, bounded privacy defaults, immutable receipts and offline
+  CLI/JSON/HTML. Missing measurements remain unavailable and incomplete imports
+  cannot pass replay/study/value gates. Added non-exact `external_reported` token
+  provenance without changing native serialization or dependencies.
+
 - Added the internal [external evidence receipt contract](docs/INTEROPERABILITY.md),
   bounded data-only JSON/path validation and fifteen pinned synthetic fixture
   families for Harbor/Omnigent interoperability. Missing traces and unknown

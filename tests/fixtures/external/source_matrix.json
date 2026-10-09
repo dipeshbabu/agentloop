@@ -164,6 +164,7 @@
       "revision": "07ad34000e4c481451b1a0ea30a4a09548d6de8b",
       "release": "v0.24.0",
       "formats": [
+        "ATIF-v1.6",
         "ATIF-v1.7",
         "ATIF-v1.8",
         "OTLP JSON"
@@ -183,12 +184,14 @@
     }
   ],
   "files_sha256": {
-    "expected/counters_and_completeness.json": "9f5be42faa046c46e0dfa5e4ce96ac99cac890caa4eac6445d88df343dd8a963",
+    "expected/counters_and_completeness.json": "69af53be00640a39a103f02a753dc7e2e766dc6d4f8ac117b0348602337b2a06",
     "expected/imported_receipts.json": "eb94e2cb95b2096603f29b15dfc959b21586cf52c148d4bd09f114b57d940f9e",
     "harbor/atif_aggregated_llm_calls.json": "484b15600e40a477bb679c3e81c0d143defd36aeca78ec613c1e623a7d84f3c1",
     "harbor/atif_continuation.json": "e404a5815d615ff8085b7046da62baaba19b385a3d7cdb62b19d6839d0cf9677",
     "harbor/atif_deterministic_dispatch.json": "460cc45d1b1916dffc5e3f143d386a68152f1566943be75c0b34185f6f670526",
     "harbor/atif_embedded_subagents.json": "62db31be5519c41ef5552fe374daba6aecaaa57abc43ae9006ffb605236fbc8c",
+    "harbor/atif_source_intervals.json": "1859ccfc51dc8f1235a06b5d8dc7366de3f715a44087789f4277aa96537e56c4",
+    "harbor/atif_v16_legacy.json": "1b623d3c0bc9b95c5a943188dc1b36883f2ef22a07ab2b5b7c4218de0245ddef",
     "harbor/atif_v17_simple.json": "fa6bcf9c43cf4485cdc936e0d74f6e52bacc970a266e61fc8394c47872de93ce",
     "harbor/atif_v18_multimodal.json": "fc16f7c3e1f2fc7fe38cd18514bb5cd258ae9b4691eb543d9c6f1096202d3517",
     "harbor/continuation_segment.json": "86d58971e4e1e31a831e95756ce118a5f283e439a1ad33c0371d1a219168742e",

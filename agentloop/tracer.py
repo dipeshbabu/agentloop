@@ -172,7 +172,9 @@ class AgentTrace:
         report = self.report()
         print(f"AgentLoop Report: {self.name}")
         print(f"Run ID: {self.run_id}")
-        print(f"Total runtime: {report['total_runtime_ms'] / 1000:.2f}s")
+        from agentloop.timing import format_duration_ms
+
+        print(f"Total runtime: {format_duration_ms(report['total_runtime_ms'])}")
         token_status = report.get("token_status", "unspecified")
         print(
             "Estimated cost: "
@@ -182,15 +184,16 @@ class AgentTrace:
                 token_status=token_status,
             )
         )
-        print(f"Model time: {report['model_time_ms'] / 1000:.2f}s")
-        print(f"Tool time: {report['tool_time_ms'] / 1000:.2f}s")
-        print(f"Retry time: {report['retry_time_ms'] / 1000:.2f}s")
+        print(f"Model time: {format_duration_ms(report['model_time_ms'])}")
+        print(f"Tool time: {format_duration_ms(report['tool_time_ms'])}")
+        print(f"Retry time: {format_duration_ms(report['retry_time_ms'])}")
         token_note = "" if is_token_basis_exact(token_status) else f"  [{token_status}]"
         print(f"Input tokens: {report['input_tokens']}{token_note}")
         print(f"Output tokens: {report['output_tokens']}{token_note}")
         if not is_token_basis_exact(token_status):
             print(f"  Token basis: {describe_token_status(token_status)}")
-        print(f"Repeated context ratio: {report['repeated_context_ratio']:.1%}")
+        ratio = report["repeated_context_ratio"]
+        print("Repeated context ratio: " + ("unavailable" if ratio is None else f"{ratio:.1%}"))
         print("\nRecommendations:")
         for rec in report["recommendations"]:
             print(f"- {rec['title']}: {rec['description']}")

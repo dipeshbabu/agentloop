@@ -86,10 +86,11 @@ came from in `token_provenance`:
 | `provider` | the provider reported usage (e.g. an OpenAI `usage` object) | yes |
 | `tokenizer` | counted with a real tokenizer for the target model | yes |
 | `user_supplied` | explicit counts passed by the calling application | yes |
+| `external_reported` | imported counts without independently verified provider accounting | no |
 | `estimated_words` | the `len(text.split())` fallback; an approximation | no |
 | `unavailable` | no counts were available and none could be estimated | no |
 
-A sixth value, `unspecified`, is a **read result only** — it is what a reader
+A seventh value, `unspecified`, is a **read result only** — it is what a reader
 reports for an event that has no `token_provenance` (a `1.0` trace) or one whose
 value this build does not recognize. Producers never write it.
 
