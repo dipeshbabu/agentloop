@@ -1,0 +1,23 @@
+{
+  "receipts": 2,
+  "native_traces": 0,
+  "without_native_traces": 2,
+  "verifier_available": 1,
+  "external_quality_uninterpreted": 1,
+  "quality_pass": 0,
+  "quality_fail": 0,
+  "quality_indeterminate": 2,
+  "notices_by_code": {
+    "missing_trajectory": 1,
+    "untimed_operations": 1
+  },
+  "source_versions": [
+    {
+      "system": "harbor",
+      "producer_version": "0.24.0",
+      "producer_revision": "07ad34000e4c481451b1a0ea30a4a09548d6de8b",
+      "format": "harbor_trial",
+      "format_version": null
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "id": "00000000-0000-0000-0000-000000000006",
+  "task_name": "blue-card",
+  "trial_name": "missing_trajectory",
+  "trial_uri": "file:///synthetic/missing_trajectory",
+  "task_id": {
+    "path": "tasks/blue-card"
+  },
+  "task_checksum": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "config": {
+    "task": {
+      "path": "tasks/blue-card"
+    },
+    "agent": {
+      "name": "fixture",
+      "model_name": "fixture-model"
+    },
+    "environment": {
+      "type": "docker"
+    },
+    "verifier": {
+      "disable": false
+    }
+  },
+  "agent_info": {
+    "name": "fixture",
+    "version": "1",
+    "model_info": {
+      "name": "fixture-model"
+    }
+  },
+  "agent_execution": {
+    "started_at": "2026-01-01T00:00:00Z",
+    "finished_at": "2026-01-01T00:00:02Z"
+  },
+  "verifier_result": {
+    "rewards": {
+      "correctness": 1.0
+    }
+  },
+  "verifier_environment_mode": "separate"
+}

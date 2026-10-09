@@ -1,0 +1,63 @@
+{
+  "json_cases": [
+    {
+      "data": "{\"secret\":\"FIRST\",\"secret\":\"SECOND\"}",
+      "code": "duplicate_key"
+    },
+    {
+      "data": "{\"value\":NaN}",
+      "code": "invalid_number"
+    },
+    {
+      "data": "{\"value\":1e999}",
+      "code": "invalid_number"
+    },
+    {
+      "data": "\"\\ud800\"",
+      "code": "invalid_json"
+    }
+  ],
+  "unsafe_references": [
+    "../outside.json",
+    "/absolute.json",
+    "C:/private.json",
+    "C:relative.json",
+    "\\\\host\\share\\file.json",
+    "https://example.invalid/data.json",
+    "file:///private.json",
+    "safe/../private.json",
+    "safe//file.json",
+    "NUL.json",
+    "file.json:stream"
+  ],
+  "adapter_cases_pending": [
+    {
+      "mutation": "future_schema_version",
+      "expected": "reject"
+    },
+    {
+      "mutation": "duplicate_step_id",
+      "expected": "reject"
+    },
+    {
+      "mutation": "duplicate_embedded_document_id",
+      "expected": "reject"
+    },
+    {
+      "mutation": "invalid_source",
+      "expected": "reject"
+    },
+    {
+      "mutation": "negative_or_boolean_token_counts",
+      "expected": "reject"
+    },
+    {
+      "mutation": "continuation_cycle",
+      "expected": "qualified_failure"
+    },
+    {
+      "mutation": "missing_tool_observation",
+      "expected": "qualified_receipt"
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "schema_version": "ATIF-v1.7",
+  "trajectory_id": "continuation-root",
+  "session_id": "shared-session",
+  "agent": {
+    "name": "synthetic-agent",
+    "version": "fixture-1",
+    "model_name": "fixture-model"
+  },
+  "steps": [
+    {
+      "step_id": 1,
+      "source": "user",
+      "message": "Count the blue cards."
+    },
+    {
+      "step_id": 2,
+      "source": "agent",
+      "message": "There are two blue cards.",
+      "timestamp": "2026-01-01T00:00:01Z",
+      "llm_call_count": 1,
+      "metrics": {
+        "prompt_tokens": 12,
+        "completion_tokens": 6,
+        "cached_tokens": 4
+      }
+    }
+  ],
+  "final_metrics": {
+    "total_prompt_tokens": 12,
+    "total_completion_tokens": 6,
+    "total_cached_tokens": 4
+  },
+  "continued_trajectory_ref": "continuation_segment.json"
+}

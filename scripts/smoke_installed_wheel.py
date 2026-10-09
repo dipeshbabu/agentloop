@@ -16,6 +16,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import agentloop
+from agentloop.interoperability.contracts import ImportReceipt, summarize_receipts
+from agentloop.interoperability.validation import ImportValidationError, load_json_artifact
 from agentloop.version import __version__
 
 
@@ -39,6 +41,24 @@ def smoke(expected_version: str) -> None:
         "Installed distribution and import versions must match the release",
     )
     example = Path(__file__).resolve().parents[1] / "examples" / "intervention_study.py"
+    external_fixtures = Path(__file__).resolve().parents[1] / "tests" / "fixtures" / "external"
+    artifact = load_json_artifact(external_fixtures, "expected/imported_receipts.json")
+    receipts = [ImportReceipt.from_dict(payload) for payload in artifact.payload]
+    inventory = summarize_receipts(receipts)
+    require(inventory["without_native_traces"] == 2, "Missing native traces were lost")
+    require(inventory["quality_indeterminate"] == 2, "Unknown external quality was promoted")
+    invalid = receipts[1].to_dict()
+    invalid["outcome"]["quality_pass"] = True
+    try:
+        ImportReceipt.from_dict(invalid)
+    except ImportValidationError:
+        pass
+    else:
+        raise RuntimeError("Positive external rewards must not imply quality pass")
+    require(
+        not any(name.split(".")[0] in {"harbor", "omnigent"} for name in sys.modules),
+        "Core wheel smoke must not load external runtimes",
+    )
     with TemporaryDirectory(prefix="agentloop-wheel-smoke-") as temporary:
         work = Path(temporary)
         env = {
