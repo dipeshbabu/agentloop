@@ -298,6 +298,14 @@ class _BatchImporter:
             "parent_id": attrs.get("agentloop.native_parent_id"),
             "run_id": witness["resource"].get("agentloop.run_id") or attrs.get("agentloop.run_id"),
         }
+        if any(
+            value is not None and (not isinstance(value, str) or len(value.encode()) > 512)
+            for value in native_identity.values()
+        ):
+            fail(
+                "agentloop.native_identity",
+                "native identity assertions must be bounded strings or null",
+            )
         if any(value is not None for value in native_identity.values()):
             event.metadata["source_native_identity"] = native_identity
         start, end = span.get("startTimeUnixNano"), span.get("endTimeUnixNano")

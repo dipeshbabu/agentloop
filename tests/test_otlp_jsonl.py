@@ -206,6 +206,22 @@ def test_duplicate_attribute_names_and_invalid_anyvalue_are_rejected(tmp_path):
         assert not result.traces
 
 
+@pytest.mark.parametrize("representation", ["wire", "usage", "timestamp"])
+def test_numeric_decimal_strings_are_bounded_before_conversion(tmp_path, representation):
+    value = span()
+    if representation == "wire":
+        value["attributes"] = [
+            {"key": "gen_ai.usage.input_tokens", "value": {"intValue": "9" * 500}}
+        ]
+    elif representation == "usage":
+        value["attributes"]["gen_ai.usage.input_tokens"] = "9" * 500
+    else:
+        value["startTimeUnixNano"] = "9" * 500
+    result = import_otlp(source(tmp_path, [document(value), document(span(trace="b" * 32))]))
+    assert result.inventory()["invalid_records"] == 1
+    assert len(result.traces) == 1
+
+
 def test_missing_identifiers_have_calculated_isolated_identity_not_shared_fake_source(tmp_path):
     missing = span()
     missing.pop("traceId")
@@ -336,6 +352,16 @@ def test_calculated_missing_span_identity_cannot_resolve_a_source_parent(tmp_pat
     result = import_otlp(source(tmp_path, [document(missing), document(child)]))
     assert result.traces[0].events[1].parent_id is None
     assert result.inventory()["notices_by_code"]["missing_span_identity"] == 1
+
+
+def test_nested_payload_cannot_leak_through_native_identity_assertion(tmp_path):
+    invalid = document(span(), resource={"agentloop.run_id": {"access_token": "PRIVATE_NESTED"}})
+    result = import_otlp(source(tmp_path, [invalid, document(span(trace="b" * 32))]))
+    assert result.inventory()["invalid_records"] == 1
+    assert "PRIVATE_NESTED" not in json.dumps(result.inventory())
+    assert "PRIVATE_NESTED" not in json.dumps(
+        [receipt.to_dict() for receipt in result.source_receipts]
+    )
 
 
 def test_default_minimization_covers_inputs_reasoning_credentials_and_errors(tmp_path):

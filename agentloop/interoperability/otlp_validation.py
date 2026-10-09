@@ -10,6 +10,7 @@ from typing import Any
 from agentloop.interoperability.validation import ImportLimits, ImportValidationError
 from agentloop.interventions import canonical_json
 from agentloop.otel import _attributes
+from agentloop.otel_semantics import INPUT_USAGE, OUTPUT_USAGE
 
 _STRUCTURAL_STRINGS = frozenset(
     {
@@ -223,6 +224,7 @@ def flatten(
 ) -> tuple[dict, list[dict], list[dict]]:
     """Return a validated/minimized payload plus source span and log witnesses."""
     object_value(payload, "record")
+    _numeric_string_bounds(payload, limits)
     if not ("resourceSpans" in payload or "resourceLogs" in payload or "spans" in payload):
         fail("record", "OTLP resource spans/logs or a spans array are required")
     clean = deepcopy(payload)
@@ -386,3 +388,56 @@ def flatten(
                         }
                     )
     return clean, spans, logs
+
+
+def _numeric_string_bounds(payload: dict, limits: ImportLimits) -> None:
+    """Bound decimal strings before the core parser calls int on wire values."""
+    numeric_keys = {
+        "intValue",
+        "startTimeUnixNano",
+        "endTimeUnixNano",
+        "timeUnixNano",
+        "observedTimeUnixNano",
+        "start_time_unix_nano",
+        "end_time_unix_nano",
+        "agentloop.input_tokens",
+        "agentloop.output_tokens",
+        "gen_ai.usage.cache_read.input_tokens",
+        "gen_ai.usage.cache_write.input_tokens",
+        "llm.token_count.prompt_details.cache_read",
+        "llm.token_count.prompt_details.cache_write",
+        "gen_ai.usage.reasoning.output_tokens",
+        "llm.token_count.completion_details.reasoning",
+        "llm.token_count.total",
+        *INPUT_USAGE,
+        *OUTPUT_USAGE,
+    }
+    pending = [payload]
+    while pending:
+        node = pending.pop()
+        if isinstance(node, dict):
+            for key, value in node.items():
+                if (
+                    key in numeric_keys
+                    and isinstance(value, str)
+                    and len(value) > limits.max_number_chars
+                ):
+                    fail(
+                        "numeric_string",
+                        "numeric representation exceeds configured bounds",
+                        "record_limit_exceeded",
+                    )
+            if isinstance(node.get("key"), str) and node["key"] in numeric_keys:
+                encoded = node.get("value")
+                if isinstance(encoded, dict) and any(
+                    isinstance(value, str) and len(value) > limits.max_number_chars
+                    for value in encoded.values()
+                ):
+                    fail(
+                        "numeric_string",
+                        "numeric representation exceeds configured bounds",
+                        "record_limit_exceeded",
+                    )
+            pending.extend(value for value in node.values() if isinstance(value, (dict, list)))
+        elif isinstance(node, list):
+            pending.extend(value for value in node if isinstance(value, (dict, list)))
