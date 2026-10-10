@@ -11,9 +11,13 @@ of [roadmap #270](https://github.com/dipeshbabu/agentloop/issues/270). The
 [Job/trial import](HARBOR_TRIALS.md) retains independent verifier outcomes.
 [Bounded JSONL import](OTLP_JSONL.md) extends the existing OTel parser.
 [Omnigent adaptation](OMNIGENT_OTEL.md) adds session/policy observations and gaps.
-Capability validation, coordination analysis and
-cross-harness studies remain dependent workstreams. These capabilities are not in the
-published `agentloop-profiler==0.7.0` wheel.
+[Capability declarations](HARNESS_CAPABILITIES.md), the
+[executable offline bench](HARNESS_BENCH.md),
+[full-population paired cohorts](CROSS_HARNESS_STUDIES.md) and
+[coordination reports](MULTIAGENT_EFFICIENCY.md) extend those import paths.
+These Unreleased capabilities are not in the published
+`agentloop-profiler==0.7.0` wheel. Optional Harbor plugins, active approval resolution
+and research trajectory export remain deferred.
 
 ## Existing contracts reused
 

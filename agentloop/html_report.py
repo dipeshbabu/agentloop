@@ -64,6 +64,77 @@ def _table(headers: list[str], rows: list[list[str]], *, caption: str) -> str:
     )
 
 
+def cohort_to_html(report: dict[str, Any]) -> str:
+    """Render full-population cohort evidence with the existing local report styles."""
+    sections = [
+        '<!doctype html><html lang="en"><head><meta charset="utf-8">',
+        '<meta name="viewport" content="width=device-width, initial-scale=1">',
+        "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'\">",
+        f"<title>{_text(report['name'])}</title><style>{_CSS}</style></head><body><main><h1>{_text(report['name'])}</h1>",
+        '<p class="notice">External source evidence. Correctness, execution and source coverage are independent gates. No causal harness effect or estimator attribution is invented.</p>',
+    ]
+    if report["synthetic"]:
+        sections.append(
+            '<p class="notice">Synthetic inputs: these reports demonstrate validation and do not establish empirical performance benefits.</p>'
+        )
+    sections.append(
+        _table(
+            ["Condition", "Attempts retained", "Accepted", "Rejected", "Indeterminate"],
+            [
+                [
+                    _text(condition),
+                    _text(population["denominator"]),
+                    _text(population["accepted"]),
+                    _text(population["rejected"]),
+                    _text(population["acceptance_indeterminate"]),
+                ]
+                for condition, population in report["conditions"].items()
+            ],
+            caption="Complete observed and planned attempt populations",
+        )
+    )
+    for condition, comparison in report["comparisons"].items():
+        sections.extend(
+            [
+                f"<h2>Baseline vs {_text(condition)}</h2>",
+                f"<p>Comparison: {_text(comparison['comparison_kind'])}; causal harness effect not established.</p>",
+                _table(
+                    ["Task", "Outcome", "Runtime improvement"],
+                    [
+                        [
+                            _text(pair["pairing_metadata"]["task_id"]),
+                            _text(pair["state"]),
+                            _text(
+                                pair["runtime_improvement_pct"]
+                                if pair["runtime_improvement_pct"] is not None
+                                else "unavailable"
+                            ),
+                        ]
+                        for pair in comparison["pairs"]
+                    ],
+                    caption="Independent task-quality and source-evidence gates",
+                ),
+                _definition(
+                    [
+                        ("Unpaired records", comparison["unpaired_count"]),
+                        (
+                            "Planned unidentified candidate attempts",
+                            comparison["quality_preserving_intervention_rate"][
+                                "unidentified_planned_attempts"
+                            ],
+                        ),
+                        (
+                            "Verified improvements / candidate attempts",
+                            f"{comparison['quality_preserving_intervention_rate']['numerator']} / {comparison['quality_preserving_intervention_rate']['denominator']}",
+                        ),
+                    ]
+                ),
+            ]
+        )
+    sections.append("</main></body></html>")
+    return "\n".join(sections)
+
+
 def coordination_to_html(report: dict[str, Any]) -> str:
     """Render source-qualified bundle coordination with the local report styles."""
     sections = [
