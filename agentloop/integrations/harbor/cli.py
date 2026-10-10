@@ -12,6 +12,105 @@ from agentloop.interoperability.validation import ImportValidationError
 harbor_app = typer.Typer(help="Import completed Harbor artifacts offline.")
 
 
+def _job(
+    path: Path,
+    *,
+    scoring: Path | None,
+    condition: str | None,
+    protocol_id: str | None,
+    context: Path | None,
+    synthetic: bool,
+):
+    from agentloop.integrations.harbor.trials import HarborOptions, import_harbor
+    from agentloop.integrations.harbor.verifier import ScoringContract
+    from agentloop.interoperability.validation import load_json_artifact
+
+    try:
+        criteria = (
+            ScoringContract.from_dict(load_json_artifact(scoring.parent, scoring.name).payload)
+            if scoring
+            else None
+        )
+        declared = load_json_artifact(context.parent, context.name).payload if context else {}
+        return import_harbor(
+            path,
+            options=HarborOptions(
+                scoring=criteria,
+                condition=condition,
+                protocol_id=protocol_id,
+                trial_context=declared,
+                synthetic_fixture=synthetic,
+            ),
+        )
+    except (ImportValidationError, OSError) as exc:
+        message = (
+            str(exc)
+            if isinstance(exc, ImportValidationError)
+            else "Job artifacts could not be read"
+        )
+        raise typer.BadParameter(message, param_hint="path") from None
+
+
+@harbor_app.command("import")
+def import_job_command(
+    path: Path,
+    out: Path = typer.Option(...),
+    scoring: Path | None = typer.Option(
+        None, help="Versioned explicit reward thresholds; no implicit positive-reward rule."
+    ),
+    condition: str | None = typer.Option(None),
+    protocol_id: str | None = typer.Option(None),
+    context: Path | None = typer.Option(
+        None, help="Explicit trial-directory condition/protocol/repetition mapping."
+    ),
+    synthetic: bool = typer.Option(False),
+) -> None:
+    result = _job(
+        path,
+        scoring=scoring,
+        condition=condition,
+        protocol_id=protocol_id,
+        context=context,
+        synthetic=synthetic,
+    )
+    try:
+        inventory = result.write(out)
+    except (ImportValidationError, OSError) as exc:
+        message = (
+            str(exc) if isinstance(exc, ImportValidationError) else "Output could not be written"
+        )
+        raise typer.BadParameter(message, param_hint="--out") from None
+    stats = result.inventory()
+    typer.echo(
+        f"{stats['trials_discovered']} trials retained; {stats['trials_imported']} imported; {stats['missing_trajectories']} missing trajectories; {stats['invalid_records']} invalid."
+    )
+    typer.echo(
+        f"External criterion outcomes: {stats['quality_pass']} pass, {stats['quality_fail']} fail, {stats['quality_indeterminate']} indeterminate. Source hashes are reproducibility evidence, not authenticity."
+    )
+    typer.echo(f"Inventory: {inventory}")
+
+
+@harbor_app.command("inspect")
+def inspect_job_command(
+    path: Path,
+    json_out: Path | None = typer.Option(None),
+    scoring: Path | None = typer.Option(None),
+) -> None:
+    result = _job(
+        path, scoring=scoring, condition=None, protocol_id=None, context=None, synthetic=False
+    )
+    content = json.dumps(result.inventory(), indent=2)
+    if json_out is not None:
+        try:
+            json_out.parent.mkdir(parents=True, exist_ok=True)
+            json_out.write_text(content + "\n", encoding="utf-8")
+        except OSError:
+            raise typer.BadParameter(
+                "Inspection output could not be written", param_hint="--json-out"
+            ) from None
+    typer.echo(content)
+
+
 def _import(path: Path, *, strict: bool, root: Path | None, synthetic: bool = False):
     from agentloop.integrations.harbor.atif import AtifOptions, import_atif
 

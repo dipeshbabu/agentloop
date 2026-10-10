@@ -40,6 +40,9 @@ def build_replay_report(
 
     require_complete_evidence(baseline_trace, "replay")
     require_complete_evidence(candidate_trace, "replay")
+    from agentloop.integrations.harbor.trial_evidence import require_trial_pair
+
+    require_trial_pair(baseline_trace, candidate_trace)
     gates = gates or ReplayGates()
     baseline_report = baseline_trace.report()
     candidate_report = candidate_trace.report()
@@ -74,6 +77,18 @@ def build_replay_report(
     ) and is_token_basis_evaluable(candidate.get("token_status"))
     cost_evaluable = pricing_known and token_basis_evaluable
     deltas = _deltas(baseline, candidate)
+    if "external_trial" in baseline or "external_trial" in candidate:
+        nullable = {
+            "input_tokens": ("input_tokens_delta", "input_token_improvement_pct"),
+            "output_tokens": ("output_tokens_delta", "output_token_improvement_pct"),
+            "retry_count": ("retry_count_delta", "retry_improvement_pct"),
+            "tool_call_count": ("tool_call_count_delta", "tool_call_improvement_pct"),
+            "model_call_count": ("model_call_count_delta", "model_call_improvement_pct"),
+        }
+        for metric, fields in nullable.items():
+            if baseline.get(metric) is None or candidate.get(metric) is None:
+                for key in fields:
+                    deltas[key] = None
     versioned_quality = quality_report is not None and quality_report.get("schema_version") == "2.0"
     if versioned_quality or "quality_evidence" in baseline or "quality_evidence" in candidate:
         if baseline.get("quality_score") is None or candidate.get("quality_score") is None:
@@ -107,6 +122,23 @@ def build_replay_report(
         cost_evaluable=cost_evaluable,
         pricing_known=pricing_known,
     )
+    if "external_trial" in baseline:
+        outcomes = [summary["external_trial"]["outcome"] for summary in (baseline, candidate)]
+        available = all(outcome["quality_pass"] is not None for outcome in outcomes)
+        correct = available and all(
+            outcome["quality_pass"] is True and outcome["execution_status"] == "completed"
+            for outcome in outcomes
+        )
+        gate_results.append(
+            _gate(
+                "external_task_correctness",
+                correct,
+                "matching externally supplied verifier criteria passed"
+                if correct
+                else "external task correctness failed or is unavailable",
+                indeterminate=not available,
+            )
+        )
     passed = all(item["passed"] for item in gate_results)
     indeterminate_gates = [item["name"] for item in gate_results if item.get("indeterminate")]
 
@@ -312,7 +344,7 @@ def replay_report_to_markdown(report: dict[str, Any]) -> str:
 def _trace_summary(trace: Any, report: dict[str, Any]) -> dict[str, Any]:
     metadata = getattr(trace, "metadata", {}) or {}
     cost = report.get("cost_breakdown") or {}
-    return {
+    result = {
         **(
             {
                 "quality_evidence": report["quality_evidence"],
@@ -361,6 +393,26 @@ def _trace_summary(trace: Any, report: dict[str, Any]) -> dict[str, Any]:
             else metadata.get("quality_score")
         ),
     }
+    from agentloop.integrations.harbor.trial_evidence import read_trial, trial_study_values
+
+    trial = read_trial(trace)
+    if trial is not None:
+        measurement = trial["measurement"]
+        result.update(
+            external_trial=trial,
+            runtime_ms=measurement["runtime_ms"],
+            estimated_cost_usd=measurement["cost_usd"],
+            has_unknown_cost=measurement["cost_usd"] is None,
+            input_tokens=measurement["input_tokens"],
+            output_tokens=measurement["output_tokens"],
+            quality_score=trial_study_values(trial)[0],
+            retry_count=None,
+            tool_call_count=None,
+            model_call_count=None,
+            quality_basis="configured_binary_acceptance",
+            cost_basis="external_reported_agent_context",
+        )
+    return result
 
 
 def _deltas(baseline: dict[str, Any], candidate: dict[str, Any]) -> dict[str, Any]:
@@ -463,15 +515,27 @@ def _gate_results(
         cost_improvement_gate,
     ]
     if gates.require_retry_non_increase:
-        base_retries = int(baseline.get("retry_count", 0) or 0)
-        cand_retries = int(candidate.get("retry_count", 0) or 0)
-        results.append(
-            _gate(
-                "retry_non_increase",
-                cand_retries <= base_retries,
-                f"{cand_retries} candidate retries <= {base_retries} baseline retries",
+        if "external_trial" in baseline and (
+            baseline.get("retry_count") is None or candidate.get("retry_count") is None
+        ):
+            results.append(
+                _gate(
+                    "retry_non_increase",
+                    False,
+                    "source retry counts are unavailable",
+                    indeterminate=True,
+                )
             )
-        )
+        else:
+            base_retries = int(baseline.get("retry_count", 0) or 0)
+            cand_retries = int(candidate.get("retry_count", 0) or 0)
+            results.append(
+                _gate(
+                    "retry_non_increase",
+                    cand_retries <= base_retries,
+                    f"{cand_retries} candidate retries <= {base_retries} baseline retries",
+                )
+            )
     if gates.require_schema_valid:
         schema_valid = _candidate_schema_valid(candidate)
         results.append(

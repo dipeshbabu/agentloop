@@ -39,9 +39,10 @@ trace-to-quality workflow and five offline reference examples. These additions
 are not included in the published `0.7.0` package.
 
 The [Harbor and Omnigent interoperability workstream](docs/INTEROPERABILITY.md)
-includes a read-only [Harbor ATIF importer](docs/HARBOR_ATIF.md), source-qualified
-native reports and pinned offline fixtures. Job/verifier import, Omnigent
-telemetry and cross-harness comparisons remain dependent workstreams.
+includes read-only [Harbor ATIF](docs/HARBOR_ATIF.md) and
+[job/trial/verifier import](docs/HARBOR_TRIALS.md), source-qualified native reports
+and pinned offline fixtures. Omnigent telemetry and complete cross-harness
+comparisons remain dependent workstreams.
 
 ## Without and with AgentLoop
 
