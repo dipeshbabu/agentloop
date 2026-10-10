@@ -65,6 +65,10 @@ retaining failed, missing and unpaired attempts in population reports.
 documents, observed interval overlap and usage attribution, with explicit gaps
 for missing children, caller wait, duplicate-work inputs and review quality.
 
+The [offline adoption guide](docs/INTEROPERABILITY_READINESS.md) connects the
+copyable examples, source/quality limits, complete inventories and validation
+workflow. These integrations are Unreleased checkout capabilities.
+
 ## Without and with AgentLoop
 
 <picture>

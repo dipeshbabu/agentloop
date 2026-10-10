@@ -7,6 +7,17 @@ For opt-in runtime controls, see the [LangGraph harness adapter](LANGGRAPH_HARNE
 The tracing integrations below remain observation APIs; recording a call does
 not itself enforce a policy.
 
+For completed external execution files, use the dependency-free
+[Harbor ATIF](HARBOR_ATIF.md), [Harbor trials](HARBOR_TRIALS.md),
+[bounded OTLP JSONL](OTLP_JSONL.md) and [Omnigent](OMNIGENT_OTEL.md) adapters.
+They retain source receipts, privacy defaults, missingness and unverified policy
+observations. [Capabilities](HARNESS_CAPABILITIES.md),
+[offline behavioral probes](HARNESS_BENCH.md),
+[paired external-quality cohorts](CROSS_HARNESS_STUDIES.md) and
+[coordination](MULTIAGENT_EFFICIENCY.md) consume that evidence.
+These additions are Unreleased checkout features and require no Harbor/Omnigent
+runtime, collector, credentials or new database schema.
+
 AgentLoop integrations are designed for low-friction instrumentation. A team
 should be able to wrap an existing agent and inspect latency, token, retry, and
 tool-call waste without changing its framework.

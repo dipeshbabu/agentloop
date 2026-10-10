@@ -1,0 +1,615 @@
+{
+  "schema_version": "1.0",
+  "synthetic": true,
+  "baseline_revision": "560191f000f0e41b2f5455b2e0910cb2c1b2cb24",
+  "measurement_method": "examples/interoperability_scalability.py; sequential baseline then candidate, one sample per size; tracemalloc enabled",
+  "source_scope": "local parser/export/report overhead, not empirical agent performance; original imported snapshots identical",
+  "results": [
+    {
+      "size": 10,
+      "baseline": {
+        "limitations": [
+          "single samples on a shared host; filesystem cache and competing CPU load uncontrolled",
+          "tracemalloc measures Python allocation peaks, not whole-process RSS",
+          "source runtimes and rewards are owned synthetic data; no provider or task-performance benefit established",
+          "large cases explicitly raise bounded trajectory/reference caps; core defaults unchanged"
+        ],
+        "limits": {
+          "max_depth": 64,
+          "max_events_per_trace": 10000,
+          "max_json_bytes": 8388608,
+          "max_line_bytes": 8388608,
+          "max_metadata_bytes": 65536,
+          "max_nodes": 200000,
+          "max_number_chars": 128,
+          "max_path_depth": 32,
+          "max_records": 10000,
+          "max_references": 1024,
+          "max_spans": 100000,
+          "max_total_bytes": 536870912,
+          "max_trajectories": 256,
+          "max_trials": 10000
+        },
+        "measurement_scope": "local parser/export/report overhead; generation, startup, repeated-import fingerprint and repeated-export checks excluded",
+        "module_sha256": {
+          "integrations/harbor/trials.py": "323a6f98e003d20d86464e40772836d4575e15927c5fd733fdd59762ee8be8fc",
+          "integrations/omnigent/telemetry.py": "47619ea5156be0ffdc4d2fa3c97582438b34d4a703826fa42e40b96849244e02",
+          "interoperability/coordination.py": "52604f607fd89cce43c3c80fdc7dcb49f0504c591812760f23b4f2fbae6a1e3f",
+          "interoperability/otlp_jsonl.py": "b2092bde3957d4339af1973cd172f538768d156f2175048ba00d7227ad51c906"
+        },
+        "platform": "Windows-11-10.0.26200-SP0",
+        "python": "3.13.12",
+        "schema_version": "1.0",
+        "size": 10,
+        "source_revision": "560191f000f0e41b2f5455b2e0910cb2c1b2cb24",
+        "synthetic": true,
+        "workloads": {
+          "harbor_job": {
+            "coverage": {
+              "missing_trajectories": 1,
+              "quality_fail": 2,
+              "quality_indeterminate": 0,
+              "quality_pass": 8,
+              "trials_discovered": 10,
+              "trials_planned": 11
+            },
+            "export": {
+              "cpu_seconds": 0.375,
+              "peak_tracemalloc_bytes": 733094,
+              "wall_seconds": 0.37963420001324266
+            },
+            "import": {
+              "cpu_seconds": 1.171875,
+              "peak_tracemalloc_bytes": 8713538,
+              "wall_seconds": 1.5757443000329658
+            },
+            "native_traces": 9,
+            "repeat_export": "idempotent",
+            "repeat_import_sha256": "57f652c25e3fdde2e6b0004821ef61f4b92ecd917be35f010e9f1fd78e60ad87"
+          },
+          "omnigent_sessions": {
+            "export": {
+              "cpu_seconds": 0.265625,
+              "peak_tracemalloc_bytes": 125883,
+              "wall_seconds": 0.29069000005256385
+            },
+            "import": {
+              "cpu_seconds": 0.265625,
+              "peak_tracemalloc_bytes": 318062,
+              "wall_seconds": 0.30970730003900826
+            },
+            "native_traces": 10,
+            "repeat_export": "idempotent",
+            "repeat_import_sha256": "abf118654f92a73e3144d6cb992e3b44512f094067617011e6fd089665112df1",
+            "session_groups": 10
+          },
+          "otlp_large_trace": {
+            "analysis": {
+              "cpu_seconds": 0.015625,
+              "peak_tracemalloc_bytes": 23976,
+              "wall_seconds": 0.009400899987667799
+            },
+            "export": {
+              "cpu_seconds": 0.03125,
+              "peak_tracemalloc_bytes": 58182,
+              "wall_seconds": 0.025149799999780953
+            },
+            "import": {
+              "cpu_seconds": 0.078125,
+              "peak_tracemalloc_bytes": 103725,
+              "wall_seconds": 0.08724729996174574
+            },
+            "native_traces": 1,
+            "recorded_model_blocks": 10,
+            "repeat_export": "idempotent",
+            "repeat_import_sha256": "a48f2afdf985757c02d838d718bb7cdfe8df0b8e43775830360583e668c820e9"
+          }
+        }
+      },
+      "candidate": {
+        "limitations": [
+          "single samples on a shared host; filesystem cache and competing CPU load uncontrolled",
+          "tracemalloc measures Python allocation peaks, not whole-process RSS",
+          "source runtimes and rewards are owned synthetic data; no provider or task-performance benefit established",
+          "large cases explicitly raise bounded trajectory/reference caps; core defaults unchanged"
+        ],
+        "limits": {
+          "max_depth": 64,
+          "max_events_per_trace": 10000,
+          "max_json_bytes": 8388608,
+          "max_line_bytes": 8388608,
+          "max_metadata_bytes": 65536,
+          "max_nodes": 200000,
+          "max_number_chars": 128,
+          "max_path_depth": 32,
+          "max_records": 10000,
+          "max_references": 1024,
+          "max_spans": 100000,
+          "max_total_bytes": 536870912,
+          "max_trajectories": 256,
+          "max_trials": 10000
+        },
+        "measurement_scope": "local parser/export/report overhead; generation, startup, repeated-import fingerprint and repeated-export checks excluded",
+        "module_sha256": {
+          "integrations/harbor/trials.py": "3cb1fca041a7d67d52f193c4fbbebc84284e8262cefbede3e4d57705920710f8",
+          "integrations/omnigent/telemetry.py": "4e20c841e6cba88b2d79e4bf8e8efed903733f39d233b694559e64a5ecd1c711",
+          "interoperability/coordination.py": "52604f607fd89cce43c3c80fdc7dcb49f0504c591812760f23b4f2fbae6a1e3f",
+          "interoperability/otlp_jsonl.py": "b2092bde3957d4339af1973cd172f538768d156f2175048ba00d7227ad51c906"
+        },
+        "platform": "Windows-11-10.0.26200-SP0",
+        "python": "3.13.12",
+        "schema_version": "1.0",
+        "size": 10,
+        "source_revision": "working-tree",
+        "synthetic": true,
+        "workloads": {
+          "harbor_job": {
+            "coverage": {
+              "missing_trajectories": 1,
+              "quality_fail": 2,
+              "quality_indeterminate": 0,
+              "quality_pass": 8,
+              "trials_discovered": 10,
+              "trials_planned": 11
+            },
+            "export": {
+              "cpu_seconds": 0.46875,
+              "peak_tracemalloc_bytes": 737857,
+              "wall_seconds": 0.7009626999497414
+            },
+            "import": {
+              "cpu_seconds": 1.015625,
+              "peak_tracemalloc_bytes": 8717733,
+              "wall_seconds": 1.0711927000666037
+            },
+            "native_traces": 9,
+            "repeat_export": "idempotent",
+            "repeat_import_sha256": "57f652c25e3fdde2e6b0004821ef61f4b92ecd917be35f010e9f1fd78e60ad87"
+          },
+          "omnigent_sessions": {
+            "export": {
+              "cpu_seconds": 0.21875,
+              "peak_tracemalloc_bytes": 125933,
+              "wall_seconds": 0.402139600017108
+            },
+            "import": {
+              "cpu_seconds": 0.34375,
+              "peak_tracemalloc_bytes": 318430,
+              "wall_seconds": 0.4365836000069976
+            },
+            "native_traces": 10,
+            "repeat_export": "idempotent",
+            "repeat_import_sha256": "abf118654f92a73e3144d6cb992e3b44512f094067617011e6fd089665112df1",
+            "session_groups": 10
+          },
+          "otlp_large_trace": {
+            "analysis": {
+              "cpu_seconds": 0.0,
+              "peak_tracemalloc_bytes": 23976,
+              "wall_seconds": 0.02012640004977584
+            },
+            "export": {
+              "cpu_seconds": 0.046875,
+              "peak_tracemalloc_bytes": 58183,
+              "wall_seconds": 0.03322429989930242
+            },
+            "import": {
+              "cpu_seconds": 0.109375,
+              "peak_tracemalloc_bytes": 102176,
+              "wall_seconds": 0.3051043999148533
+            },
+            "native_traces": 1,
+            "recorded_model_blocks": 10,
+            "repeat_export": "idempotent",
+            "repeat_import_sha256": "a48f2afdf985757c02d838d718bb7cdfe8df0b8e43775830360583e668c820e9"
+          }
+        }
+      },
+      "all_three_import_snapshots_match": true
+    },
+    {
+      "size": 100,
+      "baseline": {
+        "limitations": [
+          "single samples on a shared host; filesystem cache and competing CPU load uncontrolled",
+          "tracemalloc measures Python allocation peaks, not whole-process RSS",
+          "source runtimes and rewards are owned synthetic data; no provider or task-performance benefit established",
+          "large cases explicitly raise bounded trajectory/reference caps; core defaults unchanged"
+        ],
+        "limits": {
+          "max_depth": 64,
+          "max_events_per_trace": 10000,
+          "max_json_bytes": 8388608,
+          "max_line_bytes": 8388608,
+          "max_metadata_bytes": 65536,
+          "max_nodes": 200000,
+          "max_number_chars": 128,
+          "max_path_depth": 32,
+          "max_records": 10000,
+          "max_references": 1024,
+          "max_spans": 100000,
+          "max_total_bytes": 536870912,
+          "max_trajectories": 256,
+          "max_trials": 10000
+        },
+        "measurement_scope": "local parser/export/report overhead; generation, startup, repeated-import fingerprint and repeated-export checks excluded",
+        "module_sha256": {
+          "integrations/harbor/trials.py": "323a6f98e003d20d86464e40772836d4575e15927c5fd733fdd59762ee8be8fc",
+          "integrations/omnigent/telemetry.py": "47619ea5156be0ffdc4d2fa3c97582438b34d4a703826fa42e40b96849244e02",
+          "interoperability/coordination.py": "52604f607fd89cce43c3c80fdc7dcb49f0504c591812760f23b4f2fbae6a1e3f",
+          "interoperability/otlp_jsonl.py": "b2092bde3957d4339af1973cd172f538768d156f2175048ba00d7227ad51c906"
+        },
+        "platform": "Windows-11-10.0.26200-SP0",
+        "python": "3.13.12",
+        "schema_version": "1.0",
+        "size": 100,
+        "source_revision": "560191f000f0e41b2f5455b2e0910cb2c1b2cb24",
+        "synthetic": true,
+        "workloads": {
+          "harbor_job": {
+            "coverage": {
+              "missing_trajectories": 10,
+              "quality_fail": 15,
+              "quality_indeterminate": 0,
+              "quality_pass": 85,
+              "trials_discovered": 100,
+              "trials_planned": 101
+            },
+            "export": {
+              "cpu_seconds": 4.53125,
+              "peak_tracemalloc_bytes": 3000271,
+              "wall_seconds": 7.241921900073066
+            },
+            "import": {
+              "cpu_seconds": 9.78125,
+              "peak_tracemalloc_bytes": 11355632,
+              "wall_seconds": 13.132007999927737
+            },
+            "native_traces": 90,
+            "repeat_export": "idempotent",
+            "repeat_import_sha256": "caa799fc775f42d26f2240aefb5d5aab4d8eb5f7c84aebeeec018829ee5d249b"
+          },
+          "omnigent_sessions": {
+            "export": {
+              "cpu_seconds": 3.625,
+              "peak_tracemalloc_bytes": 1066644,
+              "wall_seconds": 4.732292699976824
+            },
+            "import": {
+              "cpu_seconds": 6.390625,
+              "peak_tracemalloc_bytes": 2918149,
+              "wall_seconds": 8.681994099984877
+            },
+            "native_traces": 100,
+            "repeat_export": "idempotent",
+            "repeat_import_sha256": "4e2980db8c654b676bf7b093a8f92e79df0dad7dad7641f0cac595f9571b1043",
+            "session_groups": 100
+          },
+          "otlp_large_trace": {
+            "analysis": {
+              "cpu_seconds": 0.078125,
+              "peak_tracemalloc_bytes": 164488,
+              "wall_seconds": 0.06741859996691346
+            },
+            "export": {
+              "cpu_seconds": 0.171875,
+              "peak_tracemalloc_bytes": 469189,
+              "wall_seconds": 0.1764598999870941
+            },
+            "import": {
+              "cpu_seconds": 1.125,
+              "peak_tracemalloc_bytes": 769607,
+              "wall_seconds": 1.210477099986747
+            },
+            "native_traces": 1,
+            "recorded_model_blocks": 100,
+            "repeat_export": "idempotent",
+            "repeat_import_sha256": "169907bccc4a7bc6aba4cf70dcb0a528b77ec946a1fbd0e2d9e8a174a45b46ce"
+          }
+        }
+      },
+      "candidate": {
+        "limitations": [
+          "single samples on a shared host; filesystem cache and competing CPU load uncontrolled",
+          "tracemalloc measures Python allocation peaks, not whole-process RSS",
+          "source runtimes and rewards are owned synthetic data; no provider or task-performance benefit established",
+          "large cases explicitly raise bounded trajectory/reference caps; core defaults unchanged"
+        ],
+        "limits": {
+          "max_depth": 64,
+          "max_events_per_trace": 10000,
+          "max_json_bytes": 8388608,
+          "max_line_bytes": 8388608,
+          "max_metadata_bytes": 65536,
+          "max_nodes": 200000,
+          "max_number_chars": 128,
+          "max_path_depth": 32,
+          "max_records": 10000,
+          "max_references": 1024,
+          "max_spans": 100000,
+          "max_total_bytes": 536870912,
+          "max_trajectories": 256,
+          "max_trials": 10000
+        },
+        "measurement_scope": "local parser/export/report overhead; generation, startup, repeated-import fingerprint and repeated-export checks excluded",
+        "module_sha256": {
+          "integrations/harbor/trials.py": "3cb1fca041a7d67d52f193c4fbbebc84284e8262cefbede3e4d57705920710f8",
+          "integrations/omnigent/telemetry.py": "4e20c841e6cba88b2d79e4bf8e8efed903733f39d233b694559e64a5ecd1c711",
+          "interoperability/coordination.py": "52604f607fd89cce43c3c80fdc7dcb49f0504c591812760f23b4f2fbae6a1e3f",
+          "interoperability/otlp_jsonl.py": "b2092bde3957d4339af1973cd172f538768d156f2175048ba00d7227ad51c906"
+        },
+        "platform": "Windows-11-10.0.26200-SP0",
+        "python": "3.13.12",
+        "schema_version": "1.0",
+        "size": 100,
+        "source_revision": "working-tree",
+        "synthetic": true,
+        "workloads": {
+          "harbor_job": {
+            "coverage": {
+              "missing_trajectories": 10,
+              "quality_fail": 15,
+              "quality_indeterminate": 0,
+              "quality_pass": 85,
+              "trials_discovered": 100,
+              "trials_planned": 101
+            },
+            "export": {
+              "cpu_seconds": 3.703125,
+              "peak_tracemalloc_bytes": 3001932,
+              "wall_seconds": 6.049270899966359
+            },
+            "import": {
+              "cpu_seconds": 11.34375,
+              "peak_tracemalloc_bytes": 11421611,
+              "wall_seconds": 17.834894999978133
+            },
+            "native_traces": 90,
+            "repeat_export": "idempotent",
+            "repeat_import_sha256": "caa799fc775f42d26f2240aefb5d5aab4d8eb5f7c84aebeeec018829ee5d249b"
+          },
+          "omnigent_sessions": {
+            "export": {
+              "cpu_seconds": 2.640625,
+              "peak_tracemalloc_bytes": 1066694,
+              "wall_seconds": 3.1679270000895485
+            },
+            "import": {
+              "cpu_seconds": 3.59375,
+              "peak_tracemalloc_bytes": 2925802,
+              "wall_seconds": 4.219434599974193
+            },
+            "native_traces": 100,
+            "repeat_export": "idempotent",
+            "repeat_import_sha256": "4e2980db8c654b676bf7b093a8f92e79df0dad7dad7641f0cac595f9571b1043",
+            "session_groups": 100
+          },
+          "otlp_large_trace": {
+            "analysis": {
+              "cpu_seconds": 0.03125,
+              "peak_tracemalloc_bytes": 164488,
+              "wall_seconds": 0.039543199934996665
+            },
+            "export": {
+              "cpu_seconds": 0.125,
+              "peak_tracemalloc_bytes": 469190,
+              "wall_seconds": 0.11884999996982515
+            },
+            "import": {
+              "cpu_seconds": 0.75,
+              "peak_tracemalloc_bytes": 756335,
+              "wall_seconds": 0.7804255000082776
+            },
+            "native_traces": 1,
+            "recorded_model_blocks": 100,
+            "repeat_export": "idempotent",
+            "repeat_import_sha256": "169907bccc4a7bc6aba4cf70dcb0a528b77ec946a1fbd0e2d9e8a174a45b46ce"
+          }
+        }
+      },
+      "all_three_import_snapshots_match": true
+    },
+    {
+      "size": 1000,
+      "baseline": {
+        "limitations": [
+          "single samples on a shared host; filesystem cache and competing CPU load uncontrolled",
+          "tracemalloc measures Python allocation peaks, not whole-process RSS",
+          "source runtimes and rewards are owned synthetic data; no provider or task-performance benefit established",
+          "large cases explicitly raise bounded trajectory/reference caps; core defaults unchanged"
+        ],
+        "limits": {
+          "max_depth": 64,
+          "max_events_per_trace": 10000,
+          "max_json_bytes": 8388608,
+          "max_line_bytes": 8388608,
+          "max_metadata_bytes": 65536,
+          "max_nodes": 200000,
+          "max_number_chars": 128,
+          "max_path_depth": 32,
+          "max_records": 10000,
+          "max_references": 8000,
+          "max_spans": 100000,
+          "max_total_bytes": 536870912,
+          "max_trajectories": 2000,
+          "max_trials": 10000
+        },
+        "measurement_scope": "local parser/export/report overhead; generation, startup, repeated-import fingerprint and repeated-export checks excluded",
+        "module_sha256": {
+          "integrations/harbor/trials.py": "323a6f98e003d20d86464e40772836d4575e15927c5fd733fdd59762ee8be8fc",
+          "integrations/omnigent/telemetry.py": "47619ea5156be0ffdc4d2fa3c97582438b34d4a703826fa42e40b96849244e02",
+          "interoperability/coordination.py": "52604f607fd89cce43c3c80fdc7dcb49f0504c591812760f23b4f2fbae6a1e3f",
+          "interoperability/otlp_jsonl.py": "b2092bde3957d4339af1973cd172f538768d156f2175048ba00d7227ad51c906"
+        },
+        "platform": "Windows-11-10.0.26200-SP0",
+        "python": "3.13.12",
+        "schema_version": "1.0",
+        "size": 1000,
+        "source_revision": "560191f000f0e41b2f5455b2e0910cb2c1b2cb24",
+        "synthetic": true,
+        "workloads": {
+          "harbor_job": {
+            "coverage": {
+              "missing_trajectories": 100,
+              "quality_fail": 143,
+              "quality_indeterminate": 0,
+              "quality_pass": 857,
+              "trials_discovered": 1000,
+              "trials_planned": 1001
+            },
+            "export": {
+              "cpu_seconds": 40.859375,
+              "peak_tracemalloc_bytes": 31732502,
+              "wall_seconds": 70.19999860005919
+            },
+            "import": {
+              "cpu_seconds": 152.875,
+              "peak_tracemalloc_bytes": 39461968,
+              "wall_seconds": 301.043654799927
+            },
+            "native_traces": 900,
+            "repeat_export": "idempotent",
+            "repeat_import_sha256": "3243c61961d95760d84d461b4b3cce975a3ae3d1dd8d6b8b55dd4c0fcb1cfc3b"
+          },
+          "omnigent_sessions": {
+            "export": {
+              "cpu_seconds": 28.78125,
+              "peak_tracemalloc_bytes": 10413127,
+              "wall_seconds": 48.797464499948546
+            },
+            "import": {
+              "cpu_seconds": 40.453125,
+              "peak_tracemalloc_bytes": 28732090,
+              "wall_seconds": 58.551043699961156
+            },
+            "native_traces": 1000,
+            "repeat_export": "idempotent",
+            "repeat_import_sha256": "563eaa4745f6af2dfe6e7865d0a9dfe7fbdfb90b727759a009b2ffb7920a9362",
+            "session_groups": 1000
+          },
+          "otlp_large_trace": {
+            "analysis": {
+              "cpu_seconds": 0.296875,
+              "peak_tracemalloc_bytes": 1440220,
+              "wall_seconds": 0.3921202999772504
+            },
+            "export": {
+              "cpu_seconds": 0.84375,
+              "peak_tracemalloc_bytes": 4572326,
+              "wall_seconds": 0.8823714000172913
+            },
+            "import": {
+              "cpu_seconds": 8.28125,
+              "peak_tracemalloc_bytes": 7061974,
+              "wall_seconds": 9.94233680004254
+            },
+            "native_traces": 1,
+            "recorded_model_blocks": 1000,
+            "repeat_export": "idempotent",
+            "repeat_import_sha256": "f71db249bbd170bf3ea22c463a8e8d6e11a7cdbc59f976b3fa7ce8c31c87bb7f"
+          }
+        }
+      },
+      "candidate": {
+        "limitations": [
+          "single samples on a shared host; filesystem cache and competing CPU load uncontrolled",
+          "tracemalloc measures Python allocation peaks, not whole-process RSS",
+          "source runtimes and rewards are owned synthetic data; no provider or task-performance benefit established",
+          "large cases explicitly raise bounded trajectory/reference caps; core defaults unchanged"
+        ],
+        "limits": {
+          "max_depth": 64,
+          "max_events_per_trace": 10000,
+          "max_json_bytes": 8388608,
+          "max_line_bytes": 8388608,
+          "max_metadata_bytes": 65536,
+          "max_nodes": 200000,
+          "max_number_chars": 128,
+          "max_path_depth": 32,
+          "max_records": 10000,
+          "max_references": 8000,
+          "max_spans": 100000,
+          "max_total_bytes": 536870912,
+          "max_trajectories": 2000,
+          "max_trials": 10000
+        },
+        "measurement_scope": "local parser/export/report overhead; generation, startup, repeated-import fingerprint and repeated-export checks excluded",
+        "module_sha256": {
+          "integrations/harbor/trials.py": "3cb1fca041a7d67d52f193c4fbbebc84284e8262cefbede3e4d57705920710f8",
+          "integrations/omnigent/telemetry.py": "4e20c841e6cba88b2d79e4bf8e8efed903733f39d233b694559e64a5ecd1c711",
+          "interoperability/coordination.py": "52604f607fd89cce43c3c80fdc7dcb49f0504c591812760f23b4f2fbae6a1e3f",
+          "interoperability/otlp_jsonl.py": "b2092bde3957d4339af1973cd172f538768d156f2175048ba00d7227ad51c906"
+        },
+        "platform": "Windows-11-10.0.26200-SP0",
+        "python": "3.13.12",
+        "schema_version": "1.0",
+        "size": 1000,
+        "source_revision": "working-tree",
+        "synthetic": true,
+        "workloads": {
+          "harbor_job": {
+            "coverage": {
+              "missing_trajectories": 100,
+              "quality_fail": 143,
+              "quality_indeterminate": 0,
+              "quality_pass": 857,
+              "trials_discovered": 1000,
+              "trials_planned": 1001
+            },
+            "export": {
+              "cpu_seconds": 33.53125,
+              "peak_tracemalloc_bytes": 31732554,
+              "wall_seconds": 51.00078180001583
+            },
+            "import": {
+              "cpu_seconds": 112.109375,
+              "peak_tracemalloc_bytes": 40102386,
+              "wall_seconds": 162.3976140000159
+            },
+            "native_traces": 900,
+            "repeat_export": "idempotent",
+            "repeat_import_sha256": "3243c61961d95760d84d461b4b3cce975a3ae3d1dd8d6b8b55dd4c0fcb1cfc3b"
+          },
+          "omnigent_sessions": {
+            "export": {
+              "cpu_seconds": 13.40625,
+              "peak_tracemalloc_bytes": 10413177,
+              "wall_seconds": 14.133432999951765
+            },
+            "import": {
+              "cpu_seconds": 16.21875,
+              "peak_tracemalloc_bytes": 28758505,
+              "wall_seconds": 16.90435890003573
+            },
+            "native_traces": 1000,
+            "repeat_export": "idempotent",
+            "repeat_import_sha256": "563eaa4745f6af2dfe6e7865d0a9dfe7fbdfb90b727759a009b2ffb7920a9362",
+            "session_groups": 1000
+          },
+          "otlp_large_trace": {
+            "analysis": {
+              "cpu_seconds": 0.171875,
+              "peak_tracemalloc_bytes": 1440220,
+              "wall_seconds": 0.17440180003177375
+            },
+            "export": {
+              "cpu_seconds": 0.53125,
+              "peak_tracemalloc_bytes": 4572327,
+              "wall_seconds": 0.5259510000469163
+            },
+            "import": {
+              "cpu_seconds": 3.9375,
+              "peak_tracemalloc_bytes": 7055764,
+              "wall_seconds": 4.167616099934094
+            },
+            "native_traces": 1,
+            "recorded_model_blocks": 1000,
+            "repeat_export": "idempotent",
+            "repeat_import_sha256": "f71db249bbd170bf3ea22c463a8e8d6e11a7cdbc59f976b3fa7ce8c31c87bb7f"
+          }
+        }
+      },
+      "all_three_import_snapshots_match": true
+    }
+  ]
+}

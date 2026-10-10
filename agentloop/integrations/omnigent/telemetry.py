@@ -385,14 +385,13 @@ def import_omnigent(
         "model_coverage": "unknown_or_observed_partial",
         "session_sidecar": "omnigent-sessions.json",
     }
+    assigned_run_ids = {run_id for group in groups.values() for run_id in group["run_ids"]}
     sessions = {
         "schema_version": "1.0",
         "source": "omnigent",
         "groups": list(groups.values()),
         "unassigned_run_ids": [
-            trace.run_id
-            for trace in imported.traces
-            if not any(trace.run_id in group["run_ids"] for group in groups.values())
+            trace.run_id for trace in imported.traces if trace.run_id not in assigned_run_ids
         ],
     }
     inventory["session_sidecar_sha256"] = sha256(

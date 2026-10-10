@@ -247,6 +247,8 @@ class HarborImportResult:
         return json.loads(self._inventory_json)
 
     def write(self, out: str | Path) -> Path:
+        from agentloop.interoperability.artifacts import write_artifact_chunks
+
         root = Path(out)
         # Reuse byte-bound export for both source projections and measured trials.
         AtifImportResult(
@@ -260,6 +262,22 @@ class HarborImportResult:
         else:
             with target.open("xb") as stream:
                 stream.write(content)
+        inventory = self.inventory()
+        header = {key: value for key, value in inventory.items() if key != "trial_rows"}
+        records = (
+            {"schema_version": "1.0", "record_type": "trial", "trial": row}
+            for row in inventory["trial_rows"]
+        )
+        from itertools import chain
+
+        chunks = (
+            (canonical_json(record) + "\n").encode()
+            for record in chain(
+                ({"schema_version": "1.0", "record_type": "summary", "summary": header},),
+                records,
+            )
+        )
+        write_artifact_chunks(root, "harbor-trials.jsonl", chunks)
         return target
 
 
@@ -268,6 +286,7 @@ class _JobImporter:
         self.root, self.options, self.limits = root, options, limits
         self.budget = ImportBudget(limits)
         self.artifacts: dict[str, JsonArtifact] = {}
+        self.artifact_hashes_by_prefix: dict[str, dict[str, str]] = {}
         self.rows: list[dict] = []
         self.traces: list[AgentTrace] = []
         self.trajectory_receipts: list[ImportReceipt] = []
@@ -314,6 +333,12 @@ class _JobImporter:
             if not isinstance(artifact.payload, dict):
                 fail("artifact", "Harbor metadata must be an object")
             self.artifacts[reference] = artifact
+            parts = reference.split("/")
+            for depth in range(len(parts)):
+                prefix = "/".join(parts[:depth]) + "/" if depth else ""
+                self.artifact_hashes_by_prefix.setdefault(prefix, {})[reference] = (
+                    artifact.artifact_sha256
+                )
             return artifact
         except ImportValidationError as exc:
             if exc.code == "limit_exceeded" or (
@@ -785,11 +810,7 @@ class _JobImporter:
                 "dataset_version": result.get("dataset_version"),
                 "verifier_rewards": dimensions,
                 "usage_scope": "agent context, including reported subagents; setup/verifier scope not inferred",
-                "artifact_hashes": {
-                    key: item.artifact_sha256
-                    for key, item in self.artifacts.items()
-                    if key.startswith(prefix)
-                },
+                "artifact_hashes": dict(self.artifact_hashes_by_prefix.get(prefix, {})),
                 "step_results": step_details,
                 "adapter_contract_revision": TRIAL_CONTRACT_REVISION,
                 "trajectory_run_ids": [trace.run_id for trace in imported],

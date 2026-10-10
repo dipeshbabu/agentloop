@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import fnmatch
+import os
 import re
 import sys
 from pathlib import Path
@@ -29,11 +31,11 @@ REQUIRED_COMMUNITY_FILES = {
 
 
 def markdown_files() -> list[Path]:
-    return sorted(
-        path
-        for path in ROOT.rglob("*.md")
-        if not EXCLUDED_PARTS.intersection(path.relative_to(ROOT).parts)
-    )
+    paths = []
+    for directory, children, files in os.walk(ROOT):
+        children[:] = [name for name in children if name not in EXCLUDED_PARTS]
+        paths.extend(Path(directory) / name for name in files if fnmatch.fnmatch(name, "*.md"))
+    return sorted(paths)
 
 
 def local_link_target(source: Path, raw_target: str) -> Path | None:

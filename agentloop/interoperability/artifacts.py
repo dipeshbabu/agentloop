@@ -25,6 +25,11 @@ def native_bytes(trace: AgentTrace) -> bytes:
 
 def write_artifact(root: Path, reference: str, data: bytes) -> None:
     """Reject indirect paths and conflicting bytes under an explicit output root."""
+    write_artifact_chunks(root, reference, (data,))
+
+
+def write_artifact_chunks(root: Path, reference: str, chunks: Iterable[bytes]) -> None:
+    """Write bounded chunks, comparing an existing artifact without loading it all."""
     relative_reference(reference)
     current = root
     for part in reference.split("/"):
@@ -40,13 +45,20 @@ def write_artifact(root: Path, reference: str, data: bytes) -> None:
     target = root / reference
     target.parent.mkdir(parents=True, exist_ok=True)
     if target.exists():
-        if target.read_bytes() != data:
-            raise ImportValidationError(
-                "output_conflict", "output", "existing artifact has conflicting content"
-            )
+        with target.open("rb") as stream:
+            for chunk in chunks:
+                if stream.read(len(chunk)) != chunk:
+                    raise ImportValidationError(
+                        "output_conflict", "output", "existing artifact has conflicting content"
+                    )
+            if stream.read(1):
+                raise ImportValidationError(
+                    "output_conflict", "output", "existing artifact has conflicting content"
+                )
         return
     with target.open("xb") as stream:
-        stream.write(data)
+        for chunk in chunks:
+            stream.write(chunk)
 
 
 def write_import_bundle(

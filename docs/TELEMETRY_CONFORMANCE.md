@@ -90,6 +90,19 @@ it. Review those fields before sharing exported research artifacts. Native
 `input_text`/`output_text` fields are not automatically emitted as GenAI content
 attributes.
 
+The file adapters documented in [OTLP_JSONL.md](OTLP_JSONL.md) and
+[OMNIGENT_OTEL.md](OMNIGENT_OTEL.md) apply their bounded source contracts and omit
+raw content by default. Their owned fixtures include actual pinned Harbor
+converter outputs, sparse/converter-inferred intervals, duplicates, malformed
+records, unverified policies and separate cross-process traces. Source hashes
+bind supplied bytes; links and session groups create no inferred causal edges.
+The generic core OTLP helper's raw-attribute retention contract above remains
+unchanged. The source-adapter suites are offline:
+
+```bash
+uv run --frozen python -m pytest tests/test_otlp_jsonl.py tests/test_omnigent_telemetry.py tests/test_multiagent_coordination.py -q
+```
+
 Run the offline contracts with:
 
 ```bash

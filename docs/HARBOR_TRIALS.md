@@ -17,6 +17,15 @@ are deliberate; it establishes no empirical optimization result.
 
 ## Source files and inventory
 
+Exports also include `harbor-trials.jsonl`: one complete summary record followed
+by one record per discovered trial, including failures, missing trajectories and
+invalid rows. Records are written and compared incrementally, with conflicting
+bytes rejected. The existing `harbor-inventory.json` remains unchanged. Planned
+unidentified attempts stay in summary counts. See the
+[offline adoption guide](INTEROPERABILITY_READINESS.md) for framing and limits;
+correlated import results retain bounded native objects, rather than claiming
+constant-memory whole-job import.
+
 The adapter reads `result.json`, `config.json`, `lock.json` and
 `agent/trajectory.json` at a trial root, plus `verifier/reward.json` when supplied.
 Only immediate directories with recognized trial metadata are discovered. A
