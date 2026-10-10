@@ -34,7 +34,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:16-alpine
+        image: public.ecr.aws/docker/library/postgres:16-alpine
         env:
           POSTGRES_USER: agentloop
           POSTGRES_PASSWORD: agentloop-ci-test-only
@@ -285,6 +285,8 @@ jobs:
   docker:
     name: Docker image and deployment smoke
     runs-on: ubuntu-latest
+    env:
+      COMPOSE_FILE: docker-compose.yml:.github/docker-compose.ci.yml
 
     steps:
       - name: Checkout
@@ -301,7 +303,14 @@ jobs:
           echo "AGENTLOOP_ADMIN_API_KEY=$admin_key" >> "$GITHUB_ENV"
 
       - name: Build exact image used by Compose
-        run: docker build --tag agentloop:local .
+        shell: bash
+        run: |
+          # Change only the registry for CI; retain the source Python tag and all
+          # application/build instructions. Validate that exactly one base exists.
+          mirror_file="$RUNNER_TEMP/Dockerfile.agentloop-ci"
+          test "$(grep -c '^FROM python:' Dockerfile)" -eq 1
+          sed 's|^FROM python:|FROM public.ecr.aws/docker/library/python:|' Dockerfile > "$mirror_file"
+          docker build --file "$mirror_file" --tag agentloop:local .
 
       - name: Validate Compose configuration without rendering secrets
         run: docker compose config --quiet

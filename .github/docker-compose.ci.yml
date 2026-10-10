@@ -1,0 +1,5 @@
+# Use Docker's official publisher mirror for hosted smoke checks. Production
+# Compose defaults and the database version/health checks remain unchanged.
+services:
+  db:
+    image: public.ecr.aws/docker/library/postgres:16-alpine
