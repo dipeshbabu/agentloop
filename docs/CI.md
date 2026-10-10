@@ -11,6 +11,21 @@ source, and synthetic marker. A missing marker is reported as missing rather tha
 as proof that the data came from production. Comparisons containing synthetic
 data are explicitly qualified. Demo generators continue to mark their traces.
 
+## Hosted container pulls
+
+Hosted Python/Postgres and deployment checks pull Docker's Official Images from
+ECR Public (`public.ecr.aws/docker/library`) to avoid shared unauthenticated
+Docker Hub pull quotas. CI keeps the `postgres:16-alpine` service/version and the
+source Dockerfile's Python tag. Deployment uses a CI-only Compose image override
+and a temporary Dockerfile with only the registry prefix replaced. Production
+Dockerfile/Compose defaults, health checks, database contracts and application
+validation remain unchanged.
+
+Docker lists Python/Postgres in its
+[official ECR publisher gallery](https://gallery.ecr.aws/docker/). These mirrors
+do not replace checks: pull failures still fail CI, and the full interpreter,
+Postgres and deployment tests must run before a PR can merge.
+
 ## Compare application traces
 
 Run your application's baseline and candidate, then upload the resulting trace
