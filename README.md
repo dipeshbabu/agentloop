@@ -61,6 +61,10 @@ The [cross-harness cohort workflow](docs/CROSS_HARNESS_STUDIES.md) compares comp
 Harbor jobs with exact task pairing and independent verifier criteria, while
 retaining failed, missing and unpaired attempts in population reports.
 
+[Coordination reports](docs/MULTIAGENT_EFFICIENCY.md) preserve distinct child
+documents, observed interval overlap and usage attribution, with explicit gaps
+for missing children, caller wait, duplicate-work inputs and review quality.
+
 ## Without and with AgentLoop
 
 <picture>

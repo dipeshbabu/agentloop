@@ -79,7 +79,11 @@ class AtifImportResult:
 
     def write(self, out: str | Path) -> Path:
         """Write stable native files and receipts; conflicting bytes are an error."""
-        return write_import_bundle(self.traces, self.source_receipts, out, self.inventory())
+        from agentloop.interoperability.coordination import write_coordination_report
+
+        inventory = write_import_bundle(self.traces, self.source_receipts, out, self.inventory())
+        write_coordination_report(self.traces, self.source_receipts, inventory.parent)
+        return inventory
 
 
 class _Importer:
@@ -131,6 +135,7 @@ class _Importer:
         if isinstance(value, dict):
             result = {}
             safe_labels = {
+                "role": {"reviewer", "implementer", "responder"},
                 "usage_scope": {
                     "includes_subagents",
                     "self_only",

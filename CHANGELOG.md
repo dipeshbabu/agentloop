@@ -10,6 +10,12 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added [source-bound coordination reports](docs/MULTIAGENT_EFFICIENCY.md) to
+  Harbor/Omnigent exports, retaining distinct actors, explicit delegation and
+  noncausal references, child failures, measured interval coverage and model-leaf
+  usage separate from inclusive totals. Duplicate tool inputs support investigation
+  only; caller wait, unsupported critical paths and review effects remain unknown.
+
 - Added [full-population task-paired source cohorts](docs/CROSS_HARNESS_STUDIES.md),
   retaining failed/missing/unpaired attempts, exact task/config/scorer identity,
   independent correctness/source-coverage gates and task-cluster uncertainty through

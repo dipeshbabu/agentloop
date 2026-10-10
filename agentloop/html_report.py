@@ -64,6 +64,73 @@ def _table(headers: list[str], rows: list[list[str]], *, caption: str) -> str:
     )
 
 
+def coordination_to_html(report: dict[str, Any]) -> str:
+    """Render source-qualified bundle coordination with the local report styles."""
+    sections = [
+        '<!doctype html><html lang="en"><head><meta charset="utf-8">',
+        '<meta name="viewport" content="width=device-width, initial-scale=1">',
+        "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'\">",
+        f"<title>AgentLoop coordination</title><style>{_CSS}</style></head><body><main><h1>Recorded coordination</h1>",
+        '<p class="notice">External observations. Missing timing is unavailable, child runtime is not caller wait, and overlap does not prove independent work. Reviewer labels do not establish correctness.</p>',
+    ]
+    if report["synthetic"]:
+        sections.append(
+            '<p class="notice">Synthetic inputs: no empirical performance or quality benefit is established.</p>'
+        )
+    sections.append(
+        _definition(
+            [
+                ("Recorded handoffs", report["handoff_count"]),
+                (
+                    "Observed / unknown children",
+                    f"{report['observed_child_count']} / {report['unknown_child_count']}",
+                ),
+                ("Recorded child failures", report["child_failure_count"]),
+                ("Caller wait", format_duration_ms(report["handoff_wait_ms"])),
+                ("Observed overlap", format_duration_ms(report["parallel_overlap_ms"])),
+                ("Critical path", format_duration_ms(report["critical_path_ms"])),
+                (
+                    "Possible duplicate work",
+                    report["possible_duplicate_work_count"]
+                    if report["possible_duplicate_work_count"] is not None
+                    else "unavailable",
+                ),
+            ]
+        )
+    )
+    sections.append(
+        _table(
+            ["Agent", "Declared role", "Session / document", "Recorded runtime", "Status"],
+            [
+                [
+                    _text(actor["agent_name"] or "unknown"),
+                    _text(actor["declared_role"] or "unknown"),
+                    _text(
+                        actor["source_identity"]["trajectory_id"]
+                        or actor["session_id"]
+                        or "unknown"
+                    ),
+                    _text(format_duration_ms(actor["runtime_ms"])),
+                    _text(actor["execution_status"]),
+                ]
+                for actor in report["actors"]
+            ],
+            caption="Distinct source actors; shared sessions preserve document and trace identities",
+        )
+    )
+    sections.extend(
+        [
+            "<h2>Evidence coverage and limitations</h2>",
+            _json(report["overlap_coverage"]),
+            "<ul>"
+            + "".join("<li>" + _text(item) + "</li>" for item in report["limitations"])
+            + "</ul>",
+            "<p>Inclusive usage remains separate from attributed model leaves. Retries, safe reuse, review overhead and review quality effects require additional evidence.</p></main></body></html>",
+        ]
+    )
+    return "\n".join(sections)
+
+
 def analysis_to_html(payload: dict[str, Any], *, include_content: bool = False) -> str:
     """Render the combined `analyze` payload. All source values enter as escaped text."""
     required = {"trace", "report", "diagnosis", "optimization"}
