@@ -25,6 +25,12 @@ fields and trial lock schemas 2/3 are documented in
 revision and frozen bytes remain the source of these synthetic fixtures;
 neither revision is an inferred producer identity or a live execution claim.
 
+The Omnigent adapter additionally checked these synthetic tracing projections
+against `a2956be0e97bb175a60b274053d836f07d494c6c` on 2026-10-09. See
+[Omnigent evidence](../../../docs/OMNIGENT_OTEL.md) for recorded aliases,
+session/link gaps and policy-observation limits. Fixture bytes and their original
+matrix provenance remain unchanged; no vendor execution or prevention is claimed.
+
 Fifteen families include untimed operations, omitted cost, shared sessions,
 copied context, aggregated usage, absent trajectories, fractional rewards without
 pass criteria, policy verdicts without enforcement, missing parentage, duplicate

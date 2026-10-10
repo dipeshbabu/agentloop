@@ -112,6 +112,47 @@ def analysis_to_html(payload: dict[str, Any], *, include_content: bool = False) 
                 ]
             )
         )
+    if report.get("omnigent_observations") is not None:
+        observed = report["omnigent_observations"]
+        sections.append(
+            "<h3>Omnigent observations</h3>"
+            + _definition(
+                [
+                    ("Agents", ", ".join(observed["agent_names"]) or "unknown"),
+                    ("Session", observed["source_identity"]["session_id"] or "unknown"),
+                    ("Executor model coverage", observed["model_coverage"]),
+                    ("Policy enforcement", observed["enforcement"]),
+                    ("Task correctness", observed["task_correctness"]),
+                ]
+            )
+            + '<p class="notice">Policy verdicts and tool spans are external observations. A DENY or ASK does not prove prevention or approval. Sessions retain separate trace identities; links do not establish causal dependencies.</p>'
+            + _table(
+                ["Policy", "Phase", "Decision", "Dispatch prevention"],
+                [
+                    [
+                        _text(item["name"] or "unknown"),
+                        _text(item["phase"] or "unknown"),
+                        _text(item["action"]),
+                        _text(item["dispatch_prevention"]),
+                    ]
+                    for item in observed["policy_decisions"]
+                ],
+                caption="Externally reported policy decisions; enforcement remains unverified",
+            )
+            + _table(
+                ["Observed role", "Spans", "Interval union", "Coverage"],
+                [
+                    [
+                        _text(role),
+                        _text(value["spans"]),
+                        _text(format_duration_ms(value["interval_union_ms"])),
+                        _text(value["coverage"]),
+                    ]
+                    for role, value in observed["timing_by_role"].items()
+                ],
+                caption="Role intervals are separate observations; cumulative values can overlap",
+            )
+        )
     if report.get("execution") is not None:
         execution = report["execution"]
         sections.append(

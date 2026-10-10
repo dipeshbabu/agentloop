@@ -10,6 +10,11 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added [offline Omnigent telemetry/session adaptation](docs/OMNIGENT_OTEL.md),
+  source aliases, ALLOW/DENY/ASK observations, separate role intervals, session
+  sidecars and qualified JSON/HTML/CLI. Separate traces and unresolved lineage
+  remain explicit; policy verdicts do not prove enforcement or task correctness.
+
 - Added [bounded OTLP JSON/JSONL batch import](docs/OTLP_JSONL.md) through existing
   OTel semantics, with trace-boundary preservation, exact duplicate/conflict
   checks, late-parent resolution, qualified gaps and local native/HTML exports.
