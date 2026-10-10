@@ -78,6 +78,9 @@ def build_report(trace: Any, *, _aggregate_only: bool = False) -> dict[str, Any]
     from agentloop.interoperability.evidence import qualify_report
 
     qualify_report(trace, report)
+    from agentloop.integrations.harbor.trial_evidence import qualify_trial_report
+
+    qualify_trial_report(trace, report)
     if _aggregate_only:
         return report
     execution = workflow_summary(getattr(trace, "metadata", {}))

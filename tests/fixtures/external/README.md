@@ -12,6 +12,13 @@ The `mixed_job` config/locks are field projections for data import, not complete
 Harbor-executable configurations. OTLP examples are hand-authored protocol data,
 not artifacts from Harbor's converter or an Omnigent vendor executor.
 
+The job/trial importer also checked these field projections against Harbor
+`d5ac1be17f575852eaf4fffc4072fd18481c209b` on 2026-10-09. Its trial/job result
+fields and trial lock schemas 2/3 are documented in
+[Harbor trial evidence](../../../docs/HARBOR_TRIALS.md). The original matrix
+revision and frozen bytes remain the source of these synthetic fixtures;
+neither revision is an inferred producer identity or a live execution claim.
+
 Fifteen families include untimed operations, omitted cost, shared sessions,
 copied context, aggregated usage, absent trajectories, fractional rewards without
 pass criteria, policy verdicts without enforcement, missing parentage, duplicate

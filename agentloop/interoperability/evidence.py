@@ -19,6 +19,23 @@ EXTERNAL_KEY = "agentloop.external"
 def read_external(trace: Any) -> dict[str, Any] | None:
     metadata = getattr(trace, "metadata", {})
     metadata = metadata if isinstance(metadata, Mapping) else {}
+    if "agentloop.harbor_trial" in metadata:
+        from agentloop.integrations.harbor.trial_evidence import read_trial
+
+        trial = read_trial(trace)
+        measurement = trial["measurement"]
+        return {
+            "schema_version": "1.0",
+            "source": {"system": "harbor", "format": "harbor_trial"},
+            "receipt_id": trial["receipt_id"],
+            "runtime_ms": measurement["runtime_ms"],
+            "event_timing_complete": measurement["runtime_ms"] is not None,
+            "execution_status": trial["outcome"]["execution_status"],
+            "usage_complete": measurement["input_tokens"] is not None
+            and measurement["output_tokens"] is not None,
+            "reported_model_call_count": None,
+            "comparison_eligible": True,
+        }
     if EXTERNAL_KEY not in metadata:
         if metadata.get("external_evidence_schema") == "1.0" or any(
             isinstance(event.metadata, Mapping)
@@ -96,6 +113,23 @@ def read_external(trace: Any) -> dict[str, Any] | None:
 
 
 def require_external_comparison(trace: Any, operation: str) -> None:
+    if "agentloop.harbor_trial" in getattr(trace, "metadata", {}):
+        from agentloop.integrations.harbor.trial_evidence import read_trial
+
+        trial = read_trial(trace)
+        # Studies already support missing per-metric values. A captured trial
+        # record is complete evidence even when a measurement is unavailable.
+        if operation == "study":
+            return
+        if trial["measurement"]["runtime_ms"] is None:
+            raise ValueError(
+                f"{operation} requires an externally recorded agent execution interval"
+            )
+        if operation == "value estimates":
+            raise ValueError(
+                "value estimates require finding-level timing; a trial phase is not a model/tool profile"
+            )
+        return
     evidence = read_external(trace)
     if evidence is not None and (
         not evidence["comparison_eligible"]
