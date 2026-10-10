@@ -98,6 +98,20 @@ def analysis_to_html(payload: dict[str, Any], *, include_content: bool = False) 
         sections.append(
             '<p class="notice">No execution spans were supplied. This artifact contains external evaluation metadata.</p>'
         )
+    if report.get("external_evidence") is not None:
+        external = report["external_evidence"]
+        sections.append(
+            '<p class="notice">External execution evidence: source status and usage are reported, not independently verified. Unavailable durations are not measured zero; task correctness requires a separate verifier.</p>'
+            + _definition(
+                [
+                    ("Source system", external["source"].get("system", "unknown")),
+                    ("Source format", external["source"].get("format", "unknown")),
+                    ("Source receipt", external["receipt_id"]),
+                    ("Source execution status", external["execution_status"]),
+                    ("Reported model call multiplicity", external["reported_model_call_count"]),
+                ]
+            )
+        )
     if report.get("execution") is not None:
         execution = report["execution"]
         sections.append(
@@ -190,7 +204,7 @@ def analysis_to_html(payload: dict[str, Any], *, include_content: bool = False) 
             + _json(diagnosis.get("rule_errors", []))
         )
     metrics = [
-        ("Elapsed runtime", f"{report['total_runtime_ms'] / 1000:.3f}s"),
+        ("Elapsed runtime", format_duration_ms(report["total_runtime_ms"], precision=3)),
         ("Recorded spans", report["event_count"]),
         ("Input / output tokens", f"{report['input_tokens']} / {report['output_tokens']}"),
         (
@@ -217,7 +231,8 @@ def analysis_to_html(payload: dict[str, Any], *, include_content: bool = False) 
                 ("Cost completeness", report.get("cost_status", "unknown")),
                 (
                     "Cumulative span time",
-                    f"{report['cumulative_span_time_ms'] / 1000:.3f}s; overlapping/nested work may exceed elapsed runtime",
+                    format_duration_ms(report["cumulative_span_time_ms"], precision=3)
+                    + "; overlapping/nested work may exceed elapsed runtime",
                 ),
             ]
         )
@@ -260,8 +275,13 @@ def analysis_to_html(payload: dict[str, Any], *, include_content: bool = False) 
         '<article class="prediction"><h3>Predicted outcome</h3>'
         + _definition(
             [
-                ("Estimated runtime", f"{after['runtime_ms'] / 1000:.3f}s"),
-                ("Estimated latency reduction", f"{after['latency_reduction_pct']:.2f}%"),
+                ("Estimated runtime", format_duration_ms(after["runtime_ms"], precision=3)),
+                (
+                    "Estimated latency reduction",
+                    "unavailable"
+                    if after["latency_reduction_pct"] is None
+                    else f"{after['latency_reduction_pct']:.2f}%",
+                ),
                 (
                     "Estimated cost",
                     format_cost_usd(after.get("estimated_cost_usd"), after.get("cost_status")),
@@ -481,7 +501,7 @@ def _timeline(trace: AgentTrace, nodes: list[dict[str, Any]], anchors: dict[str,
                 stage_detail += "<p>Depends on: " + ", ".join(links) + "</p>"
             stage_detail += "</details>"
         rows.append(
-            f'<tr id="{anchors[node["node_id"]]}"><td>{_text(node["name"])}<br><code>{_text(node["node_id"])}</code>{stage_detail}</td><td>{_text(node.get("operation_kind", node["event_type"]))}</td><td>{node["duration_ms"]:.3f} ms</td><td>{bar}</td><td>{parent_link}</td></tr>'
+            f'<tr id="{anchors[node["node_id"]]}"><td>{_text(node["name"])}<br><code>{_text(node["node_id"])}</code>{stage_detail}</td><td>{_text(node.get("operation_kind", node["event_type"]))}</td><td>{_text(format_duration_ms(node["duration_ms"], unit="ms", precision=3))}</td><td>{bar}</td><td>{parent_link}</td></tr>'
         )
     return (
         '<section id="timeline"><h2>Execution timeline</h2><div class="table-wrap"><table><caption>Recorded span timing and parent structure. Bars show relative timestamps, not predicted savings.</caption><thead><tr><th scope="col">Span</th><th scope="col">Operation</th><th scope="col">Duration</th><th scope="col">Relative timing</th><th scope="col">Parent</th></tr></thead><tbody>'

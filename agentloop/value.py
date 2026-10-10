@@ -21,6 +21,9 @@ def build_value_report(
     observed financial results.
     """
 
+    from agentloop.interoperability.evidence import require_external_comparison
+
+    require_external_comparison(trace, "value estimates")
     if runs_per_month < 0:
         raise ValueError("runs_per_month must be non-negative")
     if engineer_hourly_rate_usd < 0:

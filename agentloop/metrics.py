@@ -75,6 +75,9 @@ def build_report(trace: Any, *, _aggregate_only: bool = False) -> dict[str, Any]
         "recommendations": [],
         "events": [] if _aggregate_only else [e.to_dict() for e in events],
     }
+    from agentloop.interoperability.evidence import qualify_report
+
+    qualify_report(trace, report)
     if _aggregate_only:
         return report
     execution = workflow_summary(getattr(trace, "metadata", {}))
@@ -167,7 +170,21 @@ def _event_cost_estimate(event: Any, pricing: PricingTable) -> CostEstimate:
             metadata = raw_metadata
         else:
             raise ValueError("metadata must be a mapping")
-
+        if getattr(event, "token_provenance", None) == "external_reported" or (
+            metadata.get("external_evidence_schema") == "1.0"
+        ):
+            return CostEstimate(
+                state="unknown",
+                amount_usd=None,
+                model=event.model,
+                provider=None,
+                pricing_source=None,
+                pricing_as_of=None,
+                input_tokens=event.input_tokens,
+                output_tokens=event.output_tokens,
+                cached_input_tokens=0,
+                unknown_reason="external_usage_not_provider_accounting",
+            )
         provider = metadata.get("provider")
         billing_mode = metadata.get("billing_mode")
         if provider is not None and not isinstance(provider, str):

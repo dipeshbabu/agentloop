@@ -115,9 +115,14 @@ def diagnosis_to_markdown(diagnosis: dict[str, Any]) -> str:
         f"# AgentLoop Diagnosis: {markdown_heading(diagnosis['name'])}",
         "",
         f"- Run ID: {markdown_code_span(diagnosis['run_id'])}",
-        f"- Current runtime: {current['runtime_ms'] / 1000:.2f}s",
-        f"- Estimated runtime after fixes: {after['runtime_ms'] / 1000:.2f}s",
-        f"- Estimated latency reduction: {after['latency_reduction_pct']:.2f}%",
+        f"- Current runtime: {format_duration_ms(current['runtime_ms'])}",
+        f"- Estimated runtime after fixes: {format_duration_ms(after['runtime_ms'])}",
+        "- Estimated latency reduction: "
+        + (
+            "unavailable"
+            if after["latency_reduction_pct"] is None
+            else f"{after['latency_reduction_pct']:.2f}%"
+        ),
         "- Current cost: "
         + format_cost_usd(current.get("estimated_cost_usd"), current.get("cost_status")),
         "- Estimated cost after fixes: "

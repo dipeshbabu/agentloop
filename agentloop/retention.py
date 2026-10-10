@@ -71,6 +71,9 @@ def read_retention(trace) -> dict | None:
 
 
 def require_complete_evidence(trace, analysis: str) -> None:
+    from agentloop.interoperability.evidence import require_external_comparison
+
+    require_external_comparison(trace, analysis)
     evidence = read_retention(trace)
     if evidence is not None and not evidence["complete_evidence"]:
         raise ValueError(

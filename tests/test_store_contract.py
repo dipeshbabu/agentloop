@@ -86,6 +86,22 @@ def test_generic_workflow_metadata_and_operations_roundtrip(store):
     assert loaded.report()["stages"]["route"]["depends_on"] == ["lookup", "priority"]
 
 
+def test_external_atif_unknown_measurements_roundtrip_as_null(store):
+    from pathlib import Path
+
+    from agentloop.integrations.harbor.atif import import_atif
+
+    fixture = Path(__file__).parent / "fixtures/external/harbor/atif_v17_simple.json"
+    trace = import_atif(fixture).traces[0]
+    store.save_trace(trace)
+    loaded = store.get_trace(trace.run_id)
+    assert loaded.to_dict() == trace.to_dict()
+    assert loaded.report()["total_runtime_ms"] is None
+    row = next(item for item in store.list_traces() if item["run_id"] == trace.run_id)
+    assert row["total_runtime_ms"] is None
+    assert row["estimated_cost_usd"] is None
+
+
 def test_semantic_unknown_savings_are_preserved_in_both_backends(store):
     from test_semantic_findings import prepare
 

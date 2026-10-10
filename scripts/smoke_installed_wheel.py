@@ -75,6 +75,22 @@ def smoke(expected_version: str) -> None:
         def cli(*args: str) -> None:
             run("-c", "from agentloop.entrypoint import app; app()", *args)
 
+        fixture = external_fixtures / "harbor" / "atif_v18_multimodal.json"
+        cli("harbor", "import-atif", str(fixture), "--out", "atif", "--synthetic")
+        atif_trace = next((work / "atif" / "traces").glob("*.json"))
+        cli("analyze", str(atif_trace), "--html", "atif.html", "--json-out", "atif-analysis.json")
+        atif_report = read_json(work / "atif-analysis.json")["report"]
+        require(atif_report["total_runtime_ms"] is None, "Missing ATIF latency became zero")
+        require(atif_report["estimated_cost_usd"] is None, "Source counts became priced usage")
+        require(
+            atif_report["token_status"] == "external_reported", "External usage provenance lost"
+        )
+        require(
+            "SYNTHETIC_REASONING_MUST_BE_OMITTED"
+            not in (work / "atif.html").read_text(encoding="utf-8"),
+            "Reasoning leaked into HTML",
+        )
+
         cli("quickstart", "--out", "quickstart.json")
         cli("analyze", "quickstart.json", "--html", "analysis.html", "--json-out", "analysis.json")
         analysis = read_json(work / "analysis.json")

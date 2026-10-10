@@ -102,11 +102,16 @@ class ExecutionGraph:
     elapsed_ms: float | None = None
     execution: dict[str, Any] | None = None
     dependency_mode: str | None = None
+    external_evidence: dict[str, Any] | None = None
 
     @classmethod
     def from_trace(cls, trace: Any) -> "ExecutionGraph":
+        from agentloop.interoperability.evidence import read_external
+
+        external = read_external(trace)
         indexed_events = list(enumerate(trace.events))
-        indexed_events.sort(key=_event_sort_key)
+        if external is None:
+            indexed_events.sort(key=_event_sort_key)
 
         nodes: list[ExecutionNode] = []
         event_by_node_id: dict[str, Any] = {}
@@ -156,7 +161,7 @@ class ExecutionGraph:
                         for source in stage["depends_on"]
                         if source in node_ids
                     )
-        else:
+        elif external is None:
             edges.extend(_inferred_sequence_edges(roots))
         return cls(
             nodes=nodes,
@@ -166,9 +171,12 @@ class ExecutionGraph:
             dependency_mode=("declared" if declared else "inferred_sequence")
             if annotated
             else None,
+            external_evidence=external,
         )
 
-    def total_runtime_ms(self) -> float:
+    def total_runtime_ms(self) -> float | None:
+        if self.external_evidence is not None:
+            return self.external_evidence["runtime_ms"]
         if self.elapsed_ms is not None:
             return max(0.0, self.elapsed_ms)
         intervals = [event_interval_ms(node) for node in self.nodes]
@@ -178,6 +186,11 @@ class ExecutionGraph:
         return cumulative_span_time_ms(self.nodes)
 
     def critical_path(self) -> CriticalPath:
+        if (
+            self.external_evidence is not None
+            and not self.external_evidence["event_timing_complete"]
+        ):
+            raise ValueError("critical path requires measured external event intervals")
         details = self.dependency_summary()
         if details is not None and not details["valid"]:
             raise ValueError(
@@ -288,6 +301,11 @@ class ExecutionGraph:
         )
 
     def bottlenecks(self, limit: int = 5) -> list[dict[str, Any]]:
+        if self.external_evidence is not None and (
+            not self.external_evidence["event_timing_complete"]
+            or self.external_evidence["runtime_ms"] is None
+        ):
+            return []
         total = self.total_runtime_ms() or 1.0
         ranked = sorted(self.nodes, key=lambda node: node.duration_ms, reverse=True)[:limit]
         return [
@@ -303,7 +321,9 @@ class ExecutionGraph:
         result = {
             "nodes": [node.to_dict() for node in self.nodes],
             "edges": [edge.to_dict() for edge in self.edges],
-            "total_runtime_ms": round(self.total_runtime_ms(), 3),
+            "total_runtime_ms": None
+            if self.total_runtime_ms() is None
+            else round(self.total_runtime_ms(), 3),
             "cumulative_span_time_ms": round(cumulative_span_time_ms(self.nodes), 3),
             "critical_path": self._critical_path().to_dict()
             if dependencies is None or dependencies["valid"]
@@ -315,6 +335,27 @@ class ExecutionGraph:
             result["execution"] = self.execution
         if dependencies is not None:
             result["dependency_evidence"] = dependencies
+        if self.external_evidence is not None:
+            result["external_evidence"] = self.external_evidence
+            result["total_runtime_ms"] = self.external_evidence["runtime_ms"]
+            for node in result["nodes"]:
+                if node["event_type"] == "model_call":
+                    for key in ("input_tokens", "output_tokens"):
+                        if node["metadata"].get(key + "_available") is False:
+                            node[key] = None
+                    if node["input_tokens"] is None or node["output_tokens"] is None:
+                        node["total_tokens"] = None
+                if node["metadata"].get("timing_available") is False:
+                    node["duration_ms"] = None
+                if node["metadata"].get("source_status_available") is False:
+                    node["status"] = "unknown"
+            if not self.external_evidence["event_timing_complete"]:
+                result.update(
+                    cumulative_span_time_ms=None,
+                    critical_path={"node_ids": [], "duration_ms": None, "status": "unavailable"},
+                    parallelizable_groups=[],
+                    bottlenecks=[],
+                )
         return result
 
 

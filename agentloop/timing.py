@@ -51,6 +51,13 @@ def event_interval_ms(event: Any) -> tuple[float, float] | None:
     cumulative-duration fallback instead of reporting an almost-zero runtime.
     """
 
+    metadata = getattr(event, "metadata", {})
+    if (
+        isinstance(metadata, dict)
+        and metadata.get("external_evidence_schema") == "1.0"
+        and metadata.get("timing_available") is False
+    ):
+        return None
     started = timestamp_ms(getattr(event, "started_at", None))
     ended = timestamp_ms(getattr(event, "ended_at", None))
     if started is None or ended is None or ended < started:
