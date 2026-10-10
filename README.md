@@ -38,6 +38,11 @@ pipelines. See [AI execution profiling](docs/AI_EXECUTION_PROFILING.md) for the
 trace-to-quality workflow and five offline reference examples. These additions
 are not included in the published `0.7.0` package.
 
+The [Harbor and Omnigent interoperability workstream](docs/INTEROPERABILITY.md)
+starts with internal external-evidence receipts and pinned offline fixtures.
+Importers and cross-harness comparisons are tracked as dependent work; the
+contract alone does not establish support for either runtime.
+
 ## Without and with AgentLoop
 
 <picture>

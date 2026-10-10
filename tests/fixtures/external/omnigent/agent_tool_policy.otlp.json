@@ -1,0 +1,132 @@
+{
+  "resourceSpans": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "omnigent"
+            }
+          }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "omnigent"
+          },
+          "spans": [
+            {
+              "traceId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "spanId": "1111111111111111",
+              "name": "agent",
+              "startTimeUnixNano": "1767225600000000000",
+              "endTimeUnixNano": "1767225601000000000",
+              "attributes": [
+                {
+                  "key": "openinference.span.kind",
+                  "value": {
+                    "stringValue": "AGENT"
+                  }
+                },
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "shared-session"
+                  }
+                },
+                {
+                  "key": "gen_ai.operation.name",
+                  "value": {
+                    "stringValue": "invoke_agent"
+                  }
+                },
+                {
+                  "key": "gen_ai.agent.name",
+                  "value": {
+                    "stringValue": "fixture-agent"
+                  }
+                }
+              ]
+            },
+            {
+              "traceId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "spanId": "2222222222222222",
+              "name": "tool",
+              "startTimeUnixNano": "1767225600000000000",
+              "endTimeUnixNano": "1767225601000000000",
+              "attributes": [
+                {
+                  "key": "openinference.span.kind",
+                  "value": {
+                    "stringValue": "TOOL"
+                  }
+                },
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "shared-session"
+                  }
+                },
+                {
+                  "key": "gen_ai.operation.name",
+                  "value": {
+                    "stringValue": "execute_tool"
+                  }
+                },
+                {
+                  "key": "tool.name",
+                  "value": {
+                    "stringValue": "lookup"
+                  }
+                }
+              ],
+              "parentSpanId": "1111111111111111"
+            },
+            {
+              "traceId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "spanId": "3333333333333333",
+              "name": "guardrail",
+              "startTimeUnixNano": "1767225600000000000",
+              "endTimeUnixNano": "1767225601000000000",
+              "attributes": [
+                {
+                  "key": "openinference.span.kind",
+                  "value": {
+                    "stringValue": "GUARDRAIL"
+                  }
+                },
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "shared-session"
+                  }
+                },
+                {
+                  "key": "policy.name",
+                  "value": {
+                    "stringValue": "read-only"
+                  }
+                },
+                {
+                  "key": "policy.phase",
+                  "value": {
+                    "stringValue": "pre_tool"
+                  }
+                },
+                {
+                  "key": "policy.action",
+                  "value": {
+                    "stringValue": "DENY"
+                  }
+                }
+              ],
+              "parentSpanId": "1111111111111111"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

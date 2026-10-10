@@ -1,0 +1,18 @@
+{
+  "schema_version": 2,
+  "task": {
+    "name": "blue-card",
+    "type": "local",
+    "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "agent": {
+    "name": "fixture",
+    "model_name": "fixture-model"
+  },
+  "environment": {
+    "type": "docker"
+  },
+  "verifier": {
+    "environment_mode": "shared"
+  }
+}
