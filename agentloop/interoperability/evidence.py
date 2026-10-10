@@ -157,7 +157,9 @@ def qualify_report(trace: Any, report: dict[str, Any]) -> None:
     report["rule_abstentions"] = [
         {
             "rule_id": "cache_context",
-            "reason": "ATIF does not provide the actual provider input context",
+            "reason": "ATIF does not provide the actual provider input context"
+            if evidence["source"].get("format") == "atif"
+            else "Imported telemetry does not establish the complete provider input context",
         },
     ]
     models = [event for event in trace.events if event.event_type == "model_call"]

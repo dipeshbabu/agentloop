@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
@@ -15,6 +14,8 @@ from agentloop.integrations.harbor.atif_validation import (
     timestamp,
     validate_trajectory,
 )
+from agentloop.interoperability.artifacts import native_bytes as _native_bytes
+from agentloop.interoperability.artifacts import write_import_bundle
 from agentloop.interoperability.contracts import (
     IDENTITY_FIELDS,
     ImportReceipt,
@@ -28,7 +29,6 @@ from agentloop.interoperability.validation import (
     ImportLimits,
     ImportValidationError,
     JsonArtifact,
-    indirect_path,
     load_json_artifact,
     relative_reference,
 )
@@ -49,12 +49,6 @@ class AtifOptions:
     def __post_init__(self) -> None:
         if any(type(value) is not bool for value in vars(self).values()):
             fail("options", "capture and validation options must be boolean")
-
-
-def _native_bytes(trace: AgentTrace) -> bytes:
-    return (
-        json.dumps(trace.to_dict(), indent=2, ensure_ascii=False, allow_nan=False) + "\n"
-    ).encode("utf-8")
 
 
 @dataclass(frozen=True)
@@ -85,47 +79,7 @@ class AtifImportResult:
 
     def write(self, out: str | Path) -> Path:
         """Write stable native files and receipts; conflicting bytes are an error."""
-        expected = {
-            item["run_id"]: item["trace_sha256"]
-            for receipt in self.source_receipts
-            for item in receipt.to_dict()["traces"]
-        }
-        for trace in self.traces:
-            if sha256(_native_bytes(trace)).hexdigest() != expected.get(trace.run_id):
-                fail("native_trace", "trace changed after receipt capture", "source_conflict")
-        root = Path(out)
-        root.mkdir(parents=True, exist_ok=True)
-        root = root.resolve()
-
-        def write(reference: str, data: bytes) -> None:
-            relative_reference(reference)
-            target = root / reference
-            current = root
-            for part in reference.split("/"):
-                current = current / part
-                try:
-                    indirect = indirect_path(current)
-                except FileNotFoundError:
-                    indirect = False
-                if indirect:
-                    fail("output", "output references cannot be symlinks", "unsafe_path")
-            target.parent.mkdir(parents=True, exist_ok=True)
-            if target.exists():
-                if target.read_bytes() != data:
-                    fail("output", "existing artifact has conflicting content", "output_conflict")
-                return
-            with target.open("xb") as stream:
-                stream.write(data)
-
-        for trace in self.traces:
-            write(f"traces/{trace.run_id}.json", _native_bytes(trace))
-        for receipt in self.source_receipts:
-            write(
-                f"receipts/{receipt.receipt_id}.json",
-                (canonical_json(receipt.to_dict()) + "\n").encode(),
-            )
-        write("inventory.json", (canonical_json(self.inventory()) + "\n").encode())
-        return root / "inventory.json"
+        return write_import_bundle(self.traces, self.source_receipts, out, self.inventory())
 
 
 class _Importer:
