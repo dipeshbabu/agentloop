@@ -75,7 +75,12 @@ trajectory/reference caps and record every applied limit.
 
 Repeated imports have stable receipt/native fingerprints. Repeated exports accept
 identical bytes and reject conflicting files, later-record differences, trailing
-content and indirect output references. When upgrading an adapter, select a fresh
+content and indirect output references. Raised producer/write errors remove a new
+partial artifact so the export can be retried; existing complete artifacts remain
+unchanged. Both study writers check every generated condition folder before
+exporting any condition, including dangling symlinks and junctions. These checks
+assume a stable local tree and do not provide a concurrent filesystem sandbox.
+When upgrading an adapter, select a fresh
 output directory for changed projections. Source hashes establish supplied-byte
 consistency, not authenticity, verifier integrity or provider billing.
 
