@@ -13,7 +13,11 @@ from typing import Any
 from agentloop.integrations.harbor.trial_evidence import PAIRING_KEYS, attach_trial
 from agentloop.integrations.harbor.trials import HarborImportResult, HarborOptions, import_harbor
 from agentloop.integrations.harbor.verifier import ScoringContract, external_outcome
-from agentloop.interoperability.artifacts import native_bytes, write_artifact
+from agentloop.interoperability.artifacts import (
+    native_bytes,
+    output_artifact_path,
+    write_artifact,
+)
 from agentloop.interoperability.cohort_evidence import (
     COHORT_KEY,
     COHORT_PAIRING_KEYS,
@@ -456,10 +460,14 @@ def write_cohort_study(
         InterventionRecord.from_dict(record.to_dict())
     root.mkdir(parents=True, exist_ok=True)
     root = root.resolve()
+    folders = {
+        condition: output_artifact_path(root, f"condition-{index}")
+        for index, condition in enumerate(sorted(conditions))
+    }
     paths, populations, observations = {}, {}, {}
     for index, (condition, result) in enumerate(sorted(conditions.items())):
         folder = f"condition-{index}"
-        result.write(root / folder)
+        result.write(folders[condition])
         inventory = result.inventory()
         inventory_serialized = canonical_json(inventory).encode()
         inventory_sha256 = sha256(inventory_serialized + b"\n").hexdigest()
