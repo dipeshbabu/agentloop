@@ -7,7 +7,6 @@ import math
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from hashlib import sha256
-from html import escape
 from pathlib import Path
 from typing import Any
 
@@ -575,64 +574,9 @@ def write_cohort_study(
     }
     serialized = canonical_json(report)
     write_artifact(root, "cohort-report.json", (serialized + "\n").encode())
-    sections = [
-        "<!doctype html><html lang='en'><meta charset='utf-8'><title>AgentLoop external cohort</title><body>",
-        "<h1>" + escape(name) + "</h1>",
-        "<p>External source evidence. Correctness, execution and source coverage are independent gates. No causal harness effect or estimator attribution is invented.</p>",
-    ]
-    if report["synthetic"]:
-        sections.append(
-            "<p>Synthetic inputs: these reports demonstrate validation and do not establish empirical performance benefits.</p>"
-        )
-    for condition, population in populations.items():
-        sections.extend(
-            [
-                "<h2>" + escape(condition) + "</h2>",
-                "<p>"
-                + str(population["denominator"])
-                + " attempts retained; "
-                + str(population["accepted"])
-                + " accepted, "
-                + str(population["rejected"])
-                + " rejected, "
-                + str(population["acceptance_indeterminate"])
-                + " indeterminate.</p>",
-            ]
-        )
-    for condition, comparison in comparisons.items():
-        sections.extend(
-            [
-                "<h2>Baseline vs " + escape(condition) + "</h2>",
-                "<p>Comparison: "
-                + escape(comparison["comparison_kind"])
-                + "; causal harness effect not established.</p><table><caption>Independent task-quality and source-evidence gates</caption><tr><th>Task</th><th>Outcome</th><th>Runtime improvement</th></tr>",
-            ]
-        )
-        for pair in comparison["pairs"]:
-            sections.append(
-                "<tr><td>"
-                + escape(str(pair["pairing_metadata"]["task_id"]))
-                + "</td><td>"
-                + escape(pair["state"])
-                + "</td><td>"
-                + escape(
-                    str(pair["runtime_improvement_pct"])
-                    if pair["runtime_improvement_pct"] is not None
-                    else "unavailable"
-                )
-                + "</td></tr>"
-            )
-        sections.append(
-            "</table><p>Unpaired records: "
-            + str(comparison["unpaired_count"])
-            + "; planned unidentified candidate attempts: "
-            + str(
-                comparison["quality_preserving_intervention_rate"]["unidentified_planned_attempts"]
-            )
-            + ".</p>"
-        )
-    sections.append("</body></html>")
-    write_artifact(root, "cohort-report.html", "\n".join(sections).encode())
+    from agentloop.html_report import cohort_to_html
+
+    write_artifact(root, "cohort-report.html", cohort_to_html(report).encode())
     return CohortStudyResult(manifest_path, serialized)
 
 

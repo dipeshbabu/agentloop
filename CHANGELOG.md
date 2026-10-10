@@ -10,6 +10,12 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added an [offline interoperability adoption guide](docs/INTEROPERABILITY_READINESS.md),
+  a reproducible synthetic scalability generator, incremental Harbor inventory
+  JSONL export and shared cohort HTML styles/content policy. Indexed source hashes
+  and session membership avoid repeated scans; repository checks prune excluded
+  dependency/build directories while retaining eligible link checks.
+
 - Added [source-bound coordination reports](docs/MULTIAGENT_EFFICIENCY.md) to
   Harbor/Omnigent exports, retaining distinct actors, explicit delegation and
   noncausal references, child failures, measured interval coverage and model-leaf
