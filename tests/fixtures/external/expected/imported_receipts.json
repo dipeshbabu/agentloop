@@ -1,0 +1,137 @@
+[
+  {
+    "completeness": {
+      "cost": "unknown",
+      "parentage": "unknown",
+      "quality": "missing",
+      "timing": "partial",
+      "trajectory": "missing",
+      "usage": "unknown"
+    },
+    "external_identity": {
+      "job_id": null,
+      "session_id": null,
+      "step_id": null,
+      "task_digest": null,
+      "task_id": null,
+      "trace_id": null,
+      "trajectory_id": null,
+      "trial_id": "00000000-0000-0000-0000-000000000003"
+    },
+    "identity_provenance": {
+      "job_id": "unknown",
+      "session_id": "unknown",
+      "step_id": "unknown",
+      "task_digest": "unknown",
+      "task_id": "unknown",
+      "trace_id": "unknown",
+      "trajectory_id": "unknown",
+      "trial_id": "external_reported"
+    },
+    "missing_trace_reason": "missing_artifact",
+    "notices": [
+      {
+        "artifact": "exception/result.json",
+        "code": "missing_trajectory",
+        "field": null,
+        "record": null,
+        "severity": "warning"
+      }
+    ],
+    "outcome": {
+      "execution_status": "failed",
+      "quality_basis": "unavailable",
+      "quality_pass": null,
+      "scoring_contract": null,
+      "verifier_dimensions": {},
+      "verifier_isolation": "unknown",
+      "verifier_status": "missing"
+    },
+    "receipt_id": "receipt_d2eae14e03b5ebd6f5c4c40ef44e9e3233c0e4f912b7246d51c46ebb32220136",
+    "relationships": [],
+    "schema_version": "1.0",
+    "source": {
+      "artifact_reference": "exception/result.json",
+      "artifact_sha256": "44a56acaa2c742f328c84632f90cc3e566496b14cdec9c0ed8610a08e02a51e4",
+      "format": "harbor_trial",
+      "format_version": null,
+      "producer_revision": "07ad34000e4c481451b1a0ea30a4a09548d6de8b",
+      "producer_version": "0.24.0",
+      "system": "harbor",
+      "trust": "external_reported"
+    },
+    "source_metadata": {
+      "exception_type": "AgentError",
+      "synthetic": true
+    },
+    "traces": []
+  },
+  {
+    "completeness": {
+      "cost": "unknown",
+      "parentage": "unknown",
+      "quality": "complete",
+      "timing": "missing",
+      "trajectory": "complete",
+      "usage": "partial"
+    },
+    "external_identity": {
+      "job_id": null,
+      "session_id": null,
+      "step_id": null,
+      "task_digest": null,
+      "task_id": null,
+      "trace_id": null,
+      "trajectory_id": null,
+      "trial_id": "00000000-0000-0000-0000-000000000007"
+    },
+    "identity_provenance": {
+      "job_id": "unknown",
+      "session_id": "unknown",
+      "step_id": "unknown",
+      "task_digest": "unknown",
+      "task_id": "unknown",
+      "trace_id": "unknown",
+      "trajectory_id": "unknown",
+      "trial_id": "external_reported"
+    },
+    "missing_trace_reason": "untimed_operations",
+    "notices": [
+      {
+        "artifact": "uninterpreted/agent/trajectory.json",
+        "code": "untimed_operations",
+        "field": "steps",
+        "record": null,
+        "severity": "warning"
+      }
+    ],
+    "outcome": {
+      "execution_status": "completed",
+      "quality_basis": "external_uninterpreted_reward",
+      "quality_pass": null,
+      "scoring_contract": null,
+      "verifier_dimensions": {
+        "correctness": 0.5
+      },
+      "verifier_isolation": "shared",
+      "verifier_status": "available"
+    },
+    "receipt_id": "receipt_8c62764956148a0990f1a6d42ec3df398c5a28c0298078d445bc324044c0e341",
+    "relationships": [],
+    "schema_version": "1.0",
+    "source": {
+      "artifact_reference": "uninterpreted/result.json",
+      "artifact_sha256": "4efc597950c315ab7dce354fcb646f35d971ca7169b818f24cb6306b05cffe20",
+      "format": "harbor_trial",
+      "format_version": null,
+      "producer_revision": "07ad34000e4c481451b1a0ea30a4a09548d6de8b",
+      "producer_version": "0.24.0",
+      "system": "harbor",
+      "trust": "external_reported"
+    },
+    "source_metadata": {
+      "synthetic": true
+    },
+    "traces": []
+  }
+]

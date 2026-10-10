@@ -1,0 +1,53 @@
+{
+  "id": "00000000-0000-0000-0000-000000000008",
+  "task_name": "blue-card",
+  "trial_name": "multistep",
+  "trial_uri": "file:///synthetic/multistep",
+  "task_id": {
+    "path": "tasks/blue-card"
+  },
+  "task_checksum": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "config": {
+    "task": {
+      "path": "tasks/blue-card"
+    },
+    "agent": {
+      "name": "fixture",
+      "model_name": "fixture-model"
+    },
+    "environment": {
+      "type": "docker"
+    },
+    "verifier": {
+      "disable": false
+    }
+  },
+  "agent_info": {
+    "name": "fixture",
+    "version": "1",
+    "model_info": {
+      "name": "fixture-model"
+    }
+  },
+  "agent_execution": null,
+  "verifier_result": null,
+  "verifier_environment_mode": null,
+  "step_results": [
+    {
+      "step_name": "prepare",
+      "verifier_result": {
+        "rewards": {
+          "correctness": 1.0
+        }
+      }
+    },
+    {
+      "step_name": "answer",
+      "verifier_result": {
+        "rewards": {
+          "correctness": 0.0
+        }
+      }
+    }
+  ]
+}

@@ -10,6 +10,12 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added the internal [external evidence receipt contract](docs/INTEROPERABILITY.md),
+  bounded data-only JSON/path validation and fifteen pinned synthetic fixture
+  families for Harbor/Omnigent interoperability. Missing traces and unknown
+  quality stay explicit; reward interpretation requires a hashed scoring contract.
+  Source importers and cross-harness studies remain dependent workstreams.
+
 - Documented the completed [optimization evidence roadmap review](docs/OPTIMIZATION_EVIDENCE_REVIEW.md),
   linking all eleven workstreams to merged implementations, conformance checks,
   reproducible studies and remaining evidence/release limitations.

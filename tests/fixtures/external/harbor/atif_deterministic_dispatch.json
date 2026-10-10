@@ -1,0 +1,25 @@
+{
+  "schema_version": "ATIF-v1.7",
+  "trajectory_id": "deterministic",
+  "session_id": "shared-session",
+  "agent": {
+    "name": "synthetic-agent",
+    "version": "fixture-1",
+    "model_name": "fixture-model"
+  },
+  "steps": [
+    {
+      "step_id": 1,
+      "source": "agent",
+      "message": "Dispatch lookup",
+      "llm_call_count": 0,
+      "tool_calls": [
+        {
+          "tool_call_id": "lookup-1",
+          "function_name": "lookup",
+          "arguments": {}
+        }
+      ]
+    }
+  ]
+}

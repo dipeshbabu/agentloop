@@ -1,0 +1,240 @@
+{
+  "schema_version": "1.0",
+  "generated": "owned_synthetic",
+  "inspected_at": "2026-10-09",
+  "families": [
+    {
+      "family": "atif_v17",
+      "path": "harbor/atif_v17_simple.json",
+      "expected": {
+        "model_calls": 1,
+        "input_tokens": 12,
+        "cached_subset": 4,
+        "timing": "missing",
+        "cost": "missing"
+      }
+    },
+    {
+      "family": "atif_v18_multimodal",
+      "path": "harbor/atif_v18_multimodal.json",
+      "expected": {
+        "references_read": 0,
+        "reasoning_exported": false,
+        "token_ids_exported": false,
+        "audio_is_model_latency": false
+      }
+    },
+    {
+      "family": "atif_shared_session_subagents",
+      "path": "harbor/atif_embedded_subagents.json",
+      "expected": {
+        "documents": 3,
+        "distinct_native_run_ids": 3,
+        "session_groups": 1,
+        "aggregate_is_additive": false
+      }
+    },
+    {
+      "family": "atif_continuation",
+      "path": "harbor/atif_continuation.json",
+      "expected": {
+        "documents": 2,
+        "copied_model_calls": 0,
+        "continuation_is_causal_dependency": false
+      }
+    },
+    {
+      "family": "atif_deterministic",
+      "path": "harbor/atif_deterministic_dispatch.json",
+      "expected": {
+        "model_calls": 0,
+        "tool_results": "missing",
+        "timing": "missing"
+      }
+    },
+    {
+      "family": "atif_aggregated",
+      "path": "harbor/atif_aggregated_llm_calls.json",
+      "expected": {
+        "model_blocks": 1,
+        "source_call_multiplicity": 3,
+        "fabricated_per_call_spans": 0
+      }
+    },
+    {
+      "family": "harbor_mixed_job",
+      "path": "harbor/mixed_job",
+      "expected": {
+        "trials": 8,
+        "single_step_trajectories": 3,
+        "step_trajectories": 2,
+        "quality_without_contract": null,
+        "task_code_executed": false,
+        "config_contract": "projection"
+      }
+    },
+    {
+      "family": "omnigent_policy",
+      "path": "omnigent/agent_tool_policy.otlp.json",
+      "expected": {
+        "operations": {
+          "agent": 1,
+          "tool": 1,
+          "guardrail": 1
+        },
+        "policy_action": "DENY",
+        "pre_dispatch_prevention_proven": false,
+        "llm_coverage": "unknown"
+      }
+    },
+    {
+      "family": "omnigent_multi_trace_session",
+      "path": "omnigent/parent_child_multi_trace.otlp.json",
+      "expected": {
+        "traces": 2,
+        "session_groups": 1,
+        "cross_trace_parent_edges": 0,
+        "span_links": 1
+      }
+    },
+    {
+      "family": "omnigent_unverified_policy",
+      "path": "omnigent/unverified_policy_decision.otlp.json",
+      "expected": {
+        "policy_action": "DENY",
+        "dispatch_observed": false,
+        "enforcement": "unknown"
+      }
+    },
+    {
+      "family": "omnigent_missing_parent",
+      "path": "omnigent/missing_parentage.otlp.json",
+      "expected": {
+        "unresolved_parents": 1,
+        "fabricated_parents": 0
+      }
+    },
+    {
+      "family": "otlp_two_records",
+      "path": "otlp/two_records.jsonl",
+      "expected": {
+        "records": 2,
+        "traces": 2
+      }
+    },
+    {
+      "family": "otlp_partial_records",
+      "path": "otlp/malformed_mixed_valid.jsonl",
+      "expected": {
+        "invalid_records": 1,
+        "valid_later_records": 1
+      }
+    },
+    {
+      "family": "otlp_duplicate_segments",
+      "path": "otlp/duplicate_trace_ids.jsonl",
+      "expected": {
+        "records": 3,
+        "traces": 1,
+        "identical_duplicate_spans": 1,
+        "unique_spans": 2
+      }
+    },
+    {
+      "family": "hostile_and_sparse_contracts",
+      "path": "hostile_cases.json",
+      "expected": {
+        "parser_rejects": true,
+        "external_references_read": 0,
+        "adapter_semantics": "pending dependent PRs"
+      }
+    }
+  ],
+  "sources": [
+    {
+      "system": "agentloop",
+      "revision": "69cfcb1cf82061fb70229465e296d821f650283d",
+      "release": "v0.7.0",
+      "native_schema_version": "1.1",
+      "url": "https://github.com/dipeshbabu/agentloop",
+      "license": "Apache-2.0"
+    },
+    {
+      "system": "harbor",
+      "revision": "07ad34000e4c481451b1a0ea30a4a09548d6de8b",
+      "release": "v0.24.0",
+      "formats": [
+        "ATIF-v1.7",
+        "ATIF-v1.8",
+        "OTLP JSON"
+      ],
+      "url": "https://github.com/harbor-framework/harbor",
+      "license": "Apache-2.0"
+    },
+    {
+      "system": "omnigent",
+      "revision": "713673e9d48cf09cb71fd3a90ae45856ada288d1",
+      "release": "v0.17.0",
+      "formats": [
+        "OTLP JSON"
+      ],
+      "url": "https://github.com/omnigent-ai/omnigent",
+      "license": "Apache-2.0"
+    }
+  ],
+  "files_sha256": {
+    "expected/counters_and_completeness.json": "9f5be42faa046c46e0dfa5e4ce96ac99cac890caa4eac6445d88df343dd8a963",
+    "expected/imported_receipts.json": "eb94e2cb95b2096603f29b15dfc959b21586cf52c148d4bd09f114b57d940f9e",
+    "harbor/atif_aggregated_llm_calls.json": "484b15600e40a477bb679c3e81c0d143defd36aeca78ec613c1e623a7d84f3c1",
+    "harbor/atif_continuation.json": "e404a5815d615ff8085b7046da62baaba19b385a3d7cdb62b19d6839d0cf9677",
+    "harbor/atif_deterministic_dispatch.json": "460cc45d1b1916dffc5e3f143d386a68152f1566943be75c0b34185f6f670526",
+    "harbor/atif_embedded_subagents.json": "62db31be5519c41ef5552fe374daba6aecaaa57abc43ae9006ffb605236fbc8c",
+    "harbor/atif_v17_simple.json": "fa6bcf9c43cf4485cdc936e0d74f6e52bacc970a266e61fc8394c47872de93ce",
+    "harbor/atif_v18_multimodal.json": "fc16f7c3e1f2fc7fe38cd18514bb5cd258ae9b4691eb543d9c6f1096202d3517",
+    "harbor/continuation_segment.json": "86d58971e4e1e31a831e95756ce118a5f283e439a1ad33c0371d1a219168742e",
+    "harbor/mixed_job/cancelled/config.json": "fa011b7e2adfdf8b96607f1a589cb6d17fcedb150112e7da6c741c78b580b80d",
+    "harbor/mixed_job/cancelled/lock.json": "119f0eb6d2b0ef335563a6d0de11cc21ca7b3c6f85dd5507cebadddcbb712782",
+    "harbor/mixed_job/cancelled/result.json": "01d5bc398e9d4ef85f8ff9c4608fb7d219715c113801665fc380e3f6b1fa8df8",
+    "harbor/mixed_job/config.json": "152bd03c662d777e4e6f91e6e1c77d9d98ed0bbdf5ea2355c613089ed2ecd65d",
+    "harbor/mixed_job/exception/config.json": "fa011b7e2adfdf8b96607f1a589cb6d17fcedb150112e7da6c741c78b580b80d",
+    "harbor/mixed_job/exception/lock.json": "119f0eb6d2b0ef335563a6d0de11cc21ca7b3c6f85dd5507cebadddcbb712782",
+    "harbor/mixed_job/exception/result.json": "44a56acaa2c742f328c84632f90cc3e566496b14cdec9c0ed8610a08e02a51e4",
+    "harbor/mixed_job/missing_trajectory/config.json": "fa011b7e2adfdf8b96607f1a589cb6d17fcedb150112e7da6c741c78b580b80d",
+    "harbor/mixed_job/missing_trajectory/lock.json": "119f0eb6d2b0ef335563a6d0de11cc21ca7b3c6f85dd5507cebadddcbb712782",
+    "harbor/mixed_job/missing_trajectory/result.json": "e5e6f68efd0b33c9d3c67a32581d45c1a5b6f3f7a1c7696eec117ae686be17ae",
+    "harbor/mixed_job/missing_trajectory/verifier/reward.json": "23f5c22777ef859a9b765f94a101f08ebc389dd3266893a54a2f5ec66f896214",
+    "harbor/mixed_job/multistep/config.json": "fa011b7e2adfdf8b96607f1a589cb6d17fcedb150112e7da6c741c78b580b80d",
+    "harbor/mixed_job/multistep/lock.json": "119f0eb6d2b0ef335563a6d0de11cc21ca7b3c6f85dd5507cebadddcbb712782",
+    "harbor/mixed_job/multistep/result.json": "2c1c85a302b2b6ec67801c1620d83e23c36bc1583d2eada51f93b34de62274cc",
+    "harbor/mixed_job/multistep/steps/answer/agent/trajectory.json": "5644d740668adab547c84f2f9ad309acd6bbcd5693c9a2479cfd02cdc7e6f642",
+    "harbor/mixed_job/multistep/steps/answer/config.json": "851ee05e9a222f44490d8e14c19b0bc096aea3060ce2aef0aa25aab1855d0f15",
+    "harbor/mixed_job/multistep/steps/prepare/agent/trajectory.json": "27b33a17ad7093fe362bce9c5fbabe905018f6b497840c4dcff4809e427588e7",
+    "harbor/mixed_job/multistep/steps/prepare/config.json": "dd5455e5279901793f5f90def89d0038440c803c29dc0de667d0de8a379863c4",
+    "harbor/mixed_job/pass/agent/trajectory.json": "7e4a4bc783e34f0f8eed26ac5efd8bda60fc649ee23faa196aef1f0d4f564819",
+    "harbor/mixed_job/pass/config.json": "fa011b7e2adfdf8b96607f1a589cb6d17fcedb150112e7da6c741c78b580b80d",
+    "harbor/mixed_job/pass/lock.json": "119f0eb6d2b0ef335563a6d0de11cc21ca7b3c6f85dd5507cebadddcbb712782",
+    "harbor/mixed_job/pass/result.json": "e3b23ad6eac65dac1c6d1859812074df3aa20834e732bc29cd5d1634fa8d9e18",
+    "harbor/mixed_job/pass/verifier/reward.json": "23f5c22777ef859a9b765f94a101f08ebc389dd3266893a54a2f5ec66f896214",
+    "harbor/mixed_job/quality_fail/agent/trajectory.json": "ed17aaf65caea2bc6709d5aac1ed23a9d9a6e33313833e3d563917894364e3c7",
+    "harbor/mixed_job/quality_fail/config.json": "fa011b7e2adfdf8b96607f1a589cb6d17fcedb150112e7da6c741c78b580b80d",
+    "harbor/mixed_job/quality_fail/lock.json": "119f0eb6d2b0ef335563a6d0de11cc21ca7b3c6f85dd5507cebadddcbb712782",
+    "harbor/mixed_job/quality_fail/result.json": "a001915651870f9244e8984bdfda506fd9eaa41e0d04929cd737619e88e7b968",
+    "harbor/mixed_job/quality_fail/verifier/reward.json": "768ba4cf13ac4210cbac704e37a254cb09e2484518ebcfa60ce22ff8cda439f1",
+    "harbor/mixed_job/timeout/config.json": "fa011b7e2adfdf8b96607f1a589cb6d17fcedb150112e7da6c741c78b580b80d",
+    "harbor/mixed_job/timeout/lock.json": "119f0eb6d2b0ef335563a6d0de11cc21ca7b3c6f85dd5507cebadddcbb712782",
+    "harbor/mixed_job/timeout/result.json": "3247fbf7d4d2bfe71e98e0e28d767cdc66b84525e11d8278f4a1e65ff39a2c37",
+    "harbor/mixed_job/uninterpreted/agent/trajectory.json": "7de4470148da9a47d8c7ad7a30d3e74e756fe16658855e510e062d865cd1a97e",
+    "harbor/mixed_job/uninterpreted/config.json": "fa011b7e2adfdf8b96607f1a589cb6d17fcedb150112e7da6c741c78b580b80d",
+    "harbor/mixed_job/uninterpreted/lock.json": "3db110b0ca55bb09054a8dd7be30cddf3f9f479555166b03a9d46d43f983f6a8",
+    "harbor/mixed_job/uninterpreted/result.json": "4efc597950c315ab7dce354fcb646f35d971ca7169b818f24cb6306b05cffe20",
+    "harbor/mixed_job/uninterpreted/verifier/reward.json": "df2ebbcfdc434251cc2ee0500e22de9776093d4ebd75c5666e6b3d3feb4ce647",
+    "hostile_cases.json": "8c6c5d5eda38ad0204ca521c085c5aa0ca089e09b4e74261369e81c93bce7f05",
+    "omnigent/agent_tool_policy.otlp.json": "865b10c811cd61ce4fa4c16adac5e80742e8c8f66113ea3641153c56a8633403",
+    "omnigent/missing_parentage.otlp.json": "5d1c02d2f371bf47c3786828e696e05e9dda5bae58d56e89b41776fbe2cb7b9a",
+    "omnigent/parent_child_multi_trace.otlp.json": "85579f6effbb8945ece09ddc118e8fb989498081369d240434e6d41818f00770",
+    "omnigent/unverified_policy_decision.otlp.json": "32af01529d2c77ac65a84bf105cea718928b098c7d0ac552b32093cfd8dc5b4f",
+    "otlp/duplicate_trace_ids.jsonl": "ee43bfb9fa05cc907f5889fad08ed4dfb2c8decc0db06ce6bbb705f05d6b433c",
+    "otlp/malformed_mixed_valid.jsonl": "0b551753c026a648f428915df4b617241d33d35820bbd7c1f4f317d9763d410d",
+    "otlp/two_records.jsonl": "8575d970bc70d49910c58814378f8841274ea78c9af4f86f16a307ce2bf3bdfe"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "task": {
+    "path": "tasks/blue-card"
+  },
+  "agent": {
+    "name": "fixture",
+    "model_name": "fixture-model"
+  },
+  "environment": {
+    "type": "docker"
+  },
+  "verifier": {
+    "disable": false
+  }
+}

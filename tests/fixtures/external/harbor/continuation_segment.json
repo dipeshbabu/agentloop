@@ -1,0 +1,29 @@
+{
+  "schema_version": "ATIF-v1.7",
+  "trajectory_id": "continued",
+  "session_id": "shared-session",
+  "agent": {
+    "name": "synthetic-agent",
+    "version": "fixture-1",
+    "model_name": "fixture-model"
+  },
+  "steps": [
+    {
+      "step_id": 1,
+      "source": "system",
+      "message": "Copied context summary",
+      "is_copied_context": true
+    },
+    {
+      "step_id": 2,
+      "source": "agent",
+      "message": "Done",
+      "llm_call_count": 1
+    }
+  ],
+  "final_metrics": {
+    "total_prompt_tokens": 12,
+    "total_completion_tokens": 6,
+    "total_cached_tokens": 4
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "id": "00000000-0000-0000-0000-000000000005",
+  "task_name": "blue-card",
+  "trial_name": "cancelled",
+  "trial_uri": "file:///synthetic/cancelled",
+  "task_id": {
+    "path": "tasks/blue-card"
+  },
+  "task_checksum": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "config": {
+    "task": {
+      "path": "tasks/blue-card"
+    },
+    "agent": {
+      "name": "fixture",
+      "model_name": "fixture-model"
+    },
+    "environment": {
+      "type": "docker"
+    },
+    "verifier": {
+      "disable": false
+    }
+  },
+  "agent_info": {
+    "name": "fixture",
+    "version": "1",
+    "model_info": {
+      "name": "fixture-model"
+    }
+  },
+  "agent_execution": {
+    "started_at": "2026-01-01T00:00:00Z",
+    "finished_at": "2026-01-01T00:00:02Z"
+  },
+  "verifier_result": null,
+  "verifier_environment_mode": "separate",
+  "exception_info": {
+    "exception_type": "CancelledError",
+    "exception_message": "SYNTHETIC_ERROR_MESSAGE_MUST_BE_REDACTED",
+    "exception_traceback": "SYNTHETIC_STACK_MUST_BE_REDACTED",
+    "occurred_at": "2026-01-01T00:00:02Z"
+  }
+}
