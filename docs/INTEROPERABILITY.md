@@ -10,6 +10,7 @@ of [roadmap #270](https://github.com/dipeshbabu/agentloop/issues/270). The
 [Harbor ATIF adapter](HARBOR_ATIF.md) adds qualified native projections.
 [Job/trial import](HARBOR_TRIALS.md) retains independent verifier outcomes.
 [Bounded JSONL import](OTLP_JSONL.md) extends the existing OTel parser.
+[Omnigent adaptation](OMNIGENT_OTEL.md) adds session/policy observations and gaps.
 Capability validation, coordination analysis and
 cross-harness studies remain dependent workstreams. These capabilities are not in the
 published `agentloop-profiler==0.7.0` wheel.
