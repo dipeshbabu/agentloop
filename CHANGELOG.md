@@ -10,6 +10,11 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added an [executable offline harness bench](docs/HARNESS_BENCH.md), with
+  callable-side DENY counters, lazy streaming/close, cancellation, policy failure,
+  error/return preservation and declaration drift proofs. Missing pinned SDKs and
+  live-only features remain explicit skips; no provider/runtime spending occurs.
+
 - Added a [versioned adapter capability registry](docs/HARNESS_CAPABILITIES.md)
   for Python/LangGraph wrappers and Harbor/Omnigent observation sources, separating
   declarations from current scoped probe evidence, skips/unknowns and drift.

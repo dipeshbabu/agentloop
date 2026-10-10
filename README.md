@@ -53,6 +53,10 @@ The [capability registry](docs/HARNESS_CAPABILITIES.md) lists explicit adapter
 declarations and distinguishes current probe evidence from unknown/skipped
 capabilities. Inspection does not enable runtime controls.
 
+Run the [offline capability bench](docs/HARNESS_BENCH.md) to check actual wrapped
+behavior, source counters and declaration drift. Missing SDKs and live-only
+features remain explicit skips.
+
 ## Without and with AgentLoop
 
 <picture>

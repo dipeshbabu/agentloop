@@ -107,8 +107,8 @@ uv run --frozen python -m pytest tests/test_capability_registry.py tests/test_ha
 
 Tests cover scoped declarations, both drift directions, missing/stale evidence,
 serialization, data-only loading, unsupported enforcement, import safety and
-existing wrapper defaults. An executable offline bench is the dependent
-workstream. No live provider/transport was exercised here.
+existing wrapper defaults. The [executable offline bench](HARNESS_BENCH.md)
+provides scoped wrapper probes. No live provider/transport was exercised here.
 
 The design follows the declaration/observation separation in Omnigent
 [`a2956be0e97bb175a60b274053d836f07d494c6c`](https://github.com/omnigent-ai/omnigent/blob/a2956be0e97bb175a60b274053d836f07d494c6c/omnigent/harness_capabilities.py),
