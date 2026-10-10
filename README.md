@@ -43,11 +43,15 @@ includes read-only [Harbor ATIF](docs/HARBOR_ATIF.md) and
 [job/trial/verifier import](docs/HARBOR_TRIALS.md), source-qualified native reports
 and pinned offline fixtures. [Omnigent telemetry/session import](docs/OMNIGENT_OTEL.md)
 preserves policy observations and coverage gaps. Complete cross-harness comparisons
-and behavior-verified capabilities remain dependent workstreams.
+ and behavior-verified capabilities remain dependent workstreams.
 
 The [bounded OTLP JSONL importer](docs/OTLP_JSONL.md) joins split telemetry traces
 and keeps duplicate/conflicting records, conversion losses and inferred timing
 explicit. It works offline without upstream runtimes or OpenTelemetry packages.
+
+The [capability registry](docs/HARNESS_CAPABILITIES.md) lists explicit adapter
+declarations and distinguishes current probe evidence from unknown/skipped
+capabilities. Inspection does not enable runtime controls.
 
 ## Without and with AgentLoop
 
