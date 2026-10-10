@@ -10,6 +10,12 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added [bounded OTLP JSON/JSONL batch import](docs/OTLP_JSONL.md) through existing
+  OTel semantics, with trace-boundary preservation, exact duplicate/conflict
+  checks, late-parent resolution, qualified gaps and local native/HTML exports.
+  Pinned actual Harbor converter fixtures exercise v1.8 media and inferred timing;
+  no OpenTelemetry, Harbor or Omnigent core dependency was added.
+
 - Added [offline Harbor job/trial import](docs/HARBOR_TRIALS.md), complete source
   inventories, multi-step outcomes, hashed explicit verifier thresholds, qualified
   agent-phase measurements and native study exports with retained excluded trials.

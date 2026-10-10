@@ -12,6 +12,12 @@ The `mixed_job` config/locks are field projections for data import, not complete
 Harbor-executable configurations. OTLP examples are hand-authored protocol data,
 not artifacts from Harbor's converter or an Omnigent vendor executor.
 
+The additional `otlp/converter_*` fixtures are actual outputs from the pinned
+Harbor converter applied to owned synthetic inputs, with their own
+[provenance receipt](otlp/converter_provenance.json). They exercise v1.8 media,
+inferred timing/status, aggregates, deterministic dispatch and embedded agents.
+They do not claim a live Harbor job or alter the original fifteen-family matrix.
+
 The job/trial importer also checked these field projections against Harbor
 `d5ac1be17f575852eaf4fffc4072fd18481c209b` on 2026-10-09. Its trial/job result
 fields and trial lock schemas 2/3 are documented in

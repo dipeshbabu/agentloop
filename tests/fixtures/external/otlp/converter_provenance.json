@@ -1,0 +1,61 @@
+{
+  "schema_version": "1.0",
+  "fixture_origin": "owned_synthetic_input_through_pinned_upstream_converter",
+  "producer": "harbor-atif2otel",
+  "upstream_project_version": "0.1.1",
+  "emitted_sdk_version": "0.1.0",
+  "upstream_revision": "d5ac1be17f575852eaf4fffc4072fd18481c209b",
+  "upstream_license": "Apache-2.0",
+  "source_files_sha256": {
+    "packages/harbor-atif2otel/src/harbor_atif2otel/convert.py": "4313589aa1a2fe3196839a3512de11241284376d684885c762409a2464a4f205",
+    "packages/harbor-atif2otel/src/harbor_atif2otel/ids.py": "8ffc7323f1ddff6983c7985a87384eaa284f68c1d19ca6b5d39509ff8f6c7201",
+    "packages/harbor-atif2otel/src/harbor_atif2otel/_types.py": "22e7711b7d90fcc987d6f268ea076cf923ab1feb81bebdd26356950d15f346cd"
+  },
+  "python": "3.13.12",
+  "opentelemetry_proto": "1.42.1",
+  "protobuf": "6.33.6",
+  "live_execution": false,
+  "media_files_read": false,
+  "cases": [
+    {
+      "input": "harbor/atif_v17_simple.json",
+      "input_sha256": "fa6bcf9c43cf4485cdc936e0d74f6e52bacc970a266e61fc8394c47872de93ce",
+      "output": "otlp/converter_atif_v17_simple.jsonl",
+      "output_sha256": "70fd84372f9a67f2243c8b34e278ddc3f82bdbacd4cae042b3326cb86a500e0d",
+      "schema_version": "ATIF-v1.7",
+      "trace_seed": "agentloop_owned_atif_v17_simple"
+    },
+    {
+      "input": "harbor/atif_v18_multimodal.json",
+      "input_sha256": "fc16f7c3e1f2fc7fe38cd18514bb5cd258ae9b4691eb543d9c6f1096202d3517",
+      "output": "otlp/converter_atif_v18_multimodal.jsonl",
+      "output_sha256": "cc5d48ce4161f9688a5d8c2a7a5ea733ca1a5f3674a9e17455b3d84f14338d50",
+      "schema_version": "ATIF-v1.8",
+      "trace_seed": "agentloop_owned_atif_v18_multimodal"
+    },
+    {
+      "input": "harbor/atif_aggregated_llm_calls.json",
+      "input_sha256": "484b15600e40a477bb679c3e81c0d143defd36aeca78ec613c1e623a7d84f3c1",
+      "output": "otlp/converter_atif_aggregated_llm_calls.jsonl",
+      "output_sha256": "0e03b639b43e741a5230b2325441ee7dabcd4c297e15ec93a2d5ea4ca6840051",
+      "schema_version": "ATIF-v1.7",
+      "trace_seed": "agentloop_owned_atif_aggregated_llm_calls"
+    },
+    {
+      "input": "harbor/atif_deterministic_dispatch.json",
+      "input_sha256": "460cc45d1b1916dffc5e3f143d386a68152f1566943be75c0b34185f6f670526",
+      "output": "otlp/converter_atif_deterministic_dispatch.jsonl",
+      "output_sha256": "118bf1647ebe3823c34d9a1e7037f14bb7170cb4437c146fabf9b5af9dd951e5",
+      "schema_version": "ATIF-v1.7",
+      "trace_seed": "agentloop_owned_atif_deterministic_dispatch"
+    },
+    {
+      "input": "harbor/atif_embedded_subagents.json",
+      "input_sha256": "62db31be5519c41ef5552fe374daba6aecaaa57abc43ae9006ffb605236fbc8c",
+      "output": "otlp/converter_atif_embedded_subagents.jsonl",
+      "output_sha256": "dd9eb3e703b1faec44e3dc7b6e0fd2c59c67c00f9283725643eb55b1c917d0f4",
+      "schema_version": "ATIF-v1.7",
+      "trace_seed": "agentloop_owned_atif_embedded_subagents"
+    }
+  ]
+}
