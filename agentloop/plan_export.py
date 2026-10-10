@@ -31,9 +31,14 @@ def export_optimization_markdown(plan: dict[str, Any], path: str | Path) -> Path
         f"# AgentLoop Optimization Plan: {markdown_heading(plan['name'])}",
         "",
         f"- Run ID: {markdown_code_span(plan['run_id'])}",
-        f"- Current runtime: {current['runtime_ms'] / 1000:.2f}s",
-        f"- Estimated optimized runtime: {after['runtime_ms'] / 1000:.2f}s",
-        f"- Estimated latency reduction: {after['latency_reduction_pct']:.2f}%",
+        f"- Current runtime: {format_duration_ms(current['runtime_ms'])}",
+        f"- Estimated optimized runtime: {format_duration_ms(after['runtime_ms'])}",
+        "- Estimated latency reduction: "
+        + (
+            "unavailable"
+            if after["latency_reduction_pct"] is None
+            else f"{after['latency_reduction_pct']:.2f}%"
+        ),
         "- Current cost: "
         + format_cost_usd(current.get("estimated_cost_usd"), current.get("cost_status")),
         "- Estimated optimized cost: "
@@ -44,7 +49,12 @@ def export_optimization_markdown(plan: dict[str, Any], path: str | Path) -> Path
             if after.get("cost_reduction_pct") is None
             else f"{after['cost_reduction_pct']:.2f}%"
         ),
-        f"- Repeated context ratio: {current['repeated_context_ratio']:.1%}",
+        "- Repeated context ratio: "
+        + (
+            "unavailable"
+            if current["repeated_context_ratio"] is None
+            else f"{current['repeated_context_ratio']:.1%}"
+        ),
         f"- Retry count: {current['retry_count']}",
         "",
         "## Optimization cards",

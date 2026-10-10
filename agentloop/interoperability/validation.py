@@ -251,17 +251,7 @@ def safe_artifact_path(
         candidate = base
         for part in reference.split("/"):
             candidate = candidate / part
-            # Path.is_junction() is absent on Python 3.10/3.11. Windows lstat
-            # exposes reparse attributes on those interpreters too, so do not
-            # accidentally allow in-root junctions on our oldest supported API.
-            reparse = getattr(candidate.lstat(), "st_file_attributes", 0) & getattr(
-                stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400
-            )
-            if (
-                candidate.is_symlink()
-                or reparse
-                or getattr(candidate, "is_junction", lambda: False)()
-            ):
+            if indirect_path(candidate):
                 raise ImportValidationError(
                     "unsafe_path", "reference", "symlinks and junctions are unsupported"
                 )
@@ -281,6 +271,14 @@ def safe_artifact_path(
         raise ImportValidationError(
             "unsafe_path", "reference", "unresolvable artifact path"
         ) from exc
+
+
+def indirect_path(path: Path) -> bool:
+    """Recognize symlinks/reparse entries on Python 3.10 as well as newer APIs."""
+    reparse = getattr(path.lstat(), "st_file_attributes", 0) & getattr(
+        stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400
+    )
+    return bool(path.is_symlink() or reparse or getattr(path, "is_junction", lambda: False)())
 
 
 @dataclass(frozen=True)
@@ -323,5 +321,13 @@ def load_json_artifact(
         ) from exc
     if budget is not None:
         budget.consume(total_bytes=len(data), records=1)
-    payload = parse_json_bytes(data, limits)
-    return JsonArtifact(reference, sha256(data).hexdigest(), len(data), payload)
+    digest = sha256(data).hexdigest()
+    try:
+        payload = parse_json_bytes(data, limits)
+    except ImportValidationError as exc:
+        if exc.code != "limit_exceeded":
+            exc.artifact_reference = reference
+            exc.artifact_sha256 = digest
+            exc.byte_count = len(data)
+        raise
+    return JsonArtifact(reference, digest, len(data), payload)

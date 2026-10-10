@@ -12,6 +12,7 @@ from agentloop.html_report import analysis_to_html
 from agentloop.optimizer import build_optimization_plan
 from agentloop.ranking import RankingSort
 from agentloop.replay import ReplayGates, build_replay_report
+from agentloop.timing import format_duration_ms
 from agentloop.tracer import AgentTrace
 
 
@@ -70,7 +71,12 @@ def _print_analysis(trace: AgentTrace, diagnosis: dict, plan: dict) -> None:
     table = Table(title=f"AgentLoop Analysis: {trace.name}")
     table.add_column("Metric")
     table.add_column("Value")
-    table.add_row("Runtime", f"{report['total_runtime_ms'] / 1000:.3f}s")
+    table.add_row("Runtime", format_duration_ms(report["total_runtime_ms"], precision=3))
+    if report.get("external_evidence"):
+        source = report["external_evidence"]["source"]
+        table.add_row("External source", str(source.get("system", "unknown")))
+        table.add_row("Execution status", report["external_evidence"]["execution_status"])
+        table.add_row("Timing coverage", report["timing_status"])
     table.add_row("Findings", str(summary["finding_count"]))
     table.add_row("High severity", str(summary["high_severity_count"]))
     table.add_row("Patchable", str(summary["patchable_count"]))

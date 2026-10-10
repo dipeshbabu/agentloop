@@ -86,17 +86,18 @@ came from in `token_provenance`:
 | `provider` | the provider reported usage (e.g. an OpenAI `usage` object) | yes |
 | `tokenizer` | counted with a real tokenizer for the target model | yes |
 | `user_supplied` | explicit counts passed by the calling application | yes |
+| `external_reported` | imported counts without independently verified provider accounting | no |
 | `estimated_words` | the `len(text.split())` fallback; an approximation | no |
 | `unavailable` | no counts were available and none could be estimated | no |
 
-A sixth value, `unspecified`, is a **read result only** — it is what a reader
+A seventh value, `unspecified`, is a **read result only** — it is what a reader
 reports for an event that has no `token_provenance` (a `1.0` trace) or one whose
 value this build does not recognize. Producers never write it.
 
 Aggregating those per-event values over a trace's model calls gives the
 `token_status` reported in `report()["token_status"]` and in
 `cost_breakdown.token_status`: one of `exact`, `partial`, `estimated`,
-`unavailable`, `unspecified`, or `empty`. Only treat token totals — and any cost
+`unavailable`, `unspecified`, `empty`, or `external_reported`. Only treat token totals — and any cost
 calculated from them — as a measurement when `token_status` is `exact` or
 `empty`. See [`agentloop/tokens.py`](../agentloop/tokens.py).
 

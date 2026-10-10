@@ -104,6 +104,21 @@ def main() -> None:
         families.append({"family": family, "path": path, "expected": expected})
 
     simple = trajectory("simple")
+    legacy = deepcopy(simple)
+    legacy["schema_version"] = "ATIF-v1.6"
+    del legacy["trajectory_id"]
+    del legacy["steps"][1]["llm_call_count"]
+    files["harbor/atif_v16_legacy.json"] = write("harbor/atif_v16_legacy.json", legacy)
+    timed = deepcopy(simple)
+    interval = {
+        "started_at": "2026-01-01T00:00:00Z",
+        "ended_at": "2026-01-01T00:00:01Z",
+        "duration_ms": 1000,
+    }
+    timed["extra"] = {"agentloop": {"timing": interval, "execution_status": "completed"}}
+    for step in timed["steps"]:
+        step["extra"] = {"agentloop": {"timing": interval, "execution_status": "completed"}}
+    files["harbor/atif_source_intervals.json"] = write("harbor/atif_source_intervals.json", timed)
     freeze(
         "atif_v17",
         "harbor/atif_v17_simple.json",
@@ -590,7 +605,7 @@ def main() -> None:
                     "system": "harbor",
                     "revision": HARBOR_REVISION,
                     "release": "v0.24.0",
-                    "formats": ["ATIF-v1.7", "ATIF-v1.8", "OTLP JSON"],
+                    "formats": ["ATIF-v1.6", "ATIF-v1.7", "ATIF-v1.8", "OTLP JSON"],
                     "url": "https://github.com/harbor-framework/harbor",
                     "license": "Apache-2.0",
                 },

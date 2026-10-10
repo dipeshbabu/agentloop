@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from copy import deepcopy
 from dataclasses import dataclass, fields
 from enum import Enum
@@ -155,6 +155,9 @@ def run_rules(
     if not is_cost_evaluable(context.report.get("cost_status", "complete")):
         for candidate in candidates:
             candidate.estimated_cost_savings_usd = None
+    from agentloop.interoperability.evidence import qualify_candidates
+
+    qualify_candidates(context.report, candidates)
     return candidates, errors
 
 
@@ -181,6 +184,8 @@ def _parallelization_cards(graph: ExecutionGraph) -> list[FindingCandidate]:
 
 def _context_cache_cards(report: dict[str, Any], graph: ExecutionGraph) -> list[FindingCandidate]:
     ratio = report.get("repeated_context_ratio", 0.0)
+    if ratio is None:
+        return []
     if ratio < 0.10:
         return []
     model_nodes = [node.node_id for node in graph.nodes if node.operation_kind == "model"]
@@ -249,7 +254,9 @@ def _routing_cards(graph: ExecutionGraph) -> list[FindingCandidate]:
     for node in graph.nodes:
         if node.operation_kind != "model" or not node.model:
             continue
-        if node.token_provenance == UNAVAILABLE:
+        if node.token_provenance == UNAVAILABLE or (
+            isinstance(node.metadata, Mapping) and node.metadata.get("usage_available") is False
+        ):
             continue
         if "mini" in node.model.lower():
             continue

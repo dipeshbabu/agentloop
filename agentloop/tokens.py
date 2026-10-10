@@ -7,11 +7,12 @@ fields that carry provider-reported usage, so without provenance a trace can sho
 an exact-looking token count — and an exact-looking dollar amount derived from it
 — that actually came from ``len(text.split())``.
 
-Six provenance values are represented (`TokenProvenance`), recorded per event:
+Seven provenance values are represented (`TokenProvenance`), recorded per event:
 
 - ``provider``       — the provider reported usage (e.g. an OpenAI ``usage`` object).
 - ``tokenizer``      — counted with a real tokenizer for the target model.
 - ``user_supplied``  — explicit counts passed by the calling application.
+- ``external_reported`` — imported counts without verified provider accounting.
 - ``estimated_words`` — the whitespace word-count fallback; an approximation.
 - ``unavailable``    — no counts were available and none could be estimated.
 - ``unspecified``    — the trace predates this field, so provenance is unknown.
@@ -32,22 +33,28 @@ TokenProvenance = Literal[
     "provider",
     "tokenizer",
     "user_supplied",
+    "external_reported",
     "estimated_words",
     "unavailable",
     "unspecified",
 ]
-TokenStatus = Literal["exact", "estimated", "partial", "unavailable", "unspecified", "empty"]
+TokenStatus = Literal[
+    "exact", "estimated", "partial", "unavailable", "unspecified", "empty", "external_reported"
+]
 
 PROVIDER = "provider"
 TOKENIZER = "tokenizer"
 USER_SUPPLIED = "user_supplied"
+EXTERNAL_REPORTED = "external_reported"
 ESTIMATED_WORDS = "estimated_words"
 UNAVAILABLE = "unavailable"
 UNSPECIFIED = "unspecified"
 
 #: Provenance values a producer may record. ``unspecified`` is a *read* result
 #: for traces written before the field existed, never something to write.
-WRITABLE_PROVENANCE = frozenset({PROVIDER, TOKENIZER, USER_SUPPLIED, ESTIMATED_WORDS, UNAVAILABLE})
+WRITABLE_PROVENANCE = frozenset(
+    {PROVIDER, TOKENIZER, USER_SUPPLIED, EXTERNAL_REPORTED, ESTIMATED_WORDS, UNAVAILABLE}
+)
 
 #: Provenance values that count tokens rather than approximate them.
 EXACT_PROVENANCE = frozenset({PROVIDER, TOKENIZER, USER_SUPPLIED})
@@ -98,6 +105,8 @@ def provenance_grade(value: Any) -> str:
         return _ESTIMATED
     if value == UNAVAILABLE:
         return _UNAVAILABLE
+    if value == EXTERNAL_REPORTED:
+        return EXTERNAL_REPORTED
     return _UNSPECIFIED
 
 
@@ -127,6 +136,10 @@ def token_status(model_events: list[Any]) -> str:
         return "estimated"
     if grades == {_UNAVAILABLE}:
         return "unavailable"
+    if grades == {EXTERNAL_REPORTED}:
+        return EXTERNAL_REPORTED
+    if EXTERNAL_REPORTED in grades:
+        return "partial"
     return "unspecified"
 
 
@@ -165,6 +178,7 @@ def describe_token_status(status: str | None) -> str:
     """Return a short human explanation of a token status, for reports and CLI."""
 
     return {
+        "external_reported": "external counts; provider accounting is not independently verified",
         "exact": "counted tokens (provider, tokenizer, or caller-supplied)",
         "partial": "mixed: some model calls counted tokens, some did not",
         "estimated": "approximated from whitespace word counts, not counted tokens",

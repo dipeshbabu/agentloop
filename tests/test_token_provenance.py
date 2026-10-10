@@ -19,6 +19,7 @@ from agentloop.replay import ReplayGates, build_replay_report
 from agentloop.schema import SCHEMA_VERSION, TraceValidationError
 from agentloop.tokens import (
     ESTIMATED_WORDS,
+    EXTERNAL_REPORTED,
     PROVIDER,
     UNAVAILABLE,
     USER_SUPPLIED,
@@ -45,6 +46,26 @@ def _model_event(provenance: str | None, *, input_tokens: int = 10) -> AgentEven
         output_tokens=5,
         token_provenance=provenance,
     )
+
+
+def test_external_reports_are_nonexact_and_never_gate_provider_cost():
+    assert validate_provenance(EXTERNAL_REPORTED) == EXTERNAL_REPORTED
+    assert provenance_grade(EXTERNAL_REPORTED) == EXTERNAL_REPORTED
+    assert token_status([_model_event(EXTERNAL_REPORTED)]) == EXTERNAL_REPORTED
+    assert token_status([_model_event(EXTERNAL_REPORTED), _model_event(PROVIDER)]) == "partial"
+    assert not is_token_basis_exact(EXTERNAL_REPORTED)
+    assert not is_token_basis_evaluable(EXTERNAL_REPORTED)
+    with trace_agent("external_usage") as trace:
+        record_model_call(
+            "external",
+            started_at="2026-01-01T00:00:00Z",
+            duration_ms=1,
+            model="gpt-4.1",
+            input_tokens=10,
+            output_tokens=5,
+            token_provenance=EXTERNAL_REPORTED,
+        )
+    assert trace.report()["cost_status"] == "unknown"
 
 
 # --- recording provenance -------------------------------------------------
