@@ -28,8 +28,8 @@ def write_artifact(root: Path, reference: str, data: bytes) -> None:
     write_artifact_chunks(root, reference, (data,))
 
 
-def write_artifact_chunks(root: Path, reference: str, chunks: Iterable[bytes]) -> None:
-    """Write bounded chunks, comparing an existing artifact without loading it all."""
+def output_artifact_path(root: Path, reference: str) -> Path:
+    """Check every generated child reference before creating files or directories."""
     relative_reference(reference)
     current = root
     for part in reference.split("/"):
@@ -42,7 +42,12 @@ def write_artifact_chunks(root: Path, reference: str, chunks: Iterable[bytes]) -
             raise ImportValidationError(
                 "unsafe_path", "output", "output references cannot be symlinks"
             )
-    target = root / reference
+    return current
+
+
+def write_artifact_chunks(root: Path, reference: str, chunks: Iterable[bytes]) -> None:
+    """Write bounded chunks, comparing an existing artifact without loading it all."""
+    target = output_artifact_path(root, reference)
     target.parent.mkdir(parents=True, exist_ok=True)
     if target.exists():
         with target.open("rb") as stream:
@@ -56,9 +61,18 @@ def write_artifact_chunks(root: Path, reference: str, chunks: Iterable[bytes]) -
                     "output_conflict", "output", "existing artifact has conflicting content"
                 )
         return
-    with target.open("xb") as stream:
-        for chunk in chunks:
-            stream.write(chunk)
+    # Open exclusively before entering cleanup, so a failed competing open
+    # cannot remove an artifact owned by another writer.
+    stream = target.open("xb")
+    try:
+        with stream:
+            for chunk in chunks:
+                stream.write(chunk)
+    except BaseException:
+        # Close before unlinking on Windows. A producer/write error must not
+        # leave a partial immutable artifact that blocks a successful retry.
+        target.unlink(missing_ok=True)
+        raise
 
 
 def write_import_bundle(

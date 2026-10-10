@@ -395,6 +395,11 @@ Project history from before the first public release remains available in Git.
 
 ### Fixed
 
+- Failed streamed interoperability exports remove newly created partial files,
+  allowing a complete retry while preserving existing artifacts. Harbor inventory
+  and study manifest writes share the same recovery behavior. Both Harbor study
+  writers reject linked condition directories before exporting any condition.
+
 - Model batching advice now respects direct and transitive dependencies, parent
   scopes, and model identities. Missing, malformed or cyclic dependency evidence
   suppresses affected groups; inferred execution order alone does not prove a

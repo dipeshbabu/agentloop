@@ -13,6 +13,7 @@ import pytest
 from typer.testing import CliRunner
 
 from agentloop.entrypoint import app
+from agentloop.integrations.harbor.manifest import write_harbor_study
 from agentloop.integrations.harbor.trial_evidence import TRIAL_KEY, attach_trial
 from agentloop.integrations.harbor.trials import HarborOptions, import_harbor
 from agentloop.integrations.harbor.verifier import ScoringContract
@@ -31,6 +32,31 @@ from agentloop.tracer import AgentTrace
 FIXTURES = Path(__file__).parent / "fixtures/external/harbor/mixed_job"
 SCORER = ScoringContract.all_gte("owned-correctness-v1", {"correctness": 1})
 PROTOCOL = CohortProtocol("owned-protocol-v1")
+
+
+@pytest.mark.parametrize("writer", ["cohort", "native_manifest"])
+@pytest.mark.parametrize("condition_index", [0, 1])
+@pytest.mark.parametrize("dangling", [False, True])
+def test_studies_reject_linked_condition_folders_before_any_export(
+    tmp_path, writer, condition_index, dangling
+):
+    conditions = cohort(tmp_path / "sources")
+    out, outside = tmp_path / "report", tmp_path / "outside"
+    out.mkdir()
+    outside.mkdir()
+    target = outside / "missing" if dangling else outside
+    try:
+        (out / f"condition-{condition_index}").symlink_to(target, target_is_directory=True)
+    except OSError:
+        pytest.skip("OS does not permit directory symlink creation")
+    with pytest.raises(ImportValidationError) as caught:
+        if writer == "cohort":
+            write_cohort_study(conditions, out, baseline="baseline", protocol=PROTOCOL)
+        else:
+            write_harbor_study(conditions, out, baseline="baseline")
+    assert caught.value.code == "unsafe_path"
+    assert not list(outside.iterdir())
+    assert not (out / f"condition-{1 - condition_index}").exists()
 
 
 def read(path):

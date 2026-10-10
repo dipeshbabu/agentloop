@@ -247,7 +247,7 @@ class HarborImportResult:
         return json.loads(self._inventory_json)
 
     def write(self, out: str | Path) -> Path:
-        from agentloop.interoperability.artifacts import write_artifact_chunks
+        from agentloop.interoperability.artifacts import write_artifact, write_artifact_chunks
 
         root = Path(out)
         # Reuse byte-bound export for both source projections and measured trials.
@@ -256,12 +256,12 @@ class HarborImportResult:
         ).write(root)
         target = root / "harbor-inventory.json"
         content = (self._inventory_json + "\n").encode()
-        if target.exists():
-            if indirect_path(target) or target.read_bytes() != content:
-                fail("output", "existing Harbor inventory conflicts", "output_conflict")
-        else:
-            with target.open("xb") as stream:
-                stream.write(content)
+        try:
+            write_artifact(root.resolve(), target.name, content)
+        except ImportValidationError as exc:
+            if exc.code != "output_conflict":
+                raise
+            fail("output", "existing Harbor inventory conflicts", "output_conflict")
         inventory = self.inventory()
         header = {key: value for key, value in inventory.items() if key != "trial_rows"}
         records = (

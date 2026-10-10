@@ -7,19 +7,20 @@ from pathlib import Path
 
 from agentloop.integrations.harbor.trial_evidence import PAIRING_KEYS
 from agentloop.integrations.harbor.trials import HarborImportResult
-from agentloop.interoperability.validation import ImportValidationError, indirect_path
+from agentloop.interoperability.artifacts import output_artifact_path, write_artifact
+from agentloop.interoperability.validation import ImportValidationError
 
 
 def _write_stable(path: Path, value: dict) -> None:
     content = (json.dumps(value, indent=2) + "\n").encode("utf-8")
-    if path.exists():
-        if indirect_path(path) or path.read_bytes() != content:
-            raise ImportValidationError(
-                "output_conflict", "study", "existing study artifact conflicts"
-            )
-        return
-    with path.open("xb") as stream:
-        stream.write(content)
+    try:
+        write_artifact(path.parent, path.name, content)
+    except ImportValidationError as exc:
+        if exc.code != "output_conflict":
+            raise
+        raise ImportValidationError(
+            "output_conflict", "study", "existing study artifact conflicts"
+        ) from None
 
 
 def write_harbor_study(
@@ -42,11 +43,16 @@ def write_harbor_study(
         )
     root = Path(out)
     root.mkdir(parents=True, exist_ok=True)
+    root = root.resolve()
+    folders = {
+        condition: output_artifact_path(root, f"condition-{index}")
+        for index, condition in enumerate(sorted(conditions))
+    }
     manifests = {}
     population = {}
     for index, (condition, result) in enumerate(sorted(conditions.items())):
         folder = f"condition-{index}"
-        result.write(root / folder)
+        result.write(folders[condition])
         traces = [f"{folder}/traces/{trace.run_id}.json" for trace in result.trial_traces]
         if not traces:
             raise ImportValidationError(
