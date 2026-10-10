@@ -43,6 +43,9 @@ def build_replay_report(
     from agentloop.integrations.harbor.trial_evidence import require_trial_pair
 
     require_trial_pair(baseline_trace, candidate_trace)
+    from agentloop.interoperability.cohort_evidence import require_cohort_pair
+
+    require_cohort_pair(baseline_trace, candidate_trace)
     gates = gates or ReplayGates()
     baseline_report = baseline_trace.report()
     candidate_report = candidate_trace.report()

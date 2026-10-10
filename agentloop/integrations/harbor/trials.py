@@ -181,6 +181,7 @@ def _safe_reference(value: Any) -> dict | None:
 @dataclass(frozen=True)
 class HarborOptions:
     scoring: ScoringContract | None = None
+    scoring_by_task_digest: dict[str, ScoringContract] = field(default_factory=dict)
     job_id: str | None = None
     condition: str | None = None
     protocol_id: str | None = None
@@ -193,6 +194,14 @@ class HarborOptions:
     def __post_init__(self) -> None:
         if self.scoring is not None and not isinstance(self.scoring, ScoringContract):
             fail("options.scoring", "scoring must be a validated scoring contract")
+        if not isinstance(self.scoring_by_task_digest, dict):
+            fail("options.scoring_by_task_digest", "task scoring must be an object")
+        for digest, scorer in self.scoring_by_task_digest.items():
+            if _digest(digest) != digest or not isinstance(scorer, ScoringContract):
+                fail(
+                    "options.scoring_by_task_digest",
+                    "require prefixed task digests and validated scoring contracts",
+                )
         if not isinstance(self.trial_context, dict) or not isinstance(self.expected_hashes, dict):
             fail("options", "context and expected hashes must be objects")
         for name in ("continue_on_error", "allow_legacy_results_name", "synthetic_fixture"):
@@ -469,6 +478,7 @@ class _JobImporter:
                 notices, "task_digest_mismatch", witness.reference, "task_checksum", "error"
             )
         task_digest = checksum or locked_digest
+        scoring = self.options.scoring_by_task_digest.get(task_digest, self.options.scoring)
         task_id_data = _object(result.get("task_id"), "task_id")
         if not isinstance(task_id_data, dict):
             fail("task_id", "task identity must be an object")
@@ -572,7 +582,7 @@ class _JobImporter:
                             verifier_status=status,
                             dimensions=scores,
                             isolation=mode,
-                            scoring=self.options.scoring,
+                            scoring=scoring,
                         ),
                     }
                 )
@@ -607,13 +617,9 @@ class _JobImporter:
             verifier_status=quality_status,
             dimensions=dimensions,
             isolation=isolation,
-            scoring=self.options.scoring,
+            scoring=scoring,
         )
-        if (
-            step_details
-            and result.get("verifier_result") is None
-            and self.options.scoring is not None
-        ):
+        if step_details and result.get("verifier_result") is None and scoring is not None:
             # Preserve per-step predicates; no trial-level scoring rule is inferred.
             outcome["quality_pass"] = None  # trial has no compatible trial-level reward contract
             self.notice(
@@ -687,7 +693,7 @@ class _JobImporter:
                 verifier_status="invalid",
                 dimensions=dimensions,
                 isolation=isolation,
-                scoring=self.options.scoring,
+                scoring=scoring,
             )
         receipt = {
             "schema_version": "1.0",
@@ -760,6 +766,23 @@ class _JobImporter:
                 },
                 "exception_info": exception,
                 "usage": usage,
+                "trial_wall_timing": _phase(
+                    {
+                        "started_at": result.get("started_at"),
+                        "finished_at": result.get("finished_at"),
+                    },
+                    "trial_wall_timing",
+                ),
+                "verifier_config_hash": _hash(
+                    {
+                        "requested": config.get("verifier"),
+                        "resolved_lock": lock.get("verifier"),
+                        "isolation": isolation,
+                    }
+                ),
+                "agent_config_hash": _hash(config.get("agent") or {}),
+                "dataset": _safe_reference(result.get("source")),
+                "dataset_version": result.get("dataset_version"),
                 "verifier_rewards": dimensions,
                 "usage_scope": "agent context, including reported subagents; setup/verifier scope not inferred",
                 "artifact_hashes": {
@@ -783,9 +806,7 @@ class _JobImporter:
         environment = lock.get("environment") or config.get("environment") or {}
         pairing = {
             "task_digest": task_digest,
-            "scorer_config_hash": self.options.scoring.to_dict()["config_sha256"]
-            if self.options.scoring
-            else None,
+            "scorer_config_hash": scoring.to_dict()["config_sha256"] if scoring else None,
             "environment_hash": _hash(environment) if environment else None,
             "protocol_id": context.get("protocol_id"),
             "repetition": context.get("repetition"),
@@ -996,6 +1017,7 @@ class _JobImporter:
         inventory = {
             "schema_version": "1.0",
             "source": "harbor",
+            "synthetic": self.options.synthetic_fixture,
             "job_id": self.job_id,
             "source_versions": {
                 "producer_version": self.producer_version,
@@ -1031,6 +1053,19 @@ class _JobImporter:
                 for name in ("result.json", "config.json", "lock.json")
                 if name in self.artifacts
             },
+            "job_timing": None
+            if "trial_name" in job["metadata"] and "task_checksum" in job["metadata"]
+            else _phase(
+                {
+                    "started_at": job["metadata"].get("started_at"),
+                    "finished_at": job["metadata"].get("finished_at"),
+                },
+                "job_timing",
+            ),
+            "job_timing_scope": "selected_job_metadata; single-trial roots are not job orchestration measurements",
+            "job_concurrency": self.artifacts["config.json"].payload.get("n_concurrent_trials")
+            if "config.json" in self.artifacts
+            else None,
         }
         return HarborImportResult(
             tuple(self.traces),
