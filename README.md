@@ -57,6 +57,10 @@ Run the [offline capability bench](docs/HARNESS_BENCH.md) to check actual wrappe
 behavior, source counters and declaration drift. Missing SDKs and live-only
 features remain explicit skips.
 
+The [cross-harness cohort workflow](docs/CROSS_HARNESS_STUDIES.md) compares completed
+Harbor jobs with exact task pairing and independent verifier criteria, while
+retaining failed, missing and unpaired attempts in population reports.
+
 ## Without and with AgentLoop
 
 <picture>

@@ -12,6 +12,35 @@ from agentloop.interoperability.validation import ImportValidationError
 harbor_app = typer.Typer(help="Import completed Harbor artifacts offline.")
 
 
+@harbor_app.command("study")
+def study_command(path: Path, out: Path = typer.Option(...)) -> None:
+    """Materialize completed source cohorts without running a benchmark job."""
+    from agentloop.interoperability.cohorts import materialize_source_study
+    from agentloop.studies import StudyValidationError
+
+    try:
+        result = materialize_source_study(path, out)
+    except (ImportValidationError, StudyValidationError, OSError) as exc:
+        message = (
+            str(exc)
+            if isinstance(exc, ImportValidationError)
+            else "Study sources/output could not be read or written"
+        )
+        raise typer.BadParameter(message, param_hint="path/--out") from None
+    report = result.report()
+    typer.echo(
+        f"Cohort report: {out / 'cohort-report.json'}; {sum(value['denominator'] for value in report['conditions'].values())} source attempts retained."
+    )
+    typer.echo(
+        "Externally incorrect, unpaired or incomplete attempts cannot count as verified improvements. Native manifest: "
+        + (
+            str(result.manifest_path)
+            if result.manifest_path
+            else "unavailable for an empty observed condition"
+        )
+    )
+
+
 def _job(
     path: Path,
     *,
