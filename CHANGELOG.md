@@ -10,6 +10,11 @@ Project history from before the first public release remains available in Git.
 
 ### Added
 
+- Added a [versioned adapter capability registry](docs/HARNESS_CAPABILITIES.md)
+  for Python/LangGraph wrappers and Harbor/Omnigent observation sources, separating
+  declarations from current scoped probe evidence, skips/unknowns and drift.
+  Enumeration/catalog parsing never loads vendor SDKs/plugins or enables policy.
+
 - Added [offline Omnigent telemetry/session adaptation](docs/OMNIGENT_OTEL.md),
   source aliases, ALLOW/DENY/ASK observations, separate role intervals, session
   sidecars and qualified JSON/HTML/CLI. Separate traces and unresolved lineage
