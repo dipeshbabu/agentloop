@@ -89,7 +89,7 @@ changes. The existing #209/#189 contracts are reused rather than replacing them.
 
 ## Reproduction
 
-This is **Unreleased source-checkout** research tooling. Actual inference used
+Run this research tooling from a source checkout. Actual inference used
 Python 3.13.12 and NumPy 2.5.1, requesting one OpenBLAS/OMP thread. Models are stored
 as content-bound JSON parameters, not pickle. Selected training/task data and
 attributions are retained; full source archives remain at pinned public URLs.

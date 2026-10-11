@@ -17,7 +17,9 @@ include a new feature among other changes.
 
 `scripts/bump_version.py` rejects repeated or lower versions, updates package and
 runtime metadata together, moves nonempty Unreleased entries to a dated changelog
-section, and refreshes `uv.lock`. The one-time initial numbering reset does not
+section, and refreshes `uv.lock`. If an update or lock refresh fails, it restores
+the original files so preparation can retry. A restoration failure reports the
+affected paths for manual recovery. The one-time initial numbering reset does not
 weaken that rule for future releases.
 
 ## Prepare and review

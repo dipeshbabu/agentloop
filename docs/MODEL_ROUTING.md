@@ -1,6 +1,6 @@
 # Explicit model-routing controls
 
-This **Unreleased** API requires a source checkout. A route names one original
+This opt-in API is included in 0.1.0. A route names one original
 model, one target and an explicit allowlist. Token counts check context fit;
 they never choose or authorize a smaller model. Task quality is evaluated
 separately, as demonstrated by the [retained routing study](ROUTING_STUDY.md).

@@ -1,6 +1,6 @@
 # Trace retention
 
-These are **Unreleased source-checkout APIs**. Retention acts on completed native
+These APIs are included in 0.1.0. Retention acts on completed native
 traces, before configured finalization destinations. It reduces persisted trace
 volume; it does not reduce the live tracer's memory use or provide a warehouse.
 

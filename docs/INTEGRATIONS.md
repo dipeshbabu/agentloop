@@ -15,7 +15,7 @@ observations. [Capabilities](HARNESS_CAPABILITIES.md),
 [offline behavioral probes](HARNESS_BENCH.md),
 [paired external-quality cohorts](CROSS_HARNESS_STUDIES.md) and
 [coordination](MULTIAGENT_EFFICIENCY.md) consume that evidence.
-These additions are Unreleased checkout features and require no Harbor/Omnigent
+These adapters are included in version 0.1.0 and require no Harbor/Omnigent
 runtime, collector, credentials or new database schema.
 
 AgentLoop integrations are designed for low-friction instrumentation. A team

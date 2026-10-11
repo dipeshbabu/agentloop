@@ -1,6 +1,6 @@
 # Context reduction and result reuse experiments
 
-These **Unreleased source-checkout templates** create `ExperimentRunner` candidates
+These templates, included in 0.1.0, create `ExperimentRunner` candidates
 for the [generic experiment contract](OPTIMIZATION_EXPERIMENTS.md). Baselines and
 candidates use the same frozen case inputs, expected answers and pairing keys.
 Native traces, interventions, budgets, quality gates and JSON/HTML/Markdown exports

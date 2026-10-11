@@ -1,6 +1,6 @@
 # Declared tool scheduling
 
-This **Unreleased** adapter runs tool callbacks concurrently only when the host
+This opt-in adapter, included in 0.1.0, runs tool callbacks concurrently only when the host
 declares dependencies, resource reads/writes, side effects and worker-thread
 support. It does not infer safety from names, past successful runs or trace timing.
 Ordinary tracing remains unchanged. The [read-only study](SCHEDULING_STUDY.md)

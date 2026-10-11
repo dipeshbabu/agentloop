@@ -26,6 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PYPROJECT = ROOT / "pyproject.toml"
 VERSION_PY = ROOT / "agentloop" / "version.py"
 CHANGELOG = ROOT / "CHANGELOG.md"
+LOCKFILE = ROOT / "uv.lock"
 REPO_URL = "https://github.com/dipeshbabu/agentloop"
 
 _SEMVER = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
@@ -131,10 +132,30 @@ def bump(bump_type: str | None, explicit_version: str | None) -> str:
     if parse_semver(new_version) <= parse_semver(previous):
         raise BumpError(f"new version {new_version} must be greater than current {previous}")
 
-    update_changelog(previous, new_version)
-    update_pyproject(new_version)
-    update_version_py(new_version)
-    refresh_lockfile()
+    paths = (CHANGELOG, PYPROJECT, VERSION_PY, LOCKFILE)
+    originals = {path: path.read_bytes() if path.exists() else None for path in paths}
+    try:
+        update_changelog(previous, new_version)
+        update_pyproject(new_version)
+        update_version_py(new_version)
+        refresh_lockfile()
+    except BaseException as exc:  # Restore even when a developer interrupts uv lock.
+        failed_restores = []
+        for path, original in originals.items():
+            try:
+                if original is None:
+                    path.unlink(missing_ok=True)
+                elif not path.exists() or path.read_bytes() != original:
+                    path.write_bytes(original)
+            except OSError:
+                failed_restores.append(str(path))
+        if failed_restores:
+            raise BumpError(
+                "version update failed; could not restore: " + ", ".join(failed_restores)
+            ) from exc
+        if isinstance(exc, (OSError, subprocess.SubprocessError)):
+            raise BumpError("version update failed; previous files restored") from exc
+        raise
     return new_version
 
 
@@ -147,7 +168,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         new_version = bump(args.bump_type, args.explicit_version)
-    except BumpError as exc:
+    except (BumpError, OSError) as exc:
         print(f"bump_version: {exc}", file=sys.stderr)
         return 1
 

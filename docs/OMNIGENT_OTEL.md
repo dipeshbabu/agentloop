@@ -1,6 +1,6 @@
 # Omnigent telemetry and session evidence
 
-This unreleased checkout imports saved Omnigent OTLP JSON/JSONL files offline.
+The adapter included in 0.1.0 imports saved Omnigent OTLP JSON/JSONL files offline.
 It uses the [bounded batch loader](OTLP_JSONL.md) and existing OTel semantics,
 then adds source aliases, policy observations, separate role timing and a
 session sidecar. It does not start Omnigent, a vendor CLI, collector or provider.

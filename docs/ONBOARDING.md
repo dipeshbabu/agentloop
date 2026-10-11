@@ -1,6 +1,6 @@
 # First-use telemetry paths
 
-These are **Unreleased source-checkout APIs**. Start with telemetry you already
+These APIs are included in version 0.1.0. Start with telemetry you already
 export, or install an adapter on an existing application object. AgentLoop does
 not claim to see operations that an SDK or framework does not expose.
 

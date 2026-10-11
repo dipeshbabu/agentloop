@@ -7,7 +7,7 @@ or change the published package version. See [Unreleased changes](../CHANGELOG.m
 
 ## Completed evidence workflow
 
-The [0.7 evidence roadmap](https://github.com/dipeshbabu/agentloop/issues/145)
+The [evidence roadmap](https://github.com/dipeshbabu/agentloop/issues/145)
 is implemented on `main`:
 
 | Area | Available behavior |
@@ -35,9 +35,9 @@ finding trust/ranking, candidate experiments, context/reuse and structural
 families, retention/aggregation, onboarding, drift and cross-workload studies.
 The [cross-workload benchmark](USEFULNESS_BENCHMARK.md) and
 [non-agent CPU study](NON_AGENT_STUDY.md) preserve false positives, quality losses,
-unknown costs and attribution limits alongside successful cases. These features
-remain Unreleased source-checkout APIs; completion does not announce a package
-release or authorize deployment.
+unknown costs and attribution limits alongside successful cases. These APIs are
+included in 0.1.0; research examples require a source checkout. Their availability
+does not authorize deployment.
 
 ## Future work to scope separately
 

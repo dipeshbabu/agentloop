@@ -7,9 +7,10 @@ public UCI Wine Quality measurements. It does not change production policies.
 
 The [preceding intervention study](REAL_AGENT_STUDY.md) established the workload
 and retained model-routing failures. This experiment uses nine new questions,
-not the held-out questions from that study. It runs the unreleased harness source
-at core revision `009c8a475265c41491e47aed002a3d67597e9723`; the published 0.7.0
-package does not contain these harness APIs.
+not the held-out questions from that study. It ran the then-unreleased harness
+source at core revision `009c8a475265c41491e47aed002a3d67597e9723`.
+The harness APIs are now included in 0.1.0; reproduce the retained study with
+its pinned source and configuration.
 
 ## Results
 

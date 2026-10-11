@@ -1,6 +1,6 @@
 # Trace AI workflows and decision pipelines
 
-These APIs are unreleased additions on `main`. Start with the
+These APIs are included in 0.1.0. Start with the
 [AI execution profiling guide](AI_EXECUTION_PROFILING.md) for source setup and
 the path from tracing through quality checks, findings and paired comparisons.
 

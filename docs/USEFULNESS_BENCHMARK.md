@@ -5,7 +5,7 @@ workflows and three archived real-agent workloads. Reference executions are new;
 real-agent analysis is explicitly retrospective and makes no new model calls.
 Results remain separate by workload, candidate, phase and finding family.
 
-The implementation requires an **Unreleased source checkout**. The protocol pins
+Run the benchmark from a source checkout. The protocol pins
 the analyzer's package version, source revision and normalized hashes of its
 Python sources, plus the benchmark runner, fixture code, tasks, scorers, pairing
 keys, candidate variants and split policy. A package version alone is insufficient

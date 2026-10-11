@@ -6,7 +6,8 @@ sample, marks that result optional, and protects the current query result.
 AgentLoop summarizes only the optional result when enforcement is enabled.
 The final model answer is checked against frozen query-result labels.
 
-This is an unreleased source-checkout feature. The study extends the native
+Run this study from a source checkout. Its native APIs are included in 0.1.0.
+The study extends the native
 [harness ablation protocol](HARNESS_ABLATIONS.md), using the same public Wine
 Quality data and pinned local Qwen3-4B model as the
 [earlier harness study](REAL_HARNESS_STUDY.md). These are new task questions.

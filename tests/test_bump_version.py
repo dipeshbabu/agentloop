@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import subprocess
 import sys
 from pathlib import Path
 
@@ -35,6 +36,7 @@ def repo(tmp_path, monkeypatch):
     pyproject = tmp_path / "pyproject.toml"
     version_py = tmp_path / "version.py"
     changelog = tmp_path / "CHANGELOG.md"
+    lockfile = tmp_path / "uv.lock"
 
     pyproject.write_text('[project]\nname = "agentloop-profiler"\nversion = "0.1.0"\n')
     version_py.write_text('from __future__ import annotations\n\n__version__ = "0.1.0"\n')
@@ -45,8 +47,14 @@ def repo(tmp_path, monkeypatch):
     monkeypatch.setattr(bump_version, "PYPROJECT", pyproject)
     monkeypatch.setattr(bump_version, "VERSION_PY", version_py)
     monkeypatch.setattr(bump_version, "CHANGELOG", changelog)
+    monkeypatch.setattr(bump_version, "LOCKFILE", lockfile)
     monkeypatch.setattr(bump_version, "refresh_lockfile", lambda: None)
-    return {"pyproject": pyproject, "version_py": version_py, "changelog": changelog}
+    return {
+        "pyproject": pyproject,
+        "version_py": version_py,
+        "changelog": changelog,
+        "lockfile": lockfile,
+    }
 
 
 # --- pure version math -----------------------------------------------------
@@ -160,6 +168,88 @@ def test_bump_is_idempotent_on_failure_no_partial_writes(repo):
     assert repo["pyproject"].read_text() == original_pyproject
     assert repo["version_py"].read_text() == original_version_py
     assert repo["changelog"].read_text() == original_changelog
+
+
+# --- failed updates -------------------------------------------------------
+
+
+@pytest.mark.parametrize("existing_lock", [False, True])
+def test_failed_lock_refresh_restores_files_and_allows_retry(repo, monkeypatch, existing_lock):
+    if existing_lock:
+        repo["lockfile"].write_bytes(b"version = 1\r\n# original lock\r\n")
+    originals = {path: path.read_bytes() if path.exists() else None for path in repo.values()}
+
+    def failed_refresh():
+        repo["lockfile"].write_text("partial lock")
+        raise subprocess.CalledProcessError(1, ["uv", "lock"])
+
+    monkeypatch.setattr(bump_version, "refresh_lockfile", failed_refresh)
+    assert bump_version.main(["patch"]) == 1
+    for path, original in originals.items():
+        assert (path.read_bytes() if path.exists() else None) == original
+
+    monkeypatch.setattr(bump_version, "refresh_lockfile", lambda: None)
+    assert bump_version.bump("patch", None) == "0.1.1"
+    assert repo["changelog"].read_text().count("## [0.1.1]") == 1
+
+
+def test_missing_pyproject_version_does_not_roll_changelog_forward(repo):
+    repo["pyproject"].write_text('[project]\nname = "agentloop-profiler"\n')
+    originals = {path: path.read_bytes() for path in repo.values() if path.exists()}
+    with pytest.raises(bump_version.BumpError, match="version field"):
+        bump_version.bump("patch", None)
+    assert {path: path.read_bytes() for path in originals} == originals
+
+
+def test_interrupted_lock_refresh_restores_files(repo, monkeypatch):
+    originals = {path: path.read_bytes() for path in repo.values() if path.exists()}
+
+    def interrupted_refresh():
+        repo["lockfile"].write_text("partial lock")
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(bump_version, "refresh_lockfile", interrupted_refresh)
+    with pytest.raises(KeyboardInterrupt):
+        bump_version.bump("patch", None)
+    assert {path: path.read_bytes() for path in originals} == originals
+    assert not repo["lockfile"].exists()
+
+
+def test_failed_version_write_restores_prior_changes(repo, monkeypatch):
+    originals = {path: path.read_bytes() for path in repo.values() if path.exists()}
+    original_write = Path.write_text
+
+    def failed_write(path, *args, **kwargs):
+        if path == repo["version_py"]:
+            path.write_bytes(b"partial version")
+            raise OSError("disk write failed")
+        return original_write(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", failed_write)
+    with pytest.raises(bump_version.BumpError, match="previous files restored"):
+        bump_version.bump("patch", None)
+    assert {path: path.read_bytes() for path in originals} == originals
+
+
+def test_failed_restore_reports_file_and_continues_restoring_others(repo, monkeypatch):
+    original_version = repo["version_py"].read_bytes()
+    original_write = Path.write_bytes
+
+    def failed_refresh():
+        raise FileNotFoundError("uv not installed")
+
+    def failed_restore(path, *args, **kwargs):
+        if path == repo["changelog"]:
+            raise PermissionError("file locked")
+        return original_write(path, *args, **kwargs)
+
+    monkeypatch.setattr(bump_version, "refresh_lockfile", failed_refresh)
+    monkeypatch.setattr(Path, "write_bytes", failed_restore)
+    with pytest.raises(bump_version.BumpError, match="could not restore") as error:
+        bump_version.bump("patch", None)
+    assert str(repo["changelog"]) in str(error.value)
+    assert repo["version_py"].read_bytes() == original_version
+    assert 'version = "0.1.0"' in repo["pyproject"].read_text()
 
 
 # --- CLI -----------------------------------------------------------------
