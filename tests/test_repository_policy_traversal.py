@@ -39,3 +39,22 @@ def test_pruned_walk_preserves_existing_markdown_scope_and_link_failures(tmp_pat
     errors = check_repo.check_markdown_links()
     assert len(errors) == 1
     assert "README.md" in errors[0] and "docs/missing.md" in errors[0]
+
+
+def test_generated_run_artifacts_and_node_dependencies_are_not_repository_docs(
+    tmp_path, monkeypatch
+):
+    source = tmp_path / "sdk" / "README.md"
+    source.parent.mkdir()
+    source.write_text("[source error](missing.md)", encoding="utf-8")
+    generated = tmp_path / "runs" / "wheel-env" / "licenses"
+    dependencies = tmp_path / "sdk" / "node_modules" / "vendor"
+    for folder in (generated, dependencies):
+        folder.mkdir(parents=True)
+        (folder / "README.md").write_text(
+            "[unrelated package](missing-vendor.md)", encoding="utf-8"
+        )
+    monkeypatch.setattr(check_repo, "ROOT", tmp_path)
+    assert check_repo.markdown_files() == [source]
+    errors = check_repo.check_markdown_links()
+    assert len(errors) == 1 and "sdk" in errors[0] and "missing.md" in errors[0]

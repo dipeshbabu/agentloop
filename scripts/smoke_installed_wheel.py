@@ -92,6 +92,35 @@ def smoke(expected_version: str) -> None:
         )
 
         cli("quickstart", "--out", "quickstart.json")
+        cli("hermes", "export-plugin", "hermes-plugin")
+        hermes_smoke = Path(__file__).resolve().parent / "smoke_hermes_plugin.py"
+        subprocess.run(  # nosec B603 - own exported plugin, fixed interpreter, no shell
+            [
+                sys.executable,
+                "-I",
+                "-S",
+                str(hermes_smoke),
+                "--plugin",
+                str(work / "hermes-plugin"),
+                "--out",
+                str(work / "hermes-traces"),
+            ],
+            cwd=work,
+            check=True,
+        )
+        hermes_trace = next((work / "hermes-traces").glob("run_hermes_*.json"))
+        cli(
+            "analyze",
+            str(hermes_trace),
+            "--html",
+            "hermes.html",
+            "--json-out",
+            "hermes-analysis.json",
+        )
+        require(
+            read_json(work / "hermes-analysis.json")["report"]["model_call_count"] == 1,
+            "Hermes native traces must analyze through the installed wheel",
+        )
         cli("analyze", "quickstart.json", "--html", "analysis.html", "--json-out", "analysis.json")
         analysis = read_json(work / "analysis.json")
         require(bool(analysis["diagnosis"]["findings"]), "Quickstart must produce findings")

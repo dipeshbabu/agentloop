@@ -241,6 +241,11 @@ when needed; `python -m pip install "agentloop-profiler[instrumentation]"` inclu
 the OpenAI Python SDK. Follow the [integration guide](docs/INTEGRATIONS.md) for
 setup, supported behavior, and streaming lifecycle requirements.
 
+The current source checkout also includes [Hermes Agent tracing](docs/HERMES.md).
+Export its dependency-free directory plugin with `agentloop hermes export-plugin`,
+enable it in your Hermes profile, and analyze the native turn traces it writes.
+Output capture is off by default; the tested host contract is Hermes 0.21.6.
+
 For telemetry you already export, [onboarding](docs/ONBOARDING.md) validates capture
 before analysis. The [interoperability guide](docs/INTEROPERABILITY_READINESS.md)
 covers Harbor ATIF/jobs, Omnigent sessions, bounded OTLP JSONL, offline capability

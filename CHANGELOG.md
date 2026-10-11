@@ -7,8 +7,16 @@ trace, study, receipt, API and database schema versions.
 
 ## [Unreleased]
 
+### Added
+
+- Hermes 0.21.6 observer integration and a standalone directory-plugin exporter,
+  with native turn traces, normalized request usage, retry and tool evidence,
+  explicit incomplete capture, profile isolation, and opt-in output text.
+
 ### Fixed
 
+- Repository link checks exclude generated run artifacts, package smoke
+  environments and JavaScript dependencies while retaining source documentation.
 - CLI analysis, reports and study summaries reject destinations that alias source
   evidence or each other before writing, including symlinks and hard links.
 - CI step-summary destinations are checked alongside reports so appending a

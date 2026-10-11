@@ -14,7 +14,7 @@ except ModuleNotFoundError:  # pragma: no cover - Python 3.10 compatibility
 
 
 ROOT = Path(__file__).resolve().parents[1]
-EXCLUDED_PARTS = {".git", ".venv", "build", "dist"}
+EXCLUDED_PARTS = {".git", ".venv", ".package-smoke", "build", "dist", "runs", "node_modules"}
 LINK_PATTERN = re.compile(r"!?\[[^\]]*\]\(([^)\n]+)\)")
 VERSION_PATTERN = re.compile(r'^__version__\s*=\s*"([^"]+)"$', re.MULTILINE)
 REQUIRED_COMMUNITY_FILES = {
