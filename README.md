@@ -33,17 +33,16 @@ repeated work, and compare runs before and after a change.
 Tracing and analysis run locally. You can work with JSON files without a database
 or hosted account. The dashboard and HTTP API are optional.
 
-The unreleased source checkout also profiles classifiers, rules and decision
+AgentLoop also profiles classifiers, rules and decision
 pipelines. See [AI execution profiling](docs/AI_EXECUTION_PROFILING.md) for the
-trace-to-quality workflow and five offline reference examples. These additions
-are not included in the published `0.7.0` package.
+trace-to-quality workflow and five offline reference examples in `0.1.0`.
 
 The [Harbor and Omnigent interoperability workstream](docs/INTEROPERABILITY.md)
 includes read-only [Harbor ATIF](docs/HARBOR_ATIF.md) and
 [job/trial/verifier import](docs/HARBOR_TRIALS.md), source-qualified native reports
 and pinned offline fixtures. [Omnigent telemetry/session import](docs/OMNIGENT_OTEL.md)
-preserves policy observations and coverage gaps. Complete cross-harness comparisons
- and behavior-verified capabilities remain dependent workstreams.
+preserves policy observations and coverage gaps. Task-paired cross-harness
+comparisons and behavior-verified capabilities are included in this release.
 
 The [bounded OTLP JSONL importer](docs/OTLP_JSONL.md) joins split telemetry traces
 and keeps duplicate/conflicting records, conversion losses and inferred timing

@@ -3,7 +3,7 @@ name: Dependency review
 on:
   pull_request:
     branches: [main]
-  # Lets bump-version.yml's release-prep PR (opened with the default GITHUB_TOKEN, so
+  # Lets prepare-release.yml's release-prep PR (opened with the default GITHUB_TOKEN, so
   # the pull_request trigger above never fires for it) get this required check to
   # actually run via `gh workflow run dependency-review.yml --ref <branch>`. The
   # dependency-review-action needs explicit base-ref/head-ref outside a real

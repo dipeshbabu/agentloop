@@ -1,9 +1,9 @@
 # Harbor ATIF import
 
-The Unreleased source checkout imports ATIF v1.7/v1.8 and a v1.6 compatibility
+AgentLoop `0.1.0` imports ATIF v1.7/v1.8 and a v1.6 compatibility
 subset without Harbor, Docker, a provider SDK or network access. Import reads
-data; it does not execute an agent or verifier. These commands are not in the
-published `agentloop-profiler==0.7.0` wheel.
+data; it does not execute an agent or verifier. These commands are included in
+`agentloop-profiler==0.1.0`.
 
 This implements the trajectory boundary of
 [workstream #273](https://github.com/dipeshbabu/agentloop/issues/273). Job/trial

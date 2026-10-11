@@ -154,6 +154,6 @@ uv run --frozen python -m pytest tests/test_external_cohorts.py tests/test_harbo
 
 The mapping was refreshed against Harbor
 `d5ac1be17f575852eaf4fffc4072fd18481c209b`. Core Python 3.10, native trace 1.1,
-study manifest 1.0, dependencies and package version remain unchanged. No upstream
-implementation code copied, paid provider invoked, sandbox cloned or release made.
-Use a source checkout; published 0.7.0 does not contain these unreleased commands.
+study manifest 1.0 and dependencies remain unchanged. No upstream implementation
+code was copied, paid provider invoked or sandbox cloned. These commands are
+included in `0.1.0`.

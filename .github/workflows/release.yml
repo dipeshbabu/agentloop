@@ -1,20 +1,19 @@
-name: Release
+name: Publish release
 
 on:
   push:
     tags:
       - "v*.*.*"
-  # Lets tag-release.yml (which pushes tags with the default GITHUB_TOKEN, so
-  # the push above never fires for it — see the comment in tag-release.yml)
-  # start this workflow via `gh workflow run release.yml --ref <tag>`. Running
-  # with --ref set to a tag gives this run the same github.ref/GITHUB_REF_NAME
-  # a real tag push would, so the guard job below needs no special-casing for
-  # this trigger type. A manual dispatch against a branch (not a tag) still
-  # fails the "Check tag matches package version" step, same as it always has.
+  # Explicit dispatch supports recovering a tagged release. Branch dispatches
+  # fail the same exact-tag and main-reachability checks as every other run.
   workflow_dispatch: {}
 
 permissions:
   contents: read
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   guard:
@@ -36,6 +35,12 @@ jobs:
 
       - name: Check tag matches package version
         run: test "v$(uv version --short)" = "$GITHUB_REF_NAME"
+
+      - name: Require an annotated semantic version tag
+        shell: bash
+        run: |
+          [[ "$GITHUB_REF" =~ ^refs/tags/v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          test "$(git cat-file -t "$GITHUB_REF")" = tag
 
       - name: Require tag commit on main
         shell: bash
@@ -109,6 +114,24 @@ jobs:
             | sort -z \
             | xargs -0 sha256sum > SHA256SUMS
 
+      - name: Extract this release's changelog
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          version = os.environ["RELEASE_TAG"][1:]
+          text = Path("CHANGELOG.md").read_text(encoding="utf-8")
+          pattern = rf"^## \[{re.escape(version)}\][^\n]*\n(.*?)(?=^## \[|^\[Unreleased\]:|\Z)"
+          match = re.search(pattern, text, re.MULTILINE | re.DOTALL)
+          if match is None or not match.group(1).strip():
+              raise SystemExit("Missing nonempty changelog for the exact release version")
+          Path("release-notes.txt").write_text(match.group(1).strip() + "\n", encoding="utf-8")
+          PY
+
       - name: Create release and upload validated artifacts
         env:
           GH_TOKEN: ${{ github.token }}
@@ -118,7 +141,7 @@ jobs:
           if ! gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
             gh release create "$GITHUB_REF_NAME" \
               --verify-tag \
-              --generate-notes \
+              --notes-file release-notes.txt \
               --title "AgentLoop $version"
           fi
           gh release upload "$GITHUB_REF_NAME" release-assets/* --clobber

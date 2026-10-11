@@ -1,0 +1,87 @@
+name: Prepare release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump_type:
+        description: patch (default) for routine changes; minor for a notable feature; major for a breaking change.
+        required: false
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+      version:
+        description: Optional explicit X.Y.Z version, greater than the current version.
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate main before release preparation
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/ci.yml
+
+  prepare:
+    name: Open release preparation PR
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Set up uv and Python
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.11.28"
+          python-version: "3.13"
+          enable-cache: true
+      - name: Prepare version and changelog
+        id: version
+        env:
+          VERSION_OVERRIDE: ${{ inputs.version }}
+          BUMP_TYPE: ${{ inputs.bump_type }}
+        run: |
+          if [ -n "$VERSION_OVERRIDE" ]; then
+            version="$(uv run --frozen python scripts/bump_version.py --set "$VERSION_OVERRIDE")"
+          else
+            version="$(uv run --frozen python scripts/bump_version.py "$BUMP_TYPE")"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Commit preparation branch
+        env:
+          BRANCH: release/prepare-${{ steps.version.outputs.version }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$BRANCH"
+          git add pyproject.toml agentloop/version.py uv.lock CHANGELOG.md
+          git commit -m "chore: prepare AgentLoop $VERSION release"
+          git push origin "$BRANCH"
+      - name: Open reviewable preparation PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: release/prepare-${{ steps.version.outputs.version }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          cat > release-pr.txt <<EOF
+          Prepare AgentLoop $VERSION by updating package/runtime metadata, the lockfile and changelog together.
+
+          Main validation passed before preparation. Fresh checks are dispatched against this PR's exact branch; wait for all of them before merging. Merging this PR does not tag or publish. After merge, explicitly create the matching annotated version tag and approve its tested PyPI deployment.
+          EOF
+          gh pr create --base main --head "$BRANCH" --title "Prepare AgentLoop $VERSION release" --body-file release-pr.txt
+      - name: Dispatch final preparation checks
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: release/prepare-${{ steps.version.outputs.version }}
+        run: |
+          for workflow in ci.yml codeql.yml dependency-review.yml agentloop-performance.yml application-performance-smoke.yml; do
+            gh workflow run "$workflow" --ref "$BRANCH"
+          done

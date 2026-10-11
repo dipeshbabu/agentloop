@@ -112,7 +112,6 @@ provides scoped wrapper probes. No live provider/transport was exercised here.
 
 The design follows the declaration/observation separation in Omnigent
 [`a2956be0e97bb175a60b274053d836f07d494c6c`](https://github.com/omnigent-ai/omnigent/blob/a2956be0e97bb175a60b274053d836f07d494c6c/omnigent/harness_capabilities.py),
-using AgentLoop's existing implementations. No upstream code was copied, optional
-runtime dependency added, schema/release version changed or production control
-enabled. Core Python 3.10 remains supported; these commands are not in the
-published 0.7.0 wheel.
+using AgentLoop's existing implementations. No upstream code was copied or
+production control enabled. Core Python 3.10 remains supported; these commands
+are included in `0.1.0`.

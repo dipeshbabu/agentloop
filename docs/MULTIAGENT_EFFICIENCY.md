@@ -3,8 +3,8 @@
 Read-only Harbor and Omnigent imports now export `coordination.json` and
 `coordination.html` alongside their existing traces, receipts and inventories.
 These reports join supplied evidence without running an agent or merging
-separate documents into a session trace. They are Unreleased checkout features;
-the published `agentloop-profiler==0.7.0` wheel does not contain them.
+separate documents into a session trace. They are included in
+`agentloop-profiler==0.1.0`.
 
 ## Offline workflow
 

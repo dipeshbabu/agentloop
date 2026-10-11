@@ -19,14 +19,14 @@ CHANGELOG_TEMPLATE = """\
 
 ## [Unreleased]
 {unreleased_body}
-## [0.4.0] - 2026-07-18
+## [0.1.0] - 2026-07-18
 
 ### Added
 
 - Something from the previous release.
 
-[Unreleased]: https://github.com/dipeshbabu/agentloop/compare/v0.4.0...HEAD
-[0.4.0]: https://github.com/dipeshbabu/agentloop/releases/tag/v0.4.0
+[Unreleased]: https://github.com/dipeshbabu/agentloop/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/dipeshbabu/agentloop/releases/tag/v0.1.0
 """
 
 
@@ -36,8 +36,8 @@ def repo(tmp_path, monkeypatch):
     version_py = tmp_path / "version.py"
     changelog = tmp_path / "CHANGELOG.md"
 
-    pyproject.write_text('[project]\nname = "agentloop-profiler"\nversion = "0.4.0"\n')
-    version_py.write_text('from __future__ import annotations\n\n__version__ = "0.4.0"\n')
+    pyproject.write_text('[project]\nname = "agentloop-profiler"\nversion = "0.1.0"\n')
+    version_py.write_text('from __future__ import annotations\n\n__version__ = "0.1.0"\n')
     changelog.write_text(
         CHANGELOG_TEMPLATE.format(unreleased_body="\n### Added\n\n- A pending change.\n\n")
     )
@@ -55,9 +55,10 @@ def repo(tmp_path, monkeypatch):
 @pytest.mark.parametrize(
     ("current", "bump_type", "expected"),
     [
-        ("0.4.0", "patch", "0.4.1"),
-        ("0.4.0", "minor", "0.5.0"),
-        ("0.4.0", "major", "1.0.0"),
+        ("0.1.0", "patch", "0.1.1"),
+        ("0.1.1", "patch", "0.1.2"),
+        ("0.1.0", "minor", "0.2.0"),
+        ("0.1.0", "major", "1.0.0"),
         ("1.9.9", "patch", "1.9.10"),
         ("0.0.1", "major", "1.0.0"),
     ],
@@ -73,6 +74,14 @@ def test_parse_semver_rejects_non_semver_strings():
         bump_version.parse_semver("1.2")
     with pytest.raises(bump_version.BumpError):
         bump_version.parse_semver("1.2.3-rc1")
+    with pytest.raises(bump_version.BumpError):
+        bump_version.parse_semver("0.01.0")
+    with pytest.raises(bump_version.BumpError):
+        bump_version.parse_semver("0.1.01")
+    with pytest.raises(bump_version.BumpError):
+        bump_version.parse_semver("0.1.٢")
+    with pytest.raises(bump_version.BumpError):
+        bump_version.parse_semver("0.1.1\n")
 
 
 # --- end-to-end bump() -------------------------------------------------------
@@ -81,23 +90,23 @@ def test_parse_semver_rejects_non_semver_strings():
 def test_bump_updates_all_three_files_in_lockstep(repo):
     new_version = bump_version.bump("minor", None)
 
-    assert new_version == "0.5.0"
-    assert 'version = "0.5.0"' in repo["pyproject"].read_text()
-    assert '__version__ = "0.5.0"' in repo["version_py"].read_text()
+    assert new_version == "0.2.0"
+    assert 'version = "0.2.0"' in repo["pyproject"].read_text()
+    assert '__version__ = "0.2.0"' in repo["version_py"].read_text()
 
 
 def test_bump_moves_unreleased_content_into_a_dated_section(repo):
     bump_version.bump("patch", None)
 
     changelog = repo["changelog"].read_text()
-    assert "## [Unreleased]\n\n## [0.4.1] -" in changelog
-    unreleased_section = changelog.split("## [Unreleased]")[1].split("## [0.4.1]")[0]
+    assert "## [Unreleased]\n\n## [0.1.1] -" in changelog
+    unreleased_section = changelog.split("## [Unreleased]")[1].split("## [0.1.1]")[0]
     assert unreleased_section.strip() == ""
     assert "### Added\n\n- A pending change." in changelog
-    # the moved content must land inside the new dated section, before 0.4.0's
-    dated_index = changelog.index("## [0.4.1]")
+    # the moved content must land inside the new dated section, before 0.1.0's
+    dated_index = changelog.index("## [0.1.1]")
     pending_index = changelog.index("A pending change.")
-    old_release_index = changelog.index("## [0.4.0]")
+    old_release_index = changelog.index("## [0.1.0]")
     assert dated_index < pending_index < old_release_index
 
 
@@ -106,10 +115,10 @@ def test_bump_updates_compare_link_footer(repo):
 
     changelog = repo["changelog"].read_text()
     assert (
-        "[Unreleased]: https://github.com/dipeshbabu/agentloop/compare/v0.4.1...HEAD" in changelog
+        "[Unreleased]: https://github.com/dipeshbabu/agentloop/compare/v0.1.1...HEAD" in changelog
     )
-    assert "[0.4.1]: https://github.com/dipeshbabu/agentloop/compare/v0.4.0...v0.4.1" in changelog
-    assert "[0.4.0]: https://github.com/dipeshbabu/agentloop/releases/tag/v0.4.0" in changelog
+    assert "[0.1.1]: https://github.com/dipeshbabu/agentloop/compare/v0.1.0...v0.1.1" in changelog
+    assert "[0.1.0]: https://github.com/dipeshbabu/agentloop/releases/tag/v0.1.0" in changelog
 
 
 def test_bump_refuses_when_unreleased_section_is_empty(repo):
@@ -121,16 +130,16 @@ def test_bump_refuses_when_unreleased_section_is_empty(repo):
 
     # nothing should have been written
     assert repo["pyproject"].read_text() == original_pyproject
-    assert '__version__ = "0.4.0"' in repo["version_py"].read_text()
+    assert '__version__ = "0.1.0"' in repo["version_py"].read_text()
 
 
 def test_bump_rejects_explicit_version_not_greater_than_current(repo):
     with pytest.raises(bump_version.BumpError, match="must be greater"):
-        bump_version.bump(None, "0.3.0")
+        bump_version.bump(None, "0.0.9")
     with pytest.raises(bump_version.BumpError, match="must be greater"):
-        bump_version.bump(None, "0.4.0")
+        bump_version.bump(None, "0.1.0")
 
-    assert '__version__ = "0.4.0"' in repo["version_py"].read_text()
+    assert '__version__ = "0.1.0"' in repo["version_py"].read_text()
 
 
 def test_bump_accepts_explicit_version_override(repo):
@@ -146,7 +155,7 @@ def test_bump_is_idempotent_on_failure_no_partial_writes(repo):
     original_changelog = repo["changelog"].read_text()
 
     with pytest.raises(bump_version.BumpError):
-        bump_version.bump(None, "0.1.0")  # lower than current
+        bump_version.bump(None, "0.0.1")  # lower than current
 
     assert repo["pyproject"].read_text() == original_pyproject
     assert repo["version_py"].read_text() == original_version_py
@@ -170,4 +179,4 @@ def test_main_prints_new_version_on_success(repo, capsys):
     exit_code = bump_version.main(["patch"])
 
     assert exit_code == 0
-    assert capsys.readouterr().out.strip() == "0.4.1"
+    assert capsys.readouterr().out.strip() == "0.1.1"

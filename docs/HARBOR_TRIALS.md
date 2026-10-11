@@ -172,9 +172,8 @@ Trial locks support schemas 2/3; unsupported versions fail. This inspected
 revision is separate from the producer revision recorded in job locks. The
 [fixture matrix](../tests/fixtures/external/source_matrix.json) pins synthetic
 source bytes and their original model reference. No upstream code is copied.
-AgentLoop remains Python 3.10+, native schema 1.1 and package version 0.7.0.
-Use this checkout's qualification-aware reader; the published wheel lacks these
-commands and older readers can misinterpret native placeholders.
+AgentLoop `0.1.0` supports Python 3.10+ and native schema 1.1. Use its
+qualification-aware reader; older readers can misinterpret native placeholders.
 
 ```bash
 uv run --frozen python -m pytest tests/test_harbor_trials.py tests/test_harbor_atif.py tests/test_interoperability_contracts.py tests/test_studies.py tests/test_replay.py -q -ra
