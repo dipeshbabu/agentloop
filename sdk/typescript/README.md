@@ -12,14 +12,14 @@ published to npm. Build and install a local package:
 npm ci --prefix sdk/typescript
 npm run build --prefix sdk/typescript
 cd sdk/typescript
-npm pack --pack-destination ../../runs
+npm pack
 cd ../..
 ```
 
 From your application directory, install the generated package:
 
 ```bash
-npm install /path/to/agentloop/runs/agentloop-profiler-0.1.0.tgz
+npm install /path/to/agentloop/sdk/typescript/agentloop-profiler-0.1.0.tgz
 ```
 
 The package is ESM and includes TypeScript declarations. The SDK's package version
