@@ -6,6 +6,7 @@ import typer
 from rich.table import Table
 
 from agentloop.cli import _build_quality_report_from_file, _load_trace, _write_json, app, console
+from agentloop.cli_paths import validate_output_paths
 from agentloop.events import AgentEvent
 from agentloop.findings import build_diagnosis
 from agentloop.html_report import analysis_to_html
@@ -129,6 +130,7 @@ def quickstart_command(
     ),
 ) -> None:
     """Generate one offline trace and show useful findings with no account or API key."""
+    validate_output_paths(sources=[], outputs={"--out": out, "--json-out": json_out})
     trace = _quickstart_trace()
     trace.export_json(out)
     payload = _analysis_payload(trace)
@@ -164,6 +166,10 @@ def analyze_command(
     ),
 ) -> None:
     """Analyze one existing AgentLoop trace in a single command."""
+    validate_output_paths(
+        sources=[path, baseline, quality_fixtures],
+        outputs={"--json-out": json_out, "--html": html_out},
+    )
     trace = _load_trace(path, param_hint="path")
     if (quality_fixtures is not None or min_quality_score is not None) and baseline is None:
         raise typer.BadParameter("quality comparison options require --baseline")

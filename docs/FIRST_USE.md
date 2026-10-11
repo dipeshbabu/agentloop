@@ -100,6 +100,15 @@ agentloop replay \
 
 For pull-request gating, use the same inputs with `agentloop ci`.
 
+Keep source traces and fixtures separate from report destinations. CLI analysis
+and report commands reject overlapping input/output files and report formats
+before writing, including symlink and hard-link aliases. An existing report can
+be regenerated at its own output path.
+
+`analyze` reports comparison failures for inspection and does not enforce gates.
+Use `replay`, `quality-report`, or `ci` when failure must produce exit code `1`.
+Invalid arguments, including conflicting paths, produce exit code `2`.
+
 ## Advanced commands remain available
 
 `quickstart` and `analyze` orchestrate existing AgentLoop capabilities. They do not replace the lower-level commands. Use `report`, `diagnose`, `optimize`, `patch`, `replay`, `quality-report`, `ci`, store commands, and API commands when you need control over one stage of the workflow.

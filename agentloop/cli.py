@@ -19,6 +19,7 @@ from agentloop.calibration import (
     summarize_calibration,
 )
 from agentloop.ci import build_ci_report, ci_report_to_markdown
+from agentloop.cli_paths import validate_output_paths
 from agentloop.client import AgentLoopClient, AgentLoopClientError
 from agentloop.costs import format_cost_usd, is_cost_evaluable
 from agentloop.demo import run_baseline, run_langgraph_style, run_optimized, run_proof_pair
@@ -93,8 +94,7 @@ def onboard_command(
     from agentloop.aggregates import read_json
     from agentloop.onboarding import onboard
 
-    if path.resolve() == out.resolve():
-        raise typer.BadParameter("output must differ from the source telemetry", param_hint="out")
+    validate_output_paths(sources=[path], outputs={"--out": out})
     try:
         result = onboard(
             read_json(path),
@@ -138,13 +138,10 @@ def study_ablation_command(
         report = summarize_ablation(bundle)
     except AblationValidationError as exc:
         raise typer.BadParameter(str(exc), param_hint="bundle") from None
-    outputs = {out.resolve(), json_out.resolve()}
-    sources = {Path(source).resolve() for source in report["source_paths"]}
-    if len(outputs) != 2 or outputs & sources:
-        raise typer.BadParameter(
-            "report paths must differ from each other and all source evidence",
-            param_hint="out/json-out",
-        )
+    validate_output_paths(
+        sources=[bundle, *(Path(source) for source in report["source_paths"])],
+        outputs={"--out": out, "--json-out": json_out},
+    )
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(ablation_to_markdown(report), encoding="utf-8")
     _write_json(json_out, report)
@@ -163,13 +160,10 @@ def study_calibrate_command(
         report = summarize_calibration(manifest)
     except CalibrationValidationError as exc:
         raise typer.BadParameter(str(exc), param_hint="manifest") from None
-    outputs = {out.resolve(), json_out.resolve()}
-    sources = {Path(source).resolve() for source in report["source_paths"]}
-    if len(outputs) != 2 or outputs & sources:
-        raise typer.BadParameter(
-            "report paths must differ from each other and all source evidence",
-            param_hint="out/json-out",
-        )
+    validate_output_paths(
+        sources=[manifest, *(Path(source) for source in report["source_paths"])],
+        outputs={"--out": out, "--json-out": json_out},
+    )
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(calibration_to_markdown(report), encoding="utf-8")
     _write_json(json_out, report)
@@ -188,6 +182,17 @@ def study_summarize_command(
         report = summarize_study(manifest)
     except StudyValidationError as exc:
         raise typer.BadParameter(str(exc), param_hint="manifest") from None
+    validate_output_paths(
+        sources=[
+            manifest,
+            *(
+                Path(run["path"])
+                for condition in report["conditions"].values()
+                for run in condition["runs"]
+            ),
+        ],
+        outputs={"--out": out, "--json-out": json_out},
+    )
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(study_to_markdown(report), encoding="utf-8")
     _write_json(json_out, report)
@@ -439,6 +444,17 @@ def replay_command(
         None, help="Optional saved baseline diagnosis for historical prediction snapshots."
     ),
 ) -> None:
+    validate_output_paths(
+        sources=[
+            baseline,
+            candidate,
+            quality_fixtures,
+            intervention_config,
+            intervention_metadata,
+            baseline_diagnosis,
+        ],
+        outputs={"--out": out, "--json-out": json_out, "--intervention-out": intervention_out},
+    )
     baseline_trace = _load_trace(baseline, param_hint="--baseline")
     candidate_trace = _load_trace(candidate, param_hint="--candidate")
     quality = (
@@ -532,6 +548,7 @@ def intervention_create_command(
         None, help="Remote project API key; defaults to AGENTLOOP_API_KEY."
     ),
 ) -> None:
+    validate_output_paths(sources=[request], outputs={"--out": out})
     payload = _json_object_input(request, "request")
     try:
         record = (
@@ -586,6 +603,9 @@ def quality_report_command(
     ),
     min_score: float | None = typer.Option(None, min=0.0, max=1.0),
 ) -> None:
+    validate_output_paths(
+        sources=[fixtures, baseline, candidate], outputs={"--out": out, "--json-out": json_out}
+    )
     baseline_trace = (
         _load_trace(baseline, param_hint="--baseline") if baseline is not None else None
     )
@@ -632,6 +652,15 @@ def ci_command(
     ),
     fail_on_gate: bool = typer.Option(True, help="Exit non-zero when CI gates fail."),
 ) -> None:
+    summary_path = os.getenv("GITHUB_STEP_SUMMARY") if github_step_summary else None
+    validate_output_paths(
+        sources=[baseline, candidate, quality_fixtures],
+        outputs={
+            "--out": out,
+            "--json-out": json_out,
+            "GITHUB_STEP_SUMMARY": Path(summary_path) if summary_path else None,
+        },
+    )
     baseline_trace = _load_trace(baseline, param_hint="--baseline")
     candidate_trace = _load_trace(candidate, param_hint="--candidate")
     quality = (
@@ -667,7 +696,6 @@ def ci_command(
     if json_out is not None:
         _write_json(json_out, report_data)
     if github_step_summary:
-        summary_path = os.getenv("GITHUB_STEP_SUMMARY")
         if summary_path:
             with open(summary_path, "a", encoding="utf-8") as handle:
                 handle.write(markdown)
@@ -681,6 +709,7 @@ def ci_command(
 
 @app.command("dump-report")
 def dump_report(path: Path, out: Path) -> None:
+    validate_output_paths(sources=[path], outputs={"out": out})
     trace = _load_trace(path)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(trace.report(), indent=2), encoding="utf-8")
@@ -692,6 +721,7 @@ def audit(
     path: Path = Path("runs/research_agent_baseline.json"),
     out: Path = Path("runs/agentloop_audit.md"),
 ) -> None:
+    validate_output_paths(sources=[path], outputs={"--out": out})
     trace = _load_trace(path, param_hint="--path")
     report_data = trace.report()
     improvement = estimate_improvement(report_data)
@@ -711,6 +741,7 @@ def optimize(
     out: Path = Path("runs/optimization_plan.md"),
     json_out: Path | None = typer.Option(None, help="Optional JSON output path."),
 ) -> None:
+    validate_output_paths(sources=[path], outputs={"--out": out, "--json-out": json_out})
     trace = _load_trace(path, param_hint="--path")
     plan = build_optimization_plan(trace)
     export_optimization_markdown(plan, out)
@@ -746,6 +777,7 @@ def diagnose(
         RankingSort.PRIORITY, help="Finding ranking dimension; unknown values stay explicit."
     ),
 ) -> None:
+    validate_output_paths(sources=[path], outputs={"--out": out, "--json-out": json_out})
     trace = _load_trace(path, otel=otel, name=name, param_hint="--path")
     diagnosis = build_diagnosis(trace, sort_by=sort_by.value)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -779,6 +811,7 @@ def import_otel(
     out: Path,
     name: str | None = typer.Option(None, help="Optional imported trace name."),
 ) -> None:
+    validate_output_paths(sources=[path], outputs={"out": out})
     trace = _load_trace(path, otel=True, name=name)
     trace.export_json(out)
     console.print(f"Imported OTLP trace {trace.run_id} to {out}")
@@ -786,6 +819,7 @@ def import_otel(
 
 @app.command("export-otel")
 def export_otel(path: Path, out: Path) -> None:
+    validate_output_paths(sources=[path], outputs={"out": out})
     trace = _load_trace(path)
     _write_json(out, trace_to_otel(trace))
     console.print(f"Exported OTLP-style trace to {out}")
@@ -803,6 +837,7 @@ def patch_command(
         True, help="Only generate a patch plan. File edits are not supported yet."
     ),
 ) -> None:
+    validate_output_paths(sources=[path], outputs={"--out": out, "--json-out": json_out})
     if not dry_run:
         raise typer.BadParameter(
             "Only --dry-run is supported. Generate a patch plan first, then apply manually."
@@ -835,6 +870,7 @@ def value_report(
     engineer_hourly_rate_usd: float = typer.Option(150.0, min=0),
     incident_cost_usd: float = typer.Option(500.0, min=0),
 ) -> None:
+    validate_output_paths(sources=[path], outputs={"--out": out})
     trace = _load_trace(path, param_hint="--path")
     value = build_value_report(
         trace,

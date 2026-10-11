@@ -55,6 +55,10 @@ API calls. It tests your installation, not your application's performance.
 If your shell cannot find `agentloop`, activate the Python environment where you
 installed it. Run `agentloop doctor` to check the installation and available adapters.
 
+For an isolated install, create an environment with `python -m venv .venv`, then
+activate it with `source .venv/bin/activate` on Linux/macOS or
+`.\.venv\Scripts\Activate.ps1` in Windows PowerShell before installing the package.
+
 ## Record your own run
 
 Save this as `example_agent.py`. It traces local functions and saves their output
@@ -119,6 +123,16 @@ measure the result. See [finding rules](docs/FINDING_RULES.md),
 [estimator provenance](docs/ESTIMATORS.md) for how suggestions are derived.
 
 ## Compare before and after
+
+To try the comparison workflow before instrumenting your application:
+
+```bash
+agentloop demo --kind proof
+agentloop replay --baseline runs/agentloop_proof_baseline.json --candidate runs/agentloop_proof_candidate.json
+```
+
+This pair is synthetic and demonstrates the gates. Its result does not measure
+your application's performance.
 
 Record your agent on a task and export `runs/baseline.json`. Make your change, run
 the same task again, and export `runs/candidate.json`. Then compare the files:
@@ -197,6 +211,18 @@ requires verifiable improvement. See [pricing](docs/PRICING.md) and
 Rule failures remain visible and mark analysis incomplete. CI requires complete
 analysis before recommending a merge. Keep your Markdown renderer's safe mode or
 HTML sanitizer enabled when viewing reports from untrusted traces.
+
+### Files and exit codes
+
+Use separate filenames for source traces, quality fixtures, and each report format.
+The analysis and report commands reject paths that would replace source evidence
+or make outputs overwrite each other, including aliases through filesystem links.
+You can rerun a command to replace an existing report at its own output path.
+
+`replay`, `quality-report`, and `ci` exit with code `1` when configured checks fail.
+Invalid command arguments exit with code `2`. `analyze` produces a report for
+inspection, including failed comparison checks; use `replay` or `ci` to enforce a
+gate. Run `agentloop COMMAND --help` to see its output options and thresholds.
 
 ## Framework integrations
 

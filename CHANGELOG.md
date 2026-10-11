@@ -9,6 +9,10 @@ trace, study, receipt, API and database schema versions.
 
 ### Fixed
 
+- CLI analysis, reports and study summaries reject destinations that alias source
+  evidence or each other before writing, including symlinks and hard links.
+- CI step-summary destinations are checked alongside reports so appending a
+  summary cannot corrupt a trace, fixture or report.
 - Release preparation restores the original version, changelog and lockfile bytes
   after a failed update or interrupted lock generation, so preparation can retry.
 - Locked urllib3 and virtualenv dependencies now use patched versions for seven
