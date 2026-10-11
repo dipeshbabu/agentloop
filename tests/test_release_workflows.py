@@ -168,7 +168,8 @@ def test_manually_dispatched_ci_uploads_and_verifies_the_release_artifact() -> N
         "|| github.event_name == 'workflow_dispatch'"
     )
 
-    assert workflow.count(artifact_condition) == 4
+    assert workflow.count(artifact_condition) == 5
+    assert "typescript-sdk-node-${{ matrix.node }}" in workflow
     assert "Upload validated release artifact" in workflow
     assert "Download validated release artifact" in workflow
     assert "Verify downloaded artifact bytes" in workflow

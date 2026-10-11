@@ -24,6 +24,59 @@ permissions:
   contents: read
 
 jobs:
+  typescript:
+    name: TypeScript SDK (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["22", "24"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: sdk/typescript/package-lock.json
+      - name: Install SDK development dependencies
+        run: npm ci --prefix sdk/typescript
+      - name: Build declarations and JavaScript
+        run: npm run build --prefix sdk/typescript
+      - name: SDK regression tests
+        run: npm test --prefix sdk/typescript
+      - name: Public declaration checks
+        run: npm run test:types --prefix sdk/typescript
+      - name: Set up uv and Python
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.11.28"
+          python-version: "3.13"
+          enable-cache: true
+      - name: Install API test dependencies
+        run: uv sync --locked --extra server
+      - name: Native schema and authenticated API interoperability
+        run: uv run --frozen --extra server python scripts/smoke_typescript_sdk.py --out runs/typescript-smoke
+      - name: Pack and install SDK artifact
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/agentloop-sdk-package"
+          npm pack --pack-destination "$RUNNER_TEMP/agentloop-sdk-package"
+          package=$(find "$RUNNER_TEMP/agentloop-sdk-package" -name '*.tgz' -print -quit)
+          test -n "$package"
+          npm install --prefix "$RUNNER_TEMP/agentloop-sdk-installed" "$package"
+        working-directory: sdk/typescript
+      - name: Installed artifact interoperability
+        run: uv run --frozen --extra server python scripts/smoke_typescript_sdk.py --module "$RUNNER_TEMP/agentloop-sdk-installed/node_modules/agentloop-profiler/dist/index.js" --out runs/typescript-packed-smoke
+      - name: Upload SDK package
+        if: ${{ inputs.upload_release_artifact || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: typescript-sdk-node-${{ matrix.node }}
+          path: ${{ runner.temp }}/agentloop-sdk-package/*.tgz
+          if-no-files-found: error
+
   test:
     name: Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest

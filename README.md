@@ -35,6 +35,10 @@ The core Python SDK and CLI work with JSON files. You can trace and analyze your
 code without a hosted account or database. A dashboard, HTTP API, and shared
 storage are available as optional components.
 
+For Node.js and browser applications, the source checkout includes a
+[TypeScript SDK](sdk/typescript/README.md) with native tracing and an API v1 client.
+It has no runtime dependencies and has not yet been published to npm.
+
 ## Quickstart
 
 Install with Python 3.10 or newer:
