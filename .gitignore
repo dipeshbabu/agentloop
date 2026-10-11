@@ -18,6 +18,8 @@ runs/
 *.pem
 build/
 dist/
+node_modules/
+*.tgz
 htmlcov/
 .DS_Store
 Thumbs.db

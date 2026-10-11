@@ -9,6 +9,9 @@ trace, study, receipt, API and database schema versions.
 
 ### Added
 
+- TypeScript SDK for native model/tool/retry tracing and the API v1 routes, with
+  explicit concurrent contexts, qualified usage, private credential scopes,
+  cancellation, bounded responses, and Node/Python interoperability checks.
 - Hermes 0.21.6 observer integration and a standalone directory-plugin exporter,
   with native turn traces, normalized request usage, retry and tool evidence,
   explicit incomplete capture, profile isolation, and opt-in output text.
