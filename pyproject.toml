@@ -63,6 +63,9 @@ Changelog = "https://github.com/dipeshbabu/agentloop/blob/main/CHANGELOG.md"
 [project.scripts]
 agentloop = "agentloop.entrypoint:app"
 
+[project.entry-points."hermes_agent.plugins"]
+agentloop = "agentloop.integrations.hermes_recorder:register"
+
 [tool.setuptools.packages.find]
 include = ["agentloop*", "dashboard*"]
 

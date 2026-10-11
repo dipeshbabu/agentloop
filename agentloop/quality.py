@@ -364,6 +364,8 @@ def _trace_output(trace: Any | None) -> Any:
     if trace is None:
         return _MISSING
     metadata = getattr(trace, "metadata", {}) or {}
+    if metadata.get("output_unavailable") is True:
+        return _MISSING
     if "output" in metadata:
         return metadata["output"]
     for event in reversed(getattr(trace, "events", [])):

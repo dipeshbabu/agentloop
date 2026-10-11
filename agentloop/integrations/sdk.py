@@ -13,11 +13,17 @@ def instrument(obj: Any, *, kind: str | None = None, name: str | None = None) ->
     - `crewai_task`
     - `langgraph_state_graph`
     - `langgraph_runnable`
+    - `hermes` (a Hermes PluginContext)
 
     Without `kind`, AgentLoop uses duck-typing to choose the safest wrapper.
     """
 
     normalized = kind.lower().replace("-", "_") if kind else None
+
+    if normalized == "hermes":
+        from agentloop.integrations.hermes import register_hermes
+
+        return register_hermes(obj)
 
     if normalized == "openai" or _looks_like_openai_client(obj):
         from agentloop.integrations.openai import instrument_openai_client
@@ -54,7 +60,7 @@ def instrument(obj: Any, *, kind: str | None = None, name: str | None = None) ->
     raise ValueError(
         "Could not infer object type for AgentLoop instrumentation. "
         "Pass kind='openai', 'crewai_crew', 'crewai_agent', 'crewai_task', "
-        "'langgraph_state_graph', or 'langgraph_runnable'."
+        "'langgraph_state_graph', 'langgraph_runnable', or 'hermes'."
     )
 
 

@@ -29,6 +29,7 @@ from agentloop.exporters import export_report_markdown
 from agentloop.findings import build_diagnosis, diagnosis_to_markdown
 from agentloop.harness_bench.cli import harness_app
 from agentloop.integrations.harbor.cli import harbor_app
+from agentloop.integrations.hermes_cli import hermes_app
 from agentloop.integrations.omnigent.cli import omnigent_app
 from agentloop.interoperability.cli import telemetry_app
 from agentloop.intervention_service import create_stored_intervention
@@ -69,6 +70,7 @@ app.add_typer(study_app, name="study")
 app.add_typer(aggregate_app, name="aggregate")
 app.add_typer(drift_app, name="drift")
 app.add_typer(harbor_app, name="harbor")
+app.add_typer(hermes_app, name="hermes")
 app.add_typer(telemetry_app, name="telemetry")
 app.add_typer(omnigent_app, name="omnigent")
 app.add_typer(harness_app, name="harness")

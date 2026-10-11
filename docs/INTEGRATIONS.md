@@ -1,5 +1,9 @@
 # AgentLoop Framework Integrations
 
+For Hermes Agent, see [the Hermes plugin guide](HERMES.md). This integration is
+currently available from a source checkout and exports native per-turn traces
+through Hermes 0.21.6 observer hooks without new Hermes runtime dependencies.
+
 For framework-neutral pipeline and stage annotations, see
 [workflow tracing](WORKFLOW_TRACING.md).
 
