@@ -1,6 +1,6 @@
 # Structural optimization experiments
 
-These **Unreleased source-checkout templates** create candidates on the
+These templates, included in 0.1.0, create candidates on the
 [generic experiment contract](OPTIMIZATION_EXPERIMENTS.md). They evaluate explicit
 stage removal, conditional execution, batching and parallelization. Every
 candidate declares changed stage IDs/versions, source references, implementation

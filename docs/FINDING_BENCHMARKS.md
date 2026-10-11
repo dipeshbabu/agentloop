@@ -1,6 +1,6 @@
 # Finding trust benchmark
 
-The unreleased finding benchmark evaluates canonical detector output against a
+The finding benchmark evaluates canonical detector output against a
 frozen, versioned corpus. It measures finding correctness separately from
 [savings calibration](CALIBRATION.md) and [judgment backend quality](JUDGMENT_BENCHMARKS.md).
 It does not execute judges, tune prompts or change detector thresholds.

@@ -1,6 +1,6 @@
 # Offline OTLP JSONL import
 
-This unreleased checkout reads bounded OTLP JSONL exports and creates qualified
+The importer included in 0.1.0 reads bounded OTLP JSONL exports and creates qualified
 native traces, immutable source receipts and a record inventory. It accepts
 multiple traces on one line and joins a trace split over several lines using
 the existing `agentloop.otel.traces_from_otel` parser.

@@ -1,6 +1,6 @@
 # Declared and behavior-verified capabilities
 
-This unreleased source checkout enumerates versioned adapter descriptions and
+The registry included in 0.1.0 enumerates versioned adapter descriptions and
 keeps declarations separate from scoped observations. It does not execute a
 vendor runtime, discover plugins or enable harness policies during inspection.
 

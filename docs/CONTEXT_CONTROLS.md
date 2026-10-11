@@ -1,6 +1,6 @@
 # Explicit context transformations
 
-This opt-in API is **Unreleased** and requires a source checkout. Ordinary tracing
+This opt-in API is included in 0.1.0. Ordinary tracing
 does not rewrite prompts. The first supported transformation summarizes only
 tool results that the caller explicitly marks optional. It does not choose a
 policy, identify optional evidence, trim instructions or activate itself.

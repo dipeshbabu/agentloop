@@ -1,6 +1,6 @@
 # Executable offline capability bench
 
-The unreleased bench invokes the existing explicit Python/LangGraph adapters
+The bench included in 0.1.0 invokes the existing explicit Python/LangGraph adapters
 with trusted local protocol fakes. It checks observed behavior and external
 counters against [capability declarations](HARNESS_CAPABILITIES.md), then exports
 versioned JSON/Markdown and per-probe proof files.

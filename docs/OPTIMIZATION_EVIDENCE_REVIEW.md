@@ -2,9 +2,9 @@
 
 Reviewed on 2026-09-30 for [roadmap #208](https://github.com/dipeshbabu/agentloop/issues/208),
 through [PR #260](https://github.com/dipeshbabu/agentloop/pull/260). All eleven
-workstreams have implementation and validation evidence on main. These remain
-**Unreleased source-checkout capabilities**; this review does not publish a new
-PyPI version or activate an optimization in production.
+workstreams have implementation and validation evidence on main. These capabilities
+are now included in release 0.1.0. The review records implementation evidence;
+it does not activate an optimization in production.
 
 ## Implementation and evidence
 

@@ -1,6 +1,6 @@
 # Evidence-aware investigation ranking
 
-Available from an **Unreleased source checkout**. Ranking helps select experiments;
+Included in 0.1.0. Ranking helps select experiments;
 it never applies a finding or changes an estimated saving into a measured result.
 Canonical finding IDs, estimator snapshots, predictions and lifecycle decisions
 remain intact. Severity is a separate diagnostic field.

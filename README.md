@@ -20,127 +20,45 @@
 
 <p align="center">
   <a href="#quickstart">Quickstart</a> ·
-  <a href="#without-and-with-agentloop">Why AgentLoop</a> ·
+  <a href="#record-your-own-run">Trace your code</a> ·
   <a href="#compare-before-and-after">Compare runs</a> ·
   <a href="#framework-integrations">Integrations</a> ·
   <a href="docs/FIRST_USE.md">Guide</a>
 </p>
 
-AgentLoop records model calls, tool calls, and retries in an agent workflow. Use
-its reports to inspect latency, token usage, and estimated model costs, find
-repeated work, and compare runs before and after a change.
+AgentLoop is a local profiler for AI agents and decision pipelines. It records
+execution spans, reports latency and token usage, and identifies patterns such as
+repeated calls, retry loops, and reused context. Compare saved runs to check whether
+a change improves performance while still passing your output checks.
 
-Tracing and analysis run locally. You can work with JSON files without a database
-or hosted account. The dashboard and HTTP API are optional.
-
-AgentLoop also profiles classifiers, rules and decision
-pipelines. See [AI execution profiling](docs/AI_EXECUTION_PROFILING.md) for the
-trace-to-quality workflow and five offline reference examples in `0.1.0`.
-
-The [Harbor and Omnigent interoperability workstream](docs/INTEROPERABILITY.md)
-includes read-only [Harbor ATIF](docs/HARBOR_ATIF.md) and
-[job/trial/verifier import](docs/HARBOR_TRIALS.md), source-qualified native reports
-and pinned offline fixtures. [Omnigent telemetry/session import](docs/OMNIGENT_OTEL.md)
-preserves policy observations and coverage gaps. Task-paired cross-harness
-comparisons and behavior-verified capabilities are included in this release.
-
-The [bounded OTLP JSONL importer](docs/OTLP_JSONL.md) joins split telemetry traces
-and keeps duplicate/conflicting records, conversion losses and inferred timing
-explicit. It works offline without upstream runtimes or OpenTelemetry packages.
-
-The [capability registry](docs/HARNESS_CAPABILITIES.md) lists explicit adapter
-declarations and distinguishes current probe evidence from unknown/skipped
-capabilities. Inspection does not enable runtime controls.
-
-Run the [offline capability bench](docs/HARNESS_BENCH.md) to check actual wrapped
-behavior, source counters and declaration drift. Missing SDKs and live-only
-features remain explicit skips.
-
-The [cross-harness cohort workflow](docs/CROSS_HARNESS_STUDIES.md) compares completed
-Harbor jobs with exact task pairing and independent verifier criteria, while
-retaining failed, missing and unpaired attempts in population reports.
-
-[Coordination reports](docs/MULTIAGENT_EFFICIENCY.md) preserve distinct child
-documents, observed interval overlap and usage attribution, with explicit gaps
-for missing children, caller wait, duplicate-work inputs and review quality.
-
-The [offline adoption guide](docs/INTEROPERABILITY_READINESS.md) connects the
-copyable examples, source/quality limits, complete inventories and validation
-workflow. These integrations are Unreleased checkout capabilities.
-
-## Without and with AgentLoop
-
-<picture>
-  <source media="(max-width: 600px)" srcset="docs/assets/workflow-comparison-mobile.svg">
-  <source media="(prefers-reduced-motion: reduce)" srcset="docs/assets/workflow-comparison.svg">
-  <img src="docs/assets/workflow-comparison.gif" width="100%" alt="Architecture comparison: your agent feeds custom timing, usage parsing, retry analysis, output checks, and report code without AgentLoop. With AgentLoop, the same execution evidence feeds a shared tracing, analysis, and replay workflow.">
-</picture>
-
-<details>
-<summary>Read the comparison in text</summary>
-
-| Question | Without AgentLoop | With AgentLoop |
-|---|---|---|
-| Where did the time go? | Add timers and connect logs to calls. | Inspect recorded model, tool, and retry spans. |
-| What should I investigate? | Look through calls and logs for repeated work. | Follow findings to affected spans and suggested changes. |
-| Did the change help? | Write your own before/after comparison. | Compare saved runs with `agentloop replay`. |
-| Is the output still acceptable? | Combine task-specific checks with the performance comparison. | Supply quality fixtures and evaluate them alongside performance gates. |
-
-</details>
-
-AgentLoop supplies the tracing and comparison workflow. You choose the change,
-define what a correct output looks like, and decide which checks must pass.
-
-## How AgentLoop fits your stack
-
-<picture>
-  <source media="(max-width: 600px)" srcset="docs/assets/framework-comparison-mobile.svg">
-  <source media="(prefers-reduced-motion: reduce)" srcset="docs/assets/framework-comparison.svg">
-  <img src="docs/assets/framework-comparison.gif" width="100%" alt="Architecture: your application runs the agent and calls models and tools. AgentLoop decorators and adapters record spans into trace JSON. Analyze produces metrics and findings; replay compares a candidate with its baseline and your quality fixtures. Both produce reports for review or CI.">
-</picture>
-
-Your application runs the agent and chooses its framework and models.
-AgentLoop's [decorators and adapters](#framework-integrations) record the
-instrumented calls. Exported traces feed analysis, baseline/candidate replay,
-and reports for review or CI.
-
-When you change the framework, model, prompt, or execution strategy, record the
-same task again. [Compare both runs](#compare-before-and-after) with the same
-[quality fixtures](#quality-gates) to check the effect of your change.
+The core Python SDK and CLI work with JSON files. You can trace and analyze your
+code without a hosted account or database. A dashboard, HTTP API, and shared
+storage are available as optional components.
 
 ## Quickstart
 
-Requires Python 3.10 or newer:
+Install with Python 3.10 or newer:
 
 ```bash
 python -m pip install agentloop-profiler
 agentloop quickstart
+agentloop analyze runs/agentloop_quickstart.json --html runs/report.html --json-out runs/analysis.json
 ```
+
+Open `runs/report.html` in your browser to inspect the timeline and findings.
+`runs/analysis.json` contains the trace, metrics, diagnosis, and optimization plan.
 
 The package name is `agentloop-profiler`; the Python import and CLI command are
-both `agentloop`.
+both `agentloop`. `quickstart` creates a labeled synthetic trace and makes no model
+API calls. It tests your installation, not your application's performance.
 
-`quickstart` creates `runs/agentloop_quickstart.json` and prints findings from
-synthetic data. Use it to check the installation and learn the report format.
-The demo itself makes no network or model API calls.
-
-Inspect the saved trace and export the complete analysis:
-
-```bash
-agentloop analyze runs/agentloop_quickstart.json --json-out runs/quickstart_analysis.json
-```
-
-The analysis JSON contains the trace, its metrics, findings, and optimization
-suggestions. See [First useful result](docs/FIRST_USE.md) for more options.
-
-Add `--html runs/report.html` to `analyze` for a single offline report with a
-timeline and linked finding evidence. See [HTML reports](docs/HTML_REPORTS.md).
+If your shell cannot find `agentloop`, activate the Python environment where you
+installed it. Run `agentloop doctor` to check the installation and available adapters.
 
 ## Record your own run
 
-Save this complete example as `example_agent.py`. It traces a few local function
-calls so you can try instrumentation without a model SDK or API key. Replace the
-function body with your own work when adapting it to an agent.
+Save this as `example_agent.py`. It traces local functions and saves their output
+for the quality check below. It runs without a model SDK or API key.
 
 ```python
 import agentloop
@@ -165,72 +83,64 @@ trace.export_json("runs/research_agent.json")
 print(output)
 ```
 
-Run it, then analyze the file it created:
+Run it and inspect the recorded calls:
 
 ```bash
 python example_agent.py
-agentloop analyze runs/research_agent.json --json-out runs/research_agent_analysis.json
+agentloop analyze runs/research_agent.json --html runs/research_agent.html
 ```
 
-The decorator records each function call's duration and status. The example also
-explicitly saves the final output in trace metadata so the quality checks below
-can read it. Decide which outputs are appropriate to retain when adapting this
-example to real data.
+The decorator records duration and status for each call. Wrap your application's
+functions the same way, or use a [framework adapter](#framework-integrations).
+SDK adapters can capture provider token usage; a generic decorator cannot infer
+usage from an arbitrary return value.
 
-For model calls, use an [SDK integration](#framework-integrations) to capture
-provider token usage. The [integration guide](docs/INTEGRATIONS.md) also covers
-model decorators, context managers, streaming, and cancellation.
+Saving `metadata["output"]` is an explicit choice in this example. Review the
+inputs, outputs, errors, and metadata you retain before sharing real traces.
+See [trace retention](docs/TRACE_RETENTION.md) for capture controls.
 
 ## Inspect findings
 
-Start with `analyze`. It combines metrics, findings, and proposed optimizations
-in one report. AgentLoop looks for patterns such as repeated context, retry loops,
-repeated model calls, large steps, and recurring tool calls.
+Start with `analyze` to see metrics, findings, and suggested changes together.
+Findings link to the affected spans and describe the evidence and assumptions
+behind each suggestion. A repeated tool name, for example, does not prove that
+its calls are safe to run concurrently.
 
-On `main`, reports and optimization use the same [versioned finding rules](docs/FINDING_RULES.md).
-If a rule fails, its diagnostics remain visible and analysis is marked incomplete.
-CI requires complete analysis before recommending a merge.
+| Command | Purpose |
+| --- | --- |
+| `agentloop report runs/research_agent.json` | Inspect runtime, usage, costs, and call counts. |
+| `agentloop diagnose --path runs/research_agent.json` | Inspect findings and their supporting spans. |
+| `agentloop optimize --path runs/research_agent.json` | Review proposed optimizations and estimated savings. |
+| `agentloop patch --path runs/research_agent.json --repo .` | Generate a repository patch plan for manual review. |
 
-Treat a suggestion as a change to investigate. For example, repeated tool names
-alone do not establish that calls are safe to run concurrently. The development
-version on `main` exposes the evidence and assumptions behind
-[parallelization candidates](docs/PARALLELIZATION.md).
-
-Use individual commands when you need a specific artifact:
-
-| Command | Output |
-|---|---|
-| `agentloop report runs/research_agent.json` | Metrics for one run. |
-| `agentloop diagnose --path runs/research_agent.json` | Findings with affected spans and validation criteria. |
-| `agentloop optimize --path runs/research_agent.json` | Suggested changes and estimated savings. |
-| `agentloop patch --path runs/research_agent.json --repo .` | Proposed edits for the repository at `.`, ready for you to review and apply. |
-
-Change one thing at a time, such as reducing repeated context or changing a retry
-policy, so you can attribute the result to that change.
+Optimization savings are predictions. Change one thing, record another run, and
+measure the result. See [finding rules](docs/FINDING_RULES.md),
+[parallelization evidence](docs/PARALLELIZATION.md), and
+[estimator provenance](docs/ESTIMATORS.md) for how suggestions are derived.
 
 ## Compare before and after
 
-Run your agent before the change and export `runs/baseline.json`. Run the changed
-agent on the same task and export `runs/candidate.json`. `replay` compares these
-saved traces:
+Record your agent on a task and export `runs/baseline.json`. Make your change, run
+the same task again, and export `runs/candidate.json`. Then compare the files:
 
 ```bash
 agentloop replay --baseline runs/baseline.json --candidate runs/candidate.json --min-latency-improvement-pct 10
 ```
 
-This requires at least a 10% latency improvement. The report also compares costs,
-tokens, retries, and call counts. It writes `runs/replay_report.md` and exits
-nonzero when a required gate fails. Use `agentloop replay --help` to choose other
-thresholds or a JSON output path.
+This gate requires at least a 10% latency improvement. The report also compares
+tokens, costs, retries, and call counts. It writes `runs/replay_report.md` and exits
+nonzero when a required gate fails. `replay` evaluates saved evidence; your
+application supplies both runs.
 
-A result applies to the runs and checks you supplied. Repeat the comparison across
-representative tasks before drawing broader conclusions. Add output checks when
-you need evidence that the changed agent still meets its task requirements.
+Use representative tasks and repeated runs before drawing broader conclusions.
+For experiments across tasks and conditions, see [paired studies](docs/STUDIES.md)
+and the [research guide](docs/RESEARCH.md). The
+[intervention ledger](docs/INTERVENTIONS.md) links predictions to measured results.
 
-## Quality gates
+### Quality gates
 
-Quality fixtures define checks against the recorded output. For the example
-above, save this as `fixtures.json`:
+A faster run still needs to meet its task requirements. For the local tracing
+example, save this as `fixtures.json`:
 
 ```json
 {
@@ -243,104 +153,103 @@ above, save this as `fixtures.json`:
 }
 ```
 
-Run the check against the example trace:
-
 ```bash
 agentloop quality-report fixtures.json --candidate runs/research_agent.json
 ```
 
-This checks that the final output has a nonempty `notes` field. Choose expectations
-that express correctness for your own task. Fixtures can provide outputs directly
-or use a trace's `metadata.output`; the scorer can also use the last model call's
-recorded output text when available.
+This checks that the recorded output has a nonempty `notes` field. Choose checks
+that express correctness for your own task. Fixtures can supply outputs directly
+or read `metadata.output`; the last model call's output text is another supported
+source when captured.
 
-| Scorer | Check |
-|---|---|
-| `exact_match` | Output exactly matches an expected value, including its type. |
-| `contains` | Output contains specified text. |
-| `glob` | Output matches a bounded wildcard pattern. |
-| `required_fields` | A JSON object contains the specified nonempty fields. |
-| `json_subset` | A JSON object contains specified top-level keys with matching values. |
-| `custom` | A trusted local Python function, configured as `module:function`, scores the output. |
+Built-in scorers include `exact_match`, `contains`, bounded `glob`, `required_fields`,
+and `json_subset`. [Structured quality fixtures](docs/STRUCTURED_QUALITY.md) cover
+classification, routing, extraction, and other decision outputs. A `custom` scorer
+executes a trusted local Python function; the HTTP API rejects custom scorers.
+See [scorer migration notes](docs/UPGRADING.md#quality-scorer-names) for renamed checks.
 
-Every candidate case must pass. If you set `--min-quality-score` in `replay`/`ci`
-(or `--min-score` in `quality-report`), the average score must also meet that threshold.
-Invalid suites fail closed.
-
-Custom scorers run Python code and should be used only with trusted local fixtures.
-The HTTP endpoint rejects them. See the [changelog](CHANGELOG.md) for `regex` and
-`json_schema` migration notes.
-
-Once you have baseline and candidate traces, use the same fixtures in CI:
+Once you have both runs, use your fixtures in a CI gate:
 
 ```bash
 agentloop ci --baseline runs/baseline.json --candidate runs/candidate.json --quality-fixtures fixtures.json
 ```
 
-`ci` writes a Markdown report suitable for a pull request and exits nonzero when
-a required gate fails. It evaluates the traces your application supplies.
-
-The repository's required replay check uses synthetic demos to test AgentLoop's
-CI machinery. For comparisons using your application's artifacts, see
-[CI self-tests and application comparisons](docs/CI.md).
+Every candidate case must pass. Optional `--min-quality-score` thresholds also
+apply to the average score. Invalid fixture suites fail closed. `ci` writes a
+Markdown report and exits nonzero when a required gate fails. See
+[CI setup](docs/CI.md) for comparing your application's artifacts in pull requests.
 
 ## Understand the results
 
-These notes describe the current `main` branch. Check [Unreleased changes](CHANGELOG.md#unreleased)
-for behavior that has not yet shipped in the published package.
+| Result | Interpretation |
+| --- | --- |
+| Runtime | `total_runtime_ms` is elapsed time. `cumulative_span_time_ms` sums spans and can be larger when calls overlap or nest. |
+| Tokens | Counts retain their source: provider, tokenizer, user code, or a word-count estimate. Missing usage is marked unavailable. |
+| Model costs | Estimates use token counts and configured prices. Unknown prices or estimated usage limit cost comparisons. |
+| Optimization savings | Uncalibrated predictions, with recorded formulas and assumptions. Confirm them with candidate runs. |
+| Quality scores | Results of the checks you supplied; their coverage depends on your fixtures. |
 
-| Result | How to interpret it |
-|---|---|
-| Runtime and call counts | Recorded execution data. `total_runtime_ms` is elapsed time; `cumulative_span_time_ms` sums spans and can be larger when calls overlap or nest. |
-| Operation kinds | Agent, workflow, model, tool, retrieval, and other roles recorded alongside legacy event categories. See [Operation kinds](docs/OPERATIONS.md). |
-| Token counts | Counts identify their source: a provider, a tokenizer, user code, or a word-count estimate. Missing usage is marked unavailable. |
-| Model cost | A calculation from token counts and configured pricing. Unknown prices or estimated usage limit the comparisons you can make. |
-| Optimization savings | Uncalibrated predictions with versioned formulas, coefficients, and assumptions. Measure a candidate run to establish the actual effect. |
-| Quality scores | Results of the checks you supplied. Their coverage depends on your fixtures. |
+Cost gates can be `indeterminate` when pricing or usable usage is missing. This
+does not fail the default cost gate; a positive `--min-cost-improvement-pct`
+requires verifiable improvement. See [pricing](docs/PRICING.md) and
+[trace compatibility](docs/TRACE_SCHEMA.md).
 
-Cost gates can be marked `indeterminate` when pricing or usable token counts are
-missing. An indeterminate cost comparison does not fail the default gate; requiring
-a positive `--min-cost-improvement-pct` makes unverifiable cost improvement fail.
-See [Pricing](docs/PRICING.md) and [Trace compatibility](docs/TRACE_SCHEMA.md) for
-the details, including how older traces are handled.
-
-The optimizer avoids double-counting suggestions that affect the same spans.
-Reports say whether the chosen combination is exact or approximate. See
-[Savings selection](docs/SAVINGS_SELECTION.md).
-For individual predictions, see [Estimator provenance](docs/ESTIMATORS.md).
-The [intervention ledger](docs/INTERVENTIONS.md) links finding predictions to
-measured candidate results and preserves quality checks in an exportable record.
-For experiments across tasks and repetitions, use [paired study summaries](docs/STUDIES.md).
-
-Keep your Markdown renderer's safe mode or HTML sanitizer enabled when viewing
-reports from untrusted traces.
+Rule failures remain visible and mark analysis incomplete. CI requires complete
+analysis before recommending a merge. Keep your Markdown renderer's safe mode or
+HTML sanitizer enabled when viewing reports from untrusted traces.
 
 ## Framework integrations
 
-For existing telemetry, [OTLP conformance](docs/TELEMETRY_CONFORMANCE.md) covers
-GenAI, OpenInference, and MCP JSON, including operation kinds and evidence metadata.
-From an unreleased source checkout, [standards-first onboarding](docs/ONBOARDING.md)
-validates existing telemetry before analysis and provides one explicit SDK
-instrumentation entrypoint with documented coverage and measured local overhead.
-
-| Integration | How it connects |
-|---|---|
-| Custom Python agents | Decorators and context managers around your functions. |
+| Source | Integration path |
+| --- | --- |
+| Custom Python agents and pipelines | Decorators, context managers, and [workflow annotations](docs/WORKFLOW_TRACING.md). |
 | OpenAI SDK | Wrap a client or callable to capture calls, streams, and reported usage. |
 | OpenAI Agents SDK | Attach an AgentLoop tracing processor. |
 | LangGraph | Instrument the builder before adding nodes, then wrap the compiled runnable. |
 | CrewAI | Wrap crew, task, or agent execution methods. |
-| OpenTelemetry / Vercel AI SDK telemetry | Import supported telemetry into AgentLoop traces. |
+| OTLP, OpenInference, MCP, and Vercel AI telemetry | Import supported JSON telemetry into native traces. |
+| Harbor and Omnigent | Import completed execution files with source receipts and explicit coverage gaps. |
 
-The adapters are included in AgentLoop. Install the framework's own SDK separately
+Adapters are included in version 0.1.0. Install the framework's own SDK separately
 when needed; `python -m pip install "agentloop-profiler[instrumentation]"` includes
-the OpenAI Python SDK. See [Framework integrations](docs/INTEGRATIONS.md) for
-setup and supported behavior.
+the OpenAI Python SDK. Follow the [integration guide](docs/INTEGRATIONS.md) for
+setup, supported behavior, and streaming lifecycle requirements.
+
+For telemetry you already export, [onboarding](docs/ONBOARDING.md) validates capture
+before analysis. The [interoperability guide](docs/INTEROPERABILITY_READINESS.md)
+covers Harbor ATIF/jobs, Omnigent sessions, bounded OTLP JSONL, offline capability
+probes, and cross-harness comparisons. These imports work without upstream
+runtimes or credentials. For classifiers and decision pipelines, start with
+[AI execution profiling](docs/AI_EXECUTION_PROFILING.md).
+
+## How AgentLoop fits your stack
+
+Your application runs the agent and chooses its framework and models. AgentLoop
+records instrumented calls, analyzes the resulting trace, and compares saved runs
+with your performance thresholds and quality fixtures. You choose and apply the
+code changes.
+
+<details>
+<summary>View the workflow diagrams</summary>
+
+<picture>
+  <source media="(max-width: 600px)" srcset="docs/assets/workflow-comparison-mobile.svg">
+  <source media="(prefers-reduced-motion: reduce)" srcset="docs/assets/workflow-comparison.svg">
+  <img src="docs/assets/workflow-comparison.gif" width="100%" alt="Without AgentLoop, application-specific timers, usage parsing, retry analysis, and output checks produce separate reports. AgentLoop combines captured execution evidence into tracing, analysis, and replay reports.">
+</picture>
+
+<picture>
+  <source media="(max-width: 600px)" srcset="docs/assets/framework-comparison-mobile.svg">
+  <source media="(prefers-reduced-motion: reduce)" srcset="docs/assets/framework-comparison.svg">
+  <img src="docs/assets/framework-comparison.gif" width="100%" alt="Your application executes models and tools. Decorators and adapters export trace JSON. Analyze produces metrics and findings; replay compares the baseline and candidate with your quality fixtures.">
+</picture>
+
+</details>
 
 ## Dashboard and persistence
 
-The dashboard reads stored traces. From a [source checkout](#source-checkout),
-load the synthetic example and start Streamlit:
+From a [source checkout](#source-checkout), load the synthetic example and start
+the dashboard:
 
 ```bash
 uv run --frozen --all-extras agentloop quickstart
@@ -348,22 +257,20 @@ uv run --frozen --all-extras agentloop store-trace --path runs/agentloop_quickst
 uv run --frozen --all-extras streamlit run dashboard/app.py
 ```
 
-Open the URL printed by Streamlit and leave the sidebar's Project field set to
-`default`. To inspect your own data, store your trace file with `store-trace`.
+Open Streamlit's printed URL and leave the sidebar's Project field set to `default`.
+Use `store-trace` to load your own files. Storage uses SQLite by default and also
+supports Postgres. The optional HTTP API serves project-scoped traces and reports
+through `/v1` endpoints.
 
-AgentLoop uses SQLite by default and supports Postgres for shared storage. The
-optional HTTP API accepts traces and serves project-scoped reports and findings.
-Application endpoints use `/v1`. Existing unversioned aliases remain available
-throughout 0.x; see [API versioning](docs/API_VERSIONING.md) for the migration path.
-See [Dashboard setup](docs/DASHBOARD.md) and [Production deployment](docs/PRODUCTION.md)
-for database configuration, API authentication, and deployment instructions.
+See [dashboard setup](docs/DASHBOARD.md), [API versioning](docs/API_VERSIONING.md),
+and [production deployment](docs/PRODUCTION.md) for configuration and authentication.
 
 ## Other installation options
 
 ### Source checkout
 
-Use a source checkout for the dashboard or the latest unreleased changes.
-Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then run:
+Use a checkout for the examples, dashboard source, or changes since the latest
+release. Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then:
 
 ```bash
 git clone https://github.com/dipeshbabu/agentloop.git
@@ -374,27 +281,26 @@ uv run --frozen --all-extras agentloop quickstart
 
 ### Standalone CLI
 
-The [GitHub Releases page](https://github.com/dipeshbabu/agentloop/releases) has
+[GitHub Releases](https://github.com/dipeshbabu/agentloop/releases) provides
 executables for Linux x86-64, Windows x86-64, macOS Intel, and macOS Apple silicon.
 They bundle Python and the core CLI. Use the Python package for SDK instrumentation,
-the dashboard, API server, or Postgres support.
-
-Use the downloaded executable wherever the examples show `agentloop`.
+the dashboard, API server, or Postgres support. Substitute the downloaded executable
+where the examples show `agentloop`.
 
 <details>
 <summary>Download and verify a standalone executable</summary>
 
-Download the matching file and `SHA256SUMS` from the same release. Replace `X.Y.Z`
-with its version number.
+Download the executable and `SHA256SUMS` from the same release. These examples use
+version 0.1.0; change the version when choosing another release.
 
 Linux (Bash):
 
 ```bash
 set -euo pipefail
-version=X.Y.Z
+version=0.1.0
 asset="agentloop-v${version}-linux-x86_64"
-curl -LO "https://github.com/dipeshbabu/agentloop/releases/download/v${version}/${asset}"
-curl -LO "https://github.com/dipeshbabu/agentloop/releases/download/v${version}/SHA256SUMS"
+curl --fail --location --remote-name "https://github.com/dipeshbabu/agentloop/releases/download/v${version}/${asset}"
+curl --fail --location --remote-name "https://github.com/dipeshbabu/agentloop/releases/download/v${version}/SHA256SUMS"
 mapfile -t checksum_lines < <(awk -v asset="$asset" '$2 == asset { print }' SHA256SUMS)
 if [ "${#checksum_lines[@]}" -ne 1 ]; then
   echo "Expected exactly one checksum for ${asset}" >&2
@@ -408,7 +314,7 @@ chmod +x "$asset"
 Windows PowerShell:
 
 ```powershell
-$Version = "X.Y.Z"
+$Version = "0.1.0"
 $Asset = "agentloop-v$Version-windows-x86_64.exe"
 Invoke-WebRequest "https://github.com/dipeshbabu/agentloop/releases/download/v$Version/$Asset" -OutFile agentloop.exe
 Invoke-WebRequest "https://github.com/dipeshbabu/agentloop/releases/download/v$Version/SHA256SUMS" -OutFile SHA256SUMS
@@ -427,32 +333,19 @@ are ad-hoc signed but not notarized; Gatekeeper may require approval on first la
 
 </details>
 
-## Research use
-
-For experiments, record one trace per task attempt and condition. Attach metadata
-such as task ID, seed, model, and source commit, and repeat comparisons across your
-task set. The [research guide](docs/RESEARCH.md) explains this workflow. From a
-source checkout, run the offline paired example with:
-
-```bash
-uv run --frozen --all-extras python examples/research_experiment_demo.py
-```
-
 ## Help and contributions
 
-Run `agentloop --help` for all commands, or `agentloop COMMAND --help` for a specific
-command. Use `agentloop doctor` to inspect your installation and available integrations.
+Run `agentloop --help` for all commands, or `agentloop COMMAND --help` for one command.
+The [first-use guide](docs/FIRST_USE.md) walks through the analysis workflow.
 
-- [Support](SUPPORT.md): usage help and troubleshooting.
-- [Issue forms](https://github.com/dipeshbabu/agentloop/issues/new/choose): bugs and feature requests.
+- [Support](SUPPORT.md) and [issue forms](https://github.com/dipeshbabu/agentloop/issues/new/choose): questions, bugs, and feature requests.
 - [Contributing](CONTRIBUTING.md): development setup and required checks.
-- [Roadmap](docs/ROADMAP.md) and [changelog](CHANGELOG.md): project direction and release changes.
+- [Changelog](CHANGELOG.md), [upgrade guide](docs/UPGRADING.md), and [roadmap](docs/ROADMAP.md): releases, compatibility, and planned work.
 - [Security](SECURITY.md): private vulnerability reports.
 - [Governance](GOVERNANCE.md) and [Code of Conduct](CODE_OF_CONDUCT.md): project decisions and participation.
 
-AgentLoop is under active pre-1.0 development. Use a tagged release when you need
-a fixed version, and check the changelog before upgrading. Maintainers can use the
-[launch checklist](docs/OPEN_SOURCE_CHECKLIST.md) when preparing a public release.
+AgentLoop is under active pre-1.0 development. Pin a tagged release when you need
+a fixed version, and check the changelog before upgrading.
 
 ## License
 

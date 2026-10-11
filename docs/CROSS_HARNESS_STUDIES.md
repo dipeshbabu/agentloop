@@ -1,6 +1,6 @@
 # Finished-trial cross-harness cohorts
 
-This unreleased checkout compares completed Harbor source cohorts using exact
+The cohort tools included in 0.1.0 compare completed Harbor source cohorts using exact
 task/digest/scorer/verifier/environment/protocol/repetition identity. It reuses
 the existing native study manifest/statistics and task-weighted uncertainty
 helper. AgentLoop does not launch Harbor, schedule trials or run source verifiers.

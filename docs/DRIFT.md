@@ -1,6 +1,6 @@
 # Reviewed-window drift reports
 
-These are **Unreleased source-checkout APIs**. Drift compares an explicitly
+These APIs are included in 0.1.0. Drift compares an explicitly
 reviewed evidence window and its thresholds with a later window. It produces
 local descriptive evidence; it does not notify anyone, deploy changes or roll a
 workflow back. A distribution change is not itself a correctness change.

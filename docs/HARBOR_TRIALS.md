@@ -1,6 +1,6 @@
 # Harbor job and trial evidence
 
-This unreleased source checkout imports completed Harbor jobs or individual
+The adapter included in 0.1.0 imports completed Harbor jobs or individual
 trial directories without Harbor, Docker, credentials or a network connection.
 Import reads bounded JSON; it never runs a task, verifier, hook or model.
 

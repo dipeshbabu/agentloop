@@ -7,6 +7,18 @@ trace, study, receipt, API and database schema versions.
 
 ## [Unreleased]
 
+### Fixed
+
+- Release preparation restores the original version, changelog and lockfile bytes
+  after a failed update or interrupted lock generation, so preparation can retry.
+- Locked urllib3 and virtualenv dependencies now use patched versions for seven
+  security advisories, with resolver constraints preventing vulnerable downgrades.
+
+### Documentation
+
+- Reorganized the README around installation, tracing, reports and quality gates,
+  with executable examples and corrected availability notes for version 0.1.0.
+
 ## [0.1.0] - 2026-10-11
 
 ### Added

@@ -2,10 +2,10 @@
 
 Reviewed on 2026-09-30 for [roadmap #182](https://github.com/dipeshbabu/agentloop/issues/182),
 through [PR #249](https://github.com/dipeshbabu/agentloop/pull/249). The core controls,
-empirical evaluation and deferred follow-ups are implemented. These APIs remain
-**Unreleased source-checkout features**; this review does not publish version 0.8.
-The existing 0.7 evidence workflow remains the released baseline for its
-[real-agent pilot](REAL_AGENT_STUDY.md).
+empirical evaluation and deferred follow-ups are implemented. These APIs and the
+evidence workflow used by the [real-agent pilot](REAL_AGENT_STUDY.md) are now
+included in release 0.1.0. The review records implementation evidence; it does not
+activate controls in production.
 
 ## Implementation coverage
 

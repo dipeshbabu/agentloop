@@ -1,6 +1,6 @@
 # Incremental trace aggregation
 
-These are **Unreleased source-checkout APIs**. Aggregate native traces one at a
+These APIs are included in 0.1.0. Aggregate native traces one at a
 time to summarize a batch without storing all input traces in memory. Aggregates
 contain counts, bounded distributions and candidate identifiers, not individual
 evidence spans or payloads. They do not generate optimization findings.
