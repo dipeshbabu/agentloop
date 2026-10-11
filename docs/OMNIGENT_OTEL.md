@@ -132,9 +132,8 @@ code, task scripts, verifiers, media, archives or remote resources.
 Common parser/path/record/trace/event/metadata limits apply. Invalid independent
 records are retained by default; `--strict` stops on them. Global budget overflow
 is terminal. Output remains stable on repeated imports; conflicting bytes fail
-instead of overwriting. Native schema 1.1, package version 0.7.0, dependencies and
-Python 3.10 support remain unchanged. These commands are not in the published
-0.7.0 wheel; use a qualification-aware source checkout or future release.
+instead of overwriting. Native schema 1.1, core dependencies and Python 3.10 support remain unchanged.
+These commands are included in `0.1.0`; use its qualification-aware reader.
 
 ```python
 from agentloop.integrations.omnigent.telemetry import import_omnigent

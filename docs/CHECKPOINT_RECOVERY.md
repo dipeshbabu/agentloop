@@ -1,6 +1,6 @@
 # Host checkpoint recovery
 
-Available from an **Unreleased source checkout**, not PyPI 0.7.0. The narrow
+Included in `0.1.0` with the optional pinned framework runtime. The narrow
 `LangGraphRecovery` adapter resumes a synchronous root checkpoint on LangGraph
 1.2.11. The framework retains graph state; a trusted host recovery journal retains
 AgentLoop's operational policy state and atomic resume claims. Trace replay cannot

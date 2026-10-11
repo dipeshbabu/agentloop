@@ -1,6 +1,6 @@
 # Reviewed budget-policy promotion
 
-Available from an **Unreleased source checkout**, not PyPI 0.7.0. This is an offline
+Included in `0.1.0`; policy activation remains an explicit host decision. This is an offline
 review and bounded canary API for one policy family: built-in Python admission
 budgets. It does not learn, change code, activate a policy from historical pass
 rates, or deploy anything by itself.

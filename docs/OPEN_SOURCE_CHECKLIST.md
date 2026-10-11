@@ -107,7 +107,7 @@ in this section.
 - [x] Build the wheel and source archive, inspect their contents, and install each
       in a clean environment.
 - [x] Create the first versioned changelog entry.
-- [x] Publish immutable annotated tag `v0.4.0` after the trusted publisher and
+- [ ] Publish immutable annotated tag `v0.1.0` after the trusted publisher and
       exact-commit release checks passed.
 
 ## Launch

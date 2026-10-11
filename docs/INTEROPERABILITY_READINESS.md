@@ -4,10 +4,10 @@ AgentLoop reads completed Harbor/Omnigent evidence, qualifies findings and compa
 externally scored outcomes. Harbor executes tasks and verifiers; Omnigent owns
 harness sessions and policies. AgentLoop does not launch either runtime.
 
-These are Unreleased checkout capabilities. The published `0.7.0` wheel predates
-them. Feature work keeps the version, native trace/study schemas, storage/database
-contracts, Python 3.10 minimum and core dependency list unchanged. Build and install
-the intended checkout before using these commands; a release is a separate action.
+These capabilities are included in `0.1.0`. Package versioning is separate from
+the unchanged native trace/study schemas, storage/database contracts, Python 3.10
+minimum and core dependency list. Build and install the intended checkout to run
+the checked-in examples, or install `agentloop-profiler==0.1.0` for the CLI/APIs.
 
 ## Reproduce the supported offline workflows
 
@@ -135,7 +135,8 @@ environments, verifies changed package bytes, tests offline commands and checks
 Python 3.10/3.13/3.14, pinned LangGraph, package/standalone platforms, SQLite/Postgres,
 replay and Docker deployment in CI. Final-head checks must pass before squash
 merging; rewritten or retargeted heads require fresh evidence. Skipped automated
-reviews are not approvals. No version bump or publication follows these checks.
+reviews are not approvals. Publication follows the explicit tagged-release
+workflow in [RELEASING.md](RELEASING.md).
 
 Scalability measurements use the checked-in
 [generator](../examples/interoperability_scalability.py) for 10/100/1000 trials,

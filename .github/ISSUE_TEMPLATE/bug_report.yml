@@ -16,7 +16,7 @@ body:
     attributes:
       label: AgentLoop version or commit
       description: Use `uv run python -c "import agentloop; print(agentloop.__version__)"` or provide the commit SHA.
-      placeholder: 0.4.0 or abc1234
+      placeholder: 0.1.0 or abc1234
     validations:
       required: true
 

@@ -1,6 +1,6 @@
 # Bounded completion verification
 
-Available from a source checkout under **Unreleased**; not in PyPI 0.7.0.
+Included in `0.1.0`; runtime completion gates remain explicitly opt-in.
 `CompletionGate` checks explicitly configured criteria before a host releases a
 final result. This is a synchronous, single-use Python adapter, using the existing
 `completion/before` harness hook. It cannot intercept unwrapped framework work.

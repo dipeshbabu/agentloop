@@ -90,17 +90,16 @@ def test_readme_checksum_lookup_fails_closed() -> None:
     assert "Checksum verification failed" in readme
 
 
-def test_release_accepts_manual_dispatch_so_tag_release_can_trigger_it() -> None:
+def test_release_accepts_manual_recovery_only_with_the_exact_tag_guard() -> None:
     workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
 
     assert "workflow_dispatch:" in workflow
-    # the guard job's ref-based checks must still work unmodified for a
-    # dispatch run made with --ref set to the tag (see tag-release.yml)
+    # Dispatches against branches still fail the exact-tag checks.
     assert 'test "v$(uv version --short)" = "$GITHUB_REF_NAME"' in workflow
 
 
 def test_bump_version_workflow_validates_before_opening_a_release_pr() -> None:
-    workflow = (ROOT / ".github" / "workflows" / "bump-version.yml").read_text(encoding="utf-8")
+    workflow = (ROOT / ".github" / "workflows" / "prepare-release.yml").read_text(encoding="utf-8")
 
     assert "workflow_dispatch:" in workflow
     assert "options: [patch, minor, major]" in workflow
@@ -123,16 +122,14 @@ def test_releasing_docs_state_the_patch_default_versioning_policy() -> None:
     assert "Don't reach for `minor` just because a release happens to" in releasing
 
 
-def test_tag_release_workflow_is_idempotent_and_dispatches_release() -> None:
-    workflow = (ROOT / ".github" / "workflows" / "tag-release.yml").read_text(encoding="utf-8")
-
-    assert "paths:" in workflow
-    assert "agentloop/version.py" in workflow
-    assert 'git rev-parse "refs/tags/$TAG"' in workflow
-    assert "exists=true" in workflow
-    assert "if: steps.check.outputs.exists == 'false'" in workflow
-    assert 'gh workflow run release.yml --ref "$TAG"' in workflow
-    assert "actions: write" in workflow
+def test_release_preparation_cannot_automatically_tag_or_publish() -> None:
+    assert not (ROOT / ".github" / "workflows" / "tag-release.yml").exists()
+    workflow = (ROOT / ".github" / "workflows" / "prepare-release.yml").read_text(encoding="utf-8")
+    assert "git tag" not in workflow
+    assert "gh workflow run release.yml" not in workflow
+    assert "git push --force" not in workflow
+    assert "VERSION_OVERRIDE: ${{ inputs.version }}" in workflow
+    assert '--set "$VERSION_OVERRIDE"' in workflow
 
 
 def test_bump_version_script_exists_and_is_importable() -> None:
@@ -143,11 +140,12 @@ def test_bump_version_script_exists_and_is_importable() -> None:
 
 
 def test_bump_version_dispatches_the_branch_protection_required_checks() -> None:
-    workflow = (ROOT / ".github" / "workflows" / "bump-version.yml").read_text(encoding="utf-8")
+    workflow = (ROOT / ".github" / "workflows" / "prepare-release.yml").read_text(encoding="utf-8")
 
     assert "actions: write" in workflow
     assert 'gh workflow run "$workflow" --ref "$BRANCH"' in workflow
     assert "ci.yml codeql.yml dependency-review.yml agentloop-performance.yml" in workflow
+    assert "application-performance-smoke.yml" in workflow
 
 
 def test_ci_and_codeql_accept_manual_dispatch_so_bump_version_can_trigger_them() -> None:

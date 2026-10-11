@@ -1,16 +1,19 @@
-# Upgrade from 0.6 to 0.7
+# Existing installations and stored data
 
-Version 0.7.0 ships the evidence workflow: canonical findings and estimator
+Version `0.1.0` includes the evidence workflow: canonical findings and estimator
 provenance, intervention records, paired studies, offline HTML reports, telemetry
-conformance, API v1, and the large-trace graph fixes. It does not add runtime
-harness controls. The distribution remains `agentloop-profiler`; imports and the
+conformance, API v1, graph fixes and explicitly opt-in runtime harness adapters.
+The distribution remains `agentloop-profiler`; imports and the
 CLI remain `agentloop`.
 
 ## Upgrade order
 
 1. Back up the database and retain the previous package/deployment configuration.
    Test restoration before upgrading a production store.
-2. Upgrade the server and dashboard to `agentloop-profiler==0.7.0` first. Initialize
+2. Install the exact `agentloop-profiler==0.1.0` version for server/dashboard first.
+   Package numbering resets independently of data schemas; refresh version pins
+   and explicitly reinstall when moving an existing higher-numbered installation.
+   Initialize
    the configured store with `agentloop init-store`, then check `/readyz` and read
    an existing project trace before resuming writes.
 3. Upgrade Python clients and CLI installations. The new client sends `/v1`
@@ -65,9 +68,9 @@ needing a richer evaluator must supply and validate their own offline scorer.
 
 ## Database migration and recovery
 
-The trace schema and database migration versions are separate. A 0.6 store already
-has migrations 1 through 4. Version 0.7 adds migration **5**, `intervention_ledger`,
-which creates the project-scoped `interventions` table in SQLite and Postgres.
+The trace schema, database migrations and package versions are separate. Migration
+**5**, `intervention_ledger`, creates the project-scoped `interventions` table in
+SQLite and Postgres. The package numbering reset does not reset migration IDs.
 Existing trace, finding, usage, and credential records are retained. Store
 initialization applies pending migrations; repeated initialization does not
 duplicate records.
@@ -90,7 +93,7 @@ before rollback when necessary.
 In a fresh environment outside the source checkout, install the release and run:
 
 ```bash
-python -m pip install agentloop-profiler==0.7.0
+python -m pip install --force-reinstall agentloop-profiler==0.1.0
 agentloop quickstart --out quickstart.json
 agentloop analyze quickstart.json --html report.html --json-out analysis.json
 ```

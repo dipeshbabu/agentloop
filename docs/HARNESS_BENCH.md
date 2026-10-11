@@ -91,5 +91,5 @@ uv run --isolated --frozen --with langgraph==1.2.11 python -m pytest tests/test_
 The tests include dishonest denial and buffered stream drivers, both declaration
 drift directions, real skips, deterministic records/hashes, no-network guards,
 CLI mode rejection and current boundary qualification. Core Python 3.10 remains
-supported; LangGraph is optional. Native schema, package version/dependencies and
-existing harness behavior remain unchanged. This code is not in published 0.7.0.
+supported; LangGraph is optional. Native schema, dependencies and existing harness behavior remain unchanged.
+These commands are included in `0.1.0`.

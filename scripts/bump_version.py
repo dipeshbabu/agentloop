@@ -28,7 +28,7 @@ VERSION_PY = ROOT / "agentloop" / "version.py"
 CHANGELOG = ROOT / "CHANGELOG.md"
 REPO_URL = "https://github.com/dipeshbabu/agentloop"
 
-_SEMVER = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
+_SEMVER = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
 _PYPROJECT_VERSION = re.compile(r'^(version\s*=\s*")([^"]+)(")$', re.MULTILINE)
 _VERSION_PY_VERSION = re.compile(r'^(__version__\s*=\s*")([^"]+)(")$', re.MULTILINE)
 _UNRELEASED_HEADING = re.compile(r"^## \[Unreleased\]\n", re.MULTILINE)
@@ -48,7 +48,7 @@ def current_version() -> str:
 
 
 def parse_semver(version: str) -> tuple[int, int, int]:
-    match = _SEMVER.match(version)
+    match = _SEMVER.fullmatch(version)
     if not match:
         raise BumpError(f"{version!r} is not a valid X.Y.Z semantic version")
     return int(match.group(1)), int(match.group(2)), int(match.group(3))

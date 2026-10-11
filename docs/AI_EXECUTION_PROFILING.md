@@ -1,8 +1,7 @@
 # Profile AI execution from trace to verified change
 
-**Availability:** the workflow APIs and examples on this page are unreleased
-additions on `main`. They are not included in the published `0.7.0` package. Run
-them from a source checkout:
+**Availability:** the workflow APIs and examples on this page are included in
+`0.1.0`. Run the checked-in examples from a source checkout:
 
 ```bash
 git clone https://github.com/dipeshbabu/agentloop.git
