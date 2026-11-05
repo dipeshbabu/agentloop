@@ -18,6 +18,8 @@ trace, study, receipt, API and database schema versions.
 
 ### Fixed
 
+- Python 3.15 container installs use compatible binary dependencies and receive
+  full CI coverage with released interpreters alongside the existing Python matrix.
 - Repository link checks exclude generated run artifacts, package smoke
   environments and JavaScript dependencies while retaining source documentation.
 - CLI analysis, reports and study summaries reject destinations that alias source
