@@ -2,7 +2,7 @@
 
 This module deliberately uses only the standard library so its directory-plugin
 copy runs inside Hermes without changing Hermes's managed Python dependencies.
-Hook contract: NousResearch/hermes-agent v0.21.6, revision 818c13be1dc4.
+Hook contracts: Hermes v0.21.6 (818c13be1dc4) and v0.22.7 (b200f5bc60e3).
 """
 
 from __future__ import annotations

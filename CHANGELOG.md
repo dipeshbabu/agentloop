@@ -7,6 +7,22 @@ trace, study, receipt, API and database schema versions.
 
 ## [Unreleased]
 
+### Added
+
+- Reproducible Hermes v0.22.7 runtime pilot and CI coverage for streamed requests,
+  real file tools, retries, interruption, default privacy, and delegated child
+  sessions, using an isolated profile and a deterministic local provider.
+
+### Changed
+
+- Source-exported Hermes observers accept Hermes 0.22.x alongside 0.21.6+.
+  Published AgentLoop 0.1.1 retains its original Hermes 0.21.x compatibility range.
+
+### Fixed
+
+- Replay and CI comparisons reject incomplete, interrupted, or failed Hermes
+  captures even when their shorter duration appears to improve performance.
+
 ## [0.1.1] - 2026-11-05
 
 ### Added

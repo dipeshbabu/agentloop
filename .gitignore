@@ -5,6 +5,7 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .venv/
+.hermes-runtime/
 .env
 .env.*
 !.env.example

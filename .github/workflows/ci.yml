@@ -24,6 +24,70 @@ permissions:
   contents: read
 
 jobs:
+  hermes-runtime:
+    name: Hermes runtime pilot
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout AgentLoop
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+      - name: Set up AgentLoop uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.11.28"
+          enable-cache: false
+      - name: Export observer from current source
+        run: |
+          uv sync --locked --no-dev
+          .venv/bin/agentloop hermes export-plugin "$RUNNER_TEMP/agentloop-hermes-plugin"
+      - name: Checkout pinned Hermes v0.22.7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: NousResearch/hermes-agent
+          ref: b200f5bc60e31588ba2cb60e288029c4a54ba5fa
+          path: .hermes-runtime
+          persist-credentials: false
+      - name: Set up Hermes uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.7"
+          enable-cache: false
+      - name: Install locked Hermes core
+        working-directory: .hermes-runtime
+        run: |
+          test "$(git rev-parse HEAD)" = b200f5bc60e31588ba2cb60e288029c4a54ba5fa
+          uv sync --frozen --no-dev --python 3.14
+      - name: Exercise real host dispatch with local provider
+        shell: bash
+        run: |
+          for scenario in baseline stream tool retry interrupt tool-error privacy delegation; do
+            timeout --signal=TERM --kill-after=10s 180s \
+              .hermes-runtime/.venv/bin/python -I scripts/smoke_hermes_runtime.py \
+              --plugin-dir "$RUNNER_TEMP/agentloop-hermes-plugin" \
+              --hermes-root "$PWD/.hermes-runtime" \
+              --out "$RUNNER_TEMP/hermes-pilot/$scenario" --scenario "$scenario"
+          done
+      - name: Validate native evidence and incomplete capture gates
+        run: .venv/bin/python scripts/validate_hermes_runtime.py --root "$RUNNER_TEMP/hermes-pilot"
+      - name: Upload qualified pilot evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: hermes-runtime-pilot
+          path: |
+            ${{ runner.temp }}/hermes-pilot/*/report.json
+            ${{ runner.temp }}/hermes-pilot/*/native/*.json
+            ${{ runner.temp }}/hermes-pilot/*/profile/agentloop/traces/*.json
+            ${{ runner.temp }}/hermes-pilot/*/*.html
+            ${{ runner.temp }}/hermes-pilot/validation.json
+          if-no-files-found: warn
+
   typescript:
     name: TypeScript SDK (Node ${{ matrix.node }})
     runs-on: ubuntu-latest

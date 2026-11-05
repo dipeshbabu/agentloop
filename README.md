@@ -249,6 +249,9 @@ setup, supported behavior, and streaming lifecycle requirements.
 Export its dependency-free directory plugin with `agentloop hermes export-plugin`,
 enable it in your Hermes profile, and analyze the native turn traces it writes.
 Output capture is off by default; the tested host contract is Hermes 0.21.6.
+Current source adds Hermes 0.22.x support, with a
+[reproducible v0.22.7 runtime pilot](docs/HERMES_RUNTIME_PILOT.md); these changes
+are unreleased and are separate from the published 0.1.1 package.
 
 For telemetry you already export, [onboarding](docs/ONBOARDING.md) validates capture
 before analysis. The [interoperability guide](docs/INTEROPERABILITY_READINESS.md)
