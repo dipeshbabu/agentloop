@@ -1,5 +1,12 @@
 # Existing installations and stored data
 
+Version `0.1.1` requires **Python 3.11 or newer** so supported installations can
+use patched dependencies. It adds Hermes tracing and fixes CLI output collisions,
+retry/error reporting, and API client credential handling. Native trace schema
+1.1, API v1, and database migration IDs continue unchanged; retain existing data.
+The TypeScript SDK remains a separately versioned source package, with npm
+publication pending.
+
 Version `0.1.0` includes the evidence workflow: canonical findings and estimator
 provenance, intervention records, paired studies, offline HTML reports, telemetry
 conformance, API v1, graph fixes and explicitly opt-in runtime harness adapters.
@@ -10,16 +17,16 @@ CLI remain `agentloop`.
 
 1. Back up the database and retain the previous package/deployment configuration.
    Test restoration before upgrading a production store.
-2. Install the exact `agentloop-profiler==0.1.0` version for server/dashboard first.
+2. Install the exact `agentloop-profiler==0.1.1` version for server/dashboard first.
    Package numbering resets independently of data schemas; refresh version pins
    and explicitly reinstall when moving an existing higher-numbered installation.
    Initialize
    the configured store with `agentloop init-store`, then check `/readyz` and read
    an existing project trace before resuming writes.
 3. Upgrade Python clients and CLI installations. The new client sends `/v1`
-   requests and needs the upgraded server. Keep the configured server base URL
-   free of a trailing `/v1`; the client adds it. Old clients can continue using
-   unversioned routes throughout 0.x.
+   requests and needs the upgraded server. Configure the server origin or mount
+   path; the client normalizes an optional trailing `/v1`. Old clients can
+   continue using unversioned routes throughout 0.x.
 4. Update scorer configurations and explicit diagnosis writes as described below.
    Re-run your task-specific quality fixtures and CI gates on retained traces.
 
@@ -93,7 +100,7 @@ before rollback when necessary.
 In a fresh environment outside the source checkout, install the release and run:
 
 ```bash
-python -m pip install --force-reinstall agentloop-profiler==0.1.0
+python -m pip install --force-reinstall agentloop-profiler==0.1.1
 agentloop quickstart --out quickstart.json
 agentloop analyze quickstart.json --html report.html --json-out analysis.json
 ```

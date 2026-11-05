@@ -4,18 +4,19 @@ AgentLoop observes [Hermes Agent](https://hermes-agent.nousresearch.com/) throug
 its supported plugin hooks. It writes one native JSON trace per turn, which you
 can analyze, store, or compare with the usual AgentLoop commands.
 
-This integration is available from the current source checkout. It has not yet
-been published in the 0.1.0 Python release. The directory plugin uses only Python's
-standard library and does not add dependencies to Hermes's managed environment.
+This integration is included in AgentLoop **0.1.1 and newer**. The directory
+plugin uses only Python's standard library and does not add dependencies to
+Hermes's managed environment.
 The tested hook contract is Hermes **0.21.6**, revision
 [`818c13be1dc4`](https://github.com/NousResearch/hermes-agent/tree/818c13be1dc4fd28987e1e881a9408224afd4535).
 
 ## Create and enable the plugin
 
-From an AgentLoop checkout with `uv sync --locked` completed:
+Install the release in a Python 3.11+ environment, then export the plugin:
 
 ```bash
-uv run --frozen agentloop hermes export-plugin runs/hermes-agentloop
+python -m pip install agentloop-profiler==0.1.1
+agentloop hermes export-plugin runs/hermes-agentloop
 ```
 
 This creates a fresh directory containing `plugin.yaml`, the observer, its loader,
@@ -35,14 +36,14 @@ capture there. The plugin does not install Hermes or configure a model provider.
 
 By default, each completed turn writes a file such as
 `agentloop/traces/run_hermes_<id>.json` under that profile home. Analyze a file with
-the AgentLoop checkout:
+AgentLoop:
 
 ```bash
-uv run --frozen agentloop analyze /path/to/profile/agentloop/traces/run_hermes_ID.json --html runs/hermes-report.html
+agentloop analyze /path/to/profile/agentloop/traces/run_hermes_ID.json --html runs/hermes-report.html
 ```
 
 The plugin's own code needs no AgentLoop installation inside Hermes. Owners of
-an unmanaged Python environment can also install the current AgentLoop source
+an unmanaged Python environment can also install AgentLoop 0.1.1 or newer
 there and enable its `hermes_agent.plugins` entry point. Use the directory plugin
 with managed Hermes installations.
 

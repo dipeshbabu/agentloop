@@ -245,7 +245,7 @@ when needed; `python -m pip install "agentloop-profiler[instrumentation]"` inclu
 the OpenAI Python SDK. Follow the [integration guide](docs/INTEGRATIONS.md) for
 setup, supported behavior, and streaming lifecycle requirements.
 
-The current source checkout also includes [Hermes Agent tracing](docs/HERMES.md).
+[Hermes Agent tracing](docs/HERMES.md) is included in AgentLoop 0.1.1 and newer.
 Export its dependency-free directory plugin with `agentloop hermes export-plugin`,
 enable it in your Hermes profile, and analyze the native turn traces it writes.
 Output capture is off by default; the tested host contract is Hermes 0.21.6.
@@ -326,13 +326,13 @@ where the examples show `agentloop`.
 <summary>Download and verify a standalone executable</summary>
 
 Download the executable and `SHA256SUMS` from the same release. These examples use
-version 0.1.0; change the version when choosing another release.
+version 0.1.1; change the version when choosing another release.
 
 Linux (Bash):
 
 ```bash
 set -euo pipefail
-version=0.1.0
+version=0.1.1
 asset="agentloop-v${version}-linux-x86_64"
 curl --fail --location --remote-name "https://github.com/dipeshbabu/agentloop/releases/download/v${version}/${asset}"
 curl --fail --location --remote-name "https://github.com/dipeshbabu/agentloop/releases/download/v${version}/SHA256SUMS"
@@ -349,7 +349,7 @@ chmod +x "$asset"
 Windows PowerShell:
 
 ```powershell
-$Version = "0.1.0"
+$Version = "0.1.1"
 $Asset = "agentloop-v$Version-windows-x86_64.exe"
 Invoke-WebRequest "https://github.com/dipeshbabu/agentloop/releases/download/v$Version/$Asset" -OutFile agentloop.exe
 Invoke-WebRequest "https://github.com/dipeshbabu/agentloop/releases/download/v$Version/SHA256SUMS" -OutFile SHA256SUMS
