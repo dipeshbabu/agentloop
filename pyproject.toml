@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = "Apache-2.0"
 license-files = ["LICENSE", "THIRD_PARTY_LICENSES.md"]
-authors = [{ name = "Dipesh Babu" }]
+authors = [{ name = "Dipesh Tharu Mahato" }]
 keywords = ["ai-agents", "agent-evaluation", "observability", "optimization", "profiling", "research", "tracing"]
 classifiers = [
   "Development Status :: 4 - Beta",
