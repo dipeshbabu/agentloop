@@ -466,8 +466,14 @@ def trace_retry(name: str, metadata: dict[str, Any] | None = None) -> Iterator[N
     event_token = _current_event_id.set(event_id)
     started_at = utc_now_iso()
     start = time.perf_counter()
+    status = "ok"
+    error = None
     try:
         yield
+    except BaseException as exc:
+        status = "error"
+        error = format_exception_detail(exc)
+        raise
     finally:
         ended_at = utc_now_iso()
         duration_ms = (time.perf_counter() - start) * 1000
@@ -482,6 +488,8 @@ def trace_retry(name: str, metadata: dict[str, Any] | None = None) -> Iterator[N
                 ended_at=ended_at,
                 duration_ms=duration_ms,
                 parent_id=parent_id,
+                status=status,
+                error=error,
                 metadata=metadata or {},
             )
         )

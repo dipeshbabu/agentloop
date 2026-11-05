@@ -23,7 +23,11 @@ def new_run_id() -> str:
 def format_exception_detail(exc: BaseException) -> str:
     """Return useful telemetry text even when an exception has no message."""
 
-    message = str(exc)
+    try:
+        message = str(exc)
+    except BaseException:
+        # Telemetry must preserve the original failure even if its __str__ fails.
+        return type(exc).__name__
     return message if message.strip() else type(exc).__name__
 
 

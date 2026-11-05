@@ -14,7 +14,7 @@
   <a href="https://github.com/dipeshbabu/agentloop/actions/workflows/ci.yml"><img src="https://github.com/dipeshbabu/agentloop/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://pypi.org/project/agentloop-profiler/"><img src="https://img.shields.io/pypi/v/agentloop-profiler.svg?cacheSeconds=300" alt="PyPI"></a>
   <a href="https://pepy.tech/projects/agentloop-profiler"><img src="https://static.pepy.tech/badge/agentloop-profiler/month" alt="Downloads/month"></a>
-  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10%2B-3776AB.svg" alt="Python 3.10 or newer"></a>
+  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.11%2B-3776AB.svg" alt="Python 3.11 or newer"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="License: Apache-2.0"></a>
 </p>
 
@@ -41,7 +41,7 @@ It has no runtime dependencies and has not yet been published to npm.
 
 ## Quickstart
 
-Install with Python 3.10 or newer:
+Install with Python 3.11 or newer:
 
 ```bash
 python -m pip install agentloop-profiler

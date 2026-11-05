@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=83.0.0", "wheel"]
+requires = ["setuptools>=84.1.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,7 +7,7 @@ name = "agentloop-profiler"
 version = "0.1.0"
 description = "Profiler and optimization layer for AI agent execution graphs"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = "Apache-2.0"
 license-files = ["LICENSE", "THIRD_PARTY_LICENSES.md"]
 authors = [{ name = "Dipesh Babu" }]
@@ -19,7 +19,6 @@ classifiers = [
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
@@ -51,7 +50,6 @@ dev = [
   "pre-commit>=4.6.0,<5",
   "pytest>=8.0.0",
   "ruff>=0.12.0,<1",
-  "tomli>=2.0.0; python_version < '3.11'",
 ]
 
 [project.urls]
@@ -69,6 +67,7 @@ agentloop = "agentloop.integrations.hermes_recorder:register"
 
 [tool.setuptools.packages.find]
 include = ["agentloop*", "dashboard*"]
+exclude = ["runs*", "sdk*", "tests*", "build*", "dist*"]
 
 [tool.ruff]
 line-length = 100
@@ -99,7 +98,11 @@ required-version = ">=0.11.8,<0.12"
 # Security floors and Python-specific binary compatibility requirements.
 constraint-dependencies = [
   "urllib3>=2.8.0",
-  "virtualenv>=21.7.13",
+  "virtualenv>=21.14.9",
+  "filelock>=4.2.1",
+  "certifi>=2026.10.18",
+  "pillow>=13.0.0",
+  "setuptools>=84.1.0",
   # Arrow 24 supports the oldest Python floor, but has no Python 3.15 wheels.
   "pyarrow>=26.0.1; python_version >= '3.15'",
 ]

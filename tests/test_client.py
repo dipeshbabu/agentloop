@@ -18,7 +18,7 @@ def _capture_request_headers(monkeypatch) -> list[dict[str, str]]:
         def __exit__(self, *args):  # type: ignore[no-untyped-def]
             return None
 
-        def read(self) -> bytes:
+        def read(self, size=-1) -> bytes:
             return b"{}"
 
     def fake_urlopen(request, timeout):  # type: ignore[no-untyped-def]
@@ -26,7 +26,7 @@ def _capture_request_headers(monkeypatch) -> list[dict[str, str]]:
         captured.append({name.lower(): value for name, value in request.header_items()})
         return Response()
 
-    monkeypatch.setattr("agentloop.client.urllib.request.urlopen", fake_urlopen)
+    monkeypatch.setattr("agentloop.client._open_request", fake_urlopen)
     return captured
 
 

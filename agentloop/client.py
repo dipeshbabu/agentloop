@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import urllib.error
 import urllib.parse
 import urllib.request
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
 
@@ -18,14 +19,25 @@ class AgentLoopClientError(RuntimeError):
     pass
 
 
+class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        # Project and admin credentials must never be forwarded to another route.
+        return None
+
+
+def _open_request(request: urllib.request.Request, timeout: float):
+    return urllib.request.build_opener(_NoRedirectHandler()).open(request, timeout=timeout)
+
+
 @dataclass
 class AgentLoopClient:
-    """Dependency-free API v1 client; base_url is the origin or mount path, without /v1."""
+    """Dependency-free API v1 client accepting an origin, mount path, or /v1 base."""
 
     base_url: str = "http://127.0.0.1:8000"
-    api_key: str | None = None
-    admin_api_key: str | None = None
+    api_key: str | None = field(default=None, repr=False)
+    admin_api_key: str | None = field(default=None, repr=False)
     timeout_s: float = 10.0
+    max_response_bytes: int = 16 * 1024 * 1024
 
     @classmethod
     def from_env(cls) -> "AgentLoopClient":
@@ -197,11 +209,51 @@ class AgentLoopClient:
         *,
         credential_scope: CredentialScope = "project",
     ) -> dict[str, Any]:
-        parsed_base_url = urllib.parse.urlsplit(self.base_url)
+        try:
+            parsed_base_url = urllib.parse.urlsplit(self.base_url)
+            port = parsed_base_url.port
+        except (TypeError, ValueError):
+            raise AgentLoopClientError("AgentLoop API URL must be a valid HTTP(S) URL") from None
         if parsed_base_url.scheme not in {"http", "https"} or not parsed_base_url.netloc:
             raise AgentLoopClientError("AgentLoop API URL must use http:// or https://")
-        url = self.base_url.rstrip("/") + "/v1" + path
-        body = None if payload is None else json.dumps(payload).encode("utf-8")
+        if (
+            parsed_base_url.username is not None
+            or parsed_base_url.password is not None
+            or parsed_base_url.query
+            or parsed_base_url.fragment
+        ):
+            raise AgentLoopClientError(
+                "AgentLoop API URL must not contain credentials, query, or fragment"
+            )
+        if any(ord(char) <= 32 or ord(char) == 127 for char in self.base_url):
+            raise AgentLoopClientError(
+                "AgentLoop API URL must not contain whitespace or control characters"
+            )
+        del port  # Access above validates malformed or out-of-range ports.
+        if isinstance(self.timeout_s, bool) or not isinstance(self.timeout_s, (int, float)):
+            raise AgentLoopClientError("timeout_s must be a positive finite number")
+        try:
+            timeout = float(self.timeout_s)
+        except OverflowError:
+            raise AgentLoopClientError("timeout_s must be a positive finite number") from None
+        if not math.isfinite(timeout) or timeout <= 0:
+            raise AgentLoopClientError("timeout_s must be a positive finite number")
+        if (
+            isinstance(self.max_response_bytes, bool)
+            or not isinstance(self.max_response_bytes, int)
+            or self.max_response_bytes <= 0
+        ):
+            raise AgentLoopClientError("max_response_bytes must be a positive integer")
+        prefix = self.base_url.rstrip("/")
+        if prefix.endswith("/v1"):
+            prefix = prefix[:-3]
+        url = prefix + "/v1" + path
+        try:
+            body = None if payload is None else json.dumps(payload, allow_nan=False).encode("utf-8")
+        except (TypeError, ValueError):
+            raise AgentLoopClientError(
+                "AgentLoop request payload must contain finite JSON data"
+            ) from None
         headers = {"Accept": "application/json"}
         if payload is not None:
             headers["Content-Type"] = "application/json"
@@ -213,16 +265,33 @@ class AgentLoopClient:
                 headers["X-AgentLoop-Admin-Key"] = self.admin_api_key
         else:
             raise AgentLoopClientError(f"Unsupported credential scope: {credential_scope}")
-        req = urllib.request.Request(url=url, data=body, method=method, headers=headers)
+        for key in (self.api_key, self.admin_api_key):
+            if key is not None and (
+                not isinstance(key, str) or any(ord(char) < 32 or ord(char) == 127 for char in key)
+            ):
+                raise AgentLoopClientError(
+                    "AgentLoop API credentials must be strings without control characters"
+                )
         try:
-            with urllib.request.urlopen(  # nosec B310 - base URL scheme is validated above.
-                req, timeout=self.timeout_s
-            ) as response:
-                return json.loads(response.read().decode("utf-8"))
+            req = urllib.request.Request(url=url, data=body, method=method, headers=headers)
+            with _open_request(req, timeout=timeout) as response:
+                raw = response.read(self.max_response_bytes + 1)
+                if len(raw) > self.max_response_bytes:
+                    raise AgentLoopClientError(
+                        "AgentLoop response exceeds the configured size limit"
+                    )
+                if getattr(response, "status", None) == 204:
+                    return {}
+            try:
+                result = json.loads(raw.decode("utf-8"))
+            except (UnicodeError, ValueError):
+                raise AgentLoopClientError("AgentLoop response is not valid UTF-8 JSON") from None
+            if not isinstance(result, dict):
+                raise AgentLoopClientError("AgentLoop response must be a JSON object")
+            return result
         except urllib.error.HTTPError as exc:
-            detail = exc.read().decode("utf-8", errors="ignore")
-            raise AgentLoopClientError(f"AgentLoop API returned {exc.code}: {detail}") from exc
-        except urllib.error.URLError as exc:
-            raise AgentLoopClientError(
-                f"Could not reach AgentLoop API at {url}: {exc.reason}"
-            ) from exc
+            status = exc.code
+            exc.close()
+            raise AgentLoopClientError(f"AgentLoop API returned HTTP {status}") from None
+        except (OSError, ValueError):
+            raise AgentLoopClientError("Could not reach the AgentLoop API") from None

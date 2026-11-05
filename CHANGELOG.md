@@ -16,10 +16,25 @@ trace, study, receipt, API and database schema versions.
   with native turn traces, normalized request usage, retry and tool evidence,
   explicit incomplete capture, profile isolation, and opt-in output text.
 
+### Changed
+
+- Source builds require Python 3.11 or newer so all supported installations can
+  use patched Pillow and filelock releases. Published 0.1.0 predates this change.
+
 ### Fixed
 
 - Python 3.15 container installs use compatible binary dependencies and receive
   full CI coverage with released interpreters alongside the existing Python matrix.
+- Updated Pillow, certifi, filelock, virtualenv, and setuptools to patched
+  releases, with resolver floors to prevent vulnerable downgrades.
+- Failed retry spans retain their error status, and exception formatting cannot
+  replace the business failure when an exception's string conversion raises.
+- Python API requests reject redirects, bound response reads, preserve credential
+  scopes, and avoid exposing keys or error response bodies in diagnostics.
+- TypeScript metadata copying validates and copies each value once, ignoring
+  custom serializers and rejecting inherited values in sparse arrays.
+- Package discovery prunes generated runs, SDK dependencies, tests, and build
+  output before traversing their directory trees.
 - Repository link checks exclude generated run artifacts, package smoke
   environments and JavaScript dependencies while retaining source documentation.
 - CLI analysis, reports and study summaries reject destinations that alias source

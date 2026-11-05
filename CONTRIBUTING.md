@@ -30,7 +30,7 @@ data with synthetic values.
 
 ## First-time setup
 
-AgentLoop supports Python 3.10 and newer and uses
+AgentLoop supports Python 3.11 and newer and uses
 [`uv`](https://docs.astral.sh/uv/) for dependency management and task execution.
 The repository's default development interpreter is declared in
 [`.python-version`](.python-version).
