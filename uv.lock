@@ -38,18 +38,25 @@ dependencies = [
 
 [package.optional-dependencies]
 all = [
+    { name = "certifi" },
     { name = "fastapi" },
     { name = "openai" },
     { name = "pandas" },
+    { name = "pillow" },
     { name = "psycopg", extra = ["binary"] },
     { name = "streamlit" },
+    { name = "urllib3" },
     { name = "uvicorn" },
 ]
 dashboard = [
+    { name = "certifi" },
     { name = "pandas" },
+    { name = "pillow" },
     { name = "streamlit" },
+    { name = "urllib3" },
 ]
 instrumentation = [
+    { name = "certifi" },
     { name = "openai" },
 ]
 postgres = [
@@ -63,29 +70,40 @@ server = [
 [package.dev-dependencies]
 dev = [
     { name = "bandit" },
+    { name = "certifi" },
+    { name = "filelock" },
     { name = "httpx2" },
     { name = "pre-commit" },
     { name = "pytest" },
     { name = "ruff" },
+    { name = "virtualenv" },
 ]
 standalone = [
     { name = "pyinstaller" },
+    { name = "setuptools" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "certifi", marker = "extra == 'all'", specifier = ">=2026.10.18" },
+    { name = "certifi", marker = "extra == 'dashboard'", specifier = ">=2026.10.18" },
+    { name = "certifi", marker = "extra == 'instrumentation'", specifier = ">=2026.10.18" },
     { name = "fastapi", marker = "extra == 'all'", specifier = ">=0.110.0" },
     { name = "fastapi", marker = "extra == 'server'", specifier = ">=0.110.0" },
     { name = "openai", marker = "extra == 'all'", specifier = ">=1.0.0" },
     { name = "openai", marker = "extra == 'instrumentation'", specifier = ">=1.0.0" },
     { name = "pandas", marker = "extra == 'all'", specifier = ">=2.0.0" },
     { name = "pandas", marker = "extra == 'dashboard'", specifier = ">=2.0.0" },
+    { name = "pillow", marker = "extra == 'all'", specifier = ">=13.0.0" },
+    { name = "pillow", marker = "extra == 'dashboard'", specifier = ">=13.0.0" },
     { name = "psycopg", extras = ["binary"], marker = "extra == 'all'", specifier = ">=3.3.8" },
     { name = "psycopg", extras = ["binary"], marker = "extra == 'postgres'", specifier = ">=3.3.8" },
     { name = "rich", specifier = ">=13.0.0" },
     { name = "streamlit", marker = "extra == 'all'", specifier = ">=1.34.0" },
     { name = "streamlit", marker = "extra == 'dashboard'", specifier = ">=1.34.0" },
     { name = "typer", specifier = ">=0.12.0" },
+    { name = "urllib3", marker = "extra == 'all'", specifier = ">=2.8.0" },
+    { name = "urllib3", marker = "extra == 'dashboard'", specifier = ">=2.8.0" },
     { name = "uvicorn", marker = "extra == 'all'", specifier = ">=0.27.0" },
     { name = "uvicorn", marker = "extra == 'server'", specifier = ">=0.27.0" },
 ]
@@ -94,12 +112,18 @@ provides-extras = ["dashboard", "server", "postgres", "instrumentation", "all"]
 [package.metadata.requires-dev]
 dev = [
     { name = "bandit", specifier = ">=1.9.4,<2" },
+    { name = "certifi", specifier = ">=2026.10.18" },
+    { name = "filelock", specifier = ">=4.2.1" },
     { name = "httpx2", specifier = ">=2.12.0" },
     { name = "pre-commit", specifier = ">=4.6.0,<5" },
     { name = "pytest", specifier = ">=8.0.0" },
     { name = "ruff", specifier = ">=0.12.0,<1" },
+    { name = "virtualenv", specifier = ">=21.14.9" },
 ]
-standalone = [{ name = "pyinstaller", specifier = ">=6.21.0,<7" }]
+standalone = [
+    { name = "pyinstaller", specifier = ">=6.21.0,<7" },
+    { name = "setuptools", specifier = ">=84.1.0" },
+]
 
 [[package]]
 name = "altair"

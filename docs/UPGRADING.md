@@ -34,6 +34,17 @@ See [API v1](API_VERSIONING.md) for the route mapping. `/health` and `/readyz`
 remain supported. Unversioned application routes are deprecated; their earliest
 removal is 1.0 with a release notice.
 
+Repeat the optional extras you use when upgrading so pip applies their patched
+dependency requirements. For example, upgrade a dashboard/API installation with:
+
+```bash
+python -m pip install --upgrade "agentloop-profiler[dashboard,server]==0.1.1"
+```
+
+Installing only the base package does not upgrade optional dependencies left in
+an existing environment. Source development and standalone dependency groups also
+declare their security floors for installers that do not read uv constraints.
+
 Diagnosis GET requests now compute without persisting or superseding findings.
 Use `POST /v1/traces/{run_id}/diagnosis`,
 `AgentLoopClient.save_diagnosis(run_id)`, or `agentloop remote-diagnose` to save
