@@ -186,14 +186,14 @@ def test_real_client_request_adds_v1_once_under_the_configured_mount(monkeypatch
         def __exit__(self, *args):
             return None
 
-        def read(self):
+        def read(self, size=-1):
             return b"{}"
 
     def capture(request, timeout):
         requests.append(request)
         return Response()
 
-    monkeypatch.setattr("agentloop.client.urllib.request.urlopen", capture)
+    monkeypatch.setattr("agentloop.client._open_request", capture)
     client = AgentLoopClient(
         base_url="https://example.test/mount/", api_key="project", admin_api_key="admin"
     )
