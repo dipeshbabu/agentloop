@@ -129,3 +129,36 @@ test("explicit final output restores quality evidence after an unavailable marke
   assert.equal(data.metadata.output_unavailable, undefined);
   assert.deepEqual(data.metadata.output, { answer: "ok" });
 });
+
+test("metadata copying never calls custom serializers or changes its validated shape", () => {
+  const metadata = { safe: true };
+  let calls = 0;
+  Object.defineProperty(metadata, "toJSON", { value() { calls++; return "invalid-shape"; } });
+  const data = new AgentTrace("serializer", { metadata }).finish().toJSON();
+  assert.deepEqual(data.metadata, { safe: true });
+  assert.equal(calls, 0);
+});
+
+test("metadata getters are read once while validating and copying their value", () => {
+  let reads = 0;
+  const metadata = {};
+  Object.defineProperty(metadata, "answer", { enumerable: true, get() { reads++; return reads === 1 ? "safe" : Infinity; } });
+  const data = new AgentTrace("getter", { metadata }).finish().toJSON();
+  assert.equal(data.metadata.answer, "safe");
+  assert.equal(reads, 1);
+});
+
+test("JSON copies retain prototype-named data without mutating prototypes", () => {
+  const metadata = JSON.parse('{"__proto__":{"polluted":true},"constructor":"data"}');
+  const data = new AgentTrace("prototype", { metadata }).finish().toJSON();
+  assert.ok(Object.hasOwn(data.metadata, "__proto__"));
+  assert.equal(data.metadata.__proto__.polluted, true);
+  assert.equal(data.metadata.constructor, "data");
+  assert.equal({}.polluted, undefined);
+});
+
+test("inherited array values cannot disguise missing JSON elements", () => {
+  const sparse = new Array(1);
+  Object.setPrototypeOf(sparse, Object.assign(Object.create(Array.prototype), { 0: "inherited" }));
+  assert.throws(() => new AgentTrace("sparse", { metadata: { sparse } }), /empty slots/);
+});

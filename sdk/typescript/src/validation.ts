@@ -12,11 +12,11 @@ export function count(value: unknown, name: string): asserts value is number {
 
 export function cloneJson<T>(value: T): T {
   const ancestors = new Set<object>();
-  function visit(item: unknown): void {
-    if (item === null || typeof item === "string" || typeof item === "boolean") return;
+  function visit(item: unknown): JsonValue {
+    if (item === null || typeof item === "string" || typeof item === "boolean") return item;
     if (typeof item === "number") {
       if (!Number.isFinite(item)) throw new TypeError("JSON numbers must be finite");
-      return;
+      return item;
     }
     if (typeof item !== "object" || !item) throw new TypeError("Value must contain only JSON data");
     if (ancestors.has(item)) throw new TypeError("JSON data must not contain cycles");
@@ -24,14 +24,28 @@ export function cloneJson<T>(value: T): T {
       throw new TypeError("JSON objects must be plain objects");
     }
     ancestors.add(item);
-    if (Array.isArray(item) && Array.from({ length: item.length }, (_, index) => index).some(index => !(index in item))) {
-      throw new TypeError("JSON arrays must not contain empty slots");
+    let copy: JsonValue;
+    if (Array.isArray(item)) {
+      const array: JsonValue[] = [];
+      const length = item.length;
+      for (let index = 0; index < length; index++) {
+        if (!Object.hasOwn(item, index)) throw new TypeError("JSON arrays must not contain empty slots");
+        array.push(visit(item[index]));
+      }
+      copy = array;
+    } else {
+      const object: JsonObject = {};
+      for (const key of Object.keys(item)) {
+        const entry = visit((item as Record<string, unknown>)[key]);
+        if (key === "__proto__") Object.defineProperty(object, key, { value: entry, enumerable: true, writable: true, configurable: true });
+        else object[key] = entry;
+      }
+      copy = object;
     }
-    for (const entry of Object.values(item)) visit(entry);
     ancestors.delete(item);
+    return copy;
   }
-  visit(value);
-  return JSON.parse(JSON.stringify(value)) as T;
+  return visit(value) as T;
 }
 
 const bases = new Set<TokenProvenance>(["provider", "tokenizer", "user_supplied", "estimated_words", "unavailable", "unspecified", "external_reported"]);
