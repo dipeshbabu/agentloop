@@ -7,8 +7,19 @@ can analyze, store, or compare with the usual AgentLoop commands.
 This integration is included in AgentLoop **0.1.1 and newer**. The directory
 plugin uses only Python's standard library and does not add dependencies to
 Hermes's managed environment.
-The tested hook contract is Hermes **0.21.6**, revision
+The published release's tested hook contract is Hermes **0.21.6**, revision
 [`818c13be1dc4`](https://github.com/NousResearch/hermes-agent/tree/818c13be1dc4fd28987e1e881a9408224afd4535).
+
+| AgentLoop distribution | Accepted Hermes versions | Validation |
+| --- | --- | --- |
+| Published 0.1.1 | `>=0.21.6,<0.22` | 0.21.6 hook contract and standalone plugin tests |
+| Current source, unreleased | `>=0.21.6,<0.23` | Also real v0.22.7 runtime dispatch with a local deterministic provider |
+
+For Hermes 0.22.x, install the current repository source and export its plugin
+until the next Python release. A source checkout still reports package version
+0.1.1; use the source commit to identify these unreleased changes. See the
+[runtime pilot](HERMES_RUNTIME_PILOT.md) for exact pins, reproduction commands,
+and the limits of this evidence.
 
 ## Create and enable the plugin
 
@@ -33,6 +44,13 @@ hermes plugins list
 Restart the Hermes CLI or gateway after enabling it. Use the profile selected by
 your Hermes installation; copying files into a different profile does not enable
 capture there. The plugin does not install Hermes or configure a model provider.
+
+For the unreleased 0.22.x support, use a separate AgentLoop environment:
+
+```bash
+python -m pip install /path/to/agentloop-checkout
+agentloop hermes export-plugin runs/hermes-agentloop-source
+```
 
 By default, each completed turn writes a file such as
 `agentloop/traces/run_hermes_<id>.json` under that profile home. Analyze a file with
@@ -69,6 +87,11 @@ responses. Auxiliary calls such as titling, compression, and MoA calls have a
 separate Hermes hook family and are outside this capture. It cannot reconstruct
 events omitted by Hermes or certify task correctness. Use your own quality
 fixtures when comparing candidate runs.
+
+Current source also fails replay and CI capture-integrity gates when either
+Hermes turn is incomplete, interrupted, or failed, or reports unfinished requests
+or dropped events. This fix is unreleased. Complete capture alone does not establish
+that a task succeeded; keep task-quality checks alongside performance gates.
 
 ## Settings and retained content
 

@@ -142,6 +142,26 @@ def build_replay_report(
                 indeterminate=not available,
             )
         )
+    for side, trace in (("baseline", baseline_trace), ("candidate", candidate_trace)):
+        metadata = getattr(trace, "metadata", {})
+        if isinstance(metadata, dict) and metadata.get("integration") == "hermes":
+            capture = metadata.get("hermes")
+            complete = (
+                isinstance(capture, dict)
+                and capture.get("capture_complete") is True
+                and capture.get("turn_outcome") == "completed"
+                and capture.get("unfinished_requests", 0) == 0
+                and capture.get("events_dropped", 0) == 0
+            )
+            gate_results.append(
+                _gate(
+                    f"{side}_capture_complete",
+                    complete,
+                    "Hermes turn completed with complete capture"
+                    if complete
+                    else "Hermes capture is incomplete or the turn did not complete; inspect capture flags and outcome",
+                )
+            )
     passed = all(item["passed"] for item in gate_results)
     indeterminate_gates = [item["name"] for item in gate_results if item.get("indeterminate")]
 

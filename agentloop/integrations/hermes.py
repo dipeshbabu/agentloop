@@ -39,7 +39,7 @@ def export_hermes_plugin(directory: str | Path) -> Path:
         "kind": "standalone",
         "license": "Apache-2.0",
         "homepage": "https://github.com/dipeshbabu/agentloop",
-        "requires_hermes": ">=0.21.6,<0.22",
+        "requires_hermes": ">=0.21.6,<0.23",
         "provides_hooks": list(hermes_recorder.HOOKS),
         "config_schema": {
             "export_dir": {

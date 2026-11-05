@@ -9,6 +9,7 @@ from pathlib import Path
 from types import ModuleType, SimpleNamespace
 
 import pytest
+from packaging.specifiers import SpecifierSet
 from typer.testing import CliRunner
 
 import agentloop
@@ -321,6 +322,15 @@ def test_plugin_export_refuses_existing_directory(tmp_path):
     with pytest.raises(ValueError, match="already exists"):
         export_hermes_plugin(existing)
     assert sentinel.read_text(encoding="utf-8") == "preserve"
+
+
+@pytest.mark.parametrize(
+    "version,supported", [("0.21.6", True), ("0.22.7", True), ("0.21.5", False), ("0.23.0", False)]
+)
+def test_plugin_manifest_keeps_supported_hook_families_bounded(tmp_path, version, supported):
+    plugin = export_hermes_plugin(tmp_path / "plugin")
+    manifest = json.loads((plugin / "plugin.yaml").read_text(encoding="utf-8"))
+    assert (version in SpecifierSet(manifest["requires_hermes"])) is supported
 
 
 def test_duplicate_request_callbacks_do_not_add_usage_or_unfinished_requests(tmp_path):
