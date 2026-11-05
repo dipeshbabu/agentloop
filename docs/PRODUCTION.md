@@ -105,10 +105,13 @@ AGENTLOOP_ADMIN_API_KEY="$AGENTLOOP_ADMIN_API_KEY" \
 uv run python scripts/smoke_api.py
 ```
 
-The official image uses Python 3.14, which is exercised by the package CI matrix and by
+The official image uses Python 3.15, which is exercised by the package CI matrix and by
 the end-to-end container deployment smoke. The repository keeps Python 3.13 in
 `.python-version` for the default contributor and standalone-build environment, while the
-package remains tested across Python 3.10, 3.13, and 3.14. The image runs as the non-root
+package remains tested across Python 3.10, 3.13, 3.14, and 3.15. The lockfile selects
+compatible binary wheels for the image and retains older packages where Python 3.10
+requires them. CI installs released interpreters and excludes prerelease fallbacks.
+The image runs as the non-root
 `agentloop` user. Application files under `/app` are read-only to that user; `/data` is the
 intended writable path for SQLite deployments.
 

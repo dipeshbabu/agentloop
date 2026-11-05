@@ -22,6 +22,9 @@ def test_container_python_support_is_consistent_across_metadata_and_ci() -> None
 
     assert f'"Programming Language :: Python :: {container_python}"' in pyproject
     assert f'"{container_python}"' in matrix_line
+    assert "allow-prereleases: false" in workflow
+    assert "UV_PYTHON_DOWNLOADS: never" in workflow
+    assert "UV_PYTHON: ${{ matrix.python-version }}" in workflow
     assert 'expected_python="$(' in workflow
     assert 'actual_python="$(' in workflow
     assert 'test "$actual_python" = "$expected_python"' in workflow
