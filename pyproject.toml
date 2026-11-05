@@ -67,6 +67,7 @@ agentloop = "agentloop.integrations.hermes_recorder:register"
 
 [tool.setuptools.packages.find]
 include = ["agentloop*", "dashboard*"]
+exclude = ["runs*", "sdk*", "tests*", "build*", "dist*"]
 
 [tool.ruff]
 line-length = 100

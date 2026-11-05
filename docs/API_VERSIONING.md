@@ -2,7 +2,7 @@
 
 Application routes are served under `/v1`. The Python client adds that prefix
 centrally; configure `base_url` or `AGENTLOOP_API_URL` as the server origin or
-deployment mount path, without `/v1`:
+deployment mount path. A supplied `/v1` suffix is normalized:
 
 ```python
 from agentloop import AgentLoopClient
@@ -15,6 +15,12 @@ This sends `GET /v1/traces?page_size=20`. A mount such as
 `https://example.com/agentloop` produces `/agentloop/v1/traces`. The current client
 requires a server with v1 support; upgrade the server before upgrading clients.
 Older clients can continue using the deprecated unversioned aliases during 0.x.
+
+The Python client rejects redirects so project and admin keys cannot be forwarded
+to another endpoint. Credentials are omitted from its representation, and HTTP
+errors report the status without copying response bodies. Responses must be JSON
+objects and are limited to 16 MiB by default; set `max_response_bytes` on the client
+for larger reports. `timeout_s` controls the underlying socket timeout.
 
 ## Routes and migration
 
