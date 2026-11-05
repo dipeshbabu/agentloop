@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import tomllib
+
 import streamlit as st
 from streamlit.delta_generator import DeltaGenerator
 
@@ -35,6 +37,6 @@ def test_declared_dashboard_floor_remains_supported() -> None:
     from pathlib import Path
 
     root = Path(__file__).resolve().parents[1]
-    pyproject = (root / "pyproject.toml").read_text(encoding="utf-8")
+    pyproject = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
 
-    assert 'dashboard = ["streamlit>=1.34.0"' in pyproject
+    assert "streamlit>=1.34.0" in pyproject["project"]["optional-dependencies"]["dashboard"]
