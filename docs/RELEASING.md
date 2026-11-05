@@ -67,7 +67,7 @@ git push origin vX.Y.Z
 
 `release.yml` checks that the ref is an annotated semantic version tag, exactly
 matches package metadata and points to a commit reachable from main. It runs the
-reusable full CI against that exact tag: Python 3.10/3.13/3.14/3.15, SQLite/Postgres,
+reusable full CI against that exact tag: Python 3.11/3.13/3.14/3.15, SQLite/Postgres,
 lock/format/security checks, Docker deployment, installed-wheel smoke and four
 standalone platform builds. Publication downloads those validated bytes instead
 of rebuilding them. Concurrent publishing runs for one ref are serialized.
