@@ -7,11 +7,14 @@ trace, study, receipt, API and database schema versions.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-05
+
 ### Added
 
 - TypeScript SDK for native model/tool/retry tracing and the API v1 routes, with
   explicit concurrent contexts, qualified usage, private credential scopes,
   cancellation, bounded responses, and Node/Python interoperability checks.
+  The SDK is available from source; npm publication remains pending.
 - Hermes 0.21.6 observer integration and a standalone directory-plugin exporter,
   with native turn traces, normalized request usage, retry and tool evidence,
   explicit incomplete capture, profile isolation, and opt-in output text.
@@ -91,5 +94,6 @@ trace, study, receipt, API and database schema versions.
 - Optional live-provider validation, Harbor post-job plugins, active approval
   resolution and research trajectory export remain outside this release.
 
-[Unreleased]: https://github.com/dipeshbabu/agentloop/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/dipeshbabu/agentloop/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/dipeshbabu/agentloop/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/dipeshbabu/agentloop/releases/tag/v0.1.0

@@ -4,10 +4,11 @@ AgentLoop reads completed Harbor/Omnigent evidence, qualifies findings and compa
 externally scored outcomes. Harbor executes tasks and verifiers; Omnigent owns
 harness sessions and policies. AgentLoop does not launch either runtime.
 
-These capabilities are included in `0.1.0`. Package versioning is separate from
-the unchanged native trace/study schemas, storage/database contracts, Python 3.10
-minimum and core dependency list. Build and install the intended checkout to run
-the checked-in examples, or install `agentloop-profiler==0.1.0` for the CLI/APIs.
+These capabilities were introduced in `0.1.0`. Package versioning is separate from
+native trace/study schemas and storage/database contracts. Version `0.1.1` requires
+Python 3.11 or newer for patched dependencies. Build and install the intended
+checkout to run the checked-in examples, or install `agentloop-profiler==0.1.1`
+for the CLI/APIs.
 
 ## Reproduce the supported offline workflows
 
@@ -132,7 +133,7 @@ uv build
 
 Focused PR validation additionally exercises newly built wheels in isolated
 environments, verifies changed package bytes, tests offline commands and checks
-Python 3.10/3.13/3.14, pinned LangGraph, package/standalone platforms, SQLite/Postgres,
+Python 3.11/3.13/3.14/3.15, pinned LangGraph, package/standalone platforms, SQLite/Postgres,
 replay and Docker deployment in CI. Final-head checks must pass before squash
 merging; rewritten or retargeted heads require fresh evidence. Skipped automated
 reviews are not approvals. Publication follows the explicit tagged-release
