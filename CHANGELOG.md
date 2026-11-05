@@ -30,6 +30,8 @@ trace, study, receipt, API and database schema versions.
   full CI coverage with released interpreters alongside the existing Python matrix.
 - Updated Pillow, certifi, filelock, virtualenv, and setuptools to patched
   releases, with resolver floors to prevent vulnerable downgrades.
+- Published optional-extra requirements and source dependency groups enforce
+  security floors even when an installer does not read uv-specific constraints.
 - Failed retry spans retain their error status, and exception formatting cannot
   replace the business failure when an exception's string conversion raises.
 - Python API requests reject redirects, bound response reads, preserve credential
