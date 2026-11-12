@@ -18,7 +18,12 @@ on:
   # against that PR's head commit via `gh workflow run ci.yml --ref <branch>`.
   # workflow_dispatch is exempt from GitHub's anti-recursion rule for GITHUB_TOKEN-
   # authored events, unlike push/pull_request.
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      run_local_inference:
+        description: Run the controlled local-model study and retain its experimental outcomes.
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -76,8 +81,10 @@ jobs:
       - name: Validate native evidence and incomplete capture gates
         run: .venv/bin/python scripts/validate_hermes_runtime.py --root "$RUNNER_TEMP/hermes-pilot"
       - name: Prepare pinned local inference
+        if: github.event_name == 'workflow_dispatch' && inputs.run_local_inference
         run: .venv/bin/python scripts/prepare_hermes_model.py --out "$RUNNER_TEMP/hermes-local-model"
       - name: Guided optimization with real Hermes and local inference
+        if: github.event_name == 'workflow_dispatch' && inputs.run_local_inference
         run: |
           .venv/bin/python scripts/run_hermes_adoption.py \
             --hermes-root "$PWD/.hermes-runtime" \
@@ -85,7 +92,7 @@ jobs:
             --model-runtime "$RUNNER_TEMP/hermes-local-model/runtime.json" \
             --out "$RUNNER_TEMP/hermes-adoption"
       - name: Upload guided optimization evidence
-        if: always()
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.run_local_inference
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: hermes-guided-optimization

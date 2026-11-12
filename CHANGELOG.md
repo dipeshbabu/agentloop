@@ -26,6 +26,11 @@ trace, study, receipt, API and database schema versions.
 
 ### Fixed
 
+- Guided capture retains conventional child interrupt exits as cancelled attempts.
+- Patch planning prunes generated build, dependency and environment directories,
+  keeping recommendations scoped to application source.
+- Installed-wheel validation exercises guided success and rejection paths outside
+  the checkout. Local model studies run through an explicit manual CI input.
 - Replay and CI comparisons reject incomplete, interrupted, or failed Hermes
   captures even when their shorter duration appears to improve performance.
 

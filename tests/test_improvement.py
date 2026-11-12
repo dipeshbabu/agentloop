@@ -29,6 +29,8 @@ if mode == "baseline":
 trace.export_json(request["trace_path"])
 if mode == "failure":
     raise SystemExit(1)
+if mode == "cancelled":
+    raise SystemExit(130)
 """
 
 
@@ -173,6 +175,12 @@ def test_timeout_retains_every_planned_attempt(tmp_path, workload):
     report = capture(tasks, tmp_path / "capture", command(worker, "timeout"), timeout=0.1)
     assert len(report["runs"]) == 4
     assert all(row["status"] == "timed_out" for row in report["runs"])
+
+
+def test_child_interrupt_exit_status_is_retained_as_cancellation(tmp_path, workload):
+    tasks, worker = workload
+    report = capture(tasks, tmp_path / "capture", command(worker, "cancelled"))
+    assert all(row["status"] == "cancelled" for row in report["runs"])
 
 
 def test_cli_runs_the_normal_entry_points_and_returns_quality_failure(tmp_path, workload):

@@ -155,6 +155,8 @@ def _invoke(command, request, timeout, *, show_output=False):
         return "runner_error"
     try:
         process.communicate((json.dumps(request) + "\n").encode(), timeout=timeout)
+        if process.returncode in {130, -signal.SIGINT, 0xC000013A, -1073741510}:
+            return "cancelled"
         return "completed" if process.returncode == 0 else "failed"
     except subprocess.TimeoutExpired:
         _stop_process(process)
