@@ -71,6 +71,7 @@ export class AgentTrace {
 
   async runSpan<T>(kind: AgentEvent["event_type"], name: string, body: (span: SpanContext) => T | Promise<T>, options: SpanOptions, parentId: string | null): Promise<T> {
     this.#assertOpen(); nonempty(name, "span name");
+    if (!["model_call", "tool_call", "retry"].includes(kind)) throw new TypeError("Unsupported span kind");
     if (parentId !== null && !this.#activeIds.has(parentId)) throw new Error("Parent span must be active in this trace");
     if (typeof body !== "function") throw new TypeError("Span body must be callable");
     if (options.model !== undefined) nonempty(options.model, "model");

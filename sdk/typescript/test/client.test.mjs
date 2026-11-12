@@ -10,6 +10,17 @@ function capture(options = {}) {
   return { client, requests };
 }
 
+test("dot-only identifiers fail before URL normalization or requests", async () => {
+  const { client, requests } = capture();
+  for (const id of [".", ".."]) {
+    await assert.rejects(async () => client.getReport(id), /dot path segment/);
+    await assert.rejects(async () => client.getIntervention(id), /dot path segment/);
+  }
+  assert.equal(requests.length, 0);
+  await client.getReport("run.with.dots");
+  assert.ok(requests[0].url.endsWith("/traces/run.with.dots/report"));
+});
+
 test("API v1 prefixes preserve mount paths and normalize a supplied v1 suffix", async () => {
   for (const baseUrl of ["https://example.test/mount", "https://example.test/mount/", "https://example.test/mount/v1/"]) {
     const { client, requests } = capture({ baseUrl }); await client.getReport("team/run ?1");

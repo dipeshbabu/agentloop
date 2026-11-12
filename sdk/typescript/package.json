@@ -12,6 +12,10 @@
   "files": ["dist", "src", "README.md", "LICENSE"],
   "engines": {"node": ">=22"},
   "license": "Apache-2.0",
+  "author": "Dipesh Tharu Mahato",
+  "homepage": "https://github.com/dipeshbabu/agentloop/tree/main/sdk/typescript",
+  "bugs": {"url": "https://github.com/dipeshbabu/agentloop/issues"},
+  "publishConfig": {"access": "public"},
   "repository": {"type": "git", "url": "https://github.com/dipeshbabu/agentloop.git", "directory": "sdk/typescript"},
   "scripts": {
     "build": "tsc -p tsconfig.json",
