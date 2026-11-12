@@ -29,6 +29,17 @@ def plan_markdown(specification):
             [f"## {markdown_heading(case['task_id'])}, repetition {case['repetition']}", ""]
         )
         diagnosis = case["diagnosis"]
+        quality = case.get("baseline_quality")
+        lines.extend(
+            [
+                "Independent baseline quality",
+                "",
+                f"The declared check {'passed' if quality['passed'] else 'failed'} with score {quality['score']}. {markdown_text(quality['detail'])}"
+                if quality
+                else "Baseline quality evidence is unavailable.",
+                "",
+            ]
+        )
         if diagnosis is None:
             lines.extend(
                 [
@@ -37,6 +48,36 @@ def plan_markdown(specification):
                 ]
             )
             continue
+        lines.extend(
+            [
+                "Ranked investigations",
+                "",
+                "| Rank | Finding | Evidence | Quality risk | Estimated latency benefit (ms) | Readiness |",
+                "| --- | --- | --- | --- | --- | --- |",
+            ]
+        )
+        for candidate in diagnosis["findings"]:
+            ranking = candidate.get("ranking", {})
+            parts = ranking.get("components", {})
+            evidence = parts.get("evidence", {}).get("value")
+            risk = parts.get("quality_risk", {}).get("value")
+            benefit = parts.get("latency", {}).get("value")
+            lines.append(
+                "| "
+                + " | ".join(
+                    markdown_table_cell(value)
+                    for value in (
+                        ranking.get("priority_rank", "unknown"),
+                        candidate["title"],
+                        evidence or "unknown",
+                        risk or "unknown",
+                        benefit if benefit is not None else "unavailable",
+                        ranking.get("status", "unknown"),
+                    )
+                )
+                + " |"
+            )
+        lines.append("")
         findings = [
             finding
             for finding in diagnosis["findings"]
@@ -65,13 +106,43 @@ def plan_markdown(specification):
                     "",
                     markdown_text(finding["rewrite"]["hint"]),
                     "",
+                    "Estimated savings",
+                    "",
+                    "The native estimator supplies a hypothesis to test. Measured candidate outcomes are recorded by finish.",
+                    "",
+                    markdown_fenced_code(
+                        json.dumps(
+                            {
+                                "estimate": finding.get("estimate"),
+                                "predicted_effect": finding.get("savings"),
+                            },
+                            indent=2,
+                        ),
+                        language="json",
+                    ),
+                    "",
+                    "Missing evidence and review requirements",
+                    "",
+                    ", ".join(
+                        markdown_text(reason)
+                        for reason in finding.get("ranking", {}).get("reasons", [])
+                    )
+                    or "No missing ranking inputs were reported.",
+                    "",
                     "Validation and trade-offs",
                     "",
                     markdown_fenced_code(
                         json.dumps(
                             {
                                 "checks": finding["validation"],
-                                "assumptions": finding.get("assumptions", []),
+                                "assumptions": list(
+                                    dict.fromkeys(
+                                        [
+                                            *finding.get("assumptions", []),
+                                            *(finding.get("estimate") or {}).get("assumptions", []),
+                                        ]
+                                    )
+                                ),
                             },
                             indent=2,
                         ),

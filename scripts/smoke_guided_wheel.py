@@ -89,7 +89,8 @@ def smoke(root):
             capture_output=True,
             text=True,
         )
-        if result.returncode != expected:
+        allowed = expected if isinstance(expected, tuple) else (expected,)
+        if result.returncode not in allowed:
             raise RuntimeError(
                 f"Installed guided CLI failed ({result.returncode}): {result.stderr[-3000:]}"
             )
@@ -165,6 +166,53 @@ def smoke(root):
     cancelled = json.loads((root / "cancelled/capture.json").read_text(encoding="utf-8"))
     if cancelled["runs"][0]["status"] != "cancelled":
         raise RuntimeError("Child cancellation was flattened into failure")
+    cli("improve", "init", "--out", root)
+    for condition in ("init-baseline", "init-candidate"):
+        if condition == "init-candidate":
+            cli(
+                "improve",
+                "start",
+                "--baseline",
+                root / "init-baseline/capture.json",
+                "--out",
+                root / "init-session",
+            )
+            example = root / "agentloop_example.py"
+            example.write_text(
+                example.read_text(encoding="utf-8").replace(
+                    'return {"notes": [lookup_note(key) for _ in range(3)]}',
+                    'value = lookup_note(key)\n    return {"notes": [value] * 3}',
+                ),
+                encoding="utf-8",
+            )
+        cli(
+            "improve",
+            "capture",
+            "--out",
+            root / condition,
+            "--",
+            sys.executable,
+            root / "agentloop_runner.py",
+        )
+    cli(
+        "improve",
+        "finish",
+        "--session",
+        root / "init-session/session.json",
+        "--candidate",
+        root / "init-candidate/capture.json",
+        "--change",
+        "Reuse local lookup",
+        "--out",
+        root / "init-results",
+        expected=(0, 1),
+    )
+    initialized = json.loads((root / "init-results/report.json").read_text(encoding="utf-8"))
+    if initialized["planned_attempts"] != 2 or not all(
+        case["quality"]["passed"] and case["replay"]["candidate"]["operation_counts"]["tool"] == 1
+        for case in initialized["cases"]
+    ):
+        raise RuntimeError("Generated installed-wheel example failed quality or tool-call checks")
     print(
         "Installed guided CLI preserved success, incorrect answers, incomplete capture, missing usage and cancellation."
     )
