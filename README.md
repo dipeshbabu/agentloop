@@ -109,6 +109,12 @@ See [trace retention](docs/TRACE_RETENTION.md) for capture controls.
 
 ## Inspect findings
 
+For a fixed task set, the current-source `agentloop improve` commands guide you
+through baseline capture, recommendation review, a developer-applied change, and
+quality-checked before/after results. See [guided optimization](docs/GUIDED_OPTIMIZATION.md)
+for the runner contract and a reproducible Hermes example with local inference.
+These commands are unreleased.
+
 Start with `analyze` to see metrics, findings, and suggested changes together.
 Findings link to the affected spans and describe the evidence and assumptions
 behind each suggestion. A repeated tool name, for example, does not prove that
