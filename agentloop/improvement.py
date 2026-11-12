@@ -18,6 +18,7 @@ from agentloop.findings import build_diagnosis
 from agentloop.interventions import build_intervention
 from agentloop.quality import build_quality_report, validate_quality_fixtures
 from agentloop.replay import ReplayGates, build_replay_report
+from agentloop.replay import _summary as replay_summary
 from agentloop.tracer import AgentTrace
 
 VERSION = "1.0"
@@ -151,16 +152,34 @@ def _invoke(command, request, timeout, *, show_output=False):
             stderr=None if show_output else subprocess.DEVNULL,
             **options,
         )
-    except OSError:
-        return "runner_error"
+    except OSError as error:
+        return {
+            "status": "runner_error",
+            "exit_code": None,
+            "diagnostic": f"Cannot start {Path(command[0]).name} ({type(error).__name__}). Verify the executable and Python environment.",
+        }
     try:
         process.communicate((json.dumps(request) + "\n").encode(), timeout=timeout)
         if process.returncode in {130, -signal.SIGINT, 0xC000013A, -1073741510}:
-            return "cancelled"
-        return "completed" if process.returncode == 0 else "failed"
+            return {
+                "status": "cancelled",
+                "exit_code": process.returncode,
+                "diagnostic": "The runner was interrupted. Capture a completed attempt before comparing performance.",
+            }
+        return {
+            "status": "completed" if process.returncode == 0 else "failed",
+            "exit_code": process.returncode,
+            "diagnostic": None
+            if process.returncode == 0
+            else f"Runner exited with code {process.returncode}. Rerun capture with --show-runner-output to inspect its error.",
+        }
     except subprocess.TimeoutExpired:
         _stop_process(process)
-        return "timed_out"
+        return {
+            "status": "timed_out",
+            "exit_code": process.returncode,
+            "diagnostic": f"Runner exceeded the {timeout:g}-second task timeout. Inspect the agent, or choose an appropriate --timeout for this workload.",
+        }
     except BaseException:
         _stop_process(process)
         raise
@@ -216,7 +235,7 @@ def capture(workload_path, root, command, *, timeout=180, show_output=False):
             }
             row["started_at"] = now()
             try:
-                row["status"] = _invoke(command, request, timeout, show_output=show_output)
+                row.update(_invoke(command, request, timeout, show_output=show_output))
             except KeyboardInterrupt:
                 row["status"] = "cancelled"
                 raise
@@ -226,12 +245,19 @@ def capture(workload_path, root, command, *, timeout=180, show_output=False):
                     try:
                         _, digest = trace_receipt(root, relative)
                         row.update(trace=relative, trace_sha256=digest)
-                    except (ValueError, OSError, TypeError, KeyError, AttributeError):
+                    except (ValueError, OSError, TypeError, KeyError, AttributeError) as error:
                         # Keep the more specific failed, timed-out or cancelled outcome.
                         if row["status"] == "completed":
                             row["status"] = "invalid_trace"
+                        row["diagnostic"] = (
+                            (row.get("diagnostic") or "")
+                            + f" Trace {relative} is invalid: {error}. Export a finalized native trace to request['trace_path']."
+                        )
                 elif row["status"] == "completed":
                     row["status"] = "missing_trace"
+                    row["diagnostic"] = (
+                        "Runner exited successfully without a trace. Export the finalized trace to request['trace_path']."
+                    )
                 write_once(root, f"receipts/{index:04d}.json", row)
     finally:
         write_once(root, "capture.json", manifest)
@@ -325,7 +351,8 @@ def start(
         focus = findings[0]["type"]
     require(
         focus is None or any(item["type"] == focus for item in findings),
-        "The selected finding type is absent from the baseline",
+        "The selected finding type is absent from the baseline. Available types: "
+        + ", ".join(sorted({item["type"] for item in findings})),
     )
     gates = ReplayGates(
         min_quality_score=1.0,
@@ -347,6 +374,10 @@ def start(
                 "task_id": task["id"],
                 "repetition": repetition,
                 "capture_status": row["status"],
+                "capture_diagnostic": row.get("diagnostic"),
+                "baseline_quality": _quality(task, trace, trace)["cases"][0]["baseline"]
+                if trace
+                else None,
                 "trace": relative,
                 "trace_hash": fingerprint(trace.to_dict()) if trace else None,
                 "diagnosis": diagnosis,
@@ -469,6 +500,14 @@ def finish(session_path, candidate_path, root, *, change):
         }
         if baseline is None or candidate is None:
             row["reasons"].append("A planned baseline or candidate trace is unavailable")
+            for side, status, diagnostic in (
+                ("Baseline", case["capture_status"], case.get("capture_diagnostic")),
+                ("Candidate", candidate_row["status"], candidate_row.get("diagnostic")),
+            ):
+                if status != "completed":
+                    row["reasons"].append(
+                        f"{side} attempt is {status}. {diagnostic or 'Recapture this task with --show-runner-output to inspect the failure.'}"
+                    )
         else:
             quality = _quality(task, baseline, candidate)
             replay = build_replay_report(baseline, candidate, gates=gates, quality_report=quality)
@@ -486,8 +525,19 @@ def finish(session_path, candidate_path, root, *, change):
                 row["reasons"].append(
                     "Baseline and candidate must both pass the declared quality checks"
                 )
+                for result in quality["cases"]:
+                    for side in ("baseline", "candidate"):
+                        if not result[side]["passed"]:
+                            row["reasons"].append(
+                                f"{side.title()} answer failed the declared {task.get('scorer', {}).get('type', 'exact_match')} criterion: {result[side]['detail']}"
+                            )
             if not replay["gates"]["passed"]:
                 row["reasons"].append("Native replay gates failed")
+                row["reasons"].extend(
+                    f"{gate['name']}: {gate['detail']}"
+                    for gate in replay["gates"]["results"]
+                    if not gate["passed"]
+                )
             if not case["diagnosis"].get("analysis_complete", True) or not candidate.report().get(
                 "analysis_complete", True
             ):
@@ -500,6 +550,23 @@ def finish(session_path, candidate_path, root, *, change):
             if gain is None or gain <= 0:
                 row["reasons"].append("The selected objective has no measured improvement")
             row.update(quality=quality, replay=replay, passed=not row["reasons"])
+            replay["gates"]["results"].append(
+                {
+                    "name": "guided_evidence",
+                    "passed": row["passed"],
+                    "detail": "All guided execution, quality and measured-objective checks passed"
+                    if row["passed"]
+                    else " ".join(row["reasons"]),
+                    "indeterminate": False,
+                }
+            )
+            replay["gates"]["passed"] = all(gate["passed"] for gate in replay["gates"]["results"])
+            replay["summary"] = replay_summary(
+                replay["deltas"],
+                replay["gates"]["passed"],
+                cost_evaluable=replay["gates"]["cost_evaluable"],
+                pricing_known=replay["gates"]["pricing_known"],
+            )
             if case["finding_ids"]:
                 record = build_intervention(
                     baseline,

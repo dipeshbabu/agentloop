@@ -9,6 +9,68 @@ Your agent runs in its own environment through an explicit command supplied to
 `capture`. The command receives one JSON request on stdin per task attempt and
 writes a native AgentLoop trace to the requested path.
 
+## Start with a runnable project
+
+```bash
+agentloop improve init --out agentloop-demo
+cd agentloop-demo
+python agentloop_runner.py --check
+agentloop improve capture --out baseline -- python agentloop_runner.py
+agentloop improve start --baseline baseline/capture.json --out optimization
+```
+
+Initialization writes a data-only `agentloop.toml`, two independent task examples,
+a Python runner, a local tool example, and `AGENTLOOP.md`. It makes no network
+requests and refuses to replace existing files. The example performs repeated
+local CPU work on fictional notes, with all traces explicitly marked synthetic.
+
+Inspect `optimization/plan.md`. In `agentloop_example.py`, replace
+`return {"notes": [lookup_note(key) for _ in range(3)]}` with:
+
+```python
+value = lookup_note(key)
+return {"notes": [value] * 3}
+```
+
+```bash
+agentloop improve capture --out candidate -- python agentloop_runner.py
+agentloop improve finish --session optimization/session.json --candidate candidate/capture.json --change "Reuse one lookup per request" --out results
+```
+
+Open `results/report.html`. CPU timing varies; acceptance is an observed outcome.
+For a rejection example, return `{"notes": ["wrong"] * 3}`, capture into a fresh
+`wrong` directory and finish into `rejected`. The correctness check must reject it
+regardless of its speed. Keep both result directories.
+
+## Connect an existing Python agent
+
+From your existing project, run:
+
+```bash
+agentloop improve init --agent my_agent:answer
+python agentloop_runner.py --check
+```
+
+The callable receives one JSON input and returns finite JSON. Async callables
+are supported. For another signature, edit the generated runner. Install the
+agent and AgentLoop into the runner's Python environment. Keep its existing
+model/tool instrumentation, or add the [SDK decorators](../README.md#record-your-own-run).
+An outer agent span alone does not expose internal repeated calls.
+
+Replace `agentloop_tasks.json` with your task inputs and independently chosen
+expected answers. Do this before baseline capture. The runner never receives the
+expected answers. `--tasks FILE` continues to work and overrides the project
+config; `--project FILE` selects another config. Config files select task data.
+Every capture still requires an explicit runner command after `--`.
+
+The generated adapter exports a finalized failed trace when the agent raises.
+Capture reports each failed task and its diagnostic. Use
+`agentloop improve capture --show-runner-output --out debug-capture -- python agentloop_runner.py --debug`
+for a traceback; this may reveal application data. An import failure suggests
+checking the environment and runner import. A missing trace suggests exporting
+the finalized trace to `request["trace_path"]`. A timeout suggests inspecting the
+agent before increasing `--timeout`.
+
 ## Define tasks and correctness first
 
 Save a workload such as this in `tasks.json`. Choose expected values independently
@@ -68,6 +130,9 @@ agentloop improve start --tasks tasks.json --baseline runs/baseline/capture.json
 
 Read `runs/optimization/plan.md`. It shows the selected finding family, affected
 spans, observed evidence, suggested changes, assumptions, and validation criteria.
+It includes the baseline quality result and the native finding rankings by
+evidence, quality risk and estimated benefit. Estimates retain their provenance
+and missing inputs. They remain hypotheses until candidate measurements exist.
 The default focus is the first baseline finding family. Select another observed
 family with `--focus cache_context`, for example.
 

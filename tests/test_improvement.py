@@ -100,6 +100,10 @@ def test_faster_wrong_failed_or_missing_candidates_are_rejected(tmp_path, worklo
     assert report["passed"] is False
     assert report["planned_attempts"] == 4
     assert report["passed_attempts"] == 0
+    assert all(
+        row["intervention"] is None or row["intervention"]["gates_passed"] is False
+        for row in report["cases"]
+    )
 
 
 def test_task_input_changes_cannot_be_paired(tmp_path, workload):

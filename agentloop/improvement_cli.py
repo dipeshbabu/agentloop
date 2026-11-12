@@ -8,6 +8,7 @@ import typer
 from rich.console import Console
 
 from agentloop import improvement
+from agentloop.improvement_init import initialize, project_tasks
 
 improve_app = typer.Typer(
     help="Capture fixed tasks, review baseline findings, and verify an applied change."
@@ -15,9 +16,34 @@ improve_app = typer.Typer(
 console = Console()
 
 
+def tasks_path(tasks: Path | None, project: Path) -> Path:
+    return tasks if tasks is not None else project_tasks(project)
+
+
+@improve_app.command("init")
+def init_command(
+    out: Path = typer.Option(Path("."), help="Existing project directory or a new directory."),
+    agent: str | None = typer.Option(None, help="Existing Python package.module:callable."),
+    name: str | None = typer.Option(None, help="Name shown in the trace and reports."),
+):
+    """Create task data, a Python adapter, and an executable offline example."""
+    try:
+        files = initialize(out, target=agent, name=name)
+    except (OSError, ValueError, TypeError) as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    console.print(f"Created {len(files)} files in {out.resolve()}", markup=False)
+    console.print(
+        "Read AGENTLOOP.md, then run python agentloop_runner.py --check from that directory.",
+        markup=False,
+    )
+
+
 @improve_app.command("capture")
 def capture_command(
-    tasks: Path = typer.Option(..., help="Fixed task inputs and deterministic quality checks."),
+    tasks: Path | None = typer.Option(None, help="Fixed tasks, overriding the project config."),
+    project: Path = typer.Option(
+        Path("agentloop.toml"), help="Data-only project config used when --tasks is omitted."
+    ),
     out: Path = typer.Option(..., help="Fresh output directory for this condition."),
     timeout: float = typer.Option(180, min=0.01, max=3600, help="Seconds per task attempt."),
     show_runner_output: bool = typer.Option(
@@ -30,20 +56,31 @@ def capture_command(
     """Run every declared task and retain failed, missing and interrupted attempts."""
     try:
         manifest = improvement.capture(
-            tasks, out, command, timeout=timeout, show_output=show_runner_output
+            tasks_path(tasks, project),
+            out,
+            command,
+            timeout=timeout,
+            show_output=show_runner_output,
         )
     except (OSError, ValueError, TypeError, KeyError) as exc:
         raise typer.BadParameter(str(exc)) from exc
     complete = sum(row["status"] == "completed" for row in manifest["runs"])
     console.print(f"Captured {complete} of {len(manifest['runs'])} planned attempts.", markup=False)
     console.print(f"Capture manifest written to {out / 'capture.json'}", markup=False)
+    for attempt in manifest["runs"]:
+        if attempt["status"] != "completed":
+            console.print(
+                f"{attempt['task_id']} repetition {attempt['repetition']} — {attempt['status']}. {attempt.get('diagnostic') or 'Inspect the runner with --show-runner-output.'}",
+                markup=False,
+            )
     if complete != len(manifest["runs"]):
         raise typer.Exit(1)
 
 
 @improve_app.command("start")
 def start_command(
-    tasks: Path = typer.Option(...),
+    tasks: Path | None = typer.Option(None),
+    project: Path = typer.Option(Path("agentloop.toml")),
     baseline: Path = typer.Option(..., help="Baseline capture.json."),
     out: Path = typer.Option(..., help="Fresh session directory."),
     focus: str | None = typer.Option(
@@ -57,7 +94,7 @@ def start_command(
     """Freeze task checks and original findings before editing the agent."""
     try:
         specification = improvement.start(
-            tasks,
+            tasks_path(tasks, project),
             baseline,
             out,
             focus=focus,
@@ -93,5 +130,12 @@ def finish_command(
         markup=False,
     )
     console.print(f"Read {out / 'report.html'}", markup=False)
+    for case in report["cases"]:
+        if not case["passed"]:
+            console.print(
+                f"{case['task_id']} repetition {case['repetition']} rejected — "
+                + " ".join(case["reasons"]),
+                markup=False,
+            )
     if not report["passed"]:
         raise typer.Exit(1)

@@ -20,6 +20,7 @@
 
 <p align="center">
   <a href="#quickstart">Quickstart</a> ·
+  <a href="#guided-optimization">Improve an agent</a> ·
   <a href="#record-your-own-run">Trace your code</a> ·
   <a href="#compare-before-and-after">Compare runs</a> ·
   <a href="#framework-integrations">Integrations</a> ·
@@ -62,6 +63,54 @@ installed it. Run `agentloop doctor` to check the installation and available ada
 For an isolated install, create an environment with `python -m venv .venv`, then
 activate it with `source .venv/bin/activate` on Linux/macOS or
 `.\.venv\Scripts\Activate.ps1` in Windows PowerShell before installing the package.
+
+## Guided optimization
+
+Available in current source, targeted for 0.2.0. Until that release, install the
+checkout with `python -m pip install .`. This offline example needs no API key:
+
+```bash
+agentloop improve init --out agentloop-demo
+cd agentloop-demo
+python agentloop_runner.py --check
+agentloop improve capture --out baseline -- python agentloop_runner.py
+agentloop improve start --baseline baseline/capture.json --out optimization
+```
+
+Read `optimization/plan.md`. It ranks findings using the existing evidence,
+quality-risk and estimated-benefit inputs, and separates observations from
+assumptions and missing evidence. In `agentloop_example.py`, replace the repeated
+lookup in `answer()` with:
+
+```python
+value = lookup_note(key)
+return {"notes": [value] * 3}
+```
+
+Then capture the same tasks and check the actual result:
+
+```bash
+agentloop improve capture --out candidate -- python agentloop_runner.py
+agentloop improve finish --session optimization/session.json --candidate candidate/capture.json --change "Reuse one lookup per request" --out results
+```
+
+Open `results/report.html`. The generated example runs real local CPU work on
+fictional notes; it is labeled synthetic. Its timings describe this example only.
+A faster answer that fails the frozen correctness checks is rejected with exit
+code 1. Failed attempts and unknown costs remain in the report.
+
+To connect your application, run `agentloop improve init --agent my_agent:answer`
+in its project directory. The generated adapter supports synchronous and async
+Python callables. Replace the example task inputs and expected outputs with
+independent checks for your agent, and keep your model and tool instrumentation.
+Initialization refuses to overwrite existing files. Read the generated
+`AGENTLOOP.md` and [onboarding guide](docs/GUIDED_OPTIMIZATION.md).
+
+A small [Hermes case study](docs/HERMES_OPTIMIZATION_CASE.md) retained six passing
+matched comparisons: model calls fell from 12 to 6 and mean task latency from
+14.52s to 7.41s. An earlier faster JSON-only candidate failed an independent answer
+check and was rejected. These controlled repository questions establish example
+behavior; they do not establish production savings or general agent performance.
 
 ## Record your own run
 
@@ -109,11 +158,8 @@ See [trace retention](docs/TRACE_RETENTION.md) for capture controls.
 
 ## Inspect findings
 
-For a fixed task set, the current-source `agentloop improve` commands guide you
-through baseline capture, recommendation review, a developer-applied change, and
-quality-checked before/after results. See [guided optimization](docs/GUIDED_OPTIMIZATION.md)
-for the runner contract and a reproducible Hermes example with local inference.
-These commands are unreleased.
+For a fixed task set, use the [guided workflow](#guided-optimization) to capture
+executions, review a recommendation, apply a change and verify it.
 
 Start with `analyze` to see metrics, findings, and suggested changes together.
 Findings link to the affected spans and describe the evidence and assumptions

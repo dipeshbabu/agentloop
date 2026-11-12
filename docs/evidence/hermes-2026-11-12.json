@@ -1,0 +1,1317 @@
+{
+  "schema_version": "1.0",
+  "recorded_on": "2026-11-12",
+  "kind": "historical_measurement_excerpt",
+  "source_revision": "017a7bdd9818f08d832c02c631b18c1eb08fdb19",
+  "hermes_revision": "b200f5bc60e31588ba2cb60e288029c4a54ba5fa",
+  "protocol": {
+    "runtime_assets": {
+      "runtime.tar.gz": {
+        "url": "https://github.com/ggml-org/llama.cpp/releases/download/b10964/llama-b10964-bin-ubuntu-x64.tar.gz",
+        "sha256": "9abf88aea48a55d0f80edb1ee20220b186848cca0b4e919d71518cfd7ca67443",
+        "bytes": 16825086
+      },
+      "model.gguf": {
+        "url": "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/9217f5db79a29953eb74d5343926648285ec7e67/qwen2.5-0.5b-instruct-q4_k_m.gguf",
+        "sha256": "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
+        "bytes": 491400032
+      }
+    },
+    "recorded_model_attempts": 30,
+    "warmup_requests": 1,
+    "paid_provider_requests": 0,
+    "json_only_candidate_passed": true,
+    "validated_candidate_passed": true,
+    "decoding": {
+      "temperature": 0,
+      "seed": 20261112,
+      "cache_prompt": false,
+      "response_format": {
+        "baseline_first_turn": null,
+        "baseline_repair": "json_object",
+        "candidate": "json_object",
+        "validated": "json_object",
+        "wrong": "json_object"
+      }
+    },
+    "server": {
+      "context_length": 65536,
+      "threads": 2,
+      "parallel_slots": 1
+    },
+    "order": "All baselines precede the frozen session, JSON-only candidate, source-validated candidate and negative controls; fixed order limits causal attribution",
+    "scope": "Controlled public repository metadata workload on one pinned local model; measured combined intervention"
+  },
+  "comparisons": {
+    "source_checked": {
+      "source_report": "latest/validated-results/report.json",
+      "source_sha256": "d051b808927f1069bea6ea1dbbd3c412f0b7a36dad27ffeff89a3773fb712a32",
+      "passed": true,
+      "planned_attempts": 6,
+      "passed_attempts": 6,
+      "synthetic": false,
+      "cases": [
+        {
+          "task_id": "distribution-name",
+          "repetition": 0,
+          "passed": true,
+          "reasons": [],
+          "quality": {
+            "baseline_score": 1.0,
+            "candidate_score": 1.0,
+            "case_count": 1,
+            "cases": [
+              {
+                "baseline": {
+                  "detail": "JSON subset matched",
+                  "passed": true,
+                  "score": 1.0
+                },
+                "candidate": {
+                  "detail": "JSON subset matched",
+                  "passed": true,
+                  "score": 1.0
+                },
+                "case_id": "distribution-name",
+                "input": null,
+                "passed": true,
+                "scorer": {
+                  "type": "json_subset"
+                }
+              }
+            ],
+            "failed_case_count": 0,
+            "failed_cases": [],
+            "min_score": 1.0,
+            "passed": true,
+            "quality_delta": 0.0
+          },
+          "measurements": {
+            "baseline": {
+              "run_id": "run_guided_ece25ac1db6547c785de3bf6b3008b07",
+              "runtime_ms": 14396.742,
+              "model_call_count": 2,
+              "retry_count": 1,
+              "input_tokens": 3760,
+              "output_tokens": 13,
+              "token_status": "exact",
+              "cost_status": "unknown",
+              "has_unknown_cost": true
+            },
+            "candidate": {
+              "run_id": "run_guided_80610dfb7b0f41b6b5c766c4a81e6287",
+              "runtime_ms": 7386.485,
+              "model_call_count": 1,
+              "retry_count": 0,
+              "input_tokens": 1892,
+              "output_tokens": 10,
+              "token_status": "exact",
+              "cost_status": "unknown",
+              "has_unknown_cost": true
+            }
+          }
+        },
+        {
+          "task_id": "distribution-name",
+          "repetition": 1,
+          "passed": true,
+          "reasons": [],
+          "quality": {
+            "baseline_score": 1.0,
+            "candidate_score": 1.0,
+            "case_count": 1,
+            "cases": [
+              {
+                "baseline": {
+                  "detail": "JSON subset matched",
+                  "passed": true,
+                  "score": 1.0
+                },
+                "candidate": {
+                  "detail": "JSON subset matched",
+                  "passed": true,
+                  "score": 1.0
+                },
+                "case_id": "distribution-name",
+                "input": null,
+                "passed": true,
+                "scorer": {
+                  "type": "json_subset"
+                }
+              }
+            ],
+            "failed_case_count": 0,
+            "failed_cases": [],
+            "min_score": 1.0,
+            "passed": true,
+            "quality_delta": 0.0
+          },
+          "measurements": {
+            "baseline": {
+              "run_id": "run_guided_c0e3e6150d3d48f4b66a56fe5068eccc",
+              "runtime_ms": 14171.308,
+              "model_call_count": 2,
+              "retry_count": 1,
+              "input_tokens": 3784,
+              "output_tokens": 15,
+              "token_status": "exact",
+              "cost_status": "unknown",
+              "has_unknown_cost": true
+            },
+            "candidate": {
+              "run_id": "run_guided_7bcfa958751d443186d79642ac724982",
+              "runtime_ms": 7363.067,
+              "model_call_count": 1,
+              "retry_count": 0,
+              "input_tokens": 1900,
+              "output_tokens": 10,
+              "token_status": "exact",
+              "cost_status": "unknown",
+              "has_unknown_cost": true
+            }
+          }
+        },
+        {
+          "task_id": "python-support",
+          "repetition": 0,
+          "passed": true,
+          "reasons": [],
+          "quality": {
+            "baseline_score": 1.0,
+            "candidate_score": 1.0,
+            "case_count": 1,
+            "cases": [
+              {
+                "baseline": {
+                  "detail": "JSON subset matched",
+                  "passed": true,
+                  "score": 1.0
+                },
+                "candidate": {
+                  "detail": "JSON subset matched",
+                  "passed": true,
+                  "score": 1.0
+                },
+                "case_id": "python-support",
+                "input": null,
+                "passed": true,
+                "scorer": {
+                  "type": "json_subset"
+                }
+              }
+            ],
+            "failed_case_count": 0,
+            "failed_cases": [],
+            "min_score": 1.0,
+            "passed": true,
+            "quality_delta": 0.0
+          },
+          "measurements": {
+            "baseline": {
+              "run_id": "run_guided_066ce0e3da1d44c0b0a4863948c44f2f",
+              "runtime_ms": 14567.067,
+              "model_call_count": 2,
+              "retry_count": 1,
+              "input_tokens": 3794,
+              "output_tokens": 16,
+              "token_status": "exact",
+              "cost_status": "unknown",
+              "has_unknown_cost": true
+            },
+            "candidate": {
+              "run_id": "run_guided_533ddf7ceab24805bd0e1c36f239689d",
+              "runtime_ms": 7514.994,
+              "model_call_count": 1,
+              "retry_count": 0,
+              "input_tokens": 1909,
+              "output_tokens": 11,
+              "token_status": "exact",
+              "cost_status": "unknown",
+              "has_unknown_cost": true
+            }
+          }
+        },
+        {
+          "task_id": "python-support",
+          "repetition": 1,
+          "passed": true,
+          "reasons": [],
+          "quality": {
+            "baseline_score": 1.0,
+            "candidate_score": 1.0,
+            "case_count": 1,
+            "cases": [
+              {
+                "baseline": {
+                  "detail": "JSON subset matched",
+                  "passed": true,
+                  "score": 1.0
+                },
+                "candidate": {
+                  "detail": "JSON subset matched",
+                  "passed": true,
+                  "score": 1.0
+                },
+                "case_id": "python-support",
+                "input": null,
+                "passed": true,
+                "scorer": {
+                  "type": "json_subset"
+                }
+              }
+            ],
+            "failed_case_count": 0,
+            "failed_cases": [],
+            "min_score": 1.0,
+            "passed": true,
+            "quality_delta": 0.0
+          },
+          "measurements": {
+            "baseline": {
+              "run_id": "run_guided_a0fa7379b0e24ca198238aa3b998c148",
+              "runtime_ms": 14504.663,
+              "model_call_count": 2,
+              "retry_count": 1,
+              "input_tokens": 3754,
+              "output_tokens": 16,
+              "token_status": "exact",
+              "cost_status": "unknown",
+              "has_unknown_cost": true
+            },
+            "candidate": {
+              "run_id": "run_guided_6c8499d1c2b2432f81c17968d286a15c",
+              "runtime_ms": 7512.057,
+              "model_call_count": 1,
+              "retry_count": 0,
+              "input_tokens": 1889,
+              "output_tokens": 14,
+              "token_status": "exact",
+              "cost_status": "unknown",
+              "has_unknown_cost": true
+            }
+          }
+        },
+        {
+          "task_id": "author-name",
+          "repetition": 0,
+          "passed": true,
+          "reasons": [],
+          "quality": {
+            "baseline_score": 1.0,
+            "candidate_score": 1.0,
+            "case_count": 1,
+            "cases": [
+              {
+                "baseline": {
+                  "detail": "JSON subset matched",
+                  "passed": true,
+                  "score": 1.0
+                },
+                "candidate": {
+                  "detail": "JSON subset matched",
+                  "passed": true,
+                  "score": 1.0
+                },
+                "case_id": "author-name",
+                "input": null,
+                "passed": true,
+                "scorer": {
+                  "type": "json_subset"
+                }
+              }
+            ],
+            "failed_case_count": 0,
+            "failed_cases": [],
+            "min_score": 1.0,
+            "passed": true,
+            "quality_delta": 0.0
+          },
+          "measurements": {
+            "baseline": {
+              "run_id": "run_guided_7c51bb5126f74d56ae443d996cddd29d",
+              "runtime_ms": 14875.091,
+              "model_call_count": 2,
+              "retry_count": 1,
+              "input_tokens": 3806,
+              "output_tokens": 21,
+              "token_status": "exact",
+              "cost_status": "unknown",
+              "has_unknown_cost": true
+            },
+            "candidate": {
+              "run_id": "run_guided_49526bcd640c4be3a16cc42f6db54dff",
+              "runtime_ms": 7390.119,
+              "model_call_count": 1,
+              "retry_count": 0,
+              "input_tokens": 1895,
+              "output_tokens": 13,
+              "token_status": "exact",
+              "cost_status": "unknown",
+              "has_unknown_cost": true
+            }
+          }
+        },
+        {
+          "task_id": "author-name",
+          "repetition": 1,
+          "passed": true,
+          "reasons": [],
+          "quality": {
+            "baseline_score": 1.0,
+            "candidate_score": 1.0,
+            "case_count": 1,
+            "cases": [
+              {
+                "baseline": {
+                  "detail": "JSON subset matched",
+                  "passed": true,
+                  "score": 1.0
+                },
+                "candidate": {
+                  "detail": "JSON subset matched",
+                  "passed": true,
+                  "score": 1.0
+                },
+                "case_id": "author-name",
+                "input": null,
+                "passed": true,
+                "scorer": {
+                  "type": "json_subset"
+                }
+              }
+            ],
+            "failed_case_count": 0,
+            "failed_cases": [],
+            "min_score": 1.0,
+            "passed": true,
+            "quality_delta": 0.0
+          },
+          "measurements": {
+            "baseline": {
+              "run_id": "run_guided_2e4fa7d0a8a14de6af2d387990016a0f",
+              "runtime_ms": 14589.101,
+              "model_call_count": 2,
+              "retry_count": 1,
+              "input_tokens": 3756,
+              "output_tokens": 21,
+              "token_status": "exact",
+              "cost_status": "unknown",
+              "has_unknown_cost": true
+            },
+            "candidate": {
+              "run_id": "run_guided_6a8a54bafa894c28ad377e877fa5ec15",
+              "runtime_ms": 7319.528,
+              "model_call_count": 1,
+              "retry_count": 0,
+              "input_tokens": 1899,
+              "output_tokens": 13,
+              "token_status": "exact",
+              "cost_status": "unknown",
+              "has_unknown_cost": true
+            }
+          }
+        }
+      ]
+    },
+    "earlier_json_only": {
+      "source_report": "earlier-json-only-rejection/results/report.json",
+      "source_sha256": "be8326f52ccace63076625b58f0d8ecdacf48a85ab2e9c15a5759ffb5ffda680",
+      "passed": false,
+      "planned_attempts": 6,
+      "passed_attempts": 5,
+      "synthetic": false,
+      "cases": [
+        {
+          "task_id": "distribution-name",
+          "repetition": 0,
+          "passed": false,
+          "reasons": [
+            "Baseline and candidate must both pass the declared quality checks",
+            "Native replay gates failed"
+          ],
+          "quality": {
+            "baseline_score": 1.0,
+            "candidate_score": 0.0,
+            "case_count": 1,
+            "cases": [
+              {
+                "baseline": {
+                  "detail": "JSON subset matched",
+                  "passed": true,
+                  "score": 1.0
+                },
+                "candidate": {
+                  "detail": "mismatched keys: answer",
+                  "passed": false,
+                  "score": 0.0
+                },
+                "case_id": "distribution-name",
+                "input": null,
+                "passed": false,
+                "scorer": {
+                  "type": "json_subset"
+                }
+              }
+            ],
+            "failed_case_count": 1,
+            "failed_cases": [
+              {
+                "baseline": {
+                  "detail": "JSON subset matched",
+                  "passed": true,
+                  "score": 1.0
+                },
+                "candidate": {
+                  "detail": "mismatched keys: answer",
+                  "passed": false,
+                  "score": 0.0
+                },
+                "case_id": "distribution-name",
+                "input": null,
+                "passed": false,
+                "scorer": {
+                  "type": "json_subset"
+                }
+              }
+            ],
+            "min_score": 1.0,
+            "passed": false,
+            "quality_delta": -1.0
+          },
+          "measurements": {
+            "baseline": {
+              "run_id": "run_guided_147f24e85d4b4275b452fa40470f4f61",
+              "runtime_ms": 13944.978,
+              "model_call_count": 2,
+              "retry_count": 1,
+              "input_tokens": 3768,
+              "output_tokens": 15,
+              "token_status": "exact",
+              "cost_status": "unknown",
+              "has_unknown_cost": true
+            },
+            "candidate": {
+              "run_id": "run_guided_1602aacb333c4411ab61b9ff70129e9d",
+              "runtime_ms": 7154.7,
+              "model_call_count": 1,
+              "retry_count": 0,
+              "input_tokens": 1892,
+              "output_tokens": 8,
+              "token_status": "exact",
+              "cost_status": "unknown",
+              "has_unknown_cost": true
+            }
+          }
+        },
+        {
+          "task_id": "distribution-name",
+          "repetition": 1,
+          "passed": true,
+          "reasons": [],
+          "quality": {
+            "baseline_score": 1.0,
+            "candidate_score": 1.0,
+            "case_count": 1,
+            "cases": [
+              {
+                "baseline": {
+                  "detail": "JSON subset matched",
+                  "passed": true,
+                  "score": 1.0
+                },
+                "candidate": {
+                  "detail": "JSON subset matched",
+                  "passed": true,
+                  "score": 1.0
+                },
+                "case_id": "distribution-name",
+                "input": null,
+                "passed": true,
+                "scorer": {
+                  "type": "json_subset"
+                }
+              }
+            ],
+            "failed_case_count": 0,
+            "failed_cases": [],
+            "min_score": 1.0,
+            "passed": true,
+            "quality_delta": 0.0
+          },
+          "measurements": {
+            "baseline": {
+              "run_id": "run_guided_542b85e8f3464e8f8473fbeec1c572f3",
+              "runtime_ms": 13656.611,
+              "model_call_count": 2,
+              "retry_count": 1,
+              "input_tokens": 3792,
+              "output_tokens": 13,
+              "token_status": "exact",
+              "cost_status": "unknown",
+              "has_unknown_cost": true
+            },
+            "candidate": {
+              "run_id": "run_guided_5627925faac24983a419ae8780cdabbc",
+              "runtime_ms": 7214.252,
+              "model_call_count": 1,
+              "retry_count": 0,
+              "input_tokens": 1896,
+              "output_tokens": 10,
+              "token_status": "exact",
+              "cost_status": "unknown",
+              "has_unknown_cost": true
+            }
+          }
+        },
+        {
+          "task_id": "python-support",
+          "repetition": 0,
+          "passed": true,
+          "reasons": [],
+          "quality": {
+            "baseline_score": 1.0,
+            "candidate_score": 1.0,
+            "case_count": 1,
+            "cases": [
+              {
+                "baseline": {
+                  "detail": "JSON subset matched",
+                  "passed": true,
+                  "score": 1.0
+                },
+                "candidate": {
+                  "detail": "JSON subset matched",
+                  "passed": true,
+                  "score": 1.0
+                },
+                "case_id": "python-support",
+                "input": null,
+                "passed": true,
+                "scorer": {
+                  "type": "json_subset"
+                }
+              }
+            ],
+            "failed_case_count": 0,
+            "failed_cases": [],
+            "min_score": 1.0,
+            "passed": true,
+            "quality_delta": 0.0
+          },
+          "measurements": {
+            "baseline": {
+              "run_id": "run_guided_e2b1e09b8f094397a54ad9aa40c39806",
+              "runtime_ms": 13839.19,
+              "model_call_count": 2,
+              "retry_count": 1,
+              "input_tokens": 3802,
+              "output_tokens": 16,
+              "token_status": "exact",
+              "cost_status": "unknown",
+              "has_unknown_cost": true
+            },
+            "candidate": {
+              "run_id": "run_guided_5e157148328b4fd6bb2418abbfb76633",
+              "runtime_ms": 7239.035,
+              "model_call_count": 1,
+              "retry_count": 0,
+              "input_tokens": 1900,
+              "output_tokens": 11,
+              "token_status": "exact",
+              "cost_status": "unknown",
+              "has_unknown_cost": true
+            }
+          }
+        },
+        {
+          "task_id": "python-support",
+          "repetition": 1,
+          "passed": true,
+          "reasons": [],
+          "quality": {
+            "baseline_score": 1.0,
+            "candidate_score": 1.0,
+            "case_count": 1,
+            "cases": [
+              {
+                "baseline": {
+                  "detail": "JSON subset matched",
+                  "passed": true,
+                  "score": 1.0
+                },
+                "candidate": {
+                  "detail": "JSON subset matched",
+                  "passed": true,
+                  "score": 1.0
+                },
+                "case_id": "python-support",
+                "input": null,
+                "passed": true,
+                "scorer": {
+                  "type": "json_subset"
+                }
+              }
+            ],
+            "failed_case_count": 0,
+            "failed_cases": [],
+            "min_score": 1.0,
+            "passed": true,
+            "quality_delta": 0.0
+          },
+          "measurements": {
+            "baseline": {
+              "run_id": "run_guided_9fbe254822ab49f0ac08c6b12bca5406",
+              "runtime_ms": 13969.797,
+              "model_call_count": 2,
+              "retry_count": 1,
+              "input_tokens": 3802,
+              "output_tokens": 18,
+              "token_status": "exact",
+              "cost_status": "unknown",
+              "has_unknown_cost": true
+            },
+            "candidate": {
+              "run_id": "run_guided_1e994111cabe4abb8f2ea8a26dc7082d",
+              "runtime_ms": 7178.934,
+              "model_call_count": 1,
+              "retry_count": 0,
+              "input_tokens": 1888,
+              "output_tokens": 11,
+              "token_status": "exact",
+              "cost_status": "unknown",
+              "has_unknown_cost": true
+            }
+          }
+        },
+        {
+          "task_id": "author-name",
+          "repetition": 0,
+          "passed": true,
+          "reasons": [],
+          "quality": {
+            "baseline_score": 1.0,
+            "candidate_score": 1.0,
+            "case_count": 1,
+            "cases": [
+              {
+                "baseline": {
+                  "detail": "JSON subset matched",
+                  "passed": true,
+                  "score": 1.0
+                },
+                "candidate": {
+                  "detail": "JSON subset matched",
+                  "passed": true,
+                  "score": 1.0
+                },
+                "case_id": "author-name",
+                "input": null,
+                "passed": true,
+                "scorer": {
+                  "type": "json_subset"
+                }
+              }
+            ],
+            "failed_case_count": 0,
+            "failed_cases": [],
+            "min_score": 1.0,
+            "passed": true,
+            "quality_delta": 0.0
+          },
+          "measurements": {
+            "baseline": {
+              "run_id": "run_guided_5378657fc72b4af7897af83b67a7c71b",
+              "runtime_ms": 14021.668,
+              "model_call_count": 2,
+              "retry_count": 1,
+              "input_tokens": 3758,
+              "output_tokens": 21,
+              "token_status": "exact",
+              "cost_status": "unknown",
+              "has_unknown_cost": true
+            },
+            "candidate": {
+              "run_id": "run_guided_fe7146b8dbae49da9ee751f7935198e3",
+              "runtime_ms": 7313.011,
+              "model_call_count": 1,
+              "retry_count": 0,
+              "input_tokens": 1895,
+              "output_tokens": 13,
+              "token_status": "exact",
+              "cost_status": "unknown",
+              "has_unknown_cost": true
+            }
+          }
+        },
+        {
+          "task_id": "author-name",
+          "repetition": 1,
+          "passed": true,
+          "reasons": [],
+          "quality": {
+            "baseline_score": 1.0,
+            "candidate_score": 1.0,
+            "case_count": 1,
+            "cases": [
+              {
+                "baseline": {
+                  "detail": "JSON subset matched",
+                  "passed": true,
+                  "score": 1.0
+                },
+                "candidate": {
+                  "detail": "JSON subset matched",
+                  "passed": true,
+                  "score": 1.0
+                },
+                "case_id": "author-name",
+                "input": null,
+                "passed": true,
+                "scorer": {
+                  "type": "json_subset"
+                }
+              }
+            ],
+            "failed_case_count": 0,
+            "failed_cases": [],
+            "min_score": 1.0,
+            "passed": true,
+            "quality_delta": 0.0
+          },
+          "measurements": {
+            "baseline": {
+              "run_id": "run_guided_9c1143fee4f34b2ca310db7c3d38590f",
+              "runtime_ms": 15872.331,
+              "model_call_count": 2,
+              "retry_count": 1,
+              "input_tokens": 3798,
+              "output_tokens": 21,
+              "token_status": "exact",
+              "cost_status": "unknown",
+              "has_unknown_cost": true
+            },
+            "candidate": {
+              "run_id": "run_guided_28366b86944842f096ed74bb794e582e",
+              "runtime_ms": 7198.228,
+              "model_call_count": 1,
+              "retry_count": 0,
+              "input_tokens": 1887,
+              "output_tokens": 13,
+              "token_status": "exact",
+              "cost_status": "unknown",
+              "has_unknown_cost": true
+            }
+          }
+        }
+      ]
+    },
+    "incorrect_control": {
+      "source_report": "latest/rejected/report.json",
+      "source_sha256": "a786e4fa69d93e52f5a9eccab228545c5d5a7718442df3de49d166f2ffea69a3",
+      "passed": false,
+      "planned_attempts": 6,
+      "passed_attempts": 0,
+      "synthetic": false,
+      "cases": [
+        {
+          "task_id": "distribution-name",
+          "repetition": 0,
+          "passed": false,
+          "reasons": [
+            "Baseline and candidate must both pass the declared quality checks",
+            "Native replay gates failed"
+          ],
+          "quality": {
+            "baseline_score": 1.0,
+            "candidate_score": 0.0,
+            "case_count": 1,
+            "cases": [
+              {
+                "baseline": {
+                  "detail": "JSON subset matched",
+                  "passed": true,
+                  "score": 1.0
+                },
+                "candidate": {
+                  "detail": "mismatched keys: answer",
+                  "passed": false,
+                  "score": 0.0
+                },
+                "case_id": "distribution-name",
+                "input": null,
+                "passed": false,
+                "scorer": {
+                  "type": "json_subset"
+                }
+              }
+            ],
+            "failed_case_count": 1,
+            "failed_cases": [
+              {
+                "baseline": {
+                  "detail": "JSON subset matched",
+                  "passed": true,
+                  "score": 1.0
+                },
+                "candidate": {
+                  "detail": "mismatched keys: answer",
+                  "passed": false,
+                  "score": 0.0
+                },
+                "case_id": "distribution-name",
+                "input": null,
+                "passed": false,
+                "scorer": {
+                  "type": "json_subset"
+                }
+              }
+            ],
+            "min_score": 1.0,
+            "passed": false,
+            "quality_delta": -1.0
+          },
+          "measurements": {
+            "baseline": {
+              "run_id": "run_guided_ece25ac1db6547c785de3bf6b3008b07",
+              "runtime_ms": 14396.742,
+              "model_call_count": 2,
+              "retry_count": 1,
+              "input_tokens": 3760,
+              "output_tokens": 13,
+              "token_status": "exact",
+              "cost_status": "unknown",
+              "has_unknown_cost": true
+            },
+            "candidate": {
+              "run_id": "run_guided_bdeec377a48842aea84079e22802328b",
+              "runtime_ms": 2786.237,
+              "model_call_count": 1,
+              "retry_count": 0,
+              "input_tokens": 646,
+              "output_tokens": 7,
+              "token_status": "exact",
+              "cost_status": "unknown",
+              "has_unknown_cost": true
+            }
+          }
+        },
+        {
+          "task_id": "distribution-name",
+          "repetition": 1,
+          "passed": false,
+          "reasons": [
+            "Baseline and candidate must both pass the declared quality checks",
+            "Native replay gates failed"
+          ],
+          "quality": {
+            "baseline_score": 1.0,
+            "candidate_score": 0.0,
+            "case_count": 1,
+            "cases": [
+              {
+                "baseline": {
+                  "detail": "JSON subset matched",
+                  "passed": true,
+                  "score": 1.0
+                },
+                "candidate": {
+                  "detail": "mismatched keys: answer",
+                  "passed": false,
+                  "score": 0.0
+                },
+                "case_id": "distribution-name",
+                "input": null,
+                "passed": false,
+                "scorer": {
+                  "type": "json_subset"
+                }
+              }
+            ],
+            "failed_case_count": 1,
+            "failed_cases": [
+              {
+                "baseline": {
+                  "detail": "JSON subset matched",
+                  "passed": true,
+                  "score": 1.0
+                },
+                "candidate": {
+                  "detail": "mismatched keys: answer",
+                  "passed": false,
+                  "score": 0.0
+                },
+                "case_id": "distribution-name",
+                "input": null,
+                "passed": false,
+                "scorer": {
+                  "type": "json_subset"
+                }
+              }
+            ],
+            "min_score": 1.0,
+            "passed": false,
+            "quality_delta": -1.0
+          },
+          "measurements": {
+            "baseline": {
+              "run_id": "run_guided_c0e3e6150d3d48f4b66a56fe5068eccc",
+              "runtime_ms": 14171.308,
+              "model_call_count": 2,
+              "retry_count": 1,
+              "input_tokens": 3784,
+              "output_tokens": 15,
+              "token_status": "exact",
+              "cost_status": "unknown",
+              "has_unknown_cost": true
+            },
+            "candidate": {
+              "run_id": "run_guided_c386682fc4cc431fa811f25e1321d416",
+              "runtime_ms": 2884.895,
+              "model_call_count": 1,
+              "retry_count": 0,
+              "input_tokens": 674,
+              "output_tokens": 7,
+              "token_status": "exact",
+              "cost_status": "unknown",
+              "has_unknown_cost": true
+            }
+          }
+        },
+        {
+          "task_id": "python-support",
+          "repetition": 0,
+          "passed": false,
+          "reasons": [
+            "Baseline and candidate must both pass the declared quality checks",
+            "Native replay gates failed"
+          ],
+          "quality": {
+            "baseline_score": 1.0,
+            "candidate_score": 0.0,
+            "case_count": 1,
+            "cases": [
+              {
+                "baseline": {
+                  "detail": "JSON subset matched",
+                  "passed": true,
+                  "score": 1.0
+                },
+                "candidate": {
+                  "detail": "mismatched keys: answer",
+                  "passed": false,
+                  "score": 0.0
+                },
+                "case_id": "python-support",
+                "input": null,
+                "passed": false,
+                "scorer": {
+                  "type": "json_subset"
+                }
+              }
+            ],
+            "failed_case_count": 1,
+            "failed_cases": [
+              {
+                "baseline": {
+                  "detail": "JSON subset matched",
+                  "passed": true,
+                  "score": 1.0
+                },
+                "candidate": {
+                  "detail": "mismatched keys: answer",
+                  "passed": false,
+                  "score": 0.0
+                },
+                "case_id": "python-support",
+                "input": null,
+                "passed": false,
+                "scorer": {
+                  "type": "json_subset"
+                }
+              }
+            ],
+            "min_score": 1.0,
+            "passed": false,
+            "quality_delta": -1.0
+          },
+          "measurements": {
+            "baseline": {
+              "run_id": "run_guided_066ce0e3da1d44c0b0a4863948c44f2f",
+              "runtime_ms": 14567.067,
+              "model_call_count": 2,
+              "retry_count": 1,
+              "input_tokens": 3794,
+              "output_tokens": 16,
+              "token_status": "exact",
+              "cost_status": "unknown",
+              "has_unknown_cost": true
+            },
+            "candidate": {
+              "run_id": "run_guided_f3aa968756284ab4a6406adb1c079064",
+              "runtime_ms": 2763.397,
+              "model_call_count": 1,
+              "retry_count": 0,
+              "input_tokens": 654,
+              "output_tokens": 7,
+              "token_status": "exact",
+              "cost_status": "unknown",
+              "has_unknown_cost": true
+            }
+          }
+        },
+        {
+          "task_id": "python-support",
+          "repetition": 1,
+          "passed": false,
+          "reasons": [
+            "Baseline and candidate must both pass the declared quality checks",
+            "Native replay gates failed"
+          ],
+          "quality": {
+            "baseline_score": 1.0,
+            "candidate_score": 0.0,
+            "case_count": 1,
+            "cases": [
+              {
+                "baseline": {
+                  "detail": "JSON subset matched",
+                  "passed": true,
+                  "score": 1.0
+                },
+                "candidate": {
+                  "detail": "mismatched keys: answer",
+                  "passed": false,
+                  "score": 0.0
+                },
+                "case_id": "python-support",
+                "input": null,
+                "passed": false,
+                "scorer": {
+                  "type": "json_subset"
+                }
+              }
+            ],
+            "failed_case_count": 1,
+            "failed_cases": [
+              {
+                "baseline": {
+                  "detail": "JSON subset matched",
+                  "passed": true,
+                  "score": 1.0
+                },
+                "candidate": {
+                  "detail": "mismatched keys: answer",
+                  "passed": false,
+                  "score": 0.0
+                },
+                "case_id": "python-support",
+                "input": null,
+                "passed": false,
+                "scorer": {
+                  "type": "json_subset"
+                }
+              }
+            ],
+            "min_score": 1.0,
+            "passed": false,
+            "quality_delta": -1.0
+          },
+          "measurements": {
+            "baseline": {
+              "run_id": "run_guided_a0fa7379b0e24ca198238aa3b998c148",
+              "runtime_ms": 14504.663,
+              "model_call_count": 2,
+              "retry_count": 1,
+              "input_tokens": 3754,
+              "output_tokens": 16,
+              "token_status": "exact",
+              "cost_status": "unknown",
+              "has_unknown_cost": true
+            },
+            "candidate": {
+              "run_id": "run_guided_e9d668b689ac4164a666a36300a8208b",
+              "runtime_ms": 2848.7,
+              "model_call_count": 1,
+              "retry_count": 0,
+              "input_tokens": 670,
+              "output_tokens": 7,
+              "token_status": "exact",
+              "cost_status": "unknown",
+              "has_unknown_cost": true
+            }
+          }
+        },
+        {
+          "task_id": "author-name",
+          "repetition": 0,
+          "passed": false,
+          "reasons": [
+            "Baseline and candidate must both pass the declared quality checks",
+            "Native replay gates failed"
+          ],
+          "quality": {
+            "baseline_score": 1.0,
+            "candidate_score": 0.0,
+            "case_count": 1,
+            "cases": [
+              {
+                "baseline": {
+                  "detail": "JSON subset matched",
+                  "passed": true,
+                  "score": 1.0
+                },
+                "candidate": {
+                  "detail": "mismatched keys: answer",
+                  "passed": false,
+                  "score": 0.0
+                },
+                "case_id": "author-name",
+                "input": null,
+                "passed": false,
+                "scorer": {
+                  "type": "json_subset"
+                }
+              }
+            ],
+            "failed_case_count": 1,
+            "failed_cases": [
+              {
+                "baseline": {
+                  "detail": "JSON subset matched",
+                  "passed": true,
+                  "score": 1.0
+                },
+                "candidate": {
+                  "detail": "mismatched keys: answer",
+                  "passed": false,
+                  "score": 0.0
+                },
+                "case_id": "author-name",
+                "input": null,
+                "passed": false,
+                "scorer": {
+                  "type": "json_subset"
+                }
+              }
+            ],
+            "min_score": 1.0,
+            "passed": false,
+            "quality_delta": -1.0
+          },
+          "measurements": {
+            "baseline": {
+              "run_id": "run_guided_7c51bb5126f74d56ae443d996cddd29d",
+              "runtime_ms": 14875.091,
+              "model_call_count": 2,
+              "retry_count": 1,
+              "input_tokens": 3806,
+              "output_tokens": 21,
+              "token_status": "exact",
+              "cost_status": "unknown",
+              "has_unknown_cost": true
+            },
+            "candidate": {
+              "run_id": "run_guided_1ab161294a2a48f1963ba9fb29c9883c",
+              "runtime_ms": 2805.924,
+              "model_call_count": 1,
+              "retry_count": 0,
+              "input_tokens": 666,
+              "output_tokens": 7,
+              "token_status": "exact",
+              "cost_status": "unknown",
+              "has_unknown_cost": true
+            }
+          }
+        },
+        {
+          "task_id": "author-name",
+          "repetition": 1,
+          "passed": false,
+          "reasons": [
+            "Baseline and candidate must both pass the declared quality checks",
+            "Native replay gates failed"
+          ],
+          "quality": {
+            "baseline_score": 1.0,
+            "candidate_score": 0.0,
+            "case_count": 1,
+            "cases": [
+              {
+                "baseline": {
+                  "detail": "JSON subset matched",
+                  "passed": true,
+                  "score": 1.0
+                },
+                "candidate": {
+                  "detail": "mismatched keys: answer",
+                  "passed": false,
+                  "score": 0.0
+                },
+                "case_id": "author-name",
+                "input": null,
+                "passed": false,
+                "scorer": {
+                  "type": "json_subset"
+                }
+              }
+            ],
+            "failed_case_count": 1,
+            "failed_cases": [
+              {
+                "baseline": {
+                  "detail": "JSON subset matched",
+                  "passed": true,
+                  "score": 1.0
+                },
+                "candidate": {
+                  "detail": "mismatched keys: answer",
+                  "passed": false,
+                  "score": 0.0
+                },
+                "case_id": "author-name",
+                "input": null,
+                "passed": false,
+                "scorer": {
+                  "type": "json_subset"
+                }
+              }
+            ],
+            "min_score": 1.0,
+            "passed": false,
+            "quality_delta": -1.0
+          },
+          "measurements": {
+            "baseline": {
+              "run_id": "run_guided_2e4fa7d0a8a14de6af2d387990016a0f",
+              "runtime_ms": 14589.101,
+              "model_call_count": 2,
+              "retry_count": 1,
+              "input_tokens": 3756,
+              "output_tokens": 21,
+              "token_status": "exact",
+              "cost_status": "unknown",
+              "has_unknown_cost": true
+            },
+            "candidate": {
+              "run_id": "run_guided_524592655b884e09877b002f5aa3c945",
+              "runtime_ms": 2811.844,
+              "model_call_count": 1,
+              "retry_count": 0,
+              "input_tokens": 666,
+              "output_tokens": 7,
+              "token_status": "exact",
+              "cost_status": "unknown",
+              "has_unknown_cost": true
+            }
+          }
+        }
+      ]
+    }
+  },
+  "limitations": [
+    "Excerpt of retained local reports; original hashes identify source reports, and raw traces are not included in this excerpt.",
+    "Fixed order, three metadata questions, two repetitions, one CPU host and one small model.",
+    "The earlier JSON-only comparison preceded the recorded latest protocol; it used the same task inputs and local model.",
+    "No instrumentation-overhead control and no known operating cost."
+  ]
+}

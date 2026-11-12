@@ -9,6 +9,10 @@ trace, study, receipt, API and database schema versions.
 
 ### Added
 
+- `improve init` generates a runnable offline example, independent task data,
+  a sync/async Python adapter and a data-only project configuration.
+- Guided plans show baseline quality, native finding rankings, estimate
+  provenance, assumptions and missing evidence separately from measured results.
 - Guided `improve capture`, `improve start`, and `improve finish` CLI workflow
   with fixed task inputs and quality checks, frozen baseline recommendations,
   content-hashed evidence, complete attempt inventories, native replay and
@@ -26,6 +30,9 @@ trace, study, receipt, API and database schema versions.
 
 ### Fixed
 
+- Rejected guided comparisons also fail the linked intervention gates, including
+  candidates with failed execution or no positive measured improvement.
+- Guided CLI diagnostics identify failed tasks, missing traces and quality gates.
 - Guided capture retains conventional child interrupt exits as cancelled attempts.
 - Patch planning prunes generated build, dependency and environment directories,
   keeping recommendations scoped to application source.
