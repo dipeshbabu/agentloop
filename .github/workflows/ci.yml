@@ -75,6 +75,22 @@ jobs:
           done
       - name: Validate native evidence and incomplete capture gates
         run: .venv/bin/python scripts/validate_hermes_runtime.py --root "$RUNNER_TEMP/hermes-pilot"
+      - name: Prepare pinned local inference
+        run: .venv/bin/python scripts/prepare_hermes_model.py --out "$RUNNER_TEMP/hermes-local-model"
+      - name: Guided optimization with real Hermes and local inference
+        run: |
+          .venv/bin/python scripts/run_hermes_adoption.py \
+            --hermes-root "$PWD/.hermes-runtime" \
+            --plugin-dir "$RUNNER_TEMP/agentloop-hermes-plugin" \
+            --model-runtime "$RUNNER_TEMP/hermes-local-model/runtime.json" \
+            --out "$RUNNER_TEMP/hermes-adoption"
+      - name: Upload guided optimization evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: hermes-guided-optimization
+          path: ${{ runner.temp }}/hermes-adoption/
+          if-no-files-found: warn
       - name: Upload qualified pilot evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

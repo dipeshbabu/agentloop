@@ -28,6 +28,7 @@ from agentloop.drift_cli import drift_app
 from agentloop.exporters import export_report_markdown
 from agentloop.findings import build_diagnosis, diagnosis_to_markdown
 from agentloop.harness_bench.cli import harness_app
+from agentloop.improvement_cli import improve_app
 from agentloop.integrations.harbor.cli import harbor_app
 from agentloop.integrations.hermes_cli import hermes_app
 from agentloop.integrations.omnigent.cli import omnigent_app
@@ -74,6 +75,7 @@ app.add_typer(hermes_app, name="hermes")
 app.add_typer(telemetry_app, name="telemetry")
 app.add_typer(omnigent_app, name="omnigent")
 app.add_typer(harness_app, name="harness")
+app.add_typer(improve_app, name="improve")
 
 
 @app.command("onboard")

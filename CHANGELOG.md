@@ -9,6 +9,12 @@ trace, study, receipt, API and database schema versions.
 
 ### Added
 
+- Guided `improve capture`, `improve start`, and `improve finish` CLI workflow
+  with fixed task inputs and quality checks, frozen baseline recommendations,
+  content-hashed evidence, complete attempt inventories, native replay and
+  intervention/study results, and readable Markdown/HTML comparisons.
+- Reproducible Hermes repository-question workflow with pinned local CPU model
+  inference and an incorrect-answer control evaluated through the guided CLI.
 - Reproducible Hermes v0.22.7 runtime pilot and CI coverage for streamed requests,
   real file tools, retries, interruption, default privacy, and delegated child
   sessions, using an isolated profile and a deterministic local provider.

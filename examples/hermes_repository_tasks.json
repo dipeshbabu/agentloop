@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "name": "Hermes repository metadata questions",
+  "repetitions": 2,
+  "tasks": [
+    {
+      "id": "distribution-name",
+      "input": {"question": "What is the exact distribution name in project.name?"},
+      "expected": {"answer": "agentloop-profiler"},
+      "scorer": {"type": "json_subset"}
+    },
+    {
+      "id": "python-support",
+      "input": {"question": "What is the exact value of project.requires-python? Include the comparison operators."},
+      "expected": {"answer": ">=3.11"},
+      "scorer": {"type": "json_subset"}
+    },
+    {
+      "id": "author-name",
+      "input": {"question": "What is the full name of the author in project.authors?"},
+      "expected": {"answer": "Dipesh Tharu Mahato"},
+      "scorer": {"type": "json_subset"}
+    }
+  ]
+}
