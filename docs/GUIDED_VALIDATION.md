@@ -5,6 +5,10 @@ retrieval and a tool-heavy quoting workflow. It uses existing capture, frozen
 findings, quality checks, replay, intervention records and native paired studies.
 There is no separate experiment or acceptance engine.
 
+The [first local-model run](GUIDED_LOCAL_MODEL_CASE.md) rejected the candidate:
+baseline and candidate were each correct on 6/12 held-out attempts, and only
+3/12 pairs passed every gate. All failures and overhead controls are archived.
+
 ## Offline contract checks
 
 ```bash
