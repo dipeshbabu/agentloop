@@ -1,5 +1,24 @@
 # Existing installations and stored data
 
+Version `0.2.0` adds the guided `improve init`, `capture`, `start` and `finish`
+workflow. Python 3.11 remains the minimum. Existing explicit `--tasks FILE`
+commands and runner argv remain valid; `agentloop.toml` is optional data-only
+configuration. Native trace 1.1, task/session 1.0, API v1 and database migration
+IDs remain unchanged. No stored-data rewrite or numbering reset is required.
+
+Retain old captures and sessions. New attempts use fresh output directories.
+Guided results now apply execution, independent quality and positive measured
+improvement checks to linked native intervention gates as well as the report.
+Previously rejected attempts must not be interpreted as accepted because of an
+older intervention gate field. Frozen existing sessions remain readable.
+
+The source-exported Hermes observer accepts >=0.21.6,<0.23. Real-host checks are
+pinned to 0.22.7; 0.21.6 has contract coverage. 0.23.x remains unsupported.
+Re-export the plugin from the upgraded package into the intended Hermes profile.
+See [guided onboarding](GUIDED_OPTIMIZATION.md) and
+[release readiness](RELEASE_0_2_AUDIT.md). Publication of prepared 0.2.0 artifacts
+requires the maintainer's approval.
+
 Version `0.1.1` requires **Python 3.11 or newer** so supported installations can
 use patched dependencies. It adds Hermes tracing and fixes CLI output collisions,
 retry/error reporting, and API client credential handling. Native trace schema
@@ -17,7 +36,8 @@ CLI remain `agentloop`.
 
 1. Back up the database and retain the previous package/deployment configuration.
    Test restoration before upgrading a production store.
-2. Install the exact `agentloop-profiler==0.1.1` version for server/dashboard first.
+2. After the release is published, install the exact `agentloop-profiler==0.2.0`
+   version for server/dashboard first.
    Package numbering resets independently of data schemas; refresh version pins
    and explicitly reinstall when moving an existing higher-numbered installation.
    Initialize
@@ -38,7 +58,7 @@ Repeat the optional extras you use when upgrading so pip applies their patched
 dependency requirements. For example, upgrade a dashboard/API installation with:
 
 ```bash
-python -m pip install --upgrade "agentloop-profiler[dashboard,server]==0.1.1"
+python -m pip install --upgrade "agentloop-profiler[dashboard,server]==0.2.0"
 ```
 
 Installing only the base package does not upgrade optional dependencies left in

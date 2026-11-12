@@ -2,7 +2,7 @@
 
 The `agentloop improve` commands connect task capture, baseline findings, a
 developer-applied change, and a quality-checked before/after report. These commands
-are available in current source and are **unreleased**.
+are included in the 0.2.0 source; published 0.1.1 does not include them.
 
 Install the checkout in your AgentLoop environment with `python -m pip install .`.
 Your agent runs in its own environment through an explicit command supplied to

@@ -66,8 +66,9 @@ activate it with `source .venv/bin/activate` on Linux/macOS or
 
 ## Guided optimization
 
-Available in current source, targeted for 0.2.0. Until that release, install the
-checkout with `python -m pip install .`. This offline example needs no API key:
+Requires AgentLoop 0.2.0 or the current source checkout. Check `agentloop --version`;
+if your package index still supplies 0.1.1, install the checkout with
+`python -m pip install .`. This offline example needs no API key:
 
 ```bash
 agentloop improve init --out agentloop-demo

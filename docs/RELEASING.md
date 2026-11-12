@@ -24,6 +24,15 @@ weaken that rule for future releases.
 
 ## Prepare and review
 
+The 0.2.0 preparation uses the existing helper's explicit `--set 0.2.0` override
+for the maintainer-selected guided optimization release. Its focused prerequisite
+PRs stay separate from the version/changelog PR. Review
+[the readiness audit](RELEASE_0_2_AUDIT.md), [upgrade notes](UPGRADING.md),
+[guided validation](GUIDED_VALIDATION.md) and [remaining gaps](ADOPTION_GAPS.md).
+Preparation does not authorize merging, tagging or publishing. Obtain explicit
+maintainer approval and satisfy normal protected-branch reviews/checks before
+each authorized integration or publication step. The npm proposal is separate.
+
 Run **Prepare release** on `main`, or:
 
 ```bash
