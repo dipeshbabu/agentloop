@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import json
 import sys
+from types import ModuleType
 
 import pytest
 from typer.testing import CliRunner
 
 from agentloop.entrypoint import app
+from agentloop.experiment_types import fingerprint
 from agentloop.improvement import capture, finish, read_workload, start
 
 WORKER = """import json,sys,time
@@ -279,3 +281,51 @@ def test_invalid_trace_keeps_the_runner_failure_status(tmp_path, workload):
     assert all(row["trace"] is None for row in failed["runs"])
     completed = capture(tasks, tmp_path / "completed", command(worker, "0"))
     assert {row["status"] for row in completed["runs"]} == {"invalid_trace"}
+
+
+def test_rehashed_saved_session_cannot_execute_a_custom_scorer(tmp_path, workload, monkeypatch):
+    tasks, worker = prepare(tmp_path, workload)
+    capture(tasks, tmp_path / "candidate", command(worker, "fast"))
+    calls = []
+    canary = ModuleType("guided_scorer_canary")
+    canary.score = lambda *args: calls.append(True) or True
+    monkeypatch.setitem(sys.modules, "guided_scorer_canary", canary)
+    session_path = tmp_path / "session/session.json"
+    saved = json.loads(session_path.read_bytes())
+    taskset = saved["specification"]["workload"]
+    taskset["tasks"][0]["scorer"] = {"type": "custom", "callable": "guided_scorer_canary:score"}
+    saved["session_hash"] = fingerprint(saved["specification"])
+    session_path.write_text(json.dumps(saved), encoding="utf-8")
+    candidate_path = tmp_path / "candidate/capture.json"
+    manifest = json.loads(candidate_path.read_bytes())
+    manifest["workload_hash"] = fingerprint(taskset)
+    candidate_path.write_text(json.dumps(manifest), encoding="utf-8")
+    with pytest.raises(ValueError, match="built-in"):
+        finish(session_path, candidate_path, tmp_path / "results", change="Untrusted saved scorer")
+    assert calls == []
+    assert not (tmp_path / "results").exists()
+
+
+@pytest.mark.parametrize("mutation", ["omit", "duplicate", "version"])
+def test_rehashed_sessions_still_validate_the_full_attempt_inventory(tmp_path, workload, mutation):
+    tasks, worker = prepare(tmp_path, workload)
+    capture(tasks, tmp_path / "candidate", command(worker, "fast"))
+    path = tmp_path / "session/session.json"
+    saved = json.loads(path.read_bytes())
+    specification = saved["specification"]
+    if mutation == "omit":
+        specification["cases"].pop()
+    elif mutation == "duplicate":
+        specification["cases"][1] = specification["cases"][0]
+    else:
+        specification["schema_version"] = "999.0"
+    saved["session_hash"] = fingerprint(specification)
+    path.write_text(json.dumps(saved), encoding="utf-8")
+    with pytest.raises(ValueError, match="frozen|Frozen"):
+        finish(
+            path,
+            tmp_path / "candidate/capture.json",
+            tmp_path / "results",
+            change="Invalid inventory",
+        )
+    assert not (tmp_path / "results").exists()

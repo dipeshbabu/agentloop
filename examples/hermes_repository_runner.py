@@ -2,8 +2,9 @@
 
 This runner receives the standard `improve capture` JSON request on stdin. The
 baseline repairs a free-text answer into the required JSON contract. The candidate
-uses constrained JSON from its first turn and the frozen external quality checks. Public repository context is retained in
-this example's trace to make repeated-context findings inspectable.
+uses constrained JSON from its first turn and the frozen external quality checks.
+The validated variant also checks values against the local source. Public
+repository context and model responses are retained for inspection.
 """
 
 from __future__ import annotations
@@ -12,8 +13,10 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import sys
 import time
+import tomllib
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -22,6 +25,26 @@ from urllib.parse import urlsplit
 
 def timestamp():
     return datetime.now(timezone.utc).isoformat()
+
+
+def check_repository_answer(context, question, response):
+    """Check structured metadata against its authoritative local TOML source."""
+    match = re.search(r"\bproject\.([A-Za-z0-9_-]+)", question)
+    if match is None:
+        raise ValueError("This example requires a question naming a project metadata field")
+    field = match.group(1)
+    value = tomllib.loads(context)["project"][field]
+    if field == "authors":
+        value = ", ".join(author["name"] for author in value)
+    if not isinstance(value, str):
+        raise ValueError("This example answers string-valued metadata questions")
+    try:
+        observed = json.loads(response or "")
+        valid = isinstance(observed, dict) and observed.get("answer") == value
+    except (ValueError, TypeError):
+        valid = False
+    final = response if valid else json.dumps({"answer": value})
+    return final, {"field": field, "model_answer_valid": valid, "repair_applied": not valid}
 
 
 def run(args, request):
@@ -103,7 +126,7 @@ def run(args, request):
         cwd=str(profile),
     )
     prompts, results = [], []
-    repair = None
+    repair, check = None, None
     started, clock = timestamp(), time.perf_counter()
     try:
         context = args.source.read_text(encoding="utf-8")
@@ -135,6 +158,17 @@ def run(args, request):
             repair.update(
                 ended_at=timestamp(), duration_ms=(time.perf_counter() - repair_clock) * 1000
             )
+        final = results[-1].get("final_response")
+        if args.condition == "validated":
+            check = {"event_id": "evt_" + uuid.uuid4().hex, "started_at": timestamp()}
+            check_clock = time.perf_counter()
+            final, facts = check_repository_answer(context, question, final)
+            check.update(
+                ended_at=timestamp(),
+                duration_ms=(time.perf_counter() - check_clock) * 1000,
+                metadata={"operation_kind": "guardrail", **facts},
+                output_text=final,
+            )
     finally:
         ended, elapsed = timestamp(), (time.perf_counter() - clock) * 1000
         agent.close()
@@ -149,7 +183,7 @@ def run(args, request):
     if len(originals) != len(prompts):
         raise ValueError("Missing Hermes turn evidence")
     run_id, root_id = "run_guided_" + uuid.uuid4().hex, "evt_" + uuid.uuid4().hex
-    events, sources, complete = [], [], True
+    events, sources, source_roots, complete = [], [], [], True
     for index, (path, prompt) in enumerate(zip(originals, prompts, strict=True)):
         raw = path.read_bytes()
         trace = json.loads(raw)
@@ -164,12 +198,17 @@ def run(args, request):
             event["metadata"]["source_run_id"] = event["run_id"]
             event["run_id"] = run_id
             if event["parent_id"] is None:
+                source_roots.append(event["event_id"])
                 event["parent_id"] = repair["event_id"] if index == 1 and repair else root_id
             if event["event_type"] == "model_call":
                 event["input_text"] = prompt
                 event["metadata"]["input_capture_source"] = "owned_public_repository_example"
             events.append(event)
     if repair:
+        repair["metadata"] = {
+            "reason": "initial_response_did_not_match_json_answer_contract",
+            "depends_on": source_roots[:1],
+        }
         events.append(
             {
                 **repair,
@@ -178,7 +217,18 @@ def run(args, request):
                 "name": "repair_output_format",
                 "parent_id": root_id,
                 "status": "ok",
-                "metadata": {"reason": "initial_response_did_not_match_json_answer_contract"},
+            }
+        )
+    if check:
+        check["metadata"]["depends_on"] = source_roots[-1:]
+        events.append(
+            {
+                **check,
+                "run_id": run_id,
+                "event_type": "tool_call",
+                "name": "validate_repository_answer",
+                "parent_id": root_id,
+                "status": "ok",
             }
         )
     events.insert(
@@ -196,7 +246,6 @@ def run(args, request):
             "metadata": {"operation_kind": "workflow"},
         },
     )
-    final = results[-1].get("final_response")
     payload = {
         "schema_version": "1.0",
         "run_id": run_id,
@@ -227,7 +276,9 @@ def run(args, request):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--condition", choices=("baseline", "candidate", "wrong"), required=True)
+    parser.add_argument(
+        "--condition", choices=("baseline", "candidate", "validated", "wrong"), required=True
+    )
     parser.add_argument("--base-url", required=True)
     parser.add_argument("--plugin-dir", type=Path, required=True)
     parser.add_argument("--hermes-root", type=Path, required=True)

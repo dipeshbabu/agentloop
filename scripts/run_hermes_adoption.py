@@ -24,8 +24,29 @@ def cli(*arguments, expected=0):
         check=False,
         timeout=1800,
     )
-    if result.returncode != expected:
+    allowed = (expected,) if isinstance(expected, int) else expected
+    if result.returncode not in allowed:
         raise RuntimeError(f"Guided CLI returned {result.returncode}; expected {expected}")
+
+
+def read_evaluation(root):
+    report = json.loads((root / "report.json").read_bytes())
+    if (
+        report["planned_attempts"] != 6
+        or len(report["cases"]) != 6
+        or not all((root / name).is_file() for name in ("report.html", "report.md"))
+    ):
+        raise RuntimeError("Evaluation did not retain all planned evidence and reports")
+    for case in report["cases"]:
+        if case["quality"] is None or case["replay"] is None:
+            raise RuntimeError("Model workload produced an unavailable comparison")
+        gates = {gate["name"]: gate["passed"] for gate in case["replay"]["gates"]["results"]}
+        if not all(
+            gates.get(name) is True
+            for name in ("baseline_capture_complete", "candidate_capture_complete")
+        ):
+            raise RuntimeError("Model workload produced incomplete host capture")
+    return report
 
 
 def run(args):
@@ -167,7 +188,39 @@ def run(args):
                 change,
                 "--out",
                 args.out / "results",
+                expected=(0, 1),
             )
+            original = read_evaluation(args.out / "results")
+            cli(
+                "improve",
+                "capture",
+                "--show-runner-output",
+                "--tasks",
+                tasks,
+                "--out",
+                args.out / "validated",
+                "--timeout",
+                "240",
+                "--",
+                *runner,
+                "--condition",
+                "validated",
+            )
+            cli(
+                "improve",
+                "finish",
+                "--session",
+                args.out / "session/session.json",
+                "--candidate",
+                args.out / "validated/capture.json",
+                "--change",
+                "Request constrained JSON and check values against the authoritative TOML source, repairing mismatches locally instead of invoking the model again.",
+                "--out",
+                args.out / "validated-results",
+            )
+            validated = read_evaluation(args.out / "validated-results")
+            if not validated["passed"] or validated["passed_attempts"] != 6:
+                raise RuntimeError("The source-checked candidate failed its declared gates")
             cli(
                 "improve",
                 "capture",
@@ -196,11 +249,11 @@ def run(args):
                 args.out / "rejected",
                 expected=1,
             )
-            rejected = json.loads((args.out / "rejected/report.json").read_bytes())
+            rejected = read_evaluation(args.out / "rejected")
             if rejected["passed"] or rejected["passed_attempts"]:
                 raise RuntimeError("Incorrect local-model answers passed the quality checks")
             model_requests = 0
-            for condition in ("baseline", "candidate", "wrong"):
+            for condition in ("baseline", "candidate", "validated", "wrong"):
                 manifest = json.loads((args.out / condition / "capture.json").read_bytes())
                 for receipt in manifest["runs"]:
                     if receipt["trace"] is None:
@@ -214,13 +267,22 @@ def run(args):
                 "recorded_model_attempts": model_requests,
                 "warmup_requests": 1,
                 "paid_provider_requests": 0,
+                "json_only_candidate_passed": original["passed"],
+                "validated_candidate_passed": validated["passed"],
                 "decoding": {
                     "temperature": 0,
                     "seed": 20261112,
                     "cache_prompt": False,
-                    "response_format": "json_object",
+                    "response_format": {
+                        "baseline_first_turn": None,
+                        "baseline_repair": "json_object",
+                        "candidate": "json_object",
+                        "validated": "json_object",
+                        "wrong": "json_object",
+                    },
                 },
-                "order": "All baselines precede the frozen session, candidates and negative controls; fixed order limits causal attribution",
+                "server": {"context_length": 65536, "threads": 2, "parallel_slots": 1},
+                "order": "All baselines precede the frozen session, JSON-only candidate, source-validated candidate and negative controls; fixed order limits causal attribution",
                 "scope": "Controlled public repository metadata workload on one pinned local model; measured combined intervention",
             }
             (args.out / "protocol.json").write_text(
