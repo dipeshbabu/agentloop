@@ -6,6 +6,7 @@ import subprocess
 import sys
 
 import pytest
+from click import unstyle
 from typer.testing import CliRunner
 
 from agentloop.entrypoint import app
@@ -195,10 +196,11 @@ def test_complete_offline_onboarding_with_manual_edit_and_rejected_candidate(tmp
 def test_missing_project_config_has_an_actionable_cli_error(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     result = CliRunner().invoke(
-        app, ["improve", "start", "--baseline", "missing.json", "--out", "session"]
+        app, ["improve", "start", "--baseline", "missing.json", "--out", "session"], color=True
     )
     assert result.exit_code == 2
-    assert "--tasks" in result.output and "improve init" in result.output
+    displayed = " ".join(unstyle(result.output).split())
+    assert "--tasks" in displayed and "improve init" in displayed
 
 
 def test_project_config_cannot_supply_an_executable_runner(tmp_path):
