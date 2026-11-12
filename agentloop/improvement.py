@@ -221,8 +221,10 @@ def capture(workload_path, root, command, *, timeout=180, show_output=False):
                     try:
                         _, digest = trace_receipt(root, relative)
                         row.update(trace=relative, trace_sha256=digest)
-                    except (ValueError, OSError, TypeError, KeyError):
-                        row["status"] = "invalid_trace"
+                    except (ValueError, OSError, TypeError, KeyError, AttributeError):
+                        # Keep the more specific failed, timed-out or cancelled outcome.
+                        if row["status"] == "completed":
+                            row["status"] = "invalid_trace"
                 elif row["status"] == "completed":
                     row["status"] = "missing_trace"
                 write_once(root, f"receipts/{index:04d}.json", row)

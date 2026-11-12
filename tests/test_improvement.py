@@ -264,3 +264,18 @@ def test_interruption_retains_cancelled_and_unstarted_attempts(tmp_path, workloa
         "not_started",
         "not_started",
     ]
+
+
+def test_invalid_trace_keeps_the_runner_failure_status(tmp_path, workload):
+    tasks, worker = workload
+    worker.write_text(
+        "import json,sys\nr=json.load(sys.stdin)\n"
+        "open(r['trace_path'],'w').write('not json')\n"
+        "raise SystemExit(int(sys.argv[1]))\n",
+        encoding="utf-8",
+    )
+    failed = capture(tasks, tmp_path / "failed", command(worker, "1"))
+    assert {row["status"] for row in failed["runs"]} == {"failed"}
+    assert all(row["trace"] is None for row in failed["runs"])
+    completed = capture(tasks, tmp_path / "completed", command(worker, "0"))
+    assert {row["status"] for row in completed["runs"]} == {"invalid_trace"}

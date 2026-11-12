@@ -10,8 +10,8 @@ import socket
 import subprocess  # nosec B404 - owned pinned runtime and fixed CLI commands
 import sys
 import time
+from http.client import HTTPException
 from pathlib import Path
-from urllib.error import URLError
 from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -73,7 +73,8 @@ def run(args):
                 try:
                     with urlopen(f"http://127.0.0.1:{port}/health", timeout=2) as response:  # nosec B310 - owned loopback readiness
                         ready = response.status == 200
-                except (URLError, TimeoutError):
+                except (OSError, HTTPException):
+                    # Covers URLError, timeouts and resets while the server loads.
                     pass
                 if ready:
                     break
@@ -202,6 +203,8 @@ def run(args):
             for condition in ("baseline", "candidate", "wrong"):
                 manifest = json.loads((args.out / condition / "capture.json").read_bytes())
                 for receipt in manifest["runs"]:
+                    if receipt["trace"] is None:
+                        continue
                     trace = json.loads((args.out / condition / receipt["trace"]).read_bytes())
                     model_requests += sum(
                         event["event_type"] == "model_call" for event in trace["events"]
