@@ -46,7 +46,10 @@ def load_json(path):
 
 
 def read_workload(path):
-    value = load_json(path)
+    return validate_workload(load_json(path))
+
+
+def validate_workload(value):
     require(
         isinstance(value, dict) and value.get("schema_version") == VERSION,
         "Workload schema_version must be 1.0",
@@ -249,6 +252,9 @@ def read_capture(path, workload):
     )
     traces, run_ids = {}, set()
     for row in runs:
+        require(
+            isinstance(row, dict) and type(row.get("repetition")) is int, "Invalid capture attempt"
+        )
         key = (row["task_id"], row["repetition"])
         require(
             key in planned
@@ -396,7 +402,25 @@ def finish(session_path, candidate_path, root, *, change):
     require(
         isinstance(change, str) and bool(change.strip()), "Describe the developer-applied change"
     )
-    workload = specification["workload"]
+    require(specification.get("schema_version") == VERSION, "Unsupported frozen session version")
+    workload = validate_workload(specification["workload"])
+    require(specification.get("objective") in {"latency", "cost"}, "Unsupported frozen objective")
+    planned = {(task["id"], repetition) for task, repetition in slots(workload)}
+    cases = specification.get("cases")
+    require(
+        isinstance(cases, list) and len(cases) == len(planned),
+        "Frozen session must retain every planned attempt",
+    )
+    identities = []
+    for case in cases:
+        require(
+            isinstance(case, dict) and type(case.get("repetition")) is int, "Invalid frozen attempt"
+        )
+        identities.append((case["task_id"], case["repetition"]))
+    require(
+        set(identities) == planned and len(set(identities)) == len(identities),
+        "Duplicate or unknown frozen attempt",
+    )
     candidate_manifest, candidates = read_capture(candidate_path, workload)
     require(
         datetime.fromisoformat(candidate_manifest["created_at"])
@@ -409,6 +433,7 @@ def finish(session_path, candidate_path, root, *, change):
         key = (case["task_id"], case["repetition"])
         if case["trace"]:
             trace = AgentTrace.from_dict(load_json(local_path(session_path.parent, case["trace"])))
+            require(trace.run_id not in baseline_ids, "Reused baseline run identity")
             require(
                 fingerprint(trace.to_dict()) == case["trace_hash"], "Frozen baseline trace changed"
             )
