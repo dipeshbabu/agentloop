@@ -41,6 +41,9 @@ does not authorize deployment.
 
 ## Future work to scope separately
 
+- Validate the guided first-use path with developers connecting existing agents,
+  then freeze held-out correctness checks from their actual workloads. See
+  [guided validation](GUIDED_VALIDATION.md) and [adoption gaps](ADOPTION_GAPS.md).
 - Extend the existing offline calibration with larger independent task sets and
   attributable interventions before adopting fitted runtime coefficients.
 - Track changing telemetry conventions and expand SDK/framework conformance
