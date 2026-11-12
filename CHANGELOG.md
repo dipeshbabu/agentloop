@@ -9,6 +9,9 @@ trace, study, receipt, API and database schema versions.
 
 ### Added
 
+- Reproducible guided repository, retrieval and tool-heavy pilot/held-out suite,
+  with optional pinned local inference, real LangGraph execution, negative
+  controls, native intervention/study artifacts and retained overhead controls.
 - `improve init` generates a runnable offline example, independent task data,
   a sync/async Python adapter and a data-only project configuration.
 - Guided plans show baseline quality, native finding rankings, estimate

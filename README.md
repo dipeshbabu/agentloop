@@ -112,6 +112,13 @@ matched comparisons: model calls fell from 12 to 6 and mean task latency from
 check and was rejected. These controlled repository questions establish example
 behavior; they do not establish production savings or general agent performance.
 
+The [validation guide](docs/GUIDED_VALIDATION.md) runs repository, retrieval and
+tool-heavy pilot/held-out comparisons with offline fixtures or a pinned local
+model. It retains incorrect controls, negative outcomes and tracing overhead
+observations. See [remaining adoption and measurement gaps](docs/ADOPTION_GAPS.md).
+Its [first real local-model run](docs/GUIDED_LOCAL_MODEL_CASE.md) rejected the
+candidate: only 3 of 12 held-out comparisons passed every required gate.
+
 ## Record your own run
 
 Save this as `example_agent.py`. It traces local functions and saves their output
