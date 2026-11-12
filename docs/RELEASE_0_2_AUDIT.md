@@ -60,8 +60,8 @@ The focused stack is [#305](https://github.com/dipeshbabu/agentloop/pull/305)
 [#308](https://github.com/dipeshbabu/agentloop/pull/308)
 (three-workload validation and retained negative evidence). The separately
 reviewable [SDK proposal #306](https://github.com/dipeshbabu/agentloop/pull/306)
-does not block Python preparation. All remain drafts requiring maintainer review
-and approval; no integration, release tag or publication has been authorized.
+does not block Python preparation. The repository owner authorized squash-merging
+the PRs after all CI checks pass. Tagging and publication require further approval.
 
 The 0.2.0 branch uses `scripts/bump_version.py --set 0.2.0`, updating package/runtime
 metadata, the dated changelog and only the project version in `uv.lock`. The
@@ -91,8 +91,8 @@ backends/integrations; CI supplies PostgreSQL and pinned framework coverage.
 
 ## Remaining blockers and evidence limits
 
-- The final release PR must satisfy its protected-branch checks and required
-  reviews, and the maintainer must authorize integration and publication.
+- Each updated PR commit must satisfy protected-branch checks and required
+  reviews before integration. Publication requires further maintainer approval.
 - Published 0.1.1 users cannot use guided optimization until they install reviewed
   source or the approved 0.2.0 release. No tag or PyPI write is part of preparation.
 - The new small-model pilot failed correctness; the held-out candidate was
