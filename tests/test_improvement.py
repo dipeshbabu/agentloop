@@ -12,6 +12,7 @@ from agentloop.improvement import capture, finish, read_workload, start
 WORKER = """import json,sys,time
 from pathlib import Path
 from agentloop.tracer import AgentTrace
+from agentloop.events import AgentEvent
 request=json.loads(sys.stdin.readline())
 mode=sys.argv[1]
 if mode == "timeout":
@@ -21,6 +22,8 @@ if mode == "missing":
 trace=AgentTrace("owned test worker",metadata={"synthetic":True,"output":request["input"] if mode != "wrong" else "wrong"})
 time.sleep(0.05 if mode == "baseline" else 0.001)
 trace.finish()
+if mode == "baseline":
+    trace.add_event(AgentEvent(event_id="retry",run_id=trace.run_id,event_type="retry",name="repair_format",started_at=trace.started_at,ended_at=trace.ended_at,duration_ms=trace.elapsed_ms))
 trace.export_json(request["trace_path"])
 if mode == "failure":
     raise SystemExit(1)
@@ -75,6 +78,7 @@ def test_guided_workflow_uses_native_quality_replay_and_studies(tmp_path, worklo
         row["quality"]["passed"] and row["replay"]["gates"]["passed"] for row in report["cases"]
     )
     assert report["study"] is not None
+    assert all(row["intervention"] for row in report["cases"])
     assert (tmp_path / "results/report.html").is_file()
     assert (tmp_path / "session/plan.md").is_file()
 
@@ -227,3 +231,36 @@ def test_no_executable_scorer_can_be_loaded_from_the_task_file(tmp_path, workloa
     tasks.write_text(json.dumps(value), encoding="utf-8")
     with pytest.raises(ValueError, match="built-in"):
         read_workload(tasks)
+
+
+def test_html_escapes_supplied_change_text(tmp_path, workload):
+    tasks, worker = prepare(tmp_path, workload)
+    capture(tasks, tmp_path / "candidate", command(worker, "fast"))
+    finish(
+        tmp_path / "session/session.json",
+        tmp_path / "candidate/capture.json",
+        tmp_path / "results",
+        change='<img src=x onerror="alert(1)">',
+    )
+    page = (tmp_path / "results/report.html").read_text(encoding="utf-8")
+    assert "<img" not in page
+    assert "&lt;img" in page
+
+
+def test_interruption_retains_cancelled_and_unstarted_attempts(tmp_path, workload, monkeypatch):
+    from agentloop import improvement
+
+    def interrupt(*args, **kwargs):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(improvement, "_invoke", interrupt)
+    tasks, worker = workload
+    with pytest.raises(KeyboardInterrupt):
+        capture(tasks, tmp_path / "capture", command(worker, "baseline"))
+    manifest = json.loads((tmp_path / "capture/capture.json").read_bytes())
+    assert [row["status"] for row in manifest["runs"]] == [
+        "cancelled",
+        "not_started",
+        "not_started",
+        "not_started",
+    ]

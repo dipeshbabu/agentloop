@@ -88,9 +88,9 @@ agentloop improve finish --session runs/optimization/session.json --candidate ru
 
 Open `runs/results/report.html`. The report shows per-attempt quality, latency,
 token provenance, model/tool counts, available model-cost estimates, and native
-replay gate decisions. JSON and Markdown accompany it. Available pairs also
-produce native intervention records linked to the frozen findings and a paired
-study. Study views retain the original trace fingerprints.
+replay gate decisions. JSON and Markdown accompany it. Pairs with matching frozen
+findings also produce native intervention records. Available baseline and candidate
+traces produce a paired study. Study views retain the original trace fingerprints.
 
 Acceptance requires every planned pair to have completed execution, passing
 baseline and candidate quality checks, complete analysis, passing native replay

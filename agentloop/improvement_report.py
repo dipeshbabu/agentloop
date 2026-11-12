@@ -57,11 +57,13 @@ def plan_markdown(specification):
                     "",
                     "Observed evidence",
                     "",
-                    markdown_fenced_code(json.dumps(finding["evidence"], indent=2), "json"),
+                    markdown_fenced_code(
+                        json.dumps(finding["evidence"], indent=2), language="json"
+                    ),
                     "",
                     "Suggested change",
                     "",
-                    markdown_fenced_code(json.dumps(finding["rewrite"], indent=2), "json"),
+                    markdown_text(finding["rewrite"]["hint"]),
                     "",
                     "Validation and trade-offs",
                     "",
@@ -73,7 +75,7 @@ def plan_markdown(specification):
                             },
                             indent=2,
                         ),
-                        "json",
+                        language="json",
                     ),
                     "",
                 ]
@@ -91,7 +93,7 @@ def _metric(summary, name):
     }:
         return "unavailable"
     if name == "tool_operations":
-        value = summary.get("operation_counts", {}).get("tool")
+        value = summary.get("operation_counts", {}).get("tool", 0)
     if value is None:
         return "unavailable"
     return f"{value:.3f}" if isinstance(value, float) else str(value)

@@ -41,6 +41,7 @@ def run(args, request):
     )
     os.environ.clear()
     os.environ.update(environment)
+    os.chdir(profile)
     import shutil
 
     shutil.copytree(args.plugin_dir, profile / "plugins/agentloop")

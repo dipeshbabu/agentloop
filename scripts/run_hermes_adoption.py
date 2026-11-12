@@ -208,7 +208,7 @@ def run(args):
                     )
             protocol = {
                 "runtime_assets": runtime["assets"],
-                "model_requests": model_requests,
+                "recorded_model_attempts": model_requests,
                 "warmup_requests": 1,
                 "paid_provider_requests": 0,
                 "decoding": {
