@@ -163,7 +163,7 @@ def report_markdown(report):
         [
             "Measurements describe this task set and run order. Repeated runs and independent tasks are needed to assess variability.",
             "",
-            "Original traces, frozen findings, native replay results, linked interventions and paired study data accompany this report.",
+            "Native trace snapshots, frozen findings, replay results, linked interventions and paired study data accompany this report.",
             "",
         ]
     )

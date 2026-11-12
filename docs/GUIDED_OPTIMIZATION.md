@@ -158,6 +158,10 @@ and fixed run order. Results measure the effect of requesting structured output
 and avoiding the format-repair call. Self-hosted operating cost remains
 unknown. This small controlled workload supplies a reproducible product example.
 
+Task timing starts after Hermes initialization and covers loading the context,
+the model turns, and format repair. Model/server startup, environment setup,
+and report generation occur outside task timing.
+
 The Hermes CI job executes the same guided commands with actual local inference,
 checks the incorrect-answer rejection, and uploads the complete reports and
 evidence. The [original deterministic runtime pilot](HERMES_RUNTIME_PILOT.md)
