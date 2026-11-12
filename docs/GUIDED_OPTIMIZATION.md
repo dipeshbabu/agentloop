@@ -134,8 +134,14 @@ questions about this repository's Python metadata. The
 [task set](../examples/hermes_repository_tasks.json) declares two repetitions and
 independent JSON-subset checks. The baseline repairs a free-text response into the
 required JSON contract through a second model turn. The candidate requests
-constrained JSON from its first turn and uses the same quality checks. A
-third condition deliberately asks for an incorrect answer.
+constrained JSON from its first turn and uses the same quality checks. Its report
+is retained whether the change passes or is rejected. A second candidate also
+checks the returned value against the authoritative local TOML data, repairing
+mismatches through local parsing. This is application-side validation of structured
+metadata queries. The external expected answers are held fixed across conditions.
+
+A final condition deliberately asks for an incorrect answer and omits the local
+value check to exercise the external quality gate.
 
 On Linux or WSL, prepare the pinned Hermes v0.22.7 environment and export the
 observer as described in the [runtime pilot](HERMES_RUNTIME_PILOT.md). Then run
@@ -149,18 +155,20 @@ python scripts/run_hermes_adoption.py --hermes-root /path/to/pinned/hermes --plu
 The preparation downloads checksum-verified llama.cpp `b10964` and the official
 Qwen2.5-0.5B-Instruct Q4_K_M model from pinned URLs. Inference runs on CPU through
 an owned loopback server. Profiles and provider settings are isolated per attempt.
-The runner uses real Hermes dispatch and normalized model usage. Public repository
-context is explicitly retained by this application example for repeated-context
-analysis. This leaves the observer's normal prompt-privacy behavior intact.
+The runner uses real Hermes dispatch and normalized model usage. The application
+example explicitly retains public repository context and model responses for
+inspection.
 
 `protocol.json` records artifact hashes, decoding settings, request counts, warm-up,
-and fixed run order. Results measure the effect of requesting structured output
-and avoiding the format-repair call. Self-hosted operating cost remains
+and fixed run order. `results/` retains the JSON-only proposal, `validated-results/`
+contains the source-checked proposal, and `rejected/` contains the incorrect-answer
+control. Model responses and any application-side repair remain visible in the
+native traces. Results measure structured output, source-value validation, and
+avoidance of the model format-repair call. Self-hosted operating cost remains
 unknown. This small controlled workload supplies a reproducible product example.
 
-Task timing starts after Hermes initialization and covers loading the context,
-the model turns, and format repair. Model/server startup, environment setup,
-and report generation occur outside task timing.
+The task timer covers context loading, model turns, value checks and format repair
+after Hermes initialization.
 
 The Hermes CI job executes the same guided commands with actual local inference,
 checks the incorrect-answer rejection, and uploads the complete reports and
