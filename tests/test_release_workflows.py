@@ -152,7 +152,9 @@ def test_ci_and_codeql_accept_manual_dispatch_so_bump_version_can_trigger_them()
     ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
     codeql = (ROOT / ".github" / "workflows" / "codeql.yml").read_text(encoding="utf-8")
 
-    assert "workflow_dispatch: {}" in ci
+    assert "workflow_dispatch:" in ci
+    assert "run_local_inference:" in ci
+    assert "if: github.event_name == 'workflow_dispatch' && inputs.run_local_inference" in ci
     assert "workflow_dispatch: {}" in codeql
     # both jobs' names must still match the exact required-check context strings
     assert "name: Python ${{ matrix.python-version }}" in ci

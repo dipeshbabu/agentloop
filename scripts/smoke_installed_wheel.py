@@ -75,6 +75,8 @@ def smoke(expected_version: str) -> None:
         def cli(*args: str) -> None:
             run("-c", "from agentloop.entrypoint import app; app()", *args)
 
+        run(str(Path(__file__).resolve().parent / "smoke_guided_wheel.py"))
+
         fixture = external_fixtures / "harbor" / "atif_v18_multimodal.json"
         cli("harbor", "import-atif", str(fixture), "--out", "atif", "--synthetic")
         atif_trace = next((work / "atif" / "traces").glob("*.json"))

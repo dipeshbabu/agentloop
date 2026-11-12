@@ -25,7 +25,20 @@ SUPPORTED_PATCH_TYPES = {
     "tool_oscillation",
 }
 SOURCE_SUFFIXES = {".py", ".js", ".jsx", ".ts", ".tsx"}
-SKIP_DIRS = {".git", ".pytest_cache", ".venv", "__pycache__", "agentloop.egg-info", "runs"}
+SKIP_DIRS = {
+    ".git",
+    ".pytest_cache",
+    ".venv",
+    "__pycache__",
+    "agentloop.egg-info",
+    "agentloop_profiler.egg-info",
+    "runs",
+    "node_modules",
+    "build",
+    "dist",
+    ".package-smoke",
+    ".hermes-runtime",
+}
 
 
 class RepositoryPathError(ValueError):
