@@ -1,4 +1,9 @@
-# Improve an agent workflow
+---
+search:
+  boost: 3
+---
+
+# Guided optimization
 
 The `agentloop improve` commands connect task capture, baseline findings, a
 developer-applied change, and a quality-checked before/after report. These commands

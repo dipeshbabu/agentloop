@@ -57,6 +57,10 @@ all = [
 ]
 
 [dependency-groups]
+docs = [
+  "mkdocs==1.6.1",
+  "mkdocs-material==9.8.1",
+]
 standalone = [
   "pyinstaller>=6.21.0,<7",
   "setuptools>=84.1.0",
@@ -74,7 +78,7 @@ dev = [
 
 [project.urls]
 Homepage = "https://github.com/dipeshbabu/agentloop"
-Documentation = "https://github.com/dipeshbabu/agentloop#readme"
+Documentation = "https://dipeshbabu.github.io/agentloop/"
 Repository = "https://github.com/dipeshbabu/agentloop.git"
 Issues = "https://github.com/dipeshbabu/agentloop/issues"
 Changelog = "https://github.com/dipeshbabu/agentloop/blob/main/CHANGELOG.md"

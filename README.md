@@ -19,6 +19,7 @@
 </p>
 
 <p align="center">
+  <a href="https://dipeshbabu.github.io/agentloop/">Documentation</a> ·
   <a href="#quickstart">Quickstart</a> ·
   <a href="#guided-optimization">Improve an agent</a> ·
   <a href="#record-your-own-run">Trace your code</a> ·
