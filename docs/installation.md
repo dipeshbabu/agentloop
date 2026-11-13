@@ -31,7 +31,7 @@ Create an environment for your project and install the package.
 Check the installed version and create a local example trace.
 
 ```bash
-agentloop --version
+python -m pip show agentloop-profiler
 agentloop doctor
 agentloop quickstart
 ```

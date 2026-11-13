@@ -68,7 +68,8 @@ activate it with `source .venv/bin/activate` on Linux/macOS or
 ## Guided optimization
 
 Requires AgentLoop 0.2.0 or newer. Upgrade with
-`python -m pip install --upgrade agentloop-profiler` and check `agentloop --version`.
+`python -m pip install --upgrade agentloop-profiler` and check the installed version
+with `python -m pip show agentloop-profiler`.
 The example runs locally.
 
 ```bash
