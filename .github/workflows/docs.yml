@@ -1,0 +1,84 @@
+name: Documentation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+      - "scripts/docs_hooks.py"
+      - "tests/test_docs_site.py"
+      - "sdk/typescript/README.md"
+      - "CONTRIBUTING.md"
+      - "CHANGELOG.md"
+      - "SECURITY.md"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/docs.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+      - "scripts/docs_hooks.py"
+      - "tests/test_docs_site.py"
+      - "sdk/typescript/README.md"
+      - "CONTRIBUTING.md"
+      - "CHANGELOG.md"
+      - "SECURITY.md"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/docs.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: documentation-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Documentation build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up uv and Python
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.11.28"
+          python-version: "3.13"
+          enable-cache: true
+      - name: Install locked documentation tools
+        run: uv sync --locked --dev --group docs
+      - name: Test canonical content and links
+        run: uv run --no-sync python -m pytest tests/test_docs_site.py -q
+      - name: Build the site
+        run: uv run --no-sync mkdocs build --strict
+      - name: Upload site artifact
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
+        with:
+          path: runs/docs-site
+
+  deploy:
+    name: Deploy documentation
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+      - name: Deploy the validated site
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

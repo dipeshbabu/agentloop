@@ -1,0 +1,151 @@
+site_name: AgentLoop
+site_description: Trace agent execution, investigate wasted work, and verify an improvement with independent quality checks.
+site_url: https://dipeshbabu.github.io/agentloop/
+repo_url: https://github.com/dipeshbabu/agentloop
+repo_name: GitHub
+edit_uri: edit/main/docs/
+copyright: Copyright &copy; 2026 Dipesh Tharu Mahato
+docs_dir: docs
+site_dir: runs/docs-site
+
+theme:
+  name: material
+  language: en
+  logo: assets/agentloop-mark.svg
+  favicon: assets/agentloop-mark.svg
+  font:
+    text: Source Sans 3
+    code: IBM Plex Mono
+  icon:
+    repo: fontawesome/brands/github
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+
+plugins:
+  - search
+
+hooks:
+  - scripts/docs_hooks.py
+
+extra_css:
+  - https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;600;700&display=swap
+  - stylesheets/agentloop.css
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - def_list
+  - footnotes
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - toc:
+      permalink: true
+
+validation:
+  nav:
+    omitted_files: info
+  links:
+    not_found: warn
+    anchors: warn
+    unrecognized_links: warn
+
+exclude_docs: |
+  assets/ICONS.md
+
+nav:
+  - Home: index.md
+  - Getting started:
+      - Installation: installation.md
+      - First useful trace: FIRST_USE.md
+      - Connect an existing agent: ONBOARDING.md
+      - Guided optimization: GUIDED_OPTIMIZATION.md
+      - Troubleshooting: DOCTOR.md
+  - Guides:
+      - Guided optimization: GUIDED_OPTIMIZATION.md
+      - Understand findings: FINDING_RULES.md
+      - Rank investigations: FINDING_RANKING.md
+      - Quality verification: STRUCTURED_QUALITY.md
+      - Compare runs in CI: CI.md
+      - HTML reports: HTML_REPORTS.md
+      - Token usage and pricing: PRICING.md
+      - Trace retention: TRACE_RETENTION.md
+      - Paired studies: STUDIES.md
+      - Intervention records: INTERVENTIONS.md
+  - Integrations:
+      - Framework overview: INTEGRATIONS.md
+      - Hermes: HERMES.md
+      - LangGraph: LANGGRAPH_HARNESS.md
+      - Harbor:
+          - Completed trials: HARBOR_TRIALS.md
+          - ATIF trajectories: HARBOR_ATIF.md
+          - Matched cohorts: CROSS_HARNESS_STUDIES.md
+      - Omnigent: OMNIGENT_OTEL.md
+      - OpenTelemetry JSONL: OTLP_JSONL.md
+      - Conformance: INTEGRATION_CONFORMANCE.md
+  - Reference:
+      - Python SDK: python-sdk.md
+      - TypeScript SDK: reference/typescript.md
+      - HTTP API: API_VERSIONING.md
+      - Trace schema: TRACE_SCHEMA.md
+      - Workflow tracing: WORKFLOW_TRACING.md
+      - Dashboard: DASHBOARD.md
+      - Server deployment: PRODUCTION.md
+      - Operations: OPERATIONS.md
+      - Advanced runtime controls:
+          - Harness overview: HARNESS.md
+          - Capabilities: HARNESS_CAPABILITIES.md
+          - Budgets: BUDGETS.md
+          - Completion checks: COMPLETION.md
+          - Recovery: CHECKPOINT_RECOVERY.md
+          - Context controls: CONTEXT_CONTROLS.md
+          - Tool scheduling: TOOL_SCHEDULING.md
+          - Model routing: MODEL_ROUTING.md
+  - Evidence:
+      - Guided validation: GUIDED_VALIDATION.md
+      - Hermes optimization case: HERMES_OPTIMIZATION_CASE.md
+      - Rejected local-model case: GUIDED_LOCAL_MODEL_CASE.md
+      - Hermes runtime conformance: HERMES_RUNTIME_PILOT.md
+      - Estimator provenance: ESTIMATORS.md
+      - Calibration: CALIBRATION.md
+      - Real-agent study: REAL_AGENT_STUDY.md
+      - Research guide: RESEARCH.md
+      - Adoption and measurement gaps: ADOPTION_GAPS.md
+  - Development:
+      - Contributing: development/contributing.md
+      - Build the documentation: documentation.md
+      - Changelog: development/changelog.md
+      - Security: development/security.md
+      - Roadmap: ROADMAP.md
+      - Upgrading: UPGRADING.md
+      - Releasing: RELEASING.md
