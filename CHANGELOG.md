@@ -7,6 +7,12 @@ trace, study, receipt, API and database schema versions.
 
 ## [Unreleased]
 
+### Fixed
+
+- Published README documentation and community links use absolute destinations
+  that resolve from PyPI. Repository and installed-wheel checks reject relative
+  file links in the package description.
+
 ## [0.2.0] - 2026-11-12
 
 ### Added

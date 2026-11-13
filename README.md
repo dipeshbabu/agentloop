@@ -38,7 +38,7 @@ code without a hosted account or database. A dashboard, HTTP API, and shared
 storage are available as optional components.
 
 For Node.js and browser applications, the source checkout includes a
-[TypeScript SDK](sdk/typescript/README.md) with native tracing and an API v1 client.
+[TypeScript SDK](https://github.com/dipeshbabu/agentloop/blob/main/sdk/typescript/README.md) with native tracing and an API v1 client.
 It has no runtime dependencies and has not yet been published to npm.
 
 ## Quickstart
@@ -106,19 +106,19 @@ in its project directory. The generated adapter supports synchronous and async
 Python callables. Replace the example task inputs and expected outputs with
 independent checks for your agent, and keep your model and tool instrumentation.
 Initialization refuses to overwrite existing files. Read the generated
-`AGENTLOOP.md` and [onboarding guide](docs/GUIDED_OPTIMIZATION.md).
+`AGENTLOOP.md` and [onboarding guide](https://dipeshbabu.github.io/agentloop/GUIDED_OPTIMIZATION/).
 
-A small [Hermes case study](docs/HERMES_OPTIMIZATION_CASE.md) retained six passing
+A small [Hermes case study](https://dipeshbabu.github.io/agentloop/HERMES_OPTIMIZATION_CASE/) retained six passing
 matched comparisons: model calls fell from 12 to 6 and mean task latency from
 14.52s to 7.41s. An earlier faster JSON-only candidate failed an independent answer
 check and was rejected. These controlled repository questions establish example
 behavior; they do not establish production savings or general agent performance.
 
-The [validation guide](docs/GUIDED_VALIDATION.md) runs repository, retrieval and
+The [validation guide](https://dipeshbabu.github.io/agentloop/GUIDED_VALIDATION/) runs repository, retrieval and
 tool-heavy pilot/held-out comparisons with offline fixtures or a pinned local
 model. It retains incorrect controls, negative outcomes and tracing overhead
-observations. See [remaining adoption and measurement gaps](docs/ADOPTION_GAPS.md).
-Its [first real local-model run](docs/GUIDED_LOCAL_MODEL_CASE.md) rejected the
+observations. See [remaining adoption and measurement gaps](https://dipeshbabu.github.io/agentloop/ADOPTION_GAPS/).
+Its [first real local-model run](https://dipeshbabu.github.io/agentloop/GUIDED_LOCAL_MODEL_CASE/) rejected the
 candidate: only 3 of 12 held-out comparisons passed every required gate.
 
 ## Record your own run
@@ -163,7 +163,7 @@ usage from an arbitrary return value.
 
 Saving `metadata["output"]` is an explicit choice in this example. Review the
 inputs, outputs, errors, and metadata you retain before sharing real traces.
-See [trace retention](docs/TRACE_RETENTION.md) for capture controls.
+See [trace retention](https://dipeshbabu.github.io/agentloop/TRACE_RETENTION/) for capture controls.
 
 ## Inspect findings
 
@@ -183,9 +183,9 @@ its calls are safe to run concurrently.
 | `agentloop patch --path runs/research_agent.json --repo .` | Generate a repository patch plan for manual review. |
 
 Optimization savings are predictions. Change one thing, record another run, and
-measure the result. See [finding rules](docs/FINDING_RULES.md),
-[parallelization evidence](docs/PARALLELIZATION.md), and
-[estimator provenance](docs/ESTIMATORS.md) for how suggestions are derived.
+measure the result. See [finding rules](https://dipeshbabu.github.io/agentloop/FINDING_RULES/),
+[parallelization evidence](https://dipeshbabu.github.io/agentloop/PARALLELIZATION/), and
+[estimator provenance](https://dipeshbabu.github.io/agentloop/ESTIMATORS/) for how suggestions are derived.
 
 ## Compare before and after
 
@@ -212,9 +212,9 @@ nonzero when a required gate fails. `replay` evaluates saved evidence; your
 application supplies both runs.
 
 Use representative tasks and repeated runs before drawing broader conclusions.
-For experiments across tasks and conditions, see [paired studies](docs/STUDIES.md)
-and the [research guide](docs/RESEARCH.md). The
-[intervention ledger](docs/INTERVENTIONS.md) links predictions to measured results.
+For experiments across tasks and conditions, see [paired studies](https://dipeshbabu.github.io/agentloop/STUDIES/)
+and the [research guide](https://dipeshbabu.github.io/agentloop/RESEARCH/). The
+[intervention ledger](https://dipeshbabu.github.io/agentloop/INTERVENTIONS/) links predictions to measured results.
 
 ### Quality gates
 
@@ -242,10 +242,10 @@ or read `metadata.output`; the last model call's output text is another supporte
 source when captured.
 
 Built-in scorers include `exact_match`, `contains`, bounded `glob`, `required_fields`,
-and `json_subset`. [Structured quality fixtures](docs/STRUCTURED_QUALITY.md) cover
+and `json_subset`. [Structured quality fixtures](https://dipeshbabu.github.io/agentloop/STRUCTURED_QUALITY/) cover
 classification, routing, extraction, and other decision outputs. A `custom` scorer
 executes a trusted local Python function; the HTTP API rejects custom scorers.
-See [scorer migration notes](docs/UPGRADING.md#quality-scorer-names) for renamed checks.
+See [scorer migration notes](https://dipeshbabu.github.io/agentloop/UPGRADING/#quality-scorer-names) for renamed checks.
 
 Once you have both runs, use your fixtures in a CI gate:
 
@@ -256,7 +256,7 @@ agentloop ci --baseline runs/baseline.json --candidate runs/candidate.json --qua
 Every candidate case must pass. Optional `--min-quality-score` thresholds also
 apply to the average score. Invalid fixture suites fail closed. `ci` writes a
 Markdown report and exits nonzero when a required gate fails. See
-[CI setup](docs/CI.md) for comparing your application's artifacts in pull requests.
+[CI setup](https://dipeshbabu.github.io/agentloop/CI/) for comparing your application's artifacts in pull requests.
 
 ## Understand the results
 
@@ -270,8 +270,8 @@ Markdown report and exits nonzero when a required gate fails. See
 
 Cost gates can be `indeterminate` when pricing or usable usage is missing. This
 does not fail the default cost gate; a positive `--min-cost-improvement-pct`
-requires verifiable improvement. See [pricing](docs/PRICING.md) and
-[trace compatibility](docs/TRACE_SCHEMA.md).
+requires verifiable improvement. See [pricing](https://dipeshbabu.github.io/agentloop/PRICING/) and
+[trace compatibility](https://dipeshbabu.github.io/agentloop/TRACE_SCHEMA/).
 
 Rule failures remain visible and mark analysis incomplete. CI requires complete
 analysis before recommending a merge. Keep your Markdown renderer's safe mode or
@@ -293,7 +293,7 @@ gate. Run `agentloop COMMAND --help` to see its output options and thresholds.
 
 | Source | Integration path |
 | --- | --- |
-| Custom Python agents and pipelines | Decorators, context managers, and [workflow annotations](docs/WORKFLOW_TRACING.md). |
+| Custom Python agents and pipelines | Decorators, context managers, and [workflow annotations](https://dipeshbabu.github.io/agentloop/WORKFLOW_TRACING/). |
 | OpenAI SDK | Wrap a client or callable to capture calls, streams, and reported usage. |
 | OpenAI Agents SDK | Attach an AgentLoop tracing processor. |
 | LangGraph | Instrument the builder before adding nodes, then wrap the compiled runnable. |
@@ -303,23 +303,23 @@ gate. Run `agentloop COMMAND --help` to see its output options and thresholds.
 
 Adapters are included in version 0.1.0. Install the framework's own SDK separately
 when needed; `python -m pip install "agentloop-profiler[instrumentation]"` includes
-the OpenAI Python SDK. Follow the [integration guide](docs/INTEGRATIONS.md) for
+the OpenAI Python SDK. Follow the [integration guide](https://dipeshbabu.github.io/agentloop/INTEGRATIONS/) for
 setup, supported behavior, and streaming lifecycle requirements.
 
-[Hermes Agent tracing](docs/HERMES.md) is included in AgentLoop 0.1.1 and newer.
+[Hermes Agent tracing](https://dipeshbabu.github.io/agentloop/HERMES/) is included in AgentLoop 0.1.1 and newer.
 Export its dependency-free directory plugin with `agentloop hermes export-plugin`,
 enable it in your Hermes profile, and analyze the native turn traces it writes.
 Output capture is off by default. AgentLoop 0.2.0 supports Hermes
 `>=0.21.6,<0.24`, with 0.21.6 hook-contract coverage and pinned 0.22.7/0.23.1
 host conformance across eight scenarios. Exact pins and validation commands
-appear in the [runtime pilot](docs/HERMES_RUNTIME_PILOT.md).
+appear in the [runtime pilot](https://dipeshbabu.github.io/agentloop/HERMES_RUNTIME_PILOT/).
 
-For telemetry you already export, [onboarding](docs/ONBOARDING.md) validates capture
-before analysis. The [interoperability guide](docs/INTEROPERABILITY_READINESS.md)
+For telemetry you already export, [onboarding](https://dipeshbabu.github.io/agentloop/ONBOARDING/) validates capture
+before analysis. The [interoperability guide](https://dipeshbabu.github.io/agentloop/INTEROPERABILITY_READINESS/)
 covers Harbor ATIF/jobs, Omnigent sessions, bounded OTLP JSONL, offline capability
 probes, and cross-harness comparisons. These imports work without upstream
 runtimes or credentials. For classifiers and decision pipelines, start with
-[AI execution profiling](docs/AI_EXECUTION_PROFILING.md).
+[AI execution profiling](https://dipeshbabu.github.io/agentloop/AI_EXECUTION_PROFILING/).
 
 ## How AgentLoop fits your stack
 
@@ -361,8 +361,8 @@ Use `store-trace` to load your own files. Storage uses SQLite by default and als
 supports Postgres. The optional HTTP API serves project-scoped traces and reports
 through `/v1` endpoints.
 
-See [dashboard setup](docs/DASHBOARD.md), [API versioning](docs/API_VERSIONING.md),
-and [production deployment](docs/PRODUCTION.md) for configuration and authentication.
+See [dashboard setup](https://dipeshbabu.github.io/agentloop/DASHBOARD/), [API versioning](https://dipeshbabu.github.io/agentloop/API_VERSIONING/),
+and [production deployment](https://dipeshbabu.github.io/agentloop/PRODUCTION/) for configuration and authentication.
 
 ## Other installation options
 
@@ -435,13 +435,13 @@ are ad-hoc signed but not notarized; Gatekeeper may require approval on first la
 ## Help and contributions
 
 Run `agentloop --help` for all commands, or `agentloop COMMAND --help` for one command.
-The [first-use guide](docs/FIRST_USE.md) walks through the analysis workflow.
+The [first-use guide](https://dipeshbabu.github.io/agentloop/FIRST_USE/) walks through the analysis workflow.
 
-- [Support](SUPPORT.md) and [issue forms](https://github.com/dipeshbabu/agentloop/issues/new/choose): questions, bugs, and feature requests.
-- [Contributing](CONTRIBUTING.md): development setup and required checks.
-- [Changelog](CHANGELOG.md), [upgrade guide](docs/UPGRADING.md), and [roadmap](docs/ROADMAP.md): releases, compatibility, and planned work.
-- [Security](SECURITY.md): private vulnerability reports.
-- [Governance](GOVERNANCE.md) and [Code of Conduct](CODE_OF_CONDUCT.md): project decisions and participation.
+- [Support](https://github.com/dipeshbabu/agentloop/blob/main/SUPPORT.md) and [issue forms](https://github.com/dipeshbabu/agentloop/issues/new/choose): questions, bugs, and feature requests.
+- [Contributing](https://github.com/dipeshbabu/agentloop/blob/main/CONTRIBUTING.md): development setup and required checks.
+- [Changelog](https://github.com/dipeshbabu/agentloop/blob/main/CHANGELOG.md), [upgrade guide](https://dipeshbabu.github.io/agentloop/UPGRADING/), and [roadmap](https://dipeshbabu.github.io/agentloop/ROADMAP/): releases, compatibility, and planned work.
+- [Security](https://github.com/dipeshbabu/agentloop/blob/main/SECURITY.md): private vulnerability reports.
+- [Governance](https://github.com/dipeshbabu/agentloop/blob/main/GOVERNANCE.md) and [Code of Conduct](https://github.com/dipeshbabu/agentloop/blob/main/CODE_OF_CONDUCT.md): project decisions and participation.
 
 AgentLoop is under active pre-1.0 development. Pin a tagged release when you need
 a fixed version, and check the changelog before upgrading.
@@ -450,5 +450,5 @@ a fixed version, and check the changelog before upgrading.
 
 Copyright 2026 Dipesh Tharu Mahato.
 
-AgentLoop is licensed under the [Apache License 2.0](LICENSE). Dependencies retain
-their own terms; see [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
+AgentLoop is licensed under the [Apache License 2.0](https://github.com/dipeshbabu/agentloop/blob/main/LICENSE). Dependencies retain
+their own terms; see [https://github.com/dipeshbabu/agentloop/blob/main/THIRD_PARTY_LICENSES.md](https://github.com/dipeshbabu/agentloop/blob/main/THIRD_PARTY_LICENSES.md).

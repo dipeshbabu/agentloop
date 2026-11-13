@@ -81,6 +81,16 @@ def check_markdown_links() -> list[str]:
     return errors
 
 
+def check_readme_links() -> list[str]:
+    """The same README is rendered by PyPI outside the repository's URL space."""
+    source = ROOT / "README.md"
+    return [
+        f"README.md: use an absolute URL for the published link {match.group(1)!r}"
+        for match in LINK_PATTERN.finditer(source.read_text(encoding="utf-8"))
+        if local_link_target(source, match.group(1)) is not None
+    ]
+
+
 def check_metadata() -> list[str]:
     errors: list[str] = []
     metadata = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
@@ -110,7 +120,7 @@ def check_metadata() -> list[str]:
 
 
 def main() -> int:
-    errors = check_metadata() + check_markdown_links()
+    errors = check_metadata() + check_markdown_links() + check_readme_links()
     if errors:
         for error in errors:
             print(f"repository check failed: {error}", file=sys.stderr)

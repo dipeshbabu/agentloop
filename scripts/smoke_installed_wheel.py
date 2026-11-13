@@ -9,11 +9,14 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess  # nosec B404 - fixed Python argv, no shell
 import sys
-from importlib.metadata import version
+from email import message_from_string
+from importlib.metadata import distribution, version
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from urllib.parse import urlsplit
 
 import agentloop
 from agentloop.interoperability.contracts import ImportReceipt, summarize_receipts
@@ -40,6 +43,20 @@ def smoke(expected_version: str) -> None:
         version("agentloop-profiler") == __version__ == expected_version,
         "Installed distribution and import versions must match the release",
     )
+    package_metadata = distribution("agentloop-profiler").read_text("METADATA")
+    require(package_metadata is not None, "Installed distribution metadata is missing")
+    description = message_from_string(package_metadata).get_payload()
+    require(isinstance(description, str) and bool(description.strip()), "Package README is missing")
+    for target in re.findall(r"!?\[[^\]]*\]\(([^)\n]+)\)", description):
+        target = target.strip()
+        if target.startswith("<") and ">" in target:
+            target = target[1 : target.index(">")]
+        else:
+            target = target.split(maxsplit=1)[0]
+        require(
+            target.startswith("#") or bool(urlsplit(target).scheme or urlsplit(target).netloc),
+            "Package README has a repository-relative link that breaks on PyPI: " + target,
+        )
     example = Path(__file__).resolve().parents[1] / "examples" / "intervention_study.py"
     external_fixtures = Path(__file__).resolve().parents[1] / "tests" / "fixtures" / "external"
     artifact = load_json_artifact(external_fixtures, "expected/imported_receipts.json")
