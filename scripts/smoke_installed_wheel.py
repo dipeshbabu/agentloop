@@ -9,14 +9,12 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import re
 import subprocess  # nosec B404 - fixed Python argv, no shell
 import sys
 from email import message_from_string
 from importlib.metadata import distribution, version
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from urllib.parse import urlsplit
 
 import agentloop
 from agentloop.interoperability.contracts import ImportReceipt, summarize_receipts
@@ -47,14 +45,13 @@ def smoke(expected_version: str) -> None:
     require(package_metadata is not None, "Installed distribution metadata is missing")
     description = message_from_string(package_metadata).get_payload()
     require(isinstance(description, str) and bool(description.strip()), "Package README is missing")
-    for target in re.findall(r"!?\[[^\]]*\]\(([^)\n]+)\)", description):
-        target = target.strip()
-        if target.startswith("<") and ">" in target:
-            target = target[1 : target.index(">")]
-        else:
-            target = target.split(maxsplit=1)[0]
+    # Load the sibling validator after verifying installed package ownership.
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from check_repo import local_link_target, readme_link_targets
+
+    for target in readme_link_targets(description):
         require(
-            target.startswith("#") or bool(urlsplit(target).scheme or urlsplit(target).netloc),
+            local_link_target(Path("README.md"), target) is None,
             "Package README has a repository-relative link that breaks on PyPI: " + target,
         )
     example = Path(__file__).resolve().parents[1] / "examples" / "intervention_study.py"

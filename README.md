@@ -1,7 +1,7 @@
 <h1 align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/agentloop-logo-dark.svg">
-    <img src="docs/assets/agentloop-logo-light.svg" alt="AgentLoop" width="440">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/dipeshbabu/agentloop/main/docs/assets/agentloop-logo-dark.svg">
+    <img src="https://raw.githubusercontent.com/dipeshbabu/agentloop/main/docs/assets/agentloop-logo-light.svg" alt="AgentLoop" width="440">
   </picture>
 </h1>
 
@@ -15,7 +15,7 @@
   <a href="https://pypi.org/project/agentloop-profiler/"><img src="https://img.shields.io/pypi/v/agentloop-profiler.svg?cacheSeconds=300" alt="PyPI"></a>
   <a href="https://pepy.tech/projects/agentloop-profiler"><img src="https://static.pepy.tech/badge/agentloop-profiler/month" alt="Downloads/month"></a>
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.11%2B-3776AB.svg" alt="Python 3.11 or newer"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="License: Apache-2.0"></a>
+  <a href="https://github.com/dipeshbabu/agentloop/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="License: Apache-2.0"></a>
 </p>
 
 <p align="center">
@@ -25,7 +25,7 @@
   <a href="#record-your-own-run">Trace your code</a> ·
   <a href="#compare-before-and-after">Compare runs</a> ·
   <a href="#framework-integrations">Integrations</a> ·
-  <a href="docs/FIRST_USE.md">Guide</a>
+  <a href="https://dipeshbabu.github.io/agentloop/FIRST_USE/">Guide</a>
 </p>
 
 AgentLoop is a local profiler for AI agents and decision pipelines. It records
@@ -68,7 +68,8 @@ activate it with `source .venv/bin/activate` on Linux/macOS or
 ## Guided optimization
 
 Requires AgentLoop 0.2.0 or newer. Upgrade with
-`python -m pip install --upgrade agentloop-profiler` and check `agentloop --version`.
+`python -m pip install --upgrade agentloop-profiler` and check the installed version
+with `python -m pip show agentloop-profiler`.
 The example runs locally.
 
 ```bash
@@ -332,15 +333,15 @@ code changes.
 <summary>View the workflow diagrams</summary>
 
 <picture>
-  <source media="(max-width: 600px)" srcset="docs/assets/workflow-comparison-mobile.svg">
-  <source media="(prefers-reduced-motion: reduce)" srcset="docs/assets/workflow-comparison.svg">
-  <img src="docs/assets/workflow-comparison.gif" width="100%" alt="Without AgentLoop, application-specific timers, usage parsing, retry analysis, and output checks produce separate reports. AgentLoop combines captured execution evidence into tracing, analysis, and replay reports.">
+  <source media="(max-width: 600px)" srcset="https://raw.githubusercontent.com/dipeshbabu/agentloop/main/docs/assets/workflow-comparison-mobile.svg">
+  <source media="(prefers-reduced-motion: reduce)" srcset="https://raw.githubusercontent.com/dipeshbabu/agentloop/main/docs/assets/workflow-comparison.svg">
+  <img src="https://raw.githubusercontent.com/dipeshbabu/agentloop/main/docs/assets/workflow-comparison.gif" width="100%" alt="Without AgentLoop, application-specific timers, usage parsing, retry analysis, and output checks produce separate reports. AgentLoop combines captured execution evidence into tracing, analysis, and replay reports.">
 </picture>
 
 <picture>
-  <source media="(max-width: 600px)" srcset="docs/assets/framework-comparison-mobile.svg">
-  <source media="(prefers-reduced-motion: reduce)" srcset="docs/assets/framework-comparison.svg">
-  <img src="docs/assets/framework-comparison.gif" width="100%" alt="Your application executes models and tools. Decorators and adapters export trace JSON. Analyze produces metrics and findings; replay compares the baseline and candidate with your quality fixtures.">
+  <source media="(max-width: 600px)" srcset="https://raw.githubusercontent.com/dipeshbabu/agentloop/main/docs/assets/framework-comparison-mobile.svg">
+  <source media="(prefers-reduced-motion: reduce)" srcset="https://raw.githubusercontent.com/dipeshbabu/agentloop/main/docs/assets/framework-comparison.svg">
+  <img src="https://raw.githubusercontent.com/dipeshbabu/agentloop/main/docs/assets/framework-comparison.gif" width="100%" alt="Your application executes models and tools. Decorators and adapters export trace JSON. Analyze produces metrics and findings; replay compares the baseline and candidate with your quality fixtures.">
 </picture>
 
 </details>

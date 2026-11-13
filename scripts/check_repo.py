@@ -4,6 +4,7 @@ import fnmatch
 import os
 import re
 import sys
+from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
@@ -81,13 +82,37 @@ def check_markdown_links() -> list[str]:
     return errors
 
 
+class _ReadmeHTMLLinks(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.targets = []
+
+    def handle_starttag(self, tag, attributes):
+        for name, value in attributes:
+            if name in {"href", "src"} and value:
+                self.targets.append(value)
+            elif name == "srcset" and value:
+                if value.lstrip().startswith("data:"):
+                    self.targets.append(value)
+                else:
+                    self.targets.extend(
+                        item.strip().split()[0] for item in value.split(",") if item.strip()
+                    )
+
+
+def readme_link_targets(text: str) -> list[str]:
+    parser = _ReadmeHTMLLinks()
+    parser.feed(text)
+    return [match.group(1) for match in LINK_PATTERN.finditer(text)] + parser.targets
+
+
 def check_readme_links() -> list[str]:
     """The same README is rendered by PyPI outside the repository's URL space."""
     source = ROOT / "README.md"
     return [
-        f"README.md: use an absolute URL for the published link {match.group(1)!r}"
-        for match in LINK_PATTERN.finditer(source.read_text(encoding="utf-8"))
-        if local_link_target(source, match.group(1)) is not None
+        f"README.md: use an absolute URL for the published link {target!r}"
+        for target in readme_link_targets(source.read_text(encoding="utf-8"))
+        if local_link_target(source, target) is not None
     ]
 
 
