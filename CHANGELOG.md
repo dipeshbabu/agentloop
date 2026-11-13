@@ -7,6 +7,12 @@ trace, study, receipt, API and database schema versions.
 
 ## [Unreleased]
 
+### Fixed
+
+- TypeScript API requests bind fetch to its global receiver so native browser
+  requests work. Installed-tarball checks exercise esbuild and Chromium,
+  including concurrent spans, cancellation, privacy and redirect rejection.
+
 ## [0.2.0] - 2026-11-12
 
 ### Added

@@ -14,7 +14,7 @@ work prioritizes this path over adding another control or experiment system.
 | Instrumentation overhead | Recorded tracing controls, with scope and model-variation limits | Separate direct recording, export, analysis and end-to-end overhead across realistic span volumes |
 | Cost | Actual token provenance and qualified model-price estimates | Obtain authorized billing data; retain unknown local hardware/energy cost instead of inventing dollars |
 | Hermes compatibility | 0.21.6 contract coverage and real 0.22.7 conformance | Validate 0.23.x separately before expanding the accepted range |
-| TypeScript adoption | Source SDK, package/declaration/interoperability checks and separate release proposal | Approve and publish the initial npm artifact; test real Node applications and selected browser/bundler targets |
+| TypeScript adoption | Source SDK, installed Node API interoperability, esbuild/Chromium package checks and separate release proposal | Approve and publish the initial npm artifact; observe integration into developer-owned applications and extend the target matrix as needed |
 
 No external users, production deployments or customer savings are established by
 these tests and studies. PyPI download counts do not identify unique developers

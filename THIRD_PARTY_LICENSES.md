@@ -72,6 +72,18 @@ components under MPL-2.0, including Certifi and tqdm. Consult `uv.lock` and the
 installed distributions for the complete version-specific dependency graph,
 license texts, copyright notices, and attribution requirements.
 
+## TypeScript development tools
+
+The SDK ships with no runtime dependencies. Its development environment pins
+TypeScript 7.0.2 under Apache-2.0, Playwright 1.65.0 under Apache-2.0, and esbuild
+0.28.2 under MIT. Playwright's downloaded Chromium has its own bundled third-party
+notices. These browser and build tools are used for package validation and are
+excluded from the SDK tarball. The lockfile retains version and integrity pins.
+
+See the [TypeScript license](https://github.com/microsoft/TypeScript/blob/main/LICENSE.txt),
+[Playwright license](https://github.com/microsoft/playwright/blob/main/LICENSE), and
+[esbuild license](https://github.com/evanw/esbuild/blob/main/LICENSE.md).
+
 ## Documentation graphics
 
 The README diagrams include Python, OpenAI, LangGraph, and CrewAI logos from

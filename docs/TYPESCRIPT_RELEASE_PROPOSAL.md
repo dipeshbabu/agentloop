@@ -15,8 +15,11 @@ No login, publishing workflow or registry write is needed for this review.
   bounds response bytes and supports timeout and caller cancellation.
 - Tracing uses explicit contexts for concurrent work; input, output and error
   retention are opt-in. Missing usage remains unavailable.
-- No CommonJS entry point, automatic provider instrumentation, guided CLI runner
-  or validated browser/bundler support is promised by this release.
+- Browser package validation covers esbuild 0.28.2 and Playwright Chromium using
+  an installed tarball in an owned offline application. Firefox, Safari, other
+  bundlers and cross-origin API deployments remain unvalidated.
+- No CommonJS entry point, automatic provider instrumentation or guided CLI
+  runner is promised by this release.
 
 The readiness review identified two JavaScript boundary errors: `runSpan` could
 accept an unsupported event kind despite its TypeScript union, and identifiers
@@ -38,6 +41,8 @@ npm run build --prefix sdk/typescript
 npm test --prefix sdk/typescript
 npm run test:types --prefix sdk/typescript
 npm audit --prefix sdk/typescript
+npx --prefix sdk/typescript playwright install chromium
+npm run test:browser --prefix sdk/typescript
 uv run --frozen --extra server python scripts/smoke_typescript_sdk.py
 ```
 
@@ -49,11 +54,23 @@ The CI job already performs both source and installed-artifact interoperability
 against the authenticated local Python API on Node 22 and 24. It checks native
 schema, parent relationships, usage, metrics and HTML export.
 
-Local Node 22 validation passes 24 regression tests, declaration checks and
+The browser lane separately checks public package resolution, concurrent parent
+relationships, thrown business errors, unavailable usage, same-origin fetch,
+trace uploads, cancellation and rejected redirects. Python validates the emitted
+native trace. Browser traces and model-free fixture data carry synthetic
+provenance. These checks establish package behavior on the selected targets.
+
+Local Node 22 validation passes 25 regression tests, declaration checks and
 dependency audit (zero known advisories at review time). Final-head CI, installed
 artifact evidence and full repository checks are recorded in the PR. A static
 security review of all 15 original SDK files found no reportable vulnerability;
 that result is scoped evidence, not a guarantee about every runtime or caller.
+
+Browser validation exposed a receiver error in the API client. The constructor
+now binds its fetch implementation to `globalThis`, preserving native browser
+Web API invocation. A unit regression and the installed browser application
+exercise this path. Credentials, API routes and trace contracts retain their
+existing behavior.
 
 ## Approval still needed
 

@@ -135,6 +135,10 @@ jobs:
         run: npm test --prefix sdk/typescript
       - name: Public declaration checks
         run: npm run test:types --prefix sdk/typescript
+      - name: Install browser for SDK package smoke
+        run: npx --prefix sdk/typescript playwright install --with-deps chromium
+      - name: Bundled browser application from installed tarball
+        run: npm run test:browser --prefix sdk/typescript -- "${{ runner.temp }}/sdk-browser"
       - name: Set up uv and Python
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
@@ -145,6 +149,17 @@ jobs:
         run: uv sync --locked --extra server
       - name: Native schema and authenticated API interoperability
         run: uv run --frozen --extra server python scripts/smoke_typescript_sdk.py --out runs/typescript-smoke
+      - name: Validate browser trace with native Python schema
+        env:
+          BROWSER_TRACE: ${{ runner.temp }}/sdk-browser/trace.json
+        run: |
+          uv run --frozen python - <<'PY'
+          import os
+          from agentloop.tracer import AgentTrace
+          trace = AgentTrace.from_json(os.environ["BROWSER_TRACE"])
+          assert trace.metadata["output"] == {"answer": "alpha beta"}
+          assert len(trace.events) == 4
+          PY
       - name: Pack and install SDK artifact
         shell: bash
         run: |
