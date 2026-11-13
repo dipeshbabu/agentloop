@@ -2,6 +2,14 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { AgentTrace } from "../dist/index.js";
 
+test("JavaScript callers cannot export unsupported event kinds", async () => {
+  const trace = new AgentTrace("invalid-kind");
+  let executed = false;
+  await assert.rejects(trace.runSpan("workflow", "bad", () => { executed = true; }, {}, null), /Unsupported span kind/);
+  assert.equal(executed, false);
+  assert.deepEqual(trace.finish().toJSON().events, []);
+});
+
 test("nested spans preserve outputs, parentage, measured runtime, and usage", async () => {
   const trace = new AgentTrace("agent", { metadata: { synthetic: true } });
   const output = { notes: ["local"] };

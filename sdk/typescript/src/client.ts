@@ -24,7 +24,11 @@ function positive(value: number, name: string): number {
   if (!Number.isSafeInteger(value) || value <= 0) throw new TypeError(`${name} must be a positive safe integer`);
   return value;
 }
-function segment(value: string): string { nonempty(value, "identifier"); return encodeURIComponent(value); }
+function segment(value: string): string {
+  nonempty(value, "identifier");
+  if (value === "." || value === "..") throw new TypeError("Identifier must not be a dot path segment");
+  return encodeURIComponent(value);
+}
 function query(path: string, values: Record<string, string | number | undefined>): string {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(values)) if (value !== undefined) params.set(key, String(value));

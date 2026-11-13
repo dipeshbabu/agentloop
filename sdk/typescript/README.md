@@ -1,9 +1,13 @@
 # AgentLoop TypeScript SDK
 
-Record model, tool, and retry spans in Node.js 22+ or a modern browser, then export
+Record model, tool, and retry spans in Node.js 22+, then export
 native AgentLoop traces or send them to the HTTP API. The SDK has no runtime
 dependencies. Its API client uses `fetch`; its tracer uses explicit contexts to
 keep concurrent work separate.
+
+CI covers Node.js 22 and 24, including installed-tarball API interoperability.
+The implementation uses standard Web APIs, but browser and bundler matrices have
+not been validated. CommonJS `require()` is not an advertised entry point.
 
 This SDK is available from the AgentLoop source checkout. It has not been
 published to npm. Build and install a local package:
@@ -25,6 +29,11 @@ npm install /path/to/agentloop/sdk/typescript/agentloop-profiler-0.1.0.tgz
 The package is ESM and includes TypeScript declarations. The SDK's package version
 is independent of Python releases; native trace schema 1.1 and API v1 identify
 the data contracts it supports.
+
+The public entry points are `agentloop-profiler` and `agentloop-profiler/client`.
+Import through these exports; internal files are implementation details. Before
+1.0, compatibility changes require release notes and a minor SDK version bump.
+Python package upgrades do not automatically change the SDK package version.
 
 ## Trace your code
 
