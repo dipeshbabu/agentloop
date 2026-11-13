@@ -14,6 +14,10 @@ from agentloop.replay import build_replay_report
 from agentloop.tracer import AgentTrace
 
 REVISION = "b200f5bc60e31588ba2cb60e288029c4a54ba5fa"
+REVISIONS = {
+    REVISION: "v0.22.7",
+    "3b421578588243f920886e6fe79a6faa87ea026e": "v0.23.1",
+}
 SCENARIOS = (
     "baseline",
     "stream",
@@ -51,7 +55,10 @@ def artifact_bytes(root: Path, relative: str, digest: str) -> bytes:
     return content
 
 
-def qualified_trace(root: Path, artifact: dict, scenario: str) -> AgentTrace:
+def qualified_trace(
+    root: Path, artifact: dict, scenario: str, *, revision: str = REVISION
+) -> AgentTrace:
+    require(revision in REVISIONS, "Wrong Hermes source revision")
     raw = artifact_bytes(root, artifact["raw"], artifact["raw_sha256"])
     native = artifact_bytes(root, artifact["native"], artifact["native_sha256"])
     expected = json.loads(raw)
@@ -62,7 +69,7 @@ def qualified_trace(root: Path, artifact: dict, scenario: str) -> AgentTrace:
             "pilot": {
                 "scenario": scenario,
                 "synthetic_provider": True,
-                "hermes_revision": REVISION,
+                "hermes_revision": revision,
             },
         }
     )
@@ -96,7 +103,9 @@ def validate_case(root: Path, scenario: str) -> tuple[dict, list[AgentTrace]]:
         report["scenario"] == scenario and report["synthetic"] is True,
         "Wrong scenario qualification",
     )
-    require(report["host"]["revision"] == REVISION, "Wrong Hermes source revision")
+    revision = report["host"]["revision"]
+    require(revision in REVISIONS, "Wrong Hermes source revision")
+    require(report["host"]["tag"] == REVISIONS[revision], "Wrong Hermes version tag")
     require(not report["blocked_connections"], "Host attempted an unexpected outbound connection")
     require(not report["agent_error"], "Host returned an agent error")
     requests = [item for item in report["requests"] if item["kind"] == "completion"]
@@ -124,7 +133,9 @@ def validate_case(root: Path, scenario: str) -> tuple[dict, list[AgentTrace]]:
             report["completion_matches_fixture"] and not report["interrupted"],
             "Host result differs from fixture",
         )
-    traces = [qualified_trace(root, item, scenario) for item in report["artifacts"]]
+    traces = [
+        qualified_trace(root, item, scenario, revision=revision) for item in report["artifacts"]
+    ]
     require(
         len(traces) == (0 if scenario == "baseline" else 2 if scenario == "delegation" else 1),
         "Unexpected exported turn count",
@@ -258,6 +269,10 @@ def validate_run(root: Path) -> dict:
     cases = [validate_case(root / scenario, scenario)[0] for scenario in SCENARIOS]
     reports = [json.loads((root / scenario / "report.json").read_bytes()) for scenario in SCENARIOS]
     require(
+        len({report["host"]["revision"] for report in reports}) == 1,
+        "Host source changed between scenarios",
+    )
+    require(
         len({report["plugin_recorder_sha256"] for report in reports}) == 1,
         "Observer bytes changed between scenarios",
     )
@@ -273,7 +288,7 @@ def validate_run(root: Path) -> dict:
     return {
         "synthetic": True,
         "passed": True,
-        "hermes_revision": REVISION,
+        "hermes_revision": reports[0]["host"]["revision"],
         "scope": "Real pinned Hermes dispatch with a local deterministic provider; no live model quality, cost or performance evidence",
         "cases": cases,
     }

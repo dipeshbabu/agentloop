@@ -30,9 +30,17 @@ permissions:
 
 jobs:
   hermes-runtime:
-    name: Hermes runtime pilot
+    name: Hermes runtime pilot (${{ matrix.hermes.tag }})
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        hermes:
+          - tag: v0.22.7
+            revision: b200f5bc60e31588ba2cb60e288029c4a54ba5fa
+          - tag: v0.23.1
+            revision: 3b421578588243f920886e6fe79a6faa87ea026e
     steps:
       - name: Checkout AgentLoop
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -51,11 +59,11 @@ jobs:
         run: |
           uv sync --locked --no-dev
           .venv/bin/agentloop hermes export-plugin "$RUNNER_TEMP/agentloop-hermes-plugin"
-      - name: Checkout pinned Hermes v0.22.7
+      - name: Checkout pinned Hermes ${{ matrix.hermes.tag }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: NousResearch/hermes-agent
-          ref: b200f5bc60e31588ba2cb60e288029c4a54ba5fa
+          ref: ${{ matrix.hermes.revision }}
           path: .hermes-runtime
           persist-credentials: false
       - name: Set up Hermes uv
@@ -65,8 +73,10 @@ jobs:
           enable-cache: false
       - name: Install locked Hermes core
         working-directory: .hermes-runtime
+        env:
+          HERMES_REVISION: ${{ matrix.hermes.revision }}
         run: |
-          test "$(git rev-parse HEAD)" = b200f5bc60e31588ba2cb60e288029c4a54ba5fa
+          test "$(git rev-parse HEAD)" = "$HERMES_REVISION"
           uv sync --frozen --no-dev --python 3.14
       - name: Exercise real host dispatch with local provider
         shell: bash
@@ -95,14 +105,14 @@ jobs:
         if: always() && github.event_name == 'workflow_dispatch' && inputs.run_local_inference
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: hermes-guided-optimization
+          name: hermes-guided-optimization-${{ matrix.hermes.tag }}
           path: ${{ runner.temp }}/hermes-adoption/
           if-no-files-found: warn
       - name: Upload qualified pilot evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: hermes-runtime-pilot
+          name: hermes-runtime-pilot-${{ matrix.hermes.tag }}
           path: |
             ${{ runner.temp }}/hermes-pilot/*/report.json
             ${{ runner.temp }}/hermes-pilot/*/native/*.json

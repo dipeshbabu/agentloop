@@ -2,7 +2,8 @@
 
 This module deliberately uses only the standard library so its directory-plugin
 copy runs inside Hermes without changing Hermes's managed Python dependencies.
-Hook contracts: Hermes v0.21.6 (818c13be1dc4) and v0.22.7 (b200f5bc60e3).
+Hook contracts: Hermes v0.21.6 (818c13be1dc4), v0.22.7 (b200f5bc60e3),
+and v0.23.1 (3b4215785882).
 """
 
 from __future__ import annotations

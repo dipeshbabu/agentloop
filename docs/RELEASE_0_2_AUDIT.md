@@ -37,7 +37,7 @@ database versions remain independent of the 0.2.0 package version. Guided APIs
 are currently source capabilities. Existing explicit `--tasks` and runner argv
 must continue to work after initialization is added.
 
-The source-exported Hermes plugin accepts `>=0.21.6,<0.23`; v0.22.7 is pinned for
+The source-exported Hermes plugin accepts `>=0.21.6,<0.24`; v0.22.7 and v0.23.1 are pinned for
 runtime checks and v0.21.6 has contract coverage. Current upstream v0.23.1 is
 outside this declared range. Release documentation must state that limitation
 until separate compatibility testing supports expanding it.
@@ -75,7 +75,7 @@ README and upgrade notes distinguish 0.2.0 source capabilities from published
 | Lint/security/metadata/links | Full pre-commit checks passed for the focused implementation branches |
 | Distribution compatibility | Built wheel/sdist passed Twine; a fresh core-only installed wheel ran all guided commands outside the checkout, including generated onboarding, quality rejection, incomplete capture, missing usage and cancellation |
 | Existing frozen session | Original pre-change Hermes session recomputed with 6/6 passing pairs |
-| Hermes host conformance | Real pinned 0.22.7 dispatch covers eight deterministic scenarios in normal CI; real-model studies require explicit opt-in |
+| Hermes host conformance | Real pinned 0.22.7 and 0.23.1 dispatch each cover eight deterministic scenarios in normal CI; real-model studies require explicit opt-in |
 | Guided validation | Six dedicated tests passed, including actual LangGraph 1.2.11 and archived evidence recomputation |
 | Fresh real-model study | 45 captured attempts plus 12 overhead controls retained; candidate rejected, with only 3/12 held-out pairs passing every gate |
 | Evidence retention | 300-file checksummed archive unpacked and native finish reproduced the 3/12 result without inference |
