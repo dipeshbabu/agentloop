@@ -218,6 +218,12 @@ body {
 }
 
 @media (min-width: 60em) {
+  .md-typeset .al-workflow {
+    margin-inline: auto;
+    max-width: 55rem;
+    width: 90%;
+  }
+
   .md-typeset .grid.cards {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
