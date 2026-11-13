@@ -44,8 +44,8 @@ and [GitHub Releases](https://github.com/dipeshbabu/agentloop/releases).
 
 ## Current source
 
-The guided `improve` commands require 0.2.0 or newer. If your package index
-supplies 0.1.1, install the current source into your environment.
+The guided `improve` commands require 0.2.0 or newer. To try development changes,
+install the current source into your environment.
 
 ```bash
 python -m pip install "git+https://github.com/dipeshbabu/agentloop.git"

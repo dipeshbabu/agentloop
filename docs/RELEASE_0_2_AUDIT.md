@@ -1,7 +1,7 @@
 # AgentLoop 0.2.0 readiness audit
 
-Reviewed on 2026-11-12 against main `017a7bdd9818f08d832c02c631b18c1eb08fdb19`.
-The latest published Python and GitHub release is 0.1.1. There are 29 changed
+Initially reviewed on 2026-11-12 against main `017a7bdd9818f08d832c02c631b18c1eb08fdb19`.
+At that review, the latest published Python and GitHub release was 0.1.1, with 29 changed
 files since its tag. No open Dependabot or CodeQL alerts were reported by GitHub
 at this review. The working tree was clean and there were no open pull requests.
 
@@ -46,10 +46,10 @@ The earlier local CPU Hermes study is a controlled example with fixed order,
 three distinct questions and unknown operating costs. Its measurements do not
 establish developer adoption, production performance or calibrated savings.
 
-Full test/lint/build results, exact CI commit references, remaining measurement
-gaps and release approvals will be recorded in the preparation PR. Publication
-requires an explicit later approval. No release tag or publishing action is part
-of this audit.
+The preparation PR records test/lint/build results and CI references. The
+maintainer subsequently approved Python 0.2.0 publication after final checks,
+while keeping npm publication pending. Normal protected-branch checks and the
+existing PyPI environment review apply.
 
 ## Preparation review
 
@@ -61,13 +61,13 @@ The focused stack is [#305](https://github.com/dipeshbabu/agentloop/pull/305)
 (three-workload validation and retained negative evidence). The separately
 reviewable [SDK proposal #306](https://github.com/dipeshbabu/agentloop/pull/306)
 does not block Python preparation. The repository owner authorized squash-merging
-the PRs after all CI checks pass. Tagging and publication require further approval.
+completed PRs after all CI checks pass, and then approved the Python release.
 
 The 0.2.0 branch uses `scripts/bump_version.py --set 0.2.0`, updating package/runtime
 metadata, the dated changelog and only the project version in `uv.lock`. The
 dependency set is unchanged. Source metadata names Dipesh Tharu Mahato as author.
-README and upgrade notes distinguish 0.2.0 source capabilities from published
-0.1.1. No package, trace, task, session, API or database numbering reset occurs.
+README and upgrade notes describe the released 0.2.0 workflow and its upgrade
+path. Package, trace, task, session, API and database numbering remain consistent.
 
 | Verification | Result before final release-head CI |
 | --- | --- |
@@ -80,7 +80,7 @@ README and upgrade notes distinguish 0.2.0 source capabilities from published
 | Fresh real-model study | 45 captured attempts plus 12 overhead controls retained; candidate rejected, with only 3/12 held-out pairs passing every gate |
 | Evidence retention | 300-file checksummed archive unpacked and native finish reproduced the 3/12 result without inference |
 | Dependency/security state | pip-audit: 77 locked development/all-extra packages, no skips or known advisories; GitHub: zero open Dependabot/CodeQL alerts at recheck |
-| TypeScript | 24 tests, declarations, packed installation and authenticated API interoperability passed; 21 final-commit CI checks passed on its separate proposal |
+| TypeScript | 25 unit tests, declarations, installed-tarball Node API interoperability and esbuild/Chromium validation passed; npm remains pending |
 
 The release PR records the exact final 0.2.0 test, lint, build, installed-wheel,
 artifact and CI commands/results. Focused earlier checks do not replace final
@@ -92,17 +92,33 @@ backends/integrations; CI supplies PostgreSQL and pinned framework coverage.
 ## Remaining blockers and evidence limits
 
 - Each updated PR commit must satisfy protected-branch checks and required
-  reviews before integration. Publication requires further maintainer approval.
-- Published 0.1.1 users cannot use guided optimization until they install reviewed
-  source or the approved 0.2.0 release. No tag or PyPI write is part of preparation.
+  reviews before integration. Python publication is approved after final checks.
+- Users upgrading from 0.1.1 install 0.2.0 to obtain guided optimization.
 - The new small-model pilot failed correctness; the held-out candidate was
   rejected. Its qualified overhead estimate is unavailable. It must not be
   presented as a successful optimization or a reason to deploy the agent.
 - The historical Hermes success remains six comparisons across three questions,
   with fixed order and unknown operating cost. It is separate from the negative
   [new trial](GUIDED_LOCAL_MODEL_CASE.md).
-- Hermes 0.23.x, external developer onboarding, production effects, independent
-  application task sets, billing and causal performance/overhead evidence remain
-  unestablished. See [adoption gaps](ADOPTION_GAPS.md).
-- npm publication, registry ownership and browser/bundler validation remain
-  separate decisions. Neither npm nor PyPI publication is implied by passing CI.
+- External developer onboarding, production effects, independent application task
+  sets and billing remain unmeasured. Counterbalanced CPU controls separate
+  recording, export and analysis. Real-agent causal overhead still needs suitable
+  controls. See [adoption gaps](ADOPTION_GAPS.md).
+- npm publication remains pending. Registry ownership and broader browser/bundler
+  coverage are future work. The selected esbuild/Chromium package check passes.
+
+## Finalization
+
+[Hermes compatibility #314](https://github.com/dipeshbabu/agentloop/pull/314) and
+[SDK package validation #315](https://github.com/dipeshbabu/agentloop/pull/315)
+were squash-merged after their final CI checks passed. The measurement and
+recommendation follow-up retains both instrumentation runs, every timing sample
+and both detector evaluations. Schema repair now requires a declared cause.
+The public 28-case finding evaluation retains eight correct findings and zero
+false findings on known labels. Unknown and ambiguous labels remain unscored.
+
+The release keeps the earlier successful Hermes case and the rejected three-workload
+local-model case. A consenting developer's first-use protocol is documented, and
+external participant observations remain unavailable. Local and hosted validation
+commands and results appear in each PR and the final release PR. The release
+workflow validates the exact annotated tag before publishing its tested bytes.

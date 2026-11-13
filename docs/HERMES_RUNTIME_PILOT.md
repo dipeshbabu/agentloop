@@ -85,6 +85,6 @@ and HTML generated through AgentLoop's analysis pipeline. The baseline has no tr
 The [CI workflow](../.github/workflows/ci.yml) runs the same cases and uploads these
 artifacts, excluding profile databases, caches, and installed dependencies.
 
-This compatibility extension and incomplete-capture replay fix are **unreleased**.
-The immutable PyPI 0.1.1 release accepts Hermes `>=0.21.6,<0.22`; use current source
-for this pilot and Hermes 0.22.x/0.23.x. See [the integration guide](HERMES.md).
+This compatibility extension and incomplete-capture replay fix ship in AgentLoop
+0.2.0. The immutable 0.1.1 release accepts Hermes `>=0.21.6,<0.22`.
+See [the integration guide](HERMES.md).

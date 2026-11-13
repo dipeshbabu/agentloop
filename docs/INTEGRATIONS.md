@@ -3,8 +3,9 @@
 For Hermes Agent, see [the Hermes plugin guide](HERMES.md). This integration is
 included in AgentLoop 0.1.1 and newer and exports native per-turn traces
 through Hermes 0.21.6 observer hooks without new Hermes runtime dependencies.
-Current source also supports 0.22.x; the [real runtime pilot](HERMES_RUNTIME_PILOT.md)
-documents that unreleased compatibility and its deterministic-provider limits.
+AgentLoop 0.2.0 also supports 0.22.x and 0.23.x. The
+[real runtime pilot](HERMES_RUNTIME_PILOT.md) documents exact host pins and
+deterministic-provider validation scope.
 
 For framework-neutral pipeline and stage annotations, see
 [workflow tracing](WORKFLOW_TRACING.md).

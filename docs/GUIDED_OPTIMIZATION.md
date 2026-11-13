@@ -7,9 +7,9 @@ search:
 
 The `agentloop improve` commands connect task capture, baseline findings, a
 developer-applied change, and a quality-checked before/after report. These commands
-are included in the 0.2.0 source; published 0.1.1 does not include them.
+are included in AgentLoop 0.2.0 and newer.
 
-Install the checkout in your AgentLoop environment with `python -m pip install .`.
+Install or upgrade with `python -m pip install --upgrade agentloop-profiler`.
 Your agent runs in its own environment through an explicit command supplied to
 `capture`. The command receives one JSON request on stdin per task attempt and
 writes a native AgentLoop trace to the requested path.
