@@ -67,9 +67,9 @@ activate it with `source .venv/bin/activate` on Linux/macOS or
 
 ## Guided optimization
 
-Requires AgentLoop 0.2.0 or the current source checkout. Check `agentloop --version`;
-if your package index still supplies 0.1.1, install the checkout with
-`python -m pip install .`. This offline example needs no API key:
+Requires AgentLoop 0.2.0 or newer. Upgrade with
+`python -m pip install --upgrade agentloop-profiler` and check `agentloop --version`.
+The example runs locally.
 
 ```bash
 agentloop improve init --out agentloop-demo
@@ -309,10 +309,10 @@ setup, supported behavior, and streaming lifecycle requirements.
 [Hermes Agent tracing](docs/HERMES.md) is included in AgentLoop 0.1.1 and newer.
 Export its dependency-free directory plugin with `agentloop hermes export-plugin`,
 enable it in your Hermes profile, and analyze the native turn traces it writes.
-Output capture is off by default; the tested host contract is Hermes 0.21.6.
-Current source adds Hermes 0.22.x support, with a
-[reproducible v0.22.7 runtime pilot](docs/HERMES_RUNTIME_PILOT.md); these changes
-are unreleased and are separate from the published 0.1.1 package.
+Output capture is off by default. AgentLoop 0.2.0 supports Hermes
+`>=0.21.6,<0.24`, with 0.21.6 hook-contract coverage and pinned 0.22.7/0.23.1
+host conformance across eight scenarios. Exact pins and validation commands
+appear in the [runtime pilot](docs/HERMES_RUNTIME_PILOT.md).
 
 For telemetry you already export, [onboarding](docs/ONBOARDING.md) validates capture
 before analysis. The [interoperability guide](docs/INTEROPERABILITY_READINESS.md)
@@ -390,13 +390,13 @@ where the examples show `agentloop`.
 <summary>Download and verify a standalone executable</summary>
 
 Download the executable and `SHA256SUMS` from the same release. These examples use
-version 0.1.1; change the version when choosing another release.
+version 0.2.0. Change the version when choosing another release.
 
 Linux (Bash):
 
 ```bash
 set -euo pipefail
-version=0.1.1
+version=0.2.0
 asset="agentloop-v${version}-linux-x86_64"
 curl --fail --location --remote-name "https://github.com/dipeshbabu/agentloop/releases/download/v${version}/${asset}"
 curl --fail --location --remote-name "https://github.com/dipeshbabu/agentloop/releases/download/v${version}/SHA256SUMS"
@@ -413,7 +413,7 @@ chmod +x "$asset"
 Windows PowerShell:
 
 ```powershell
-$Version = "0.1.1"
+$Version = "0.2.0"
 $Asset = "agentloop-v$Version-windows-x86_64.exe"
 Invoke-WebRequest "https://github.com/dipeshbabu/agentloop/releases/download/v$Version/$Asset" -OutFile agentloop.exe
 Invoke-WebRequest "https://github.com/dipeshbabu/agentloop/releases/download/v$Version/SHA256SUMS" -OutFile SHA256SUMS

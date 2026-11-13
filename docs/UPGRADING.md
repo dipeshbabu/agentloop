@@ -12,12 +12,16 @@ improvement checks to linked native intervention gates as well as the report.
 Previously rejected attempts must not be interpreted as accepted because of an
 older intervention gate field. Frozen existing sessions remain readable.
 
-The source-exported Hermes observer accepts >=0.21.6,<0.23. Real-host checks are
-pinned to 0.22.7; 0.21.6 has contract coverage. 0.23.x remains unsupported.
+The 0.2.0 Hermes observer accepts >=0.21.6,<0.24. Real-host checks are
+pinned to 0.22.7 and 0.23.1, and 0.21.6 has contract coverage.
 Re-export the plugin from the upgraded package into the intended Hermes profile.
 See [guided onboarding](GUIDED_OPTIMIZATION.md) and
-[release readiness](RELEASE_0_2_AUDIT.md). Publication of prepared 0.2.0 artifacts
-requires the maintainer's approval.
+[release readiness](RELEASE_0_2_AUDIT.md).
+
+Schema-repair rule 1.2 requires `retry_reason: invalid_output_schema` or
+`reason: schema_validation_failed`. All retry spans stay in the metrics. Existing
+traces without a declared structured-output cause can produce fewer schema-repair
+recommendations. The rule's estimate applies only to the qualifying spans.
 
 Version `0.1.1` requires **Python 3.11 or newer** so supported installations can
 use patched dependencies. It adds Hermes tracing and fixes CLI output collisions,
