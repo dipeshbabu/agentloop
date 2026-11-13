@@ -2,7 +2,7 @@ site_name: AgentLoop
 site_description: Trace agent execution, investigate wasted work, and verify an improvement with independent quality checks.
 site_url: https://dipeshbabu.github.io/agentloop/
 repo_url: https://github.com/dipeshbabu/agentloop
-repo_name: GitHub
+repo_name: dipeshbabu/agentloop
 edit_uri: edit/main/docs/
 copyright: Copyright &copy; 2026 Dipesh Tharu Mahato
 docs_dir: docs
@@ -15,7 +15,7 @@ theme:
   favicon: assets/agentloop-mark.svg
   font:
     text: Source Sans 3
-    code: IBM Plex Mono
+    code: JetBrains Mono
   icon:
     repo: fontawesome/brands/github
   palette:

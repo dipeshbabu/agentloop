@@ -18,24 +18,37 @@ baseline and candidate executions on the same tasks.
 [Guided optimization](GUIDED_OPTIMIZATION.md){ .md-button }
 
 </div>
-<div class="al-example" markdown>
+<figure class="al-workflow" markdown>
+
+```mermaid
+%%{init: {'flowchart': {'rankSpacing': 20, 'nodeSpacing': 20}, 'themeVariables': {'fontSize': '14px'}}}%%
+flowchart TB
+    accTitle: Guided optimization workflow
+    accDescr: Capture a baseline, review findings, apply one improvement, capture the candidate on the same tasks, and check quality and performance before saving the report.
+    baseline["Capture baseline"] --> review["Review evidence and findings"]
+    review --> change["Apply one improvement"]
+    change --> candidate["Capture candidate on the same tasks"]
+    candidate --> gates["Independent quality +<br/>performance checks"]
+    gates --> report["Before-and-after report<br/>Passed or rejected"]
+```
+
+<figcaption>Keep the task set and correctness criteria fixed across both captures.</figcaption>
+
+</figure>
+</div>
+
+<div class="al-start" markdown>
 
 ## Get a useful trace
 
 ```bash
 python -m pip install agentloop-profiler
 agentloop quickstart
-agentloop analyze runs/agentloop_quickstart.json \
-  --html runs/report.html
+agentloop analyze runs/agentloop_quickstart.json --html runs/report.html
 ```
 
 Open `runs/report.html` to inspect the timeline and findings.
 This example runs locally with synthetic data.
-
-</div>
-</div>
-
-<div class="al-start" markdown>
 
 ## Start with your agent
 

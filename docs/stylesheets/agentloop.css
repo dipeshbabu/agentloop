@@ -9,7 +9,7 @@
   --md-default-fg-color: #292333;
   --md-default-fg-color--light: #61576e;
   --md-default-bg-color: #fff;
-  --md-code-bg-color: #f5f3f8;
+  --md-code-bg-color: #f3f4f7;
   --md-footer-bg-color: #251d34;
   --md-footer-bg-color--dark: #1b1526;
   --al-rule: #e6e0ed;
@@ -86,10 +86,6 @@ body {
   box-shadow: inset 0 -.13rem 0 #ff9c8f;
 }
 
-.md-source__facts {
-  display: none;
-}
-
 .md-typeset .md-button {
   border-color: var(--md-accent-fg-color);
   color: var(--md-accent-fg-color);
@@ -133,8 +129,7 @@ body {
 }
 
 .md-typeset pre > code {
-  border: .05rem solid var(--al-rule);
-  border-radius: .3rem;
+  border-radius: .2rem;
 }
 
 .md-typeset table:not([class]) {
@@ -187,21 +182,19 @@ body {
   margin: .4rem .4rem .2rem 0;
 }
 
-.al-example {
-  background: var(--al-subtle);
-  border: .05rem solid var(--al-rule);
-  border-radius: .4rem;
-  padding: .9rem 1.2rem;
+.al-workflow {
+  text-align: center;
 }
 
-.md-typeset .al-example h2 {
-  font-size: 1.05em;
-  margin: 0 0 .7em;
+.al-workflow .mermaid {
+  display: flex;
+  justify-content: center;
 }
 
-.al-example p:last-child {
+.al-workflow figcaption {
   color: var(--md-default-fg-color--light);
   font-size: .85em;
+  margin-top: .6rem;
 }
 
 .md-typeset .grid.cards > ul > li {
@@ -234,9 +227,5 @@ body {
 @media (max-width: 44.9375em) {
   .md-typeset .al-intro h1 {
     font-size: 2.6em;
-  }
-
-  .al-example {
-    padding: .8rem;
   }
 }
