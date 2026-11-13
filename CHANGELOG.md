@@ -16,6 +16,8 @@ trace, study, receipt, API and database schema versions.
   file links in the package description.
 - Installation guidance uses the supported `python -m pip show agentloop-profiler`
   command to inspect the installed version.
+- README HTML images and responsive sources use absolute asset URLs for PyPI.
+  The shared description check validates Markdown links and HTML destinations.
 
 ## [0.2.0] - 2026-11-12
 
