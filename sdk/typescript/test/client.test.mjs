@@ -10,6 +10,23 @@ function capture(options = {}) {
   return { client, requests };
 }
 
+test("fetch receives the global receiver required by browser Web APIs", async () => {
+  const original = globalThis.fetch;
+  const browserFetch = async function () {
+    assert.equal(this, globalThis);
+    return new Response(JSON.stringify({ status: "ok" }));
+  };
+  try {
+    globalThis.fetch = browserFetch;
+    for (const options of [{}, { fetch: browserFetch }]) {
+      const client = new AgentLoopClient(options);
+      assert.deepEqual(await client.health(), { status: "ok" });
+    }
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
 test("dot-only identifiers fail before URL normalization or requests", async () => {
   const { client, requests } = capture();
   for (const id of [".", ".."]) {
