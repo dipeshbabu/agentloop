@@ -18,23 +18,6 @@ baseline and candidate executions on the same tasks.
 [Guided optimization](GUIDED_OPTIMIZATION.md){ .md-button }
 
 </div>
-<figure class="al-workflow" markdown>
-
-```mermaid
-%%{init: {'flowchart': {'rankSpacing': 20, 'nodeSpacing': 20}, 'themeVariables': {'fontSize': '14px'}}}%%
-flowchart TB
-    accTitle: Guided optimization workflow
-    accDescr: Capture a baseline, review findings, apply one improvement, capture the candidate on the same tasks, and check quality and performance before saving the report.
-    baseline["Capture baseline"] --> review["Review evidence and findings"]
-    review --> change["Apply one improvement"]
-    change --> candidate["Capture candidate on the same tasks"]
-    candidate --> gates["Independent quality +<br/>performance checks"]
-    gates --> report["Before-and-after report<br/>Passed or rejected"]
-```
-
-<figcaption>Keep the task set and correctness criteria fixed across both captures.</figcaption>
-
-</figure>
 </div>
 
 <div class="al-start" markdown>
@@ -49,6 +32,20 @@ agentloop analyze runs/agentloop_quickstart.json --html runs/report.html
 
 Open `runs/report.html` to inspect the timeline and findings.
 This example runs locally with synthetic data.
+
+</div>
+
+## How AgentLoop fits your workflow
+
+<figure class="al-workflow">
+  <picture>
+    <source media="(max-width: 600px)" srcset="assets/workflow-comparison-mobile.svg">
+    <img src="assets/workflow-comparison.svg" width="1280" height="540" alt="Comparison of custom profiling and AgentLoop. Your agent sends captured spans to analysis and replay, then you review metrics, quality results and reports using independent checks.">
+  </picture>
+  <figcaption>You choose and apply the improvement, then compare the captured runs.</figcaption>
+</figure>
+
+<div class="al-start" markdown>
 
 ## Start with your agent
 
