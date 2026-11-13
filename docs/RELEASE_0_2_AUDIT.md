@@ -111,8 +111,9 @@ backends/integrations; CI supplies PostgreSQL and pinned framework coverage.
 
 [Hermes compatibility #314](https://github.com/dipeshbabu/agentloop/pull/314) and
 [SDK package validation #315](https://github.com/dipeshbabu/agentloop/pull/315)
-were squash-merged after their final CI checks passed. The measurement and
-recommendation follow-up retains both instrumentation runs, every timing sample
+were squash-merged after their final CI checks passed. The
+[measurement and recommendation follow-up #316](https://github.com/dipeshbabu/agentloop/pull/316)
+retains both instrumentation runs, every timing sample
 and both detector evaluations. Schema repair now requires a declared cause.
 The public 28-case finding evaluation retains eight correct findings and zero
 false findings on known labels. Unknown and ambiguous labels remain unscored.

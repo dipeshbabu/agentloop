@@ -7,27 +7,6 @@ trace, study, receipt, API and database schema versions.
 
 ## [Unreleased]
 
-### Added
-
-- Counterbalanced offline instrumentation controls retain recording, buffered
-  JSON export and native analysis timings, with independent arithmetic checks,
-  source provenance and failed/cancelled attempts.
-
-### Changed
-
-- Hermes observers accept the 0.23.x hook family. CI exercises pinned Hermes
-  0.22.7 and 0.23.1 hosts with streaming, file tools, retries, cancellation,
-  privacy and delegation. Evidence validation binds each run to one source pin.
-
-### Fixed
-
-- Schema-repair recommendations require a declared structured-output failure,
-  preserving transport, rate-limit and unknown retries in the underlying metrics.
-
-- TypeScript API requests bind fetch to its global receiver so native browser
-  requests work. Installed-tarball checks exercise esbuild and Chromium,
-  including concurrent spans, cancellation, privacy and redirect rejection.
-
 ## [0.2.0] - 2026-11-12
 
 ### Added
@@ -48,10 +27,15 @@ trace, study, receipt, API and database schema versions.
 - Reproducible Hermes v0.22.7 runtime pilot and CI coverage for streamed requests,
   real file tools, retries, interruption, default privacy, and delegated child
   sessions, using an isolated profile and a deterministic local provider.
+- Counterbalanced offline instrumentation controls retain recording, buffered
+  JSON export and native analysis timings, with independent arithmetic checks,
+  source provenance and failed/cancelled attempts.
 
 ### Changed
 
-- Source-exported Hermes observers accept Hermes 0.22.x alongside 0.21.6+.
+- Hermes observers accept `>=0.21.6,<0.24`. CI exercises pinned Hermes 0.22.7 and
+  0.23.1 hosts with streaming, file tools, retries, cancellation, privacy and
+  delegation. Evidence validation binds each run to one source pin.
   Published AgentLoop 0.1.1 retains its original Hermes 0.21.x compatibility range.
 
 ### Fixed
@@ -66,6 +50,11 @@ trace, study, receipt, API and database schema versions.
   the checkout. Local model studies run through an explicit manual CI input.
 - Replay and CI comparisons reject incomplete, interrupted, or failed Hermes
   captures even when their shorter duration appears to improve performance.
+- Schema-repair recommendations require a declared structured-output failure,
+  preserving transport, rate-limit and unknown retries in the underlying metrics.
+- TypeScript API requests bind fetch to its global receiver so native browser
+  requests work. Installed-tarball checks exercise esbuild and Chromium,
+  including concurrent spans, cancellation, privacy and redirect rejection.
 
 ## [0.1.1] - 2026-11-05
 
