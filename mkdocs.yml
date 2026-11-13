@@ -14,7 +14,7 @@ theme:
   logo: assets/agentloop-mark.svg
   favicon: assets/agentloop-mark.svg
   font:
-    text: Source Sans 3
+    text: Inter
     code: JetBrains Mono
   icon:
     repo: fontawesome/brands/github
@@ -52,7 +52,7 @@ hooks:
   - scripts/docs_hooks.py
 
 extra_css:
-  - https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;600;700&display=swap
+  - https://fonts.googleapis.com/css2?family=Inter:wght@800&display=swap
   - stylesheets/agentloop.css
 
 markdown_extensions:
