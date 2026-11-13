@@ -15,6 +15,7 @@ Auxiliary model calls, gateways, and live provider behavior remain outside the p
 | Input | Pin |
 | --- | --- |
 | Hermes | [v0.22.7, `b200f5bc60e31588ba2cb60e288029c4a54ba5fa`](https://github.com/NousResearch/hermes-agent/tree/b200f5bc60e31588ba2cb60e288029c4a54ba5fa) |
+| Hermes compatibility lane | [v0.23.1, `3b421578588243f920886e6fe79a6faa87ea026e`](https://github.com/NousResearch/hermes-agent/tree/3b421578588243f920886e6fe79a6faa87ea026e) |
 | Host dependencies | Upstream `uv.lock`, installed frozen without development extras |
 | Host Python | Stable CPython 3.14; exact patch recorded in each report |
 | Hermes installer | uv 0.13.7, separate from AgentLoop's uv 0.11.28 |
@@ -25,6 +26,13 @@ case. It records the upstream lockfile digest. Generated evidence is marked
 `synthetic: true`; qualification adds provenance metadata without changing events,
 usage, outcomes, timestamps, or durations. The validator checks raw and qualified
 artifact hashes and compares their contents.
+
+Both pinned hosts run every scenario in CI. The runner and validator accept only
+these exact revisions, check the version tag against the recorded revision, and
+reject a collection that mixes host versions. To reproduce the second lane,
+check out `3b421578588243f920886e6fe79a6faa87ea026e` in the commands below and use a
+fresh evidence directory. This compatibility check does not repeat the historical
+local-model optimization study or extend its performance results to a new host.
 
 ## Scenarios and expected evidence
 
@@ -79,4 +87,4 @@ artifacts, excluding profile databases, caches, and installed dependencies.
 
 This compatibility extension and incomplete-capture replay fix are **unreleased**.
 The immutable PyPI 0.1.1 release accepts Hermes `>=0.21.6,<0.22`; use current source
-for this pilot and Hermes 0.22.x. See [the integration guide](HERMES.md).
+for this pilot and Hermes 0.22.x/0.23.x. See [the integration guide](HERMES.md).

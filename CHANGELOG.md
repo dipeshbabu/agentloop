@@ -7,6 +7,12 @@ trace, study, receipt, API and database schema versions.
 
 ## [Unreleased]
 
+### Changed
+
+- Hermes observers accept the 0.23.x hook family. CI exercises pinned Hermes
+  0.22.7 and 0.23.1 hosts with streaming, file tools, retries, cancellation,
+  privacy and delegation. Evidence validation binds each run to one source pin.
+
 ## [0.2.0] - 2026-11-12
 
 ### Added
