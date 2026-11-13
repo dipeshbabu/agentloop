@@ -325,7 +325,8 @@ def test_plugin_export_refuses_existing_directory(tmp_path):
 
 
 @pytest.mark.parametrize(
-    "version,supported", [("0.21.6", True), ("0.22.7", True), ("0.21.5", False), ("0.23.0", False)]
+    "version,supported",
+    [("0.21.6", True), ("0.22.7", True), ("0.23.1", True), ("0.21.5", False), ("0.24.0", False)],
 )
 def test_plugin_manifest_keeps_supported_hook_families_bounded(tmp_path, version, supported):
     plugin = export_hermes_plugin(tmp_path / "plugin")

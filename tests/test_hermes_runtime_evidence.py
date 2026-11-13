@@ -6,8 +6,8 @@ import json
 import pytest
 
 from agentloop.tracer import AgentTrace
-from scripts.smoke_hermes_runtime import address_allowed
-from scripts.validate_hermes_runtime import REVISION, artifact_bytes, qualified_trace
+from scripts.smoke_hermes_runtime import HERMES_REVISIONS, address_allowed
+from scripts.validate_hermes_runtime import REVISION, REVISIONS, artifact_bytes, qualified_trace
 
 
 @pytest.fixture
@@ -34,6 +34,27 @@ def test_runtime_qualification_preserves_evidence(evidence):
     root, artifact = evidence
     trace = qualified_trace(root, artifact, "stream")
     assert trace.metadata["synthetic"] is True
+
+
+def test_runtime_pins_match_the_validator():
+    assert HERMES_REVISIONS == REVISIONS
+
+
+@pytest.mark.parametrize("revision", REVISIONS)
+def test_runtime_qualification_accepts_only_the_declared_pin(evidence, revision):
+    root, artifact = evidence
+    native = json.loads((root / "native.json").read_bytes())
+    native["metadata"]["pilot"]["hermes_revision"] = revision
+    content = json.dumps(native).encode()
+    (root / "native.json").write_bytes(content)
+    artifact["native_sha256"] = hashlib.sha256(content).hexdigest()
+    trace = qualified_trace(root, artifact, "stream", revision=revision)
+    assert trace.metadata["pilot"]["hermes_revision"] == revision
+    other = next(value for value in REVISIONS if value != revision)
+    with pytest.raises(ValueError, match="changed captured evidence"):
+        qualified_trace(root, artifact, "stream", revision=other)
+    with pytest.raises(ValueError, match="Wrong Hermes source revision"):
+        qualified_trace(root, artifact, "stream", revision="unknown")
 
 
 def test_runtime_evidence_rejects_changed_bytes(evidence):

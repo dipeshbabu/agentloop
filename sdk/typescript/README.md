@@ -6,8 +6,12 @@ dependencies. Its API client uses `fetch`; its tracer uses explicit contexts to
 keep concurrent work separate.
 
 CI covers Node.js 22 and 24, including installed-tarball API interoperability.
-The implementation uses standard Web APIs, but browser and bundler matrices have
-not been validated. CommonJS `require()` is not an advertised entry point.
+It also installs the tarball into a fresh application, bundles both public entry
+points with esbuild 0.28.2, and runs an offline fixture in Playwright Chromium.
+That browser check covers concurrent spans, private errors, unknown usage,
+same-origin requests, cancellation, redirect rejection and Python trace parsing.
+Firefox, Safari, other bundlers and cross-origin API deployments need separate
+validation. CommonJS `require()` is not an advertised entry point.
 
 This SDK is available from the AgentLoop source checkout. It has not been
 published to npm. Build and install a local package:
@@ -158,10 +162,19 @@ and [trace compatibility](https://github.com/dipeshbabu/agentloop/blob/main/docs
 npm ci --prefix sdk/typescript
 npm run build --prefix sdk/typescript
 npm test --prefix sdk/typescript
+npx --prefix sdk/typescript playwright install chromium
+npm run test:browser --prefix sdk/typescript
 ```
 
 CI checks supported Node versions, the packed installation, Python schema/HTML
 interoperability, and a local authenticated API round trip. These checks make no
 paid provider calls.
+
+The browser smoke writes `trace.json` and `summary.json` to its printed output
+directory. Pass a fresh absolute directory after `--` to retain them elsewhere.
+Set `AGENTLOOP_BROWSER_CHANNEL=chrome` to use an already installed Chrome for
+local checks. CI uses the Chromium revision pinned by Playwright 1.65.0. The
+HTTP fixture is local and synthetic. Browser credentials remain subject to the
+application's own trust and CORS configuration.
 
 Copyright 2026 Dipesh Tharu Mahato. Licensed under [Apache-2.0](LICENSE).

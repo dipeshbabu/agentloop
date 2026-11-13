@@ -25,6 +25,10 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 HERMES_REVISION = "b200f5bc60e31588ba2cb60e288029c4a54ba5fa"
+HERMES_REVISIONS = {
+    HERMES_REVISION: "v0.22.7",
+    "3b421578588243f920886e6fe79a6faa87ea026e": "v0.23.1",
+}
 MODEL = "agentloop-local-pilot"
 KEY = "local-pilot-key"
 ANSWER = "AGENTLOOP_RUNTIME_PILOT_OK"
@@ -63,13 +67,14 @@ def source_info(repository: Path) -> dict:
             timeout=90,
         ).strip()
 
-    require(git("rev-parse", "HEAD") == HERMES_REVISION, "Use the pinned Hermes v0.22.7 checkout")
+    revision = git("rev-parse", "HEAD")
+    require(revision in HERMES_REVISIONS, "Use a pinned Hermes v0.22.7 or v0.23.1 checkout")
     require(
         not git("status", "--porcelain", "--untracked-files=no"), "Pinned Hermes source changed"
     )
     return {
-        "revision": HERMES_REVISION,
-        "tag": "v0.22.7",
+        "revision": revision,
+        "tag": HERMES_REVISIONS[revision],
         "lock_sha256": sha256(repository / "uv.lock"),
     }
 
@@ -547,7 +552,7 @@ def run_case(plugin: Path, repository: Path, output: Path, scenario: str) -> dic
                 "pilot": {
                     "scenario": scenario,
                     "synthetic_provider": True,
-                    "hermes_revision": HERMES_REVISION,
+                    "hermes_revision": host["revision"],
                 },
             }
         )

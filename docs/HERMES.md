@@ -13,11 +13,11 @@ The published release's tested hook contract is Hermes **0.21.6**, revision
 | AgentLoop distribution | Accepted Hermes versions | Validation |
 | --- | --- | --- |
 | Published 0.1.1 | `>=0.21.6,<0.22` | 0.21.6 hook contract and standalone plugin tests |
-| Current source, unreleased | `>=0.21.6,<0.23` | Also real v0.22.7 runtime dispatch with a local deterministic provider |
+| Current source, preparing 0.2.0 | `>=0.21.6,<0.24` | Also real v0.22.7 and v0.23.1 runtime dispatch with a local deterministic provider |
 
-For Hermes 0.22.x, install the current repository source and export its plugin
-until the next Python release. A source checkout still reports package version
-0.1.1; use the source commit to identify these unreleased changes. See the
+For Hermes 0.22.x or 0.23.x, install the current repository source and export its
+plugin until the next Python release. The prepared source reports package version
+0.2.0; use the source commit to identify its exact contents. See the
 [runtime pilot](HERMES_RUNTIME_PILOT.md) for exact pins, reproduction commands,
 and the limits of this evidence.
 

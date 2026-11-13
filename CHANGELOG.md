@@ -13,10 +13,20 @@ trace, study, receipt, API and database schema versions.
   JSON export and native analysis timings, with independent arithmetic checks,
   source provenance and failed/cancelled attempts.
 
+### Changed
+
+- Hermes observers accept the 0.23.x hook family. CI exercises pinned Hermes
+  0.22.7 and 0.23.1 hosts with streaming, file tools, retries, cancellation,
+  privacy and delegation. Evidence validation binds each run to one source pin.
+
 ### Fixed
 
 - Schema-repair recommendations require a declared structured-output failure,
   preserving transport, rate-limit and unknown retries in the underlying metrics.
+
+- TypeScript API requests bind fetch to its global receiver so native browser
+  requests work. Installed-tarball checks exercise esbuild and Chromium,
+  including concurrent spans, cancellation, privacy and redirect rejection.
 
 ## [0.2.0] - 2026-11-12
 

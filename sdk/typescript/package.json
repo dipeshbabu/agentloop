@@ -6,22 +6,48 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
-    ".": {"types": "./dist/index.d.ts", "import": "./dist/index.js"},
-    "./client": {"types": "./dist/client.d.ts", "import": "./dist/client.js"}
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "import": "./dist/client.js"
+    }
   },
-  "files": ["dist", "src", "README.md", "LICENSE"],
-  "engines": {"node": ">=22"},
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
   "license": "Apache-2.0",
   "author": "Dipesh Tharu Mahato",
   "homepage": "https://github.com/dipeshbabu/agentloop/tree/main/sdk/typescript",
-  "bugs": {"url": "https://github.com/dipeshbabu/agentloop/issues"},
-  "publishConfig": {"access": "public"},
-  "repository": {"type": "git", "url": "https://github.com/dipeshbabu/agentloop.git", "directory": "sdk/typescript"},
+  "bugs": {
+    "url": "https://github.com/dipeshbabu/agentloop/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dipeshbabu/agentloop.git",
+    "directory": "sdk/typescript"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "node --test test/*.test.mjs",
     "test:types": "tsc -p tsconfig.test.json",
+    "test:browser": "node test/smoke-browser.mjs",
     "prepack": "npm run build"
   },
-  "devDependencies": {"typescript": "7.0.2"}
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "playwright": "1.65.0",
+    "typescript": "7.0.2"
+  }
 }

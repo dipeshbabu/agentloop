@@ -59,8 +59,9 @@ export class AgentLoopClient {
     this.#timeout = positive(options.timeoutMs ?? 10000, "timeoutMs");
     if (this.#timeout > 2147483647) throw new TypeError("timeoutMs exceeds the supported timer range");
     this.#maxBytes = positive(options.maxResponseBytes ?? 16 * 1024 * 1024, "maxResponseBytes");
-    this.#fetch = options.fetch ?? globalThis.fetch;
-    if (typeof this.#fetch !== "function") throw new TypeError("A fetch implementation is required");
+    const fetch = options.fetch ?? globalThis.fetch;
+    if (typeof fetch !== "function") throw new TypeError("A fetch implementation is required");
+    this.#fetch = fetch.bind(globalThis);
   }
 
   async #request(method: string, path: string, payload?: JsonValue, options: RequestOptions = {}, scope: "project" | "admin" = "project"): Promise<JsonObject> {
