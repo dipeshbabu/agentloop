@@ -36,6 +36,7 @@ def all_rules_trace():
                 output_tokens=4000 if name == "synthesize" else (100 if tokens else 0),
                 input_text="shared context " * 200 if tokens else None,
                 token_provenance="user_supplied" if tokens else None,
+                metadata={"retry_reason": "invalid_output_schema"} if kind == "retry" else {},
             )
         )
     trace.ended_at = (start + timedelta(milliseconds=5000)).isoformat()

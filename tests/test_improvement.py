@@ -25,7 +25,7 @@ trace=AgentTrace("owned test worker",metadata={"synthetic":True,"output":request
 time.sleep(0.05 if mode == "baseline" else 0.001)
 trace.finish()
 if mode == "baseline":
-    trace.add_event(AgentEvent(event_id="retry",run_id=trace.run_id,event_type="retry",name="repair_format",started_at=trace.started_at,ended_at=trace.ended_at,duration_ms=trace.elapsed_ms))
+    trace.add_event(AgentEvent(event_id="retry",run_id=trace.run_id,event_type="retry",name="repair_format",started_at=trace.started_at,ended_at=trace.ended_at,duration_ms=trace.elapsed_ms,metadata={"retry_reason":"invalid_output_schema"}))
 trace.export_json(request["trace_path"])
 if mode == "failure":
     raise SystemExit(1)
