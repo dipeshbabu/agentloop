@@ -59,13 +59,13 @@ footer{margin-top:45px;padding-top:16px;border-top:1px solid var(--line);font-si
   &quot;selection_optimal&quot;: true
 }</pre></details></article>
 <p>Investigation order: priority. Readiness and missing inputs are separate from estimated savings; ranking does not authorize a change.</p>
-<article class="prediction" id="finding-0"><span class="badge">inferred evidence</span><span class="badge">high confidence</span><h3>Reduce retry loop with structured outputs</h3><p>Observed 6 retry span(s), costing 0.36s.</p><dl><dt>Investigation priority</dt><dd>1</dd><dt>Test readiness</dt><dd>needs evidence or review</dd><dt>Why</dt><dd>cost opportunity unavailable; evidence weak or unknown; missing input:quality risk; missing input:reversible; missing input:validation cost usd; missing input:validation effort minutes</dd></dl><details><summary>Ranking components, input references and ordering</summary><pre>{
+<article class="prediction" id="finding-0"><span class="badge">inferred evidence</span><span class="badge">medium confidence</span><h3>Reduce retry loop with structured outputs</h3><p>Observed 6 retry span(s) with declared schema failures, costing 0.36s.</p><dl><dt>Investigation priority</dt><dd>1</dd><dt>Test readiness</dt><dd>needs evidence or review</dd><dt>Why</dt><dd>cost opportunity unavailable; evidence weak or unknown; missing input:quality risk; missing input:reversible; missing input:validation cost usd; missing input:validation effort minutes</dd></dl><details><summary>Ranking components, input references and ordering</summary><pre>{
   &quot;automatic_application_allowed&quot;: false,
   &quot;components&quot;: {
     &quot;confidence&quot;: {
       &quot;kind&quot;: &quot;declared&quot;,
-      &quot;source_ref&quot;: &quot;rule:add_schema_validation:1.1&quot;,
-      &quot;value&quot;: &quot;high&quot;
+      &quot;source_ref&quot;: &quot;rule:add_schema_validation:1.2&quot;,
+      &quot;value&quot;: &quot;medium&quot;
     },
     &quot;cost&quot;: {
       &quot;kind&quot;: &quot;estimated&quot;,
@@ -161,7 +161,7 @@ footer{margin-top:45px;padding-top:16px;border-top:1px solid var(--line);font-si
     &quot;Added validation overhead is smaller than avoided retry time.&quot;
   ],
   &quot;calibrated&quot;: false,
-  &quot;confidence&quot;: &quot;high&quot;,
+  &quot;confidence&quot;: &quot;medium&quot;,
   &quot;estimator_id&quot;: &quot;add_schema_validation&quot;,
   &quot;estimator_version&quot;: &quot;1.0&quot;,
   &quot;formula&quot;: &quot;sum_duration_ms * latency_fraction&quot;,

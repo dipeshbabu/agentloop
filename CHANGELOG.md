@@ -7,6 +7,12 @@ trace, study, receipt, API and database schema versions.
 
 ## [Unreleased]
 
+### Added
+
+- Counterbalanced offline instrumentation controls retain recording, buffered
+  JSON export and native analysis timings, with independent arithmetic checks,
+  source provenance and failed/cancelled attempts.
+
 ### Changed
 
 - Hermes observers accept the 0.23.x hook family. CI exercises pinned Hermes
@@ -14,6 +20,9 @@ trace, study, receipt, API and database schema versions.
   privacy and delegation. Evidence validation binds each run to one source pin.
 
 ### Fixed
+
+- Schema-repair recommendations require a declared structured-output failure,
+  preserving transport, rate-limit and unknown retries in the underlying metrics.
 
 - TypeScript API requests bind fetch to its global receiver so native browser
   requests work. Installed-tarball checks exercise esbuild and Chromium,

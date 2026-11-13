@@ -93,6 +93,14 @@ The initial baseline deliberately retains two known false positives:
 - `add_schema_validation` recommends schema repair for a transport timeout.
 - `batch_model_calls` recommends batching a same-role sequence with dependencies.
 
+Current rules exclude both cases. Batching version 1.2 respects causal
+dependencies, and schema repair version 1.2 requires a declared structured-output
+failure. The archived initial baseline stays available for regression comparisons.
+After these corrections, the current 28-case fixture evaluation retains eight
+correct findings and zero false findings on its known labels. Its unknown and
+ambiguous cases remain unscored, and its public labels have informed development.
+Independent application-owned labels are still needed to estimate field accuracy.
+
 Each rule has one correct and one false finding in its two-case evaluation
 subset. That 0.5 precision is a diagnostic of these fixtures, not a population
 estimate. The missing-timing parallelization case is unscored and remains

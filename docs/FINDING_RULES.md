@@ -27,6 +27,20 @@ registry as a fallback. Diagnosis, patch planning, CLI, dashboard, API, and CI
 therefore use the same finding types and wording. For example, report context
 caching now uses the optimizer's title, `Cache repeated prompt/context prefix`.
 
+## Schema repair eligibility
+
+`add_schema_validation` version `1.2` requires a retry span with explicit
+`retry_reason: invalid_output_schema` or `reason: schema_validation_failed`
+metadata. The more specific `retry_reason` field takes precedence when both
+are present. Transport failures, rate limits and missing or unknown causes
+remain visible in retry counts and durations. Schema recommendations and their
+heuristic savings cover only the spans with declared schema failures.
+
+These declarations identify the recorded cause. The recommendation retains
+medium confidence, and correctness must be verified using the developer's
+independent task checks. Existing traces remain readable. Older traces with
+unclassified retry spans can produce fewer schema-repair recommendations.
+
 ## Batching eligibility
 
 `batch_model_calls` version `1.2` groups at least three calls with the same name,

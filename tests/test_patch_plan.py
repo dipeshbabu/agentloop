@@ -33,7 +33,7 @@ def plan():
             pass
         with trace_model_call("plan", input_text=repeated, output_tokens=1):
             pass
-        with trace_retry("repair_json"):
+        with trace_retry("repair_json", metadata={"retry_reason": "invalid_output_schema"}):
             pass
 
     plan = build_patch_plan(trace, repo_path=repo, allowed_root=tmp_path)
