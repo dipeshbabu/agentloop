@@ -40,7 +40,8 @@ This example runs locally with synthetic data.
 <figure class="al-workflow">
   <picture>
     <source media="(max-width: 600px)" srcset="assets/workflow-comparison-mobile.svg">
-    <img src="assets/workflow-comparison.svg" width="1280" height="540" alt="Comparison of custom profiling and AgentLoop. Your agent sends captured spans to analysis and replay, then you review metrics, quality results and reports using independent checks.">
+    <source media="(prefers-reduced-motion: reduce)" srcset="assets/workflow-comparison.svg">
+    <img src="assets/workflow-comparison.gif" width="100%" alt="Without AgentLoop, application-specific timers, usage parsing, retry analysis, and output checks produce separate reports. AgentLoop combines captured execution evidence into tracing, analysis, and replay reports.">
   </picture>
   <figcaption>You choose and apply the improvement, then compare the captured runs.</figcaption>
 </figure>
