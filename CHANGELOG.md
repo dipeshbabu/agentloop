@@ -7,6 +7,17 @@ trace, study, receipt, API and database schema versions.
 
 ## [Unreleased]
 
+### Added
+
+- Counterbalanced offline instrumentation controls retain recording, buffered
+  JSON export and native analysis timings, with independent arithmetic checks,
+  source provenance and failed/cancelled attempts.
+
+### Fixed
+
+- Schema-repair recommendations require a declared structured-output failure,
+  preserving transport, rate-limit and unknown retries in the underlying metrics.
+
 ## [0.2.0] - 2026-11-12
 
 ### Added

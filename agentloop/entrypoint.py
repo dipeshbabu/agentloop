@@ -51,6 +51,7 @@ def _quickstart_trace() -> AgentTrace:
         trace.add_event(
             AgentEvent(
                 event_id=f"evt_quickstart_{index:02d}",
+                metadata={"retry_reason": "invalid_output_schema"} if event_type == "retry" else {},
                 run_id=run_id,
                 event_type=event_type,
                 name=name,

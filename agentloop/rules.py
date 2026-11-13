@@ -212,7 +212,14 @@ def _context_cache_cards(report: dict[str, Any], graph: ExecutionGraph) -> list[
 
 
 def _retry_cards(graph: ExecutionGraph) -> list[FindingCandidate]:
-    retry_nodes = [node for node in graph.nodes if node.operation_kind == "retry"]
+    retry_nodes = [
+        node
+        for node in graph.nodes
+        if node.operation_kind == "retry"
+        and isinstance(node.metadata, Mapping)
+        and node.metadata.get("retry_reason", node.metadata.get("reason"))
+        in ("invalid_output_schema", "schema_validation_failed")
+    ]
     if not retry_nodes:
         return []
     retry_time = sum(node.duration_ms for node in retry_nodes)
@@ -220,9 +227,9 @@ def _retry_cards(graph: ExecutionGraph) -> list[FindingCandidate]:
         FindingCandidate(
             type=RecommendationType.ADD_SCHEMA_VALIDATION,
             title="Reduce retry loop with structured outputs",
-            why=f"Observed {len(retry_nodes)} retry span(s), costing {retry_time / 1000:.2f}s.",
+            why=f"Observed {len(retry_nodes)} retry span(s) with declared schema failures, costing {retry_time / 1000:.2f}s.",
             rewrite_hint="Add schema validation, JSON mode, constrained decoding, or a cheap repair prompt before rerunning a full step.",
-            confidence="high",
+            confidence="medium",
             estimated_latency_savings_ms=retry_time
             * ESTIMATORS["add_schema_validation"].parameter("latency_fraction"),
             affected_nodes=[node.node_id for node in retry_nodes],
@@ -378,7 +385,7 @@ def _semantic_cards(context, family):
 BUILTIN_RULES = (
     FindingRule("parallelize_tools", "1.1", lambda ctx: _parallelization_cards(ctx.graph)),
     FindingRule("cache_context", "1.1", lambda ctx: _context_cache_cards(ctx.report, ctx.graph)),
-    FindingRule("add_schema_validation", "1.1", lambda ctx: _retry_cards(ctx.graph)),
+    FindingRule("add_schema_validation", "1.2", lambda ctx: _retry_cards(ctx.graph)),
     FindingRule("batch_model_calls", "1.2", lambda ctx: _batch_model_cards(ctx.graph)),
     FindingRule("route_to_smaller_model", "1.2", lambda ctx: _routing_cards(ctx.graph)),
     FindingRule("split_large_step", "1.1", lambda ctx: _split_large_step_cards(ctx.graph)),
