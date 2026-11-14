@@ -170,6 +170,18 @@ def _metric(summary, name):
     return f"{value:.3f}" if isinstance(value, float) else str(value)
 
 
+def _basis(report):
+    if report.get("comparison_baseline") == "interleaved_control":
+        return (
+            "Measurements compare the candidate with an unchanged control captured in "
+            "alternating order. Findings remain frozen from the original baseline."
+        )
+    return (
+        "Measurements compare the candidate with the frozen baseline captured before "
+        "the change. Run order is not counterbalanced."
+    )
+
+
 def report_markdown(report):
     lines = [
         f"# {markdown_heading(report['name'])}",
@@ -183,6 +195,8 @@ def report_markdown(report):
         "Applied change",
         "",
         markdown_text(report["change"]),
+        "",
+        _basis(report),
         "",
     ]
     if report["synthetic"]:
@@ -248,6 +262,7 @@ def export_report(root, report):
     sections = [
         f"<header><h1>{_text(report['name'])}</h1><p>{report['passed_attempts']} of {report['planned_attempts']} planned attempts passed.</p></header>",
         f"<h2>Applied change</h2><p>{_text(report['change'])}</p>",
+        f"<p>{_text(_basis(report))}</p>",
     ]
     if report["synthetic"]:
         sections.append(

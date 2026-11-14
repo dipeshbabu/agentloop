@@ -185,33 +185,21 @@ def _invoke(command, request, timeout, *, show_output=False):
         raise
 
 
-def capture(workload_path, root, command, *, timeout=180, show_output=False):
-    workload = read_workload(workload_path)
-    require(
-        command and all(isinstance(arg, str) and arg for arg in command),
-        "Supply an explicit runner command after --",
-    )
-    require(
-        type(timeout) in (int, float) and math.isfinite(timeout) and 0 < timeout <= 3600,
-        "Task timeout must be positive and at most 3600 seconds",
-    )
-    root = Path(root).resolve()
-    root.mkdir(parents=True, exist_ok=False)
-    write_once(root, "workload.json", workload)
+CONTROL_CAPTURE = "control/capture.json"
+
+
+def _new_manifest(workload, command):
     scripts = [
         {"argument_index": index, "sha256": hashlib.sha256(Path(argument).read_bytes()).hexdigest()}
         for index, argument in enumerate(command)
         if Path(argument).suffix in {".py", ".js", ".mjs", ".ts"} and Path(argument).is_file()
     ]
-    manifest = {
+    return {
         "schema_version": VERSION,
         "created_at": now(),
         "workload_hash": fingerprint(workload),
         "runner_hash": fingerprint({"argv": command, "scripts": scripts}),
-        "runs": [],
-    }
-    for index, (task, repetition) in enumerate(slots(workload)):
-        manifest["runs"].append(
+        "runs": [
             {
                 "task_id": task["id"],
                 "repetition": repetition,
@@ -220,46 +208,104 @@ def capture(workload_path, root, command, *, timeout=180, show_output=False):
                 "trace": None,
                 "trace_sha256": None,
             }
-        )
+            for task, repetition in slots(workload)
+        ],
+    }
+
+
+def _attempt(root, index, row, task, command, timeout, show_output):
+    relative = f"traces/{index:04d}.json"
+    path = local_path(root, relative)
+    path.parent.mkdir(exist_ok=True)
+    request = {
+        "task_id": row["task_id"],
+        "repetition": row["repetition"],
+        "input": task["input"],
+        "trace_path": str(path),
+    }
+    row["started_at"] = now()
+    try:
+        row.update(_invoke(command, request, timeout, show_output=show_output))
+    except KeyboardInterrupt:
+        row["status"] = "cancelled"
+        raise
+    finally:
+        row["ended_at"] = now()
+        if path.exists():
+            try:
+                _, digest = trace_receipt(root, relative)
+                row.update(trace=relative, trace_sha256=digest)
+            except (ValueError, OSError, TypeError, KeyError, AttributeError) as error:
+                # Keep the more specific failed, timed-out or cancelled outcome.
+                if row["status"] == "completed":
+                    row["status"] = "invalid_trace"
+                row["diagnostic"] = (
+                    (row.get("diagnostic") or "")
+                    + f" Trace {relative} is invalid: {error}. Export a finalized native trace to request['trace_path']."
+                )
+        elif row["status"] == "completed":
+            row["status"] = "missing_trace"
+            row["diagnostic"] = (
+                "Runner exited successfully without a trace. Export the finalized trace to request['trace_path']."
+            )
+        write_once(root, f"receipts/{index:04d}.json", row)
+
+
+def capture(workload_path, root, command, *, timeout=180, show_output=False, control=None):
+    """Run every planned attempt, optionally alternating with an unchanged control.
+
+    With ``control``, each task attempt runs both the control and the candidate
+    back to back, and the condition that goes first alternates between attempts.
+    Cache warm-up, host load and other drift then affect both conditions instead
+    of favouring whichever condition ran later.
+    """
+    workload = read_workload(workload_path)
+    require(
+        command and all(isinstance(arg, str) and arg for arg in command),
+        "Supply an explicit runner command after --",
+    )
+    require(
+        control is None or (control and all(isinstance(arg, str) and arg for arg in control)),
+        "Supply the unchanged control runner as repeated --control-arg values",
+    )
+    require(
+        type(timeout) in (int, float) and math.isfinite(timeout) and 0 < timeout <= 3600,
+        "Task timeout must be positive and at most 3600 seconds",
+    )
+    root = Path(root).resolve()
+    root.mkdir(parents=True, exist_ok=False)
+    write_once(root, "workload.json", workload)
+    manifest = _new_manifest(workload, command)
+    conditions = [(root, manifest, command)]
+    control_manifest = None
+    if control is not None:
+        control_root = local_path(root, "control")
+        control_root.mkdir()
+        write_once(control_root, "workload.json", workload)
+        control_manifest = _new_manifest(workload, control)
+        control_manifest["schedule"] = {"mode": "interleaved", "role": "control"}
+        manifest["schedule"] = {
+            "mode": "interleaved",
+            "role": "candidate",
+            "pattern": "Control runs first on even attempt indexes and second on odd ones",
+        }
+        conditions.append((control_root, control_manifest, control))
     try:
         for index, row in enumerate(manifest["runs"]):
             task = next(task for task in workload["tasks"] if task["id"] == row["task_id"])
-            relative = f"traces/{index:04d}.json"
-            path = local_path(root, relative)
-            path.parent.mkdir(exist_ok=True)
-            request = {
-                "task_id": row["task_id"],
-                "repetition": row["repetition"],
-                "input": task["input"],
-                "trace_path": str(path),
-            }
-            row["started_at"] = now()
-            try:
-                row.update(_invoke(command, request, timeout, show_output=show_output))
-            except KeyboardInterrupt:
-                row["status"] = "cancelled"
-                raise
-            finally:
-                row["ended_at"] = now()
-                if path.exists():
-                    try:
-                        _, digest = trace_receipt(root, relative)
-                        row.update(trace=relative, trace_sha256=digest)
-                    except (ValueError, OSError, TypeError, KeyError, AttributeError) as error:
-                        # Keep the more specific failed, timed-out or cancelled outcome.
-                        if row["status"] == "completed":
-                            row["status"] = "invalid_trace"
-                        row["diagnostic"] = (
-                            (row.get("diagnostic") or "")
-                            + f" Trace {relative} is invalid: {error}. Export a finalized native trace to request['trace_path']."
-                        )
-                elif row["status"] == "completed":
-                    row["status"] = "missing_trace"
-                    row["diagnostic"] = (
-                        "Runner exited successfully without a trace. Export the finalized trace to request['trace_path']."
-                    )
-                write_once(root, f"receipts/{index:04d}.json", row)
+            order = conditions if index % 2 else conditions[::-1]
+            for position, (condition_root, condition, argv) in enumerate(order):
+                attempt = condition["runs"][index]
+                if control is not None:
+                    attempt["order"] = position
+                _attempt(condition_root, index, attempt, task, argv, timeout, show_output)
     finally:
+        if control_manifest is not None:
+            write_once(root, CONTROL_CAPTURE, control_manifest)
+            manifest["control"] = {
+                "capture": CONTROL_CAPTURE,
+                "manifest_hash": fingerprint(control_manifest),
+            }
         write_once(root, "capture.json", manifest)
     return manifest
 
@@ -472,10 +518,31 @@ def finish(session_path, candidate_path, root, *, change):
             )
             baseline_ids.add(trace.run_id)
             baselines[key] = trace
+    candidate_ids = {trace.run_id for trace in candidates.values()}
     require(
-        not baseline_ids.intersection(trace.run_id for trace in candidates.values()),
+        not baseline_ids.intersection(candidate_ids),
         "Baseline and candidate must have distinct run IDs",
     )
+    controls = control_manifest = None
+    if "control" in candidate_manifest:
+        reference = candidate_manifest["control"]
+        require(
+            isinstance(reference, dict) and reference.get("capture") == CONTROL_CAPTURE,
+            "Invalid interleaved control reference",
+        )
+        control_manifest, controls = read_capture(
+            Path(candidate_path).resolve().parent / CONTROL_CAPTURE, workload
+        )
+        require(
+            fingerprint(control_manifest) == reference.get("manifest_hash"),
+            "Interleaved control capture changed",
+        )
+        require(
+            not (baseline_ids | candidate_ids).intersection(
+                trace.run_id for trace in controls.values()
+            ),
+            "Control, baseline and candidate must have distinct run IDs",
+        )
     gates = ReplayGates(**specification["gates"])
     root = Path(root).resolve()
     root.mkdir(parents=True, exist_ok=False)
@@ -483,14 +550,40 @@ def finish(session_path, candidate_path, root, *, change):
     for index, case in enumerate(specification["cases"]):
         key = (case["task_id"], case["repetition"])
         task = next(task for task in workload["tasks"] if task["id"] == key[0])
-        baseline, candidate = baselines.get(key), candidates.get(key)
+        candidate = candidates.get(key)
         candidate_row = next(
             row for row in candidate_manifest["runs"] if (row["task_id"], row["repetition"]) == key
         )
+        if controls is None:
+            label, baseline = "Baseline", baselines.get(key)
+            baseline_status = case["capture_status"]
+            baseline_diagnostic = case.get("capture_diagnostic")
+            diagnosis, finding_ids = case["diagnosis"], case["finding_ids"]
+        else:
+            # Findings stay frozen from the original baseline. Measurements compare
+            # the candidate with the unchanged control run alongside it.
+            label, baseline = "Control", controls.get(key)
+            control_row = next(
+                row
+                for row in control_manifest["runs"]
+                if (row["task_id"], row["repetition"]) == key
+            )
+            baseline_status = control_row["status"]
+            baseline_diagnostic = control_row.get("diagnostic")
+            diagnosis = build_diagnosis(baseline) if baseline is not None else None
+            finding_ids = (
+                [
+                    finding["finding_id"]
+                    for finding in diagnosis["findings"]
+                    if finding["type"] == specification["focus"]
+                ]
+                if diagnosis and case["finding_ids"]
+                else []
+            )
         row = {
             "task_id": key[0],
             "repetition": key[1],
-            "baseline_status": case["capture_status"],
+            "baseline_status": baseline_status,
             "candidate_status": candidate_row["status"],
             "passed": False,
             "reasons": [],
@@ -498,10 +591,15 @@ def finish(session_path, candidate_path, root, *, change):
             "replay": None,
             "intervention": None,
         }
+        if controls is not None:
+            row.update(
+                frozen_baseline_status=case["capture_status"],
+                control_ran_first=control_row.get("order") == 0,
+            )
         if baseline is None or candidate is None:
-            row["reasons"].append("A planned baseline or candidate trace is unavailable")
+            row["reasons"].append(f"A planned {label.lower()} or candidate trace is unavailable")
             for side, status, diagnostic in (
-                ("Baseline", case["capture_status"], case.get("capture_diagnostic")),
+                (label, baseline_status, baseline_diagnostic),
                 ("Candidate", candidate_row["status"], candidate_row.get("diagnostic")),
             ):
                 if status != "completed":
@@ -512,7 +610,7 @@ def finish(session_path, candidate_path, root, *, change):
             quality = _quality(task, baseline, candidate)
             replay = build_replay_report(baseline, candidate, gates=gates, quality_report=quality)
             if (
-                case["capture_status"] != "completed"
+                baseline_status != "completed"
                 or candidate_row["status"] != "completed"
                 or not all(_trace_usable(trace) for trace in (baseline, candidate))
             ):
@@ -523,13 +621,13 @@ def finish(session_path, candidate_path, root, *, change):
                 for side in ("baseline", "candidate")
             ):
                 row["reasons"].append(
-                    "Baseline and candidate must both pass the declared quality checks"
+                    f"{label} and candidate must both pass the declared quality checks"
                 )
                 for result in quality["cases"]:
                     for side in ("baseline", "candidate"):
                         if not result[side]["passed"]:
                             row["reasons"].append(
-                                f"{side.title()} answer failed the declared {task.get('scorer', {}).get('type', 'exact_match')} criterion: {result[side]['detail']}"
+                                f"{label if side == 'baseline' else 'Candidate'} answer failed the declared {task.get('scorer', {}).get('type', 'exact_match')} criterion: {result[side]['detail']}"
                             )
             if not replay["gates"]["passed"]:
                 row["reasons"].append("Native replay gates failed")
@@ -538,7 +636,7 @@ def finish(session_path, candidate_path, root, *, change):
                     for gate in replay["gates"]["results"]
                     if not gate["passed"]
                 )
-            if not case["diagnosis"].get("analysis_complete", True) or not candidate.report().get(
+            if not diagnosis.get("analysis_complete", True) or not candidate.report().get(
                 "analysis_complete", True
             ):
                 row["reasons"].append("Finding analysis is incomplete")
@@ -567,14 +665,14 @@ def finish(session_path, candidate_path, root, *, change):
                 cost_evaluable=replay["gates"]["cost_evaluable"],
                 pricing_known=replay["gates"]["pricing_known"],
             )
-            if case["finding_ids"]:
+            if finding_ids:
                 record = build_intervention(
                     baseline,
                     candidate,
-                    target_finding_ids=case["finding_ids"],
+                    target_finding_ids=finding_ids,
                     intervention_type=specification["focus"],
                     configuration={"change": change},
-                    diagnosis=case["diagnosis"],
+                    diagnosis=diagnosis,
                     gates=gates,
                     quality_report=quality,
                     replay_report=replay,
@@ -626,12 +724,19 @@ def finish(session_path, candidate_path, root, *, change):
         "candidate_capture_hash": fingerprint(candidate_manifest),
         "baseline_runner_hash": specification["baseline_capture"].get("runner_hash"),
         "candidate_runner_hash": candidate_manifest.get("runner_hash"),
+        "comparison_baseline": "frozen_baseline" if controls is None else "interleaved_control",
+        "control_capture_hash": None if controls is None else fingerprint(control_manifest),
+        "control_runner_hash": None if controls is None else control_manifest.get("runner_hash"),
         "planned_attempts": len(rows),
         "passed_attempts": sum(row["passed"] for row in rows),
         "passed": all(row["passed"] for row in rows),
         "synthetic": any(
             trace.metadata.get("synthetic") is True
-            for trace in [*baselines.values(), *candidates.values()]
+            for trace in [
+                *baselines.values(),
+                *candidates.values(),
+                *(controls or {}).values(),
+            ]
         ),
         "cases": rows,
         "study": study,

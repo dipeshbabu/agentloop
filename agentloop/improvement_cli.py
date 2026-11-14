@@ -49,6 +49,12 @@ def capture_command(
     show_runner_output: bool = typer.Option(
         False, help="Stream the runner's stdout and stderr for diagnosis."
     ),
+    control_arg: list[str] | None = typer.Option(
+        None,
+        "--control-arg",
+        help="One argument of the unchanged control runner; repeat for each argument. "
+        "Alternates control and candidate attempts so drift affects both.",
+    ),
     command: list[str] = typer.Argument(
         ..., help="Explicit runner argv after --. Receives a JSON request on stdin."
     ),
@@ -61,19 +67,24 @@ def capture_command(
             command,
             timeout=timeout,
             show_output=show_runner_output,
+            control=control_arg or None,
         )
     except (OSError, ValueError, TypeError, KeyError) as exc:
         raise typer.BadParameter(str(exc)) from exc
-    complete = sum(row["status"] == "completed" for row in manifest["runs"])
-    console.print(f"Captured {complete} of {len(manifest['runs'])} planned attempts.", markup=False)
+    attempts = [("", row) for row in manifest["runs"]]
+    if control_arg:
+        control = improvement.load_json(out.resolve() / improvement.CONTROL_CAPTURE)
+        attempts += [("Control: ", row) for row in control["runs"]]
+    complete = sum(row["status"] == "completed" for _, row in attempts)
+    console.print(f"Captured {complete} of {len(attempts)} planned attempts.", markup=False)
     console.print(f"Capture manifest written to {out / 'capture.json'}", markup=False)
-    for attempt in manifest["runs"]:
+    for prefix, attempt in attempts:
         if attempt["status"] != "completed":
             console.print(
-                f"{attempt['task_id']} repetition {attempt['repetition']} — {attempt['status']}. {attempt.get('diagnostic') or 'Inspect the runner with --show-runner-output.'}",
+                f"{prefix}{attempt['task_id']} repetition {attempt['repetition']} — {attempt['status']}. {attempt.get('diagnostic') or 'Inspect the runner with --show-runner-output.'}",
                 markup=False,
             )
-    if complete != len(manifest["runs"]):
+    if complete != len(attempts):
         raise typer.Exit(1)
 
 
