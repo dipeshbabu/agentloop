@@ -1,6 +1,8 @@
 # TypeScript SDK: first npm release proposal
 
 Proposed package: `agentloop-profiler@0.1.0`. This proposal does not publish it.
+The maintainer approved the first publication on 2026-11-14; see
+[Releasing](RELEASING.md#typescript-sdk-on-npm) for the npm release flow.
 The Python 0.2.0 preparation proceeds independently. npm publication requires
 the maintainer's explicit approval and a working package-owner/publisher setup.
 No login, publishing workflow or registry write is needed for this review.

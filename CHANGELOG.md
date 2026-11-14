@@ -7,6 +7,13 @@ trace, study, receipt, API and database schema versions.
 
 ## [Unreleased]
 
+### Added
+
+- `release-npm.yml` publishes the TypeScript SDK to npm from annotated
+  `typescript-vX.Y.Z` tags on main, after Node.js 22/24 build and tests, using
+  trusted publishing with provenance. The SDK installs with
+  `npm install agentloop-profiler`.
+
 ## [0.2.1] - 2026-11-12
 
 ### Fixed

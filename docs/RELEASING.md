@@ -31,7 +31,8 @@ PRs stay separate from the version/changelog PR. Review
 [guided validation](GUIDED_VALIDATION.md) and [remaining gaps](ADOPTION_GAPS.md).
 Preparation does not authorize merging, tagging or publishing. Obtain explicit
 maintainer approval and satisfy normal protected-branch reviews/checks before
-each authorized integration or publication step. The npm proposal is separate.
+each authorized integration or publication step. The TypeScript SDK has its own
+npm release flow, described [below](#typescript-sdk-on-npm).
 
 Run **Prepare release** on `main`, or:
 
@@ -125,3 +126,50 @@ environments and refresh pinned requirements. Removing earlier PyPI releases
 requires the owner's [project management page](https://pypi.org/manage/project/agentloop-profiler/releases/).
 Keep the registered project and its trusted publisher; removing the whole project
 can release its name. See [PyPI's deletion and filename rules](https://pypi.org/help/#file-name-reuse).
+
+## TypeScript SDK on npm
+
+The SDK in `sdk/typescript` publishes to npm as `agentloop-profiler`. Its version
+is independent of the Python package. Bump `version` in
+`sdk/typescript/package.json` (and refresh `package-lock.json` with
+`npm install --package-lock-only`) in a normal PR, then tag the merged commit:
+
+```bash
+git switch main
+git pull --ff-only origin main
+git tag -a typescript-vX.Y.Z -m "AgentLoop TypeScript SDK X.Y.Z"
+git push origin typescript-vX.Y.Z
+```
+
+`release-npm.yml` checks that the tag is annotated, matches the package version
+and is reachable from main. It builds and tests the SDK on Node.js 22 and 24, then
+publishes with npm trusted publishing and provenance. Publishing runs only when
+the repository variable `NPM_PUBLISH_ENABLED` is `true`, in the `npm` environment.
+
+One-time setup, after the first publish exists on npm:
+
+1. On npmjs.com, open the package's **Settings → Trusted publishing** and add
+   GitHub Actions with repository `dipeshbabu/agentloop`, workflow
+   `release-npm.yml` and environment `npm`.
+2. In the GitHub repository, create the `npm` environment and set the
+   repository variable `NPM_PUBLISH_ENABLED` to `true`.
+
+The trusted publisher is configured from the package's settings page, so the
+first version is published by hand from a clean checkout of main:
+
+```bash
+npm login
+cd sdk/typescript
+npm ci && npm test && npm run test:types
+npm pack --dry-run
+npm publish --access public
+```
+
+npm versions are immutable: a published version cannot be re-uploaded, and
+unpublishing is restricted after 72 hours. Fix mistakes with a new patch version.
+Verify publication in a fresh directory:
+
+```bash
+npm view agentloop-profiler version
+npm install agentloop-profiler@X.Y.Z
+```

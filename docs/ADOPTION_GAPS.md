@@ -14,7 +14,7 @@ work prioritizes this path over adding another control or experiment system.
 | Instrumentation overhead | Counterbalanced CPU controls separate recording, JSON export and native analysis at declared span volumes; model controls retain quality failures | Repeat controls around actual application execution, across hosts and realistic payload sizes |
 | Cost | Actual token provenance and qualified model-price estimates | Obtain authorized billing data; retain unknown local hardware/energy cost instead of inventing dollars |
 | Hermes compatibility | 0.21.6 contract coverage and real 0.22.7/0.23.1 conformance | Revalidate future hook changes against the pinned runtime scenarios before extending the supported range |
-| TypeScript adoption | Source SDK, installed Node API interoperability, esbuild/Chromium package checks and separate release proposal | Approve and publish the initial npm artifact; observe integration into developer-owned applications and extend the target matrix as needed |
+| TypeScript adoption | npm package `agentloop-profiler`, installed Node API interoperability, esbuild/Chromium package checks and a tag-driven npm release workflow | Observe integration into developer-owned applications and extend the browser/bundler target matrix as needed |
 
 No external users, production deployments or customer savings are established by
 these tests and studies. PyPI download counts do not identify unique developers

@@ -13,8 +13,14 @@ same-origin requests, cancellation, redirect rejection and Python trace parsing.
 Firefox, Safari, other bundlers and cross-origin API deployments need separate
 validation. CommonJS `require()` is not an advertised entry point.
 
-This SDK is available from the AgentLoop source checkout. It has not been
-published to npm. Build and install a local package:
+Install the published package from npm:
+
+```bash
+npm install agentloop-profiler
+```
+
+To test unreleased changes instead, build and install a local package from the
+AgentLoop source checkout:
 
 ```bash
 npm ci --prefix sdk/typescript
