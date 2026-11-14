@@ -1,0 +1,109 @@
+name: Publish TypeScript SDK
+
+# Tags look like typescript-v0.1.0 so they never collide with the Python
+# v*.*.* release tags handled by release.yml.
+on:
+  push:
+    tags:
+      - "typescript-v*.*.*"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-npm-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    name: Verify SDK release ref
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Require an annotated SDK semantic version tag
+        shell: bash
+        run: |
+          [[ "$GITHUB_REF" =~ ^refs/tags/typescript-v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          test "$(git cat-file -t "$GITHUB_REF")" = tag
+
+      - name: Check tag matches package version
+        shell: bash
+        run: |
+          version="$(node -p "require('./sdk/typescript/package.json').version")"
+          test "typescript-v$version" = "$GITHUB_REF_NAME"
+
+      - name: Require tag commit on main
+        shell: bash
+        run: |
+          tag_commit="$(git rev-list -n 1 "$GITHUB_REF")"
+          git fetch --no-tags origin refs/heads/main:refs/remotes/origin/main
+          if ! git merge-base --is-ancestor "$tag_commit" refs/remotes/origin/main; then
+            echo "Release tags must point to a commit reachable from main." >&2
+            exit 1
+          fi
+
+  validate:
+    name: Validate SDK on Node ${{ matrix.node }}
+    needs: guard
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        node: ["22", "24"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: sdk/typescript/package-lock.json
+
+      - name: Install, build and test
+        working-directory: sdk/typescript
+        run: |
+          npm ci
+          npm run build
+          npm test
+          npm run test:types
+          npm audit
+
+  publish-npm:
+    name: Publish to npm
+    needs: [guard, validate]
+    if: ${{ vars.NPM_PUBLISH_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      # Trusted publishing exchanges this OIDC token with npm; no stored token.
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+          cache: npm
+          cache-dependency-path: sdk/typescript/package-lock.json
+
+      - name: Use an npm release that supports trusted publishing
+        run: npm install --global npm@11.6.2
+
+      - name: Build and publish
+        working-directory: sdk/typescript
+        run: |
+          npm ci
+          npm publish --provenance --access public

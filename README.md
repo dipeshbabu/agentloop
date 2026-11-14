@@ -39,7 +39,7 @@ storage are available as optional components.
 
 For Node.js and browser applications, the source checkout includes a
 [TypeScript SDK](https://github.com/dipeshbabu/agentloop/blob/main/sdk/typescript/README.md) with native tracing and an API v1 client.
-It has no runtime dependencies and has not yet been published to npm.
+It has no runtime dependencies and installs with `npm install agentloop-profiler`.
 
 ## Quickstart
 
