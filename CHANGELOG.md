@@ -13,6 +13,11 @@ trace, study, receipt, API and database schema versions.
   `typescript-vX.Y.Z` tags on main, after Node.js 22/24 build and tests, using
   trusted publishing with provenance. The SDK installs with
   `npm install agentloop-profiler`.
+- `agentloop improve capture --control-arg ...` captures an unchanged control
+  runner alongside the candidate, alternating which runs first on each attempt.
+  `improve finish` then measures the candidate against that control, keeping
+  findings frozen from the original baseline, so cache warm-up and host drift
+  affect both conditions.
 
 ## [0.2.1] - 2026-11-12
 

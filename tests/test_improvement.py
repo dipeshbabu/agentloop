@@ -341,3 +341,103 @@ def test_rehashed_sessions_still_validate_the_full_attempt_inventory(tmp_path, w
             change="Invalid inventory",
         )
     assert not (tmp_path / "results").exists()
+
+
+def test_interleaved_control_alternates_order_and_becomes_the_comparison(tmp_path, workload):
+    tasks, worker = prepare(tmp_path, workload)
+    manifest = capture(
+        tasks,
+        tmp_path / "paired",
+        command(worker, "fast"),
+        control=command(worker, "baseline"),
+    )
+    control = json.loads((tmp_path / "paired/control/capture.json").read_bytes())
+    assert manifest["control"]["manifest_hash"] == fingerprint(control)
+    assert [row["order"] for row in control["runs"]] == [0, 1, 0, 1]
+    assert [row["order"] for row in manifest["runs"]] == [1, 0, 1, 0]
+    for index, (first, second) in enumerate(zip(control["runs"], manifest["runs"])):
+        ordered = (first, second) if index % 2 == 0 else (second, first)
+        assert ordered[0]["ended_at"] <= ordered[1]["started_at"]
+    report = finish(
+        tmp_path / "session/session.json",
+        tmp_path / "paired/capture.json",
+        tmp_path / "results",
+        change="Remove repeated work",
+    )
+    assert report["passed"] is True
+    assert report["comparison_baseline"] == "interleaved_control"
+    assert report["control_capture_hash"] == fingerprint(control)
+    control_ids = {
+        json.loads((tmp_path / "paired/control" / row["trace"]).read_bytes())["run_id"]
+        for row in control["runs"]
+    }
+    for row in report["cases"]:
+        assert row["replay"]["baseline"]["run_id"] in control_ids
+        assert row["intervention"]["baseline_run_id"] in control_ids
+        assert row["frozen_baseline_status"] == "completed"
+    assert [row["control_ran_first"] for row in report["cases"]] == [True, False, True, False]
+    assert "alternating order" in (tmp_path / "results/report.md").read_text(encoding="utf-8")
+
+
+def test_interleaved_control_must_also_pass_quality_checks(tmp_path, workload):
+    tasks, worker = prepare(tmp_path, workload)
+    capture(
+        tasks,
+        tmp_path / "paired",
+        command(worker, "fast"),
+        control=command(worker, "wrong"),
+    )
+    report = finish(
+        tmp_path / "session/session.json",
+        tmp_path / "paired/capture.json",
+        tmp_path / "results",
+        change="Wrong control",
+    )
+    assert report["passed"] is False
+    assert all(
+        any(reason.startswith("Control answer failed") for reason in row["reasons"])
+        for row in report["cases"]
+    )
+
+
+def test_modified_interleaved_control_is_rejected(tmp_path, workload):
+    tasks, worker = prepare(tmp_path, workload)
+    capture(
+        tasks,
+        tmp_path / "paired",
+        command(worker, "fast"),
+        control=command(worker, "baseline"),
+    )
+    path = tmp_path / "paired/control/capture.json"
+    control = json.loads(path.read_bytes())
+    control["runner_hash"] = "changed"
+    path.write_text(json.dumps(control), encoding="utf-8")
+    with pytest.raises(ValueError, match="control capture changed"):
+        finish(
+            tmp_path / "session/session.json",
+            tmp_path / "paired/capture.json",
+            tmp_path / "results",
+            change="Tampered control",
+        )
+    assert not (tmp_path / "results").exists()
+
+
+def test_cli_accepts_repeated_control_arguments(tmp_path, workload):
+    tasks, worker = workload
+    result = CliRunner().invoke(
+        app,
+        [
+            "improve",
+            "capture",
+            "--tasks",
+            str(tasks),
+            "--out",
+            str(tmp_path / "paired"),
+            *[item for arg in command(worker, "baseline") for item in ("--control-arg", arg)],
+            "--",
+            *command(worker, "fast"),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert "Captured 8 of 8 planned attempts." in result.output
+    assert (tmp_path / "paired/control/capture.json").is_file()

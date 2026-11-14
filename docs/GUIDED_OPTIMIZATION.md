@@ -169,6 +169,32 @@ cost stays unavailable. A latency comparison can pass with an indeterminate,
 non-gating cost estimate. A required cost improvement fails when pricing or
 usable usage is missing.
 
+## Compare against an interleaved control
+
+A plain candidate capture runs after the baseline, so cache warm-up, host load or
+provider drift can look like an improvement. When you can keep the unchanged
+agent runnable, for example in a separate `git worktree`, capture it as a control
+alongside the candidate:
+
+```bash
+git worktree add ../agent-before HEAD
+agentloop improve capture --tasks tasks.json --out runs/paired --control-arg python --control-arg ../agent-before/your_agent.py -- python your_agent.py
+agentloop improve finish --session runs/optimization/session.json --candidate runs/paired/capture.json --change "Describe the change applied to the agent" --out runs/results
+```
+
+Repeat `--control-arg` once for each argument of the control runner. Each
+planned attempt runs the control and the candidate back to back. The control
+runs first on even attempt indexes and second on odd ones. Use an even number
+of attempts, through `repetitions`, so each condition runs first equally often.
+The control capture is stored in `runs/paired/control/` and its manifest hash is
+recorded in the candidate capture.
+
+`finish` then measures the candidate against the control instead of the frozen
+baseline. Findings, the focus and the gates stay frozen from the original
+baseline. The control must pass the same quality checks. Intervention records
+link the control's matching findings. The report states which comparison basis
+it used, and each case records whether the control ran first.
+
 ## Failures, evidence and execution
 
 `capture` retains every planned attempt, including failed, timed-out, cancelled,
@@ -194,8 +220,9 @@ default. Pass `--show-runner-output` to stream them when diagnosing a failing ru
 Raw task inputs, expected answers, traces, and outputs are retained in the local
 artifacts. Review them before sharing. HTML escapes supplied text and shows
 metrics and decisions. A fixed-order comparison describes the supplied tasks and
-run conditions. Repeat across independent tasks and inspect variability before
-generalizing a result.
+run conditions. An interleaved control reduces order effects but does not remove
+other differences between conditions. Repeat across independent tasks and
+inspect variability before generalizing a result.
 
 ## Reproduce the Hermes example with local inference
 
