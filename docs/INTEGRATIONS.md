@@ -7,6 +7,9 @@ AgentLoop 0.2.0 also supports 0.22.x and 0.23.x. The
 [real runtime pilot](HERMES_RUNTIME_PILOT.md) documents exact host pins and
 deterministic-provider validation scope.
 
+For OpenAI Codex CLI, see [the Codex guide](CODEX.md). Its example runner
+converts `codex exec --json` events into native traces for the guided workflow.
+
 For framework-neutral pipeline and stage annotations, see
 [workflow tracing](WORKFLOW_TRACING.md).
 

@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "name": "Codex repository metadata questions",
+  "repetitions": 2,
+  "tasks": [
+    {
+      "id": "python-support",
+      "input": {"prompt": "Read pyproject.toml in the current directory. What is the exact value of project.requires-python, including comparison operators? Reply with only that value."},
+      "expected": ">=3.11",
+      "scorer": {"type": "contains"}
+    },
+    {
+      "id": "npm-package-name",
+      "input": {"prompt": "Read sdk/typescript/package.json in the current directory. What is the exact value of the name field? Reply with only that value."},
+      "expected": "agentloop-profiler",
+      "scorer": {"type": "contains"}
+    },
+    {
+      "id": "npm-node-engine",
+      "input": {"prompt": "Read sdk/typescript/package.json in the current directory. What is the exact value of engines.node? Reply with only that value."},
+      "expected": ">=22",
+      "scorer": {"type": "contains"}
+    }
+  ]
+}

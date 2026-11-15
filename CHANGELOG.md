@@ -18,6 +18,9 @@ trace, study, receipt, API and database schema versions.
   `improve finish` then measures the candidate against that control, keeping
   findings frozen from the original baseline, so cache warm-up and host drift
   affect both conditions.
+- `examples/codex_exec_runner.py` runs OpenAI Codex CLI (`codex exec --json`)
+  on guided tasks and converts its event stream into native traces, with a
+  repository task set and a documented first run in `docs/CODEX.md`.
 
 ## [0.2.1] - 2026-11-12
 
