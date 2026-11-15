@@ -105,6 +105,7 @@ nav:
   - Integrations:
       - Framework overview: INTEGRATIONS.md
       - Hermes: HERMES.md
+      - Codex CLI: CODEX.md
       - LangGraph: LANGGRAPH_HARNESS.md
       - Harbor:
           - Completed trials: HARBOR_TRIALS.md
