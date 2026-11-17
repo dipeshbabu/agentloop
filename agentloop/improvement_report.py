@@ -22,6 +22,9 @@ def plan_markdown(specification):
         "",
         f"Investigation focus is {markdown_text(specification['focus'] or 'unavailable')}.",
         f"The measured objective is {specification['objective']}. Every baseline and candidate output must pass its declared quality checks.",
+        "The frozen decision judges the objective across all pairs by median paired improvement."
+        if specification.get("decision") == "aggregate"
+        else "The frozen decision requires every pair to improve the objective.",
         "",
     ]
     for case in specification["cases"]:
@@ -182,6 +185,35 @@ def _basis(report):
     )
 
 
+def _decision_lines(report):
+    verdict = report.get("decision") or {"mode": "per_pair"}
+    if verdict["mode"] != "aggregate":
+        return ["Decision: every pair must pass correctness, completion and performance checks."]
+    median = verdict["median_improvement_pct"]
+    p_value = verdict["sign_test_p_value"]
+    lines = [
+        "Decision: every pair must pass correctness and completion checks; "
+        f"{verdict['objective']} is judged across all pairs.",
+        f"Aggregate {verdict['objective']} decision "
+        + ("passed" if verdict["passed"] else "failed")
+        + ": median paired improvement "
+        + ("unavailable" if median is None else f"{median:.2f}%")
+        + f" (required at least {verdict['required_improvement_pct']:.2f}%), "
+        f"{verdict['improved_pairs']} improved, {verdict['regressed_pairs']} regressed, "
+        f"{verdict['unchanged_pairs']} unchanged.",
+    ]
+    if p_value is not None:
+        lines.append(
+            f"One-sided sign test p-value {p_value:.3f}. It is reported for context and does not gate the decision."
+        )
+    if not verdict["secondary_judged"]:
+        lines.append(
+            f"Median {verdict['secondary_metric']} regression was not judged because it was unavailable for some pairs."
+        )
+    lines.extend(f"Aggregate check failed: {reason}" for reason in verdict["reasons"])
+    return lines
+
+
 def report_markdown(report):
     lines = [
         f"# {markdown_heading(report['name'])}",
@@ -198,6 +230,7 @@ def report_markdown(report):
         "",
         _basis(report),
         "",
+        *[item for line in _decision_lines(report) for item in (markdown_text(line), "")],
     ]
     if report["synthetic"]:
         lines.extend(
@@ -263,6 +296,7 @@ def export_report(root, report):
         f"<header><h1>{_text(report['name'])}</h1><p>{report['passed_attempts']} of {report['planned_attempts']} planned attempts passed.</p></header>",
         f"<h2>Applied change</h2><p>{_text(report['change'])}</p>",
         f"<p>{_text(_basis(report))}</p>",
+        *[f"<p>{_text(line)}</p>" for line in _decision_lines(report)],
     ]
     if report["synthetic"]:
         sections.append(
