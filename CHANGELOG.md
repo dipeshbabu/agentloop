@@ -7,6 +7,14 @@ trace, study, receipt, API and database schema versions.
 
 ## [Unreleased]
 
+### Added
+
+- `agentloop improve start --decision aggregate` judges speed or cost across
+  all pairs: the median paired improvement must meet the frozen minimum and
+  more pairs must improve than regress. Every pair must still complete and
+  pass its quality and non-performance gates. Reports include the counts and
+  a non-gating sign-test p-value. The default per-pair decision is unchanged.
+
 ## [0.2.2] - 2026-11-17
 
 ### Added

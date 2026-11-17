@@ -7,6 +7,7 @@ import json
 import math
 import os
 import signal
+import statistics
 import subprocess  # nosec B404 - execution requires explicit CLI argv
 from dataclasses import asdict
 from datetime import datetime, timezone
@@ -22,6 +23,14 @@ from agentloop.replay import _summary as replay_summary
 from agentloop.tracer import AgentTrace
 
 VERSION = "1.0"
+DECISIONS = {"per_pair", "aggregate"}
+# Speed and cost gates; an aggregate decision judges these across all pairs.
+PERFORMANCE_GATES = {
+    "latency_regression",
+    "latency_improvement",
+    "cost_regression",
+    "cost_improvement",
+}
 SCORERS = {"exact_match", "contains", "json_subset", "required_fields", "glob"}
 
 
@@ -380,11 +389,19 @@ def _quality(task, baseline, candidate):
 
 
 def start(
-    workload_path, baseline_path, root, *, focus=None, objective="latency", minimum_improvement=0
+    workload_path,
+    baseline_path,
+    root,
+    *,
+    focus=None,
+    objective="latency",
+    minimum_improvement=0,
+    decision="per_pair",
 ):
     workload = read_workload(workload_path)
     manifest, traces = read_capture(baseline_path, workload)
     require(objective in {"latency", "cost"}, "Objective must be latency or cost")
+    require(decision in DECISIONS, "Decision must be per_pair or aggregate")
     require(
         type(minimum_improvement) in (int, float)
         and math.isfinite(minimum_improvement)
@@ -442,6 +459,7 @@ def start(
         "workload": workload,
         "focus": focus,
         "objective": objective,
+        "decision": decision,
         "gates": asdict(gates),
         "cases": cases,
         "baseline_capture": manifest,
@@ -473,6 +491,83 @@ def _trace_usable(trace):
     return not any(event.parent_id is None and event.status == "error" for event in trace.events)
 
 
+def _sign_test_p_value(improved, regressed):
+    """One-sided exact sign test: chance of at least this many improvements."""
+    trials = improved + regressed
+    if trials == 0:
+        return None
+    return sum(math.comb(trials, k) for k in range(improved, trials + 1)) / 2**trials
+
+
+def _aggregate_decision(rows, objective, gates):
+    """Judge speed or cost across all planned pairs.
+
+    Correctness, completion and non-performance gates were already enforced on
+    every pair. Here the median paired improvement in the selected objective
+    must be positive and meet the frozen minimum, and more pairs must improve
+    than regress. The other metric's median regression must stay within its
+    allowed regression when every pair can measure it.
+    """
+    secondary = "cost" if objective == "latency" else "latency"
+    required = (
+        gates.min_latency_improvement_pct
+        if objective == "latency"
+        else gates.min_cost_improvement_pct
+    )
+    allowed = (
+        gates.max_cost_regression_pct if secondary == "cost" else gates.max_latency_regression_pct
+    )
+    gains = [row.get("objective_gain_pct") for row in rows]
+    regressions = [
+        (row["replay"] or {}).get("deltas", {}).get(f"{secondary}_regression_pct")
+        if row.get("replay")
+        else None
+        for row in rows
+    ]
+    reasons = []
+    measured = [gain for gain in gains if gain is not None]
+    improved = sum(gain > 0 for gain in measured)
+    regressed = sum(gain < 0 for gain in measured)
+    median = statistics.median(measured) if measured else None
+    if len(measured) != len(rows):
+        reasons.append(
+            f"{len(rows) - len(measured)} of {len(rows)} pairs have no measured {objective} improvement"
+        )
+    if median is None or median <= 0 or median < required:
+        detail = "unavailable" if median is None else f"{median:.2f}%"
+        reasons.append(
+            f"Median {objective} improvement {detail} must be positive and at least {required:.2f}%"
+        )
+    if improved <= regressed:
+        reasons.append(
+            f"{improved} pairs improved and {regressed} regressed; more pairs must improve than regress"
+        )
+    secondary_median = None
+    if all(value is not None for value in regressions):
+        secondary_median = statistics.median(regressions)
+        if secondary_median > allowed:
+            reasons.append(
+                f"Median {secondary} regression {secondary_median:.2f}% exceeds {allowed:.2f}% allowed"
+            )
+    return {
+        "mode": "aggregate",
+        "objective": objective,
+        "pairs": len(rows),
+        "median_improvement_pct": median,
+        "required_improvement_pct": required,
+        "improved_pairs": improved,
+        "regressed_pairs": regressed,
+        "unchanged_pairs": len(measured) - improved - regressed,
+        "sign_test_p_value": _sign_test_p_value(improved, regressed),
+        "secondary_metric": secondary,
+        "secondary_median_regression_pct": secondary_median,
+        "secondary_allowed_regression_pct": allowed,
+        "secondary_judged": secondary_median is not None,
+        "passed": not reasons,
+        "reasons": reasons,
+    }
+
+
 def finish(session_path, candidate_path, root, *, change):
     session_path = Path(session_path).resolve()
     saved = load_json(session_path)
@@ -484,6 +579,9 @@ def finish(session_path, candidate_path, root, *, change):
     require(specification.get("schema_version") == VERSION, "Unsupported frozen session version")
     workload = validate_workload(specification["workload"])
     require(specification.get("objective") in {"latency", "cost"}, "Unsupported frozen objective")
+    # Sessions frozen before 0.2.3 have no decision field and keep per-pair judgment.
+    decision = specification.get("decision", "per_pair")
+    require(decision in DECISIONS, "Unsupported frozen decision")
     planned = {(task["id"], repetition) for task, repetition in slots(workload)}
     cases = specification.get("cases")
     require(
@@ -629,13 +727,17 @@ def finish(session_path, candidate_path, root, *, change):
                             row["reasons"].append(
                                 f"{label if side == 'baseline' else 'Candidate'} answer failed the declared {task.get('scorer', {}).get('type', 'exact_match')} criterion: {result[side]['detail']}"
                             )
-            if not replay["gates"]["passed"]:
+            # Aggregate decisions judge speed and cost across all pairs after
+            # this loop; every other gate still applies to each pair.
+            judged = [
+                gate
+                for gate in replay["gates"]["results"]
+                if not gate["passed"]
+                and (decision == "per_pair" or gate["name"] not in PERFORMANCE_GATES)
+            ]
+            if judged:
                 row["reasons"].append("Native replay gates failed")
-                row["reasons"].extend(
-                    f"{gate['name']}: {gate['detail']}"
-                    for gate in replay["gates"]["results"]
-                    if not gate["passed"]
-                )
+                row["reasons"].extend(f"{gate['name']}: {gate['detail']}" for gate in judged)
             if not diagnosis.get("analysis_complete", True) or not candidate.report().get(
                 "analysis_complete", True
             ):
@@ -645,14 +747,20 @@ def finish(session_path, candidate_path, root, *, change):
                 if specification["objective"] == "latency"
                 else "cost_improvement_pct"
             ]
-            if gain is None or gain <= 0:
+            if decision == "per_pair" and (gain is None or gain <= 0):
                 row["reasons"].append("The selected objective has no measured improvement")
-            row.update(quality=quality, replay=replay, passed=not row["reasons"])
+            row.update(
+                quality=quality, replay=replay, passed=not row["reasons"], objective_gain_pct=gain
+            )
             replay["gates"]["results"].append(
                 {
                     "name": "guided_evidence",
                     "passed": row["passed"],
-                    "detail": "All guided execution, quality and measured-objective checks passed"
+                    "detail": (
+                        "All guided execution, quality and measured-objective checks passed"
+                        if decision == "per_pair"
+                        else "All guided execution and quality checks passed; performance is judged across all pairs"
+                    )
                     if row["passed"]
                     else " ".join(row["reasons"]),
                     "indeterminate": False,
@@ -712,6 +820,11 @@ def finish(session_path, candidate_path, root, *, change):
         }
         study_file = write_once(root, "study.json", study_manifest)
         study = summarize_study(study_file)
+    verdict = (
+        {"mode": "per_pair", "passed": True}
+        if decision == "per_pair"
+        else _aggregate_decision(rows, specification["objective"], gates)
+    )
     report = {
         "schema_version": VERSION,
         "name": workload["name"],
@@ -729,7 +842,8 @@ def finish(session_path, candidate_path, root, *, change):
         "control_runner_hash": None if controls is None else control_manifest.get("runner_hash"),
         "planned_attempts": len(rows),
         "passed_attempts": sum(row["passed"] for row in rows),
-        "passed": all(row["passed"] for row in rows),
+        "decision": verdict,
+        "passed": all(row["passed"] for row in rows) and verdict["passed"],
         "synthetic": any(
             trace.metadata.get("synthetic") is True
             for trace in [

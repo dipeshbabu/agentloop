@@ -441,3 +441,131 @@ def test_cli_accepts_repeated_control_arguments(tmp_path, workload):
     assert result.exit_code == 0, result.output
     assert "Captured 8 of 8 planned attempts." in result.output
     assert (tmp_path / "paired/control/capture.json").is_file()
+
+
+NOISY = """import json,sys,time
+from agentloop.tracer import AgentTrace
+request=json.loads(sys.stdin.readline())
+delays={0:0.12,1:0.12,2:0.12,3:0.12}
+fast={0:0.02,1:0.02,2:0.02,3:0.2}
+index={"first":0,"second":2}[request["task_id"]]+request["repetition"]
+trace=AgentTrace("noisy worker",metadata={"synthetic":True,"output":request["input"]})
+time.sleep((fast if sys.argv[1]=="candidate" else delays)[index])
+trace.finish()
+trace.export_json(request["trace_path"])
+"""
+
+
+def noisy(tmp_path, workload, decision):
+    tasks, _ = workload
+    worker = tmp_path / "noisy.py"
+    worker.write_text(NOISY, encoding="utf-8")
+    capture(tasks, tmp_path / "baseline", [sys.executable, str(worker), "baseline"])
+    start(tasks, tmp_path / "baseline/capture.json", tmp_path / "session", decision=decision)
+    capture(tasks, tmp_path / "candidate", [sys.executable, str(worker), "candidate"])
+    return finish(
+        tmp_path / "session/session.json",
+        tmp_path / "candidate/capture.json",
+        tmp_path / "results",
+        change="Mostly faster with one slow outlier",
+    )
+
+
+def test_per_pair_decision_rejects_a_single_slower_pair(tmp_path, workload):
+    report = noisy(tmp_path, workload, "per_pair")
+    assert report["decision"] == {"mode": "per_pair", "passed": True}
+    assert report["passed"] is False
+    assert report["passed_attempts"] == 3
+
+
+def test_aggregate_decision_accepts_a_median_improvement(tmp_path, workload):
+    report = noisy(tmp_path, workload, "aggregate")
+    verdict = report["decision"]
+    assert report["passed"] is True, verdict
+    assert report["passed_attempts"] == 4
+    assert verdict["mode"] == "aggregate"
+    assert (verdict["improved_pairs"], verdict["regressed_pairs"]) == (3, 1)
+    assert verdict["median_improvement_pct"] > 0
+    assert verdict["sign_test_p_value"] == pytest.approx(5 / 16)
+    assert "judged across all pairs" in (tmp_path / "results/report.md").read_text(encoding="utf-8")
+
+
+def test_aggregate_decision_still_requires_every_answer_to_pass(tmp_path, workload):
+    tasks, worker = workload
+    capture(tasks, tmp_path / "baseline", command(worker, "baseline"))
+    start(tasks, tmp_path / "baseline/capture.json", tmp_path / "session", decision="aggregate")
+    capture(tasks, tmp_path / "candidate", command(worker, "wrong"))
+    report = finish(
+        tmp_path / "session/session.json",
+        tmp_path / "candidate/capture.json",
+        tmp_path / "results",
+        change="Faster but wrong",
+    )
+    assert report["passed"] is False
+    assert report["passed_attempts"] == 0
+    assert report["decision"]["median_improvement_pct"] > 0
+
+
+def test_aggregate_decision_rejects_a_median_slowdown(tmp_path, workload):
+    tasks, _ = workload
+    worker = tmp_path / "noisy.py"
+    worker.write_text(NOISY, encoding="utf-8")
+    # Reverse the roles: three pairs slow down and one speeds up.
+    capture(tasks, tmp_path / "baseline", [sys.executable, str(worker), "candidate"])
+    start(tasks, tmp_path / "baseline/capture.json", tmp_path / "session", decision="aggregate")
+    capture(tasks, tmp_path / "candidate", [sys.executable, str(worker), "baseline"])
+    report = finish(
+        tmp_path / "session/session.json",
+        tmp_path / "candidate/capture.json",
+        tmp_path / "results",
+        change="Mostly slower",
+    )
+    verdict = report["decision"]
+    assert report["passed_attempts"] == 4
+    assert report["passed"] is False
+    assert (verdict["improved_pairs"], verdict["regressed_pairs"]) == (1, 3)
+    assert any("Median latency" in reason for reason in verdict["reasons"])
+    assert any("more pairs must improve" in reason for reason in verdict["reasons"])
+
+
+def test_decision_is_frozen_with_the_session(tmp_path, workload):
+    tasks, worker = prepare(tmp_path, workload)
+    path = tmp_path / "session/session.json"
+    saved = json.loads(path.read_bytes())
+    assert saved["specification"]["decision"] == "per_pair"
+    saved["specification"]["decision"] = "aggregate"
+    path.write_text(json.dumps(saved), encoding="utf-8")
+    capture(tasks, tmp_path / "candidate", command(worker, "fast"))
+    with pytest.raises(ValueError, match="Frozen session was modified"):
+        finish(path, tmp_path / "candidate/capture.json", tmp_path / "results", change="Late")
+
+
+def test_unknown_decision_is_rejected(tmp_path, workload):
+    tasks, worker = workload
+    capture(tasks, tmp_path / "baseline", command(worker, "baseline"))
+    with pytest.raises(ValueError, match="per_pair or aggregate"):
+        start(tasks, tmp_path / "baseline/capture.json", tmp_path / "session", decision="any")
+
+
+def test_cli_freezes_the_aggregate_decision(tmp_path, workload):
+    tasks, worker = workload
+    capture(tasks, tmp_path / "baseline", command(worker, "baseline"))
+    result = CliRunner().invoke(
+        app,
+        [
+            "improve",
+            "start",
+            "--tasks",
+            str(tasks),
+            "--baseline",
+            str(tmp_path / "baseline/capture.json"),
+            "--decision",
+            "aggregate",
+            "--out",
+            str(tmp_path / "session"),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    saved = json.loads((tmp_path / "session/session.json").read_bytes())
+    assert saved["specification"]["decision"] == "aggregate"
+    assert "median paired improvement" in (tmp_path / "session/plan.md").read_text(encoding="utf-8")

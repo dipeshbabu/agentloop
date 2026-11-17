@@ -101,6 +101,11 @@ def start_command(
     minimum_improvement: float = typer.Option(
         0, min=0, help="Required percentage gain in the selected objective."
     ),
+    decision: str = typer.Option(
+        "per-pair",
+        help="per-pair requires every pair to improve; aggregate judges the median "
+        "paired improvement for noisy agents. Correctness is checked per pair in both.",
+    ),
 ):
     """Freeze task checks and original findings before editing the agent."""
     try:
@@ -111,6 +116,7 @@ def start_command(
             focus=focus,
             objective=objective,
             minimum_improvement=minimum_improvement,
+            decision=decision.replace("-", "_"),
         )
     except (OSError, ValueError, TypeError, KeyError) as exc:
         raise typer.BadParameter(str(exc)) from exc
@@ -136,10 +142,28 @@ def finish_command(
         report = improvement.finish(session, candidate, out, change=change)
     except (OSError, ValueError, TypeError, KeyError) as exc:
         raise typer.BadParameter(str(exc)) from exc
-    console.print(
-        f"{report['passed_attempts']} of {report['planned_attempts']} planned comparisons passed.",
-        markup=False,
-    )
+    verdict = report["decision"]
+    if verdict["mode"] == "aggregate":
+        console.print(
+            f"{report['passed_attempts']} of {report['planned_attempts']} pairs passed "
+            "correctness and completion checks.",
+            markup=False,
+        )
+        median = verdict["median_improvement_pct"]
+        console.print(
+            f"Aggregate {verdict['objective']} decision "
+            + ("passed" if verdict["passed"] else "failed")
+            + f": median improvement {'unavailable' if median is None else f'{median:.2f}%'}, "
+            f"{verdict['improved_pairs']} improved, {verdict['regressed_pairs']} regressed.",
+            markup=False,
+        )
+        for reason in verdict["reasons"]:
+            console.print(f"Aggregate check failed: {reason}", markup=False)
+    else:
+        console.print(
+            f"{report['passed_attempts']} of {report['planned_attempts']} planned comparisons passed.",
+            markup=False,
+        )
     console.print(f"Read {out / 'report.html'}", markup=False)
     for case in report["cases"]:
         if not case["passed"]:

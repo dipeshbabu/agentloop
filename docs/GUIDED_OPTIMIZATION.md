@@ -169,6 +169,37 @@ cost stays unavailable. A latency comparison can pass with an indeterminate,
 non-gating cost estimate. A required cost improvement fails when pricing or
 usable usage is missing.
 
+## Judge noisy agents across all pairs
+
+The default `--decision per-pair` rejects a change when any single pair is slower
+or costlier. Agents that call hosted models vary from run to run, so one noisy
+pair can reject a change that helps on almost every attempt. For those agents,
+freeze an aggregate decision when starting the session:
+
+```bash
+agentloop improve start --tasks tasks.json --baseline runs/baseline/capture.json --decision aggregate --out runs/optimization
+```
+
+Aggregate decisions require AgentLoop 0.2.3 or newer. The decision is part of
+the hashed session, so it cannot be changed after candidate results are known.
+
+Every pair must still complete, pass its quality checks on both sides, have
+complete analysis, and pass the replay gates that are not about speed or cost,
+such as retry and quality gates. The speed and cost gates are judged across all
+pairs instead:
+
+- the median paired improvement in the selected objective must be positive and
+  at least `--minimum-improvement`;
+- more pairs must improve than regress;
+- the other metric's median regression must stay within its allowed regression
+  when every pair can measure it.
+
+The report lists each pair's measurements and failed performance gates for
+review. It also gives a one-sided sign-test p-value, which is reported for
+context and does not gate the decision. Use enough repetitions for the median
+to mean something, and combine aggregate decisions with an
+[interleaved control](#compare-against-an-interleaved-control).
+
 ## Compare against an interleaved control
 
 Interleaved controls require AgentLoop 0.2.2 or newer.
