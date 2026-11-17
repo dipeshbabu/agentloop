@@ -212,3 +212,29 @@ def test_task_prompt_accepts_strings_and_prompt_objects(value, instructions, exp
 def test_task_prompt_rejects_missing_prompts():
     with pytest.raises(ValueError, match="prompt"):
         task_prompt({"other": 1}, "")
+
+
+def test_a_tool_reported_only_on_completion_ends_the_model_round():
+    message = (
+        1.0,
+        {
+            "type": "item.completed",
+            "item": {"id": "m1", "type": "agent_message", "text": "Editing."},
+        },
+    )
+    change = (
+        2.0,
+        {"type": "item.completed", "item": {"id": "f1", "type": "file_change", "changes": []}},
+    )
+    answer = (
+        3.5,
+        {"type": "item.completed", "item": {"id": "m2", "type": "agent_message", "text": "Done."}},
+    )
+    events, _, _, _ = run_convert([STREAM[1], message, change, answer])
+    rounds = [event for event in events if event.event_type == "model_call"]
+    assert len(rounds) == 2
+    for event in rounds:
+        started = datetime.fromisoformat(event.started_at)
+        ended = datetime.fromisoformat(event.ended_at)
+        assert event.duration_ms == pytest.approx((ended - started).total_seconds() * 1000)
+    assert rounds[1].duration_ms == pytest.approx(1500)

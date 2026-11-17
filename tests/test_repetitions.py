@@ -55,8 +55,7 @@ def test_extra_model_step_with_more_tokens_is_reported_on_the_outlier():
     finding = found[("lookup", 1)][0]
     assert finding["type"] == FINDING_TYPE
     assert finding["title"] == (
-        "Repetition 1 of lookup took 1 more model step and 1 more tool call "
-        "than its typical repetition"
+        "Repetition 1 of lookup took 3 model steps (typically 2) and 2 tool calls (typically 1)"
     )
     assert finding["savings"]["estimated_input_tokens"] == 1000
     assert finding["confidence"] == "low"
@@ -164,5 +163,58 @@ def test_start_offers_the_detour_as_a_focus(tmp_path):
     flagged = [case for case in specification["cases"] if case["finding_ids"]]
     assert [(case["task_id"], case["repetition"]) for case in flagged] == [("first", 1)]
     plan = (tmp_path / "session/plan.md").read_text(encoding="utf-8")
-    assert "took 1 more model step and 1 more tool call" in plan
+    assert "took 3 model steps (typically 2) and 2 tool calls (typically 1)" in plan
     assert "read notes" in plan
+
+
+def test_fractional_typical_counts_are_stated_not_subtracted():
+    traces = {
+        ("lookup", 0): attempt(TYPICAL),
+        ("lookup", 1): attempt(
+            ["model", "tool:read a", "model", "tool:read pyproject.toml", "model"]
+        ),
+        ("lookup", 2): attempt(DETOUR, tokens_per_step=3000),
+    }
+    finding = repetition_findings(traces)[("lookup", 2)][0]
+    assert "model steps (typically 2.5)" in finding["title"]
+    assert " 0.5 " not in finding["title"]
+
+
+def test_merged_diagnosis_counts_match_its_findings():
+    from agentloop.findings import build_diagnosis
+
+    traces = {("lookup", 0): attempt(TYPICAL), ("lookup", 1): attempt(DETOUR)}
+    diagnosis = add_repetition_findings(
+        {key: build_diagnosis(trace) for key, trace in traces.items()}, traces
+    )[("lookup", 1)]
+    assert diagnosis["ranking"]["ready_to_test_count"] == sum(
+        item["ranking"]["status"] == "ready_to_test" for item in diagnosis["findings"]
+    )
+    assert diagnosis["summary"]["finding_count"] == len(diagnosis["findings"])
+
+
+def test_failed_attempts_are_left_out_of_repetition_comparisons(tmp_path):
+    tasks = tmp_path / "tasks.json"
+    tasks.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "name": "Failed detour",
+                "repetitions": 2,
+                "tasks": [{"id": "first", "input": "one", "expected": "one"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    worker = tmp_path / "worker.py"
+    # The detour attempt writes its trace and then fails.
+    worker.write_text(WORKER + "\nif detour:\n    raise SystemExit(1)\n", encoding="utf-8")
+    capture(tasks, tmp_path / "baseline", [sys.executable, str(worker)])
+    specification = start(tasks, tmp_path / "baseline/capture.json", tmp_path / "session")
+    assert [case["capture_status"] for case in specification["cases"]] == ["completed", "failed"]
+    assert not any(
+        finding["type"] == FINDING_TYPE
+        for case in specification["cases"]
+        if case["diagnosis"]
+        for finding in case["diagnosis"]["findings"]
+    )

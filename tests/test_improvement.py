@@ -543,7 +543,7 @@ def test_decision_is_frozen_with_the_session(tmp_path, workload):
 def test_unknown_decision_is_rejected(tmp_path, workload):
     tasks, worker = workload
     capture(tasks, tmp_path / "baseline", command(worker, "baseline"))
-    with pytest.raises(ValueError, match="per_pair or aggregate"):
+    with pytest.raises(ValueError, match="per-pair or aggregate"):
         start(tasks, tmp_path / "baseline/capture.json", tmp_path / "session", decision="any")
 
 

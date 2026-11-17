@@ -50,31 +50,46 @@ def _ratio(value, typical):
     return value / typical if typical > 0 else None
 
 
+def _profile(trace):
+    """Scan one trace once for everything the comparison needs."""
+    tools = _tools(trace)
+    return {
+        "trace": trace,
+        "tools": tools,
+        "models": _models(trace),
+        "keys": {_key(event) for event in tools},
+        "tokens": _input_tokens(trace),
+        "runtime": float(trace.elapsed_ms or 0.0),
+    }
+
+
 def repetition_findings(traces: dict[tuple[str, int], Any]) -> dict[tuple[str, int], list]:
     """Return detour findings keyed by ``(task_id, repetition)``.
 
-    Only tasks with at least two available repetitions are compared. An attempt
+    Pass only completed attempts: a failed or interrupted attempt's partial
+    trace would distort the typical repetition. Only tasks with at least two
+    available repetitions are compared. An attempt
     is reported when it took more model steps or more tool calls than the
     median of the other repetitions, and its input tokens or runtime are at
     least 25% above the others' median.
     """
     by_task: dict[str, dict[int, Any]] = {}
     for (task_id, repetition), trace in traces.items():
-        by_task.setdefault(task_id, {})[repetition] = trace
+        by_task.setdefault(task_id, {})[repetition] = _profile(trace)
     flagged = {}
     for task_id, attempts in by_task.items():
         if len(attempts) < 2:
             continue
-        for repetition, trace in attempts.items():
+        for repetition, profile in attempts.items():
             others = [attempts[other] for other in attempts if other != repetition]
-            tools, models = _tools(trace), _models(trace)
-            typical_tools = statistics.median(len(_tools(other)) for other in others)
-            typical_models = statistics.median(len(_models(other)) for other in others)
+            trace, tools, models = profile["trace"], profile["tools"], profile["models"]
+            typical_tools = statistics.median(len(other["tools"]) for other in others)
+            typical_models = statistics.median(len(other["models"]) for other in others)
             more_tools = len(tools) > typical_tools
             more_models = len(models) > typical_models
             if not (more_tools or more_models):
                 continue
-            other_keys = {_key(event) for other in others for event in _tools(other)}
+            other_keys = set().union(*(other["keys"] for other in others))
             # Tool calls with no counterpart elsewhere, and the model steps
             # between the first and final ones, which each resend the context.
             extra = (
@@ -83,14 +98,10 @@ def repetition_findings(traces: dict[tuple[str, int], Any]) -> dict[tuple[str, i
             rounds = models[1:-1] if more_models else []
             if not (extra or rounds):
                 continue
-            tokens, typical_tokens = (
-                _input_tokens(trace),
-                statistics.median(_input_tokens(other) for other in others),
-            )
-            runtime, typical_runtime = (
-                float(trace.elapsed_ms or 0.0),
-                statistics.median(float(other.elapsed_ms or 0.0) for other in others),
-            )
+            tokens = profile["tokens"]
+            typical_tokens = statistics.median(other["tokens"] for other in others)
+            runtime = profile["runtime"]
+            typical_runtime = statistics.median(other["runtime"] for other in others)
             token_ratio = _ratio(tokens, typical_tokens)
             runtime_ratio = _ratio(runtime, typical_runtime)
             # Extra model steps leave a token signature. When token counts are
@@ -122,8 +133,11 @@ def repetition_findings(traces: dict[tuple[str, int], Any]) -> dict[tuple[str, i
     }
 
 
-def _plural(count, word):
-    return f"{count:g} {word}" + ("" if count == 1 else "s")
+def _count(actual, typical, word):
+    # Medians of an even number of repetitions can be fractional, so state the
+    # observed count and the typical one instead of a fractional difference.
+    plural = "" if actual == 1 else "s"
+    return f"{actual} {word}{plural} (typically {typical:g})"
 
 
 def _finding(key, item, flagged_attempts):
@@ -135,17 +149,10 @@ def _finding(key, item, flagged_attempts):
     spans = [event.event_id for event in extra]
     differences = []
     if item["model_steps"] > item["typical_model_steps"]:
-        differences.append(
-            _plural(item["model_steps"] - item["typical_model_steps"], "more model step")
-        )
+        differences.append(_count(item["model_steps"], item["typical_model_steps"], "model step"))
     if item["tool_calls"] > item["typical_tool_calls"]:
-        differences.append(
-            _plural(item["tool_calls"] - item["typical_tool_calls"], "more tool call")
-        )
-    title = (
-        f"Repetition {repetition} of {task_id} took {' and '.join(differences)} "
-        "than its typical repetition"
-    )
+        differences.append(_count(item["tool_calls"], item["typical_tool_calls"], "tool call"))
+    title = f"Repetition {repetition} of {task_id} took {' and '.join(differences)}"
     evidence = [
         {
             "span_id": event.event_id,
@@ -240,5 +247,8 @@ def add_repetition_findings(diagnoses, traces):
         diagnosis["summary"]["finding_count"] = len(combined)
         diagnosis["summary"]["high_severity_count"] = sum(
             finding["severity"] == "high" for finding in combined
+        )
+        diagnosis["ranking"]["ready_to_test_count"] = sum(
+            finding["ranking"]["status"] == "ready_to_test" for finding in diagnosis["findings"]
         )
     return diagnoses

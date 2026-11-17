@@ -116,7 +116,7 @@ def start_command(
             focus=focus,
             objective=objective,
             minimum_improvement=minimum_improvement,
-            decision=decision.replace("-", "_"),
+            decision=decision,
         )
     except (OSError, ValueError, TypeError, KeyError) as exc:
         raise typer.BadParameter(str(exc)) from exc

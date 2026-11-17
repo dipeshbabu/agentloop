@@ -374,6 +374,16 @@ def read_capture(path, workload):
     return manifest, traces
 
 
+def _completed(manifest, traces):
+    """Traces of attempts that completed, for comparisons between repetitions."""
+    done = {
+        (row["task_id"], row["repetition"])
+        for row in manifest["runs"]
+        if row["status"] == "completed"
+    }
+    return {key: trace for key, trace in traces.items() if key in done}
+
+
 def _quality(task, baseline, candidate):
     return build_quality_report(
         [
@@ -402,7 +412,8 @@ def start(
     workload = read_workload(workload_path)
     manifest, traces = read_capture(baseline_path, workload)
     require(objective in {"latency", "cost"}, "Objective must be latency or cost")
-    require(decision in DECISIONS, "Decision must be per_pair or aggregate")
+    decision = decision.replace("-", "_") if isinstance(decision, str) else decision
+    require(decision in DECISIONS, "Decision must be per-pair or aggregate")
     require(
         type(minimum_improvement) in (int, float)
         and math.isfinite(minimum_improvement)
@@ -410,7 +421,8 @@ def start(
         "Minimum improvement must be finite and nonnegative",
     )
     diagnoses = add_repetition_findings(
-        {key: build_diagnosis(trace) for key, trace in traces.items()}, traces
+        {key: build_diagnosis(trace) for key, trace in traces.items()},
+        _completed(manifest, traces),
     )
     findings = [finding for diagnosis in diagnoses.values() for finding in diagnosis["findings"]]
     if focus is None and findings:
@@ -652,7 +664,8 @@ def finish(session_path, candidate_path, root, *, change):
         # Diagnose controls like the original baseline, including comparisons
         # between their repetitions, so focus findings can be linked.
         control_diagnoses = add_repetition_findings(
-            {key: build_diagnosis(trace) for key, trace in controls.items()}, controls
+            {key: build_diagnosis(trace) for key, trace in controls.items()},
+            _completed(control_manifest, controls),
         )
     gates = ReplayGates(**specification["gates"])
     root = Path(root).resolve()
