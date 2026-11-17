@@ -7,6 +7,8 @@ trace, study, receipt, API and database schema versions.
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-11-17
+
 ### Added
 
 - `release-npm.yml` publishes the TypeScript SDK to npm from annotated
@@ -21,6 +23,12 @@ trace, study, receipt, API and database schema versions.
 - `examples/codex_exec_runner.py` runs OpenAI Codex CLI (`codex exec --json`)
   on guided tasks and converts its event stream into native traces, with a
   repository task set and a documented first run in `docs/CODEX.md`.
+
+### Changed
+
+- Development, CI, release workflows and the Docker image use uv 0.13.7.
+  The supported uv range is now 0.11.8 through 0.13, which lets Dependabot
+  propose Python dependency updates again.
 
 ## [0.2.1] - 2026-11-12
 
@@ -172,7 +180,8 @@ trace, study, receipt, API and database schema versions.
 - Optional live-provider validation, Harbor post-job plugins, active approval
   resolution and research trajectory export remain outside this release.
 
-[Unreleased]: https://github.com/dipeshbabu/agentloop/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/dipeshbabu/agentloop/compare/v0.2.2...HEAD
+[0.2.2]: https://github.com/dipeshbabu/agentloop/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/dipeshbabu/agentloop/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/dipeshbabu/agentloop/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/dipeshbabu/agentloop/compare/v0.1.0...v0.1.1
