@@ -355,10 +355,37 @@ jobs:
           path: dist/*
           if-no-files-found: error
 
-      # Download by the returned ID: a by-name lookup immediately after upload
-      # can miss the newly finalized artifact.
+      # Download by the returned ID. The artifact service can take a moment to
+      # list a newly finalized artifact, so retry with growing waits instead of
+      # requesting actions permissions that release.yml does not grant.
       - name: Download validated release artifact
+        id: download-package
         if: ${{ inputs.upload_release_artifact || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
+        continue-on-error: true
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          artifact-ids: ${{ steps.upload-package.outputs.artifact-id }}
+          path: .artifact-download-smoke
+
+      - name: Wait before second download attempt
+        if: steps.download-package.outcome == 'failure'
+        run: sleep 20
+
+      - name: Retry validated release artifact download
+        id: download-package-retry
+        if: steps.download-package.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          artifact-ids: ${{ steps.upload-package.outputs.artifact-id }}
+          path: .artifact-download-smoke
+
+      - name: Wait before final download attempt
+        if: steps.download-package-retry.outcome == 'failure'
+        run: sleep 60
+
+      - name: Final validated release artifact download
+        if: steps.download-package-retry.outcome == 'failure'
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           artifact-ids: ${{ steps.upload-package.outputs.artifact-id }}
