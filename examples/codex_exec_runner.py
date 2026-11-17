@@ -68,7 +68,7 @@ def convert(lines, *, run_id, root_id, origin, clock, model):
         return (origin + timedelta(seconds=moment - clock)).isoformat()
 
     events, open_tools, output, usage_seen = [], {}, None, False
-    failure, boundary, current = None, clock, None
+    failure, boundary, current, current_start = None, clock, None, clock
 
     def model_round(moment, item_type=None, text=None):
         """Open or extend the span for the current model round.
@@ -77,8 +77,9 @@ def convert(lines, *, run_id, root_id, origin, clock, model):
         and lasts until the model starts a tool or gives its final message.
         Messages and reasoning inside one round belong to the same model call.
         """
-        nonlocal current
+        nonlocal current, current_start
         if current is None:
+            current_start = boundary
             current = AgentEvent(
                 event_id="evt_" + uuid.uuid4().hex,
                 run_id=run_id,
@@ -95,7 +96,7 @@ def convert(lines, *, run_id, root_id, origin, clock, model):
             events.append(current)
         else:
             current.ended_at = at(moment)
-            current.duration_ms = (moment - boundary) * 1000
+            current.duration_ms = (moment - current_start) * 1000
         if item_type is not None:
             current.metadata["codex_items"].append(item_type)
         if text is not None:
@@ -117,6 +118,9 @@ def convert(lines, *, run_id, root_id, origin, clock, model):
             current = None
             open_tools[item.get("id")] = moment
         elif kind == "item.completed" and item_type in TOOL_ITEMS:
+            # Some tool items arrive only on completion; either way the model
+            # round that requested them has ended.
+            current = None
             started = open_tools.pop(item.get("id"), moment)
             exit_code = item.get("exit_code")
             failed = item.get("status") == "failed" or exit_code not in (None, 0)

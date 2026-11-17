@@ -31,6 +31,13 @@ trace, study, receipt, API and database schema versions.
   and completion checks instead of implying every pair passed overall.
 - The Codex example runner records one model span per model round. A message
   followed by a tool call in the same round was counted as two model calls.
+- `repetition_detour` compares completed attempts only, states observed and
+  typical counts instead of fractional differences, and keeps diagnosis
+  counts in step with the merged findings.
+- The Codex runner closes a model round when a tool item arrives only on
+  completion, and measures each round from its own start.
+- `improve start` accepts `per-pair` as well as `per_pair` and names the CLI
+  spelling in its error.
 - `docs/CODEX.md` attributes the first run's token spikes to extra model
   steps. It previously attributed them to an instruction-file read, which cost
   nothing extra when it ran in the same step as the requested read.
