@@ -27,7 +27,7 @@ body:
       description: Include Python, uv, operating system, and relevant framework or SDK versions.
       placeholder: |
         Python 3.13.5
-        uv 0.11.28
+        uv 0.13.7
         Windows 11
         openai 2.x
     validations:
