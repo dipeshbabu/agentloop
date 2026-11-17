@@ -18,7 +18,7 @@ Auxiliary model calls, gateways, and live provider behavior remain outside the p
 | Hermes compatibility lane | [v0.23.1, `3b421578588243f920886e6fe79a6faa87ea026e`](https://github.com/NousResearch/hermes-agent/tree/3b421578588243f920886e6fe79a6faa87ea026e) |
 | Host dependencies | Upstream `uv.lock`, installed frozen without development extras |
 | Host Python | Stable CPython 3.14; exact patch recorded in each report |
-| Hermes installer | uv 0.13.7, separate from AgentLoop's uv 0.11.28 |
+| Hermes installer | uv 0.13.7, the same version AgentLoop uses |
 | AgentLoop observer | Exported from this source checkout; recorder SHA-256 in each report |
 
 The runner checks the Hermes revision and tracked source before and after each
@@ -59,7 +59,7 @@ versions as separate executables. Replace the executable paths below with your
 local installations. Run these commands from the AgentLoop checkout:
 
 ```bash
-/path/to/uv-0.11.28 sync --locked --no-dev --python 3.14
+/path/to/uv-0.13.7 sync --locked --no-dev --python 3.14
 pilot=$(mktemp -d)
 .venv/bin/agentloop hermes export-plugin "$pilot/plugin"
 git clone https://github.com/NousResearch/hermes-agent.git "$pilot/hermes"
