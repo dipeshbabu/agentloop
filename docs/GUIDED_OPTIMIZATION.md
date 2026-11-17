@@ -171,6 +171,8 @@ usable usage is missing.
 
 ## Compare against an interleaved control
 
+Interleaved controls require AgentLoop 0.2.2 or newer.
+
 A plain candidate capture runs after the baseline, so cache warm-up, host load or
 provider drift can look like an improvement. When you can keep the unchanged
 agent runnable, for example in a separate `git worktree`, capture it as a control
