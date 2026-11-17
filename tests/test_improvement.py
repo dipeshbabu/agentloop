@@ -569,3 +569,72 @@ def test_cli_freezes_the_aggregate_decision(tmp_path, workload):
     saved = json.loads((tmp_path / "session/session.json").read_bytes())
     assert saved["specification"]["decision"] == "aggregate"
     assert "median paired improvement" in (tmp_path / "session/plan.md").read_text(encoding="utf-8")
+
+
+def test_interleaved_control_must_follow_the_frozen_session(tmp_path, workload):
+    tasks, worker = prepare(tmp_path, workload)
+    capture(
+        tasks,
+        tmp_path / "paired",
+        command(worker, "fast"),
+        control=command(worker, "baseline"),
+    )
+    control_path = tmp_path / "paired/control/capture.json"
+    control = json.loads(control_path.read_bytes())
+    control["created_at"] = "2000-01-01T00:00:00+00:00"
+    control_path.write_text(json.dumps(control), encoding="utf-8")
+    candidate_path = tmp_path / "paired/capture.json"
+    candidate = json.loads(candidate_path.read_bytes())
+    candidate["control"]["manifest_hash"] = fingerprint(control)
+    candidate_path.write_text(json.dumps(candidate), encoding="utf-8")
+    with pytest.raises(ValueError, match="control after freezing"):
+        finish(
+            tmp_path / "session/session.json",
+            candidate_path,
+            tmp_path / "results",
+            change="Stale control",
+        )
+    assert not (tmp_path / "results").exists()
+
+
+def test_cli_output_survives_unicode_names_on_a_legacy_code_page(tmp_path):
+    import os
+    import subprocess
+
+    tasks = tmp_path / "tasks.json"
+    tasks.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "name": "Unicode ✓ 检查",
+                "repetitions": 1,
+                "tasks": [{"id": "检查-✓", "input": "one", "expected": "one"}],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "from agentloop.entrypoint import app; app()",
+            "improve",
+            "capture",
+            "--tasks",
+            str(tasks),
+            "--out",
+            str(tmp_path / "capture"),
+            "--",
+            sys.executable,
+            str(tmp_path / "missing.py"),
+        ],
+        capture_output=True,
+        env={**os.environ, "PYTHONIOENCODING": "cp1252", "COLUMNS": "200"},
+        timeout=120,
+        check=False,
+    )
+    output = result.stdout.decode("utf-8")
+    assert result.returncode == 1, result.stderr.decode("utf-8", "replace")
+    assert "UnicodeEncodeError" not in result.stderr.decode("utf-8", "replace")
+    assert "检查-✓ repetition 0" in output

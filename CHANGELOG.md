@@ -22,6 +22,15 @@ trace, study, receipt, API and database schema versions.
 
 ### Fixed
 
+- The CLI no longer crashes with `UnicodeEncodeError` when its output is piped
+  or redirected on Windows and a task ID, trace name or other text falls
+  outside the console code page. Redirected output is written as UTF-8.
+- `improve finish` rejects an interleaved control captured before the session
+  was frozen, matching the existing candidate check.
+- In aggregate decisions, report headlines count pairs that passed correctness
+  and completion checks instead of implying every pair passed overall.
+- The Codex example runner records one model span per model round. A message
+  followed by a tool call in the same round was counted as two model calls.
 - `docs/CODEX.md` attributes the first run's token spikes to extra model
   steps. It previously attributed them to an instruction-file read, which cost
   nothing extra when it ran in the same step as the requested read.

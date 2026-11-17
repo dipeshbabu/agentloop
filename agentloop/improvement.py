@@ -639,6 +639,11 @@ def finish(session_path, candidate_path, root, *, change):
             "Interleaved control capture changed",
         )
         require(
+            datetime.fromisoformat(control_manifest["created_at"])
+            >= datetime.fromisoformat(specification["frozen_at"]),
+            "Capture the interleaved control after freezing baseline findings",
+        )
+        require(
             not (baseline_ids | candidate_ids).intersection(
                 trace.run_id for trace in controls.values()
             ),
