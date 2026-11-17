@@ -14,6 +14,17 @@ trace, study, receipt, API and database schema versions.
   more pairs must improve than regress. Every pair must still complete and
   pass its quality and non-performance gates. Reports include the counts and
   a non-gating sign-test p-value. The default per-pair decision is unchanged.
+- `improve start` compares repetitions of each task and reports a
+  `repetition_detour` finding when an attempt took more model steps or tool
+  calls than its typical repetition and used at least 25% more input tokens
+  (runtime when tokens are unrecorded). Evidence lists the extra calls and
+  intermediate model steps. Interleaved controls are diagnosed the same way.
+
+### Fixed
+
+- `docs/CODEX.md` attributes the first run's token spikes to extra model
+  steps. It previously attributed them to an instruction-file read, which cost
+  nothing extra when it ran in the same step as the requested read.
 
 ## [0.2.2] - 2026-11-17
 

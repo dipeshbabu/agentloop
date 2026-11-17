@@ -71,10 +71,18 @@ the three tasks ran twice per condition.
   same path. Both `engines.node` pairs were slower than their controls, by 12%
   and 19%, and failed the latency gates. **The change was rejected.**
 
-In three runs, two controls and one candidate, Codex made an extra shell call to
-read a user-level instruction file referenced by the global Codex instructions.
-Each of those runs used about 16,000–20,000 more input tokens. The traces make
-that call visible as a separate `tool_call` span. This path variation is larger
-than the measured context saving. More repetitions would be needed before
+Three runs, two controls and one candidate, used about 18,000–20,400 more input
+tokens than their other repetition. Each of them took an extra model step. Codex
+ran one tool, called the model again, and then ran another tool, instead of
+running both tools in one step, and each model step resent about 19,000 tokens
+of context. Several runs also read a user-level instruction file referenced by
+the global Codex instructions. That read cost nothing extra when Codex ran it in
+the same step as the requested file read. The extra step, not the read itself,
+accounted for the increase. This path variation is larger than the measured
+context saving.
+
+The `repetition_detour` finding, available from AgentLoop 0.2.3, reports these
+attempts automatically. On these 18 traces it flags exactly the three runs with
+an extra model step and none of the others. More repetitions would be needed before
 attributing a latency change to this configuration. These six pairs describe
 one machine, one model configuration and three lookup tasks.
