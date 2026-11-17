@@ -53,7 +53,7 @@ jobs:
       - name: Set up AgentLoop uv
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
-          version: "0.11.28"
+          version: "0.13.7"
           enable-cache: false
       - name: Export observer from current source
         run: |
@@ -152,7 +152,7 @@ jobs:
       - name: Set up uv and Python
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
-          version: "0.11.28"
+          version: "0.13.7"
           python-version: "3.13"
           enable-cache: true
       - name: Install API test dependencies
@@ -230,7 +230,7 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
-          version: "0.11.28"
+          version: "0.13.7"
           enable-cache: true
 
       - name: Install package
@@ -325,7 +325,7 @@ jobs:
       - name: Set up uv and Python
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
-          version: "0.11.28"
+          version: "0.13.7"
           python-version: "3.13"
           enable-cache: true
 
@@ -400,7 +400,7 @@ jobs:
       - name: Set up uv and Python
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
-          version: "0.11.28"
+          version: "0.13.7"
           python-version: "3.13"
           enable-cache: true
 
