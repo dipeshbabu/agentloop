@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from pathlib import Path
 
 import typer
@@ -66,6 +67,32 @@ from agentloop.value import build_value_report
 
 app = typer.Typer(help="AgentLoop profiler CLI")
 console = Console()
+
+
+def _utf8_output() -> None:
+    """Write UTF-8 when output is redirected on a legacy code page.
+
+    On Windows, piped or redirected output uses the ANSI code page (for example
+    cp1252). Task IDs, trace names and other user text outside that code page
+    then raise UnicodeEncodeError mid-command and hide the real result.
+    Interactive consoles already use UTF-8 and are left unchanged.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        encoding = (getattr(stream, "encoding", None) or "").lower().replace("-", "")
+        if encoding in {"utf8", "utf_8"} or not hasattr(stream, "reconfigure"):
+            continue
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (OSError, ValueError):
+            continue
+
+
+@app.callback()
+def _main() -> None:
+    """AgentLoop profiler CLI"""
+    _utf8_output()
+
+
 study_app = typer.Typer(help="Summarize offline studies and preserved intervention evidence.")
 app.add_typer(study_app, name="study")
 app.add_typer(aggregate_app, name="aggregate")

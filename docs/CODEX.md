@@ -86,3 +86,27 @@ attempts automatically. On these 18 traces it flags exactly the three runs with
 an extra model step and none of the others. More repetitions would be needed before
 attributing a latency change to this configuration. These six pairs describe
 one machine, one model configuration and three lookup tasks.
+
+## Second observed run
+
+On 2026-11-17 the maintainer repeated the task set with four repetitions per
+task, using the runner's model-round accounting, an interleaved control and a
+frozen `--decision aggregate`.
+
+- **Baseline:** all twelve answers were correct. `repetition_detour` flagged one
+  attempt that took an extra model step and used 20,035 more input tokens than
+  its typical repetition. One other attempt also took an extra round, but it
+  added only about 480 input tokens and was not reported.
+- **Candidate:** `--instructions` asked Codex to request every file read it
+  needed together, in one step, and to read no other files. It ran against
+  the unchanged runner as the interleaved control.
+- **Outcome:** all 24 answers were correct, and the candidate took no costly
+  detours, while the control took one. But the candidate was slower in all
+  12 pairs, with a median latency change of −34.5%, so the aggregate decision
+  **rejected it**. Its first model round spent noticeably longer planning, and
+  it averaged 2.42 model rounds against 2.08 for the control. It still read the
+  user-level instruction file, though in parallel with the requested read.
+
+Removing occasional detours did not pay for the extra planning time on these
+lookup tasks. Like the first run, this describes one machine, one model
+configuration and three tasks.

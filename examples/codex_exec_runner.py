@@ -5,7 +5,9 @@ stdin. It runs `codex exec --json --ephemeral` in a read-only sandbox, timestamp
 each JSONL event as it arrives, and converts the stream into AgentLoop events:
 
 - each shell command, file change, MCP tool call or web search is a tool span;
-- each agent message or reasoning item is a model span ending when it arrived;
+- each model round is one model span: it starts at the turn start or when the
+  last running tool finished, and ends when the model starts a tool or gives
+  its final message, so messages within a round do not count as extra calls;
 - Codex reports token usage once per turn, so the turn total is attached to the
   last model span of that turn with ``usage_scope = "turn_total"``.
 
@@ -66,7 +68,39 @@ def convert(lines, *, run_id, root_id, origin, clock, model):
         return (origin + timedelta(seconds=moment - clock)).isoformat()
 
     events, open_tools, output, usage_seen = [], {}, None, False
-    failure, boundary = None, clock
+    failure, boundary, current = None, clock, None
+
+    def model_round(moment, item_type=None, text=None):
+        """Open or extend the span for the current model round.
+
+        A round starts at the turn start or when the last running tool finished
+        and lasts until the model starts a tool or gives its final message.
+        Messages and reasoning inside one round belong to the same model call.
+        """
+        nonlocal current
+        if current is None:
+            current = AgentEvent(
+                event_id="evt_" + uuid.uuid4().hex,
+                run_id=run_id,
+                parent_id=root_id,
+                event_type="model_call",
+                name="codex_model_round",
+                model=model,
+                started_at=at(boundary),
+                ended_at=at(moment),
+                duration_ms=(moment - boundary) * 1000,
+                token_provenance=UNAVAILABLE,
+                metadata={"codex_items": []},
+            )
+            events.append(current)
+        else:
+            current.ended_at = at(moment)
+            current.duration_ms = (moment - boundary) * 1000
+        if item_type is not None:
+            current.metadata["codex_items"].append(item_type)
+        if text is not None:
+            current.output_text = clip(text)
+
     for moment, raw in lines:
         try:
             event = json.loads(raw)
@@ -75,25 +109,12 @@ def convert(lines, *, run_id, root_id, origin, clock, model):
         kind, item = event.get("type"), event.get("item") or {}
         item_type = item.get("type")
         if kind == "turn.started":
-            boundary = moment
+            boundary, current = moment, None
         elif kind == "item.started" and item_type in TOOL_ITEMS:
-            if not open_tools and moment > boundary:
-                # The model chose this tool call without emitting a visible item.
-                events.append(
-                    AgentEvent(
-                        event_id="evt_" + uuid.uuid4().hex,
-                        run_id=run_id,
-                        parent_id=root_id,
-                        event_type="model_call",
-                        name="codex_tool_decision",
-                        model=model,
-                        started_at=at(boundary),
-                        ended_at=at(moment),
-                        duration_ms=(moment - boundary) * 1000,
-                        token_provenance=UNAVAILABLE,
-                        metadata={"codex_item_type": "tool_decision"},
-                    )
-                )
+            if not open_tools and (current is not None or moment > boundary):
+                model_round(moment, "tool_call")
+            # The round ends when its tool calls start running.
+            current = None
             open_tools[item.get("id")] = moment
         elif kind == "item.completed" and item_type in TOOL_ITEMS:
             started = open_tools.pop(item.get("id"), moment)
@@ -118,46 +139,17 @@ def convert(lines, *, run_id, root_id, origin, clock, model):
             )
             boundary = max(boundary, moment)
         elif kind == "item.completed" and item_type in MODEL_ITEMS:
-            # The model was working from the previous visible boundary until this
-            # item arrived, unless a tool was still running in that interval.
-            started = max([boundary, *open_tools.values()])
-            events.append(
-                AgentEvent(
-                    event_id="evt_" + uuid.uuid4().hex,
-                    run_id=run_id,
-                    parent_id=root_id,
-                    event_type="model_call",
-                    name=f"codex_{item_type}",
-                    model=model,
-                    started_at=at(started),
-                    ended_at=at(moment),
-                    duration_ms=(moment - started) * 1000,
-                    token_provenance=UNAVAILABLE,
-                    output_text=clip(item.get("text")),
-                    metadata={"codex_item_type": item_type},
-                )
-            )
+            if open_tools:
+                # Reported while tools still run: keep the round open after them.
+                boundary = max([boundary, *open_tools.values()])
+            model_round(moment, item_type, item.get("text"))
             if item_type == "agent_message":
                 output = item.get("text")
-            boundary = moment
         elif kind == "turn.completed":
             usage = event.get("usage") or {}
+            if current is None and not any(item.event_type == "model_call" for item in events):
+                model_round(moment)
             models = [item for item in events if item.event_type == "model_call"]
-            if not models:
-                models.append(
-                    AgentEvent(
-                        event_id="evt_" + uuid.uuid4().hex,
-                        run_id=run_id,
-                        parent_id=root_id,
-                        event_type="model_call",
-                        name="codex_turn",
-                        model=model,
-                        started_at=at(boundary),
-                        ended_at=at(moment),
-                        duration_ms=(moment - boundary) * 1000,
-                    )
-                )
-                events.append(models[0])
             last = models[-1]
             last.input_tokens = int(usage.get("input_tokens") or 0)
             last.output_tokens = int(usage.get("output_tokens") or 0)

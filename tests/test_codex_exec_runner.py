@@ -78,9 +78,9 @@ def test_stream_becomes_tool_and_model_spans_with_turn_usage():
     assert usage_seen is True
     assert failure is None
     assert [(event.event_type, event.name) for event in events] == [
-        ("model_call", "codex_tool_decision"),
+        ("model_call", "codex_model_round"),
         ("tool_call", "shell"),
-        ("model_call", "codex_agent_message"),
+        ("model_call", "codex_model_round"),
     ]
     decision, tool, answer = events
     assert decision.duration_ms == pytest.approx(1500)
@@ -95,6 +95,57 @@ def test_stream_becomes_tool_and_model_spans_with_turn_usage():
     )
     assert answer.metadata["usage_scope"] == "turn_total"
     assert answer.metadata["cached_input_tokens"] == 32000
+    assert decision.metadata["codex_items"] == ["tool_call"]
+    assert answer.metadata["codex_items"] == ["agent_message"]
+    assert answer.output_text == ">=3.11"
+
+
+def test_a_message_before_a_tool_call_is_part_of_the_same_model_round():
+    preamble = (
+        1.0,
+        {
+            "type": "item.completed",
+            "item": {"id": "item_0", "type": "agent_message", "text": "Checking."},
+        },
+    )
+    events, output, _, _ = run_convert([*STREAM[:2], preamble, *STREAM[2:]])
+    rounds = [event for event in events if event.event_type == "model_call"]
+    assert len(rounds) == 2
+    assert rounds[0].metadata["codex_items"] == ["agent_message", "tool_call"]
+    assert rounds[0].duration_ms == pytest.approx(1500)
+    assert output == ">=3.11"
+
+
+def test_sequential_tools_add_a_model_round_but_parallel_tools_do_not():
+    def tool(moment, item_id, phase):
+        item = {"id": item_id, "type": "command_execution", "command": item_id}
+        if phase == "completed":
+            item.update(exit_code=0, status="completed")
+        return (moment, {"type": f"item.{phase}", "item": item})
+
+    answer = (
+        5.0,
+        {"type": "item.completed", "item": {"id": "z", "type": "agent_message", "text": "ok"}},
+    )
+    parallel = [
+        STREAM[1],
+        tool(1, "a", "started"),
+        tool(1.1, "b", "started"),
+        tool(2, "a", "completed"),
+        tool(2.1, "b", "completed"),
+        answer,
+    ]
+    sequential = [
+        STREAM[1],
+        tool(1, "a", "started"),
+        tool(2, "a", "completed"),
+        tool(3, "b", "started"),
+        tool(4, "b", "completed"),
+        answer,
+    ]
+    for stream, expected in ((parallel, 2), (sequential, 3)):
+        events, _, _, _ = run_convert(stream)
+        assert sum(event.event_type == "model_call" for event in events) == expected
 
 
 def test_failed_commands_and_turns_are_retained_as_errors():
@@ -120,7 +171,7 @@ def test_failed_commands_and_turns_are_retained_as_errors():
 def test_usage_without_model_items_gets_its_own_model_span():
     events, _, usage_seen, _ = run_convert([STREAM[1], STREAM[-1]])
     assert usage_seen is True
-    assert [(event.name, event.input_tokens) for event in events] == [("codex_turn", 40000)]
+    assert [(event.name, event.input_tokens) for event in events] == [("codex_model_round", 40000)]
 
 
 def test_converted_events_form_an_analyzable_trace():

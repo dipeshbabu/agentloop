@@ -173,6 +173,15 @@ def _metric(summary, name):
     return f"{value:.3f}" if isinstance(value, float) else str(value)
 
 
+def _headline(report):
+    if (report.get("decision") or {}).get("mode") == "aggregate":
+        return (
+            f"{report['passed_attempts']} of {report['planned_attempts']} pairs passed "
+            "correctness and completion checks."
+        )
+    return f"{report['passed_attempts']} of {report['planned_attempts']} planned attempts passed."
+
+
 def _basis(report):
     if report.get("comparison_baseline") == "interleaved_control":
         return (
@@ -222,7 +231,7 @@ def report_markdown(report):
         if report["passed"]
         else "The change did not pass the declared checks.",
         "",
-        f"{report['passed_attempts']} of {report['planned_attempts']} planned attempts passed.",
+        _headline(report),
         "",
         "Applied change",
         "",
@@ -293,7 +302,7 @@ def export_report(root, report):
     markdown = report_markdown(report)
     (root / "report.md").write_text(markdown, encoding="utf-8")
     sections = [
-        f"<header><h1>{_text(report['name'])}</h1><p>{report['passed_attempts']} of {report['planned_attempts']} planned attempts passed.</p></header>",
+        f"<header><h1>{_text(report['name'])}</h1><p>{_text(_headline(report))}</p></header>",
         f"<h2>Applied change</h2><p>{_text(report['change'])}</p>",
         f"<p>{_text(_basis(report))}</p>",
         *[f"<p>{_text(line)}</p>" for line in _decision_lines(report)],
