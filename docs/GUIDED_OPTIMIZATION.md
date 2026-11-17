@@ -141,6 +141,16 @@ and missing inputs. They remain hypotheses until candidate measurements exist.
 The default focus is the first baseline finding family. Select another observed
 family with `--focus cache_context`, for example.
 
+From AgentLoop 0.2.3, `start` also compares repetitions of each task. The
+`repetition_detour` finding marks an attempt that took more model steps or tool
+calls than the median of its other repetitions and used at least 25% more input
+tokens. Runtime replaces tokens only when traces record no token counts. Its
+evidence lists the extra tool calls and the intermediate model steps, each of
+which usually resends the whole context. Confidence is medium when two or more
+attempts in the task set take such a detour. Select it with
+`--focus repetition_detour`. Single-run rules cannot see this pattern, because
+each detour looks normal on its own. Use at least two repetitions per task.
+
 `start` saves original diagnoses, selected finding IDs, trace snapshots, task
 definitions, and gate settings in a content-hashed `session.json` before any
 candidate capture. The default objective is latency. Use `--objective cost` to

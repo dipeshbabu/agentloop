@@ -18,6 +18,7 @@ from agentloop.experiment_types import fingerprint
 from agentloop.findings import build_diagnosis
 from agentloop.interventions import build_intervention
 from agentloop.quality import build_quality_report, validate_quality_fixtures
+from agentloop.repetitions import add_repetition_findings
 from agentloop.replay import ReplayGates, build_replay_report
 from agentloop.replay import _summary as replay_summary
 from agentloop.tracer import AgentTrace
@@ -408,7 +409,9 @@ def start(
         and minimum_improvement >= 0,
         "Minimum improvement must be finite and nonnegative",
     )
-    diagnoses = {key: build_diagnosis(trace) for key, trace in traces.items()}
+    diagnoses = add_repetition_findings(
+        {key: build_diagnosis(trace) for key, trace in traces.items()}, traces
+    )
     findings = [finding for diagnosis in diagnoses.values() for finding in diagnosis["findings"]]
     if focus is None and findings:
         focus = findings[0]["type"]
@@ -641,6 +644,11 @@ def finish(session_path, candidate_path, root, *, change):
             ),
             "Control, baseline and candidate must have distinct run IDs",
         )
+        # Diagnose controls like the original baseline, including comparisons
+        # between their repetitions, so focus findings can be linked.
+        control_diagnoses = add_repetition_findings(
+            {key: build_diagnosis(trace) for key, trace in controls.items()}, controls
+        )
     gates = ReplayGates(**specification["gates"])
     root = Path(root).resolve()
     root.mkdir(parents=True, exist_ok=False)
@@ -668,7 +676,7 @@ def finish(session_path, candidate_path, root, *, change):
             )
             baseline_status = control_row["status"]
             baseline_diagnostic = control_row.get("diagnostic")
-            diagnosis = build_diagnosis(baseline) if baseline is not None else None
+            diagnosis = control_diagnoses.get(key)
             finding_ids = (
                 [
                     finding["finding_id"]
