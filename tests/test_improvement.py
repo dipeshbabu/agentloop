@@ -83,6 +83,8 @@ def test_guided_workflow_uses_native_quality_replay_and_studies(tmp_path, worklo
     )
     assert report["study"] is not None
     assert all(row["intervention"] for row in report["cases"])
+    assert report["timing_summary"]["trace_elapsed_ms"]["paired_count"] == 4
+    assert report["timing_summary"]["runner_elapsed_ms"]["paired_count"] == 4
     assert (tmp_path / "results/report.html").is_file()
     assert (tmp_path / "session/plan.md").is_file()
 
@@ -100,6 +102,16 @@ def test_faster_wrong_failed_or_missing_candidates_are_rejected(tmp_path, worklo
     assert report["passed"] is False
     assert report["planned_attempts"] == 4
     assert report["passed_attempts"] == 0
+    assert report["timing_summary"]["eligible_pairs"] == 0
+    assert report["timing_summary"]["runner_elapsed_ms"]["paired_count"] == 0
+    assert all(row["timing"]["candidate"]["runner_elapsed_ms"] > 0 for row in report["cases"])
+    if mode == "missing":
+        assert all(
+            row["timing"]["candidate"]["trace_elapsed_ms"] is None for row in report["cases"]
+        )
+        assert "| Trace latency (ms) |" in (tmp_path / "results/report.md").read_text(
+            encoding="utf-8"
+        )
     assert all(
         row["intervention"] is None or row["intervention"]["gates_passed"] is False
         for row in report["cases"]
@@ -235,6 +247,8 @@ def test_cli_runs_the_normal_entry_points_and_returns_quality_failure(tmp_path, 
         ],
     )
     assert result.exit_code == 1, result.output
+    assert "Trace latency (ms)" in result.output
+    assert "Runner wall time (ms)" in result.output
     assert (tmp_path / "results/report.json").is_file()
 
 
@@ -278,6 +292,8 @@ def test_interruption_retains_cancelled_and_unstarted_attempts(tmp_path, workloa
         "not_started",
         "not_started",
     ]
+    assert manifest["runs"][0]["runner_elapsed_ms"] >= 0
+    assert all("runner_elapsed_ms" not in row for row in manifest["runs"][1:])
 
 
 def test_invalid_trace_keeps_the_runner_failure_status(tmp_path, workload):
@@ -376,7 +392,60 @@ def test_interleaved_control_alternates_order_and_becomes_the_comparison(tmp_pat
         assert row["intervention"]["baseline_run_id"] in control_ids
         assert row["frozen_baseline_status"] == "completed"
     assert [row["control_ran_first"] for row in report["cases"]] == [True, False, True, False]
-    assert "alternating order" in (tmp_path / "results/report.md").read_text(encoding="utf-8")
+    for index, row in enumerate(report["cases"]):
+        timing = row["timing"]
+        assert (
+            timing["baseline"]["runner_elapsed_ms"] == control["runs"][index]["runner_elapsed_ms"]
+        )
+        assert timing["baseline"]["runner_clock"] == "monotonic"
+        assert (
+            timing["candidate"]["runner_elapsed_ms"] == manifest["runs"][index]["runner_elapsed_ms"]
+        )
+    markdown = (tmp_path / "results/report.md").read_text(encoding="utf-8")
+    assert "alternating order" in markdown
+    assert "| Measurement | Control | Candidate |" in markdown
+    page = (tmp_path / "results/report.html").read_text(encoding="utf-8")
+    assert "Control median" in page and "Control trace" in page
+    assert "Trace latency (ms)" in page and "Runner wall time (ms)" in page
+
+
+def test_timing_summary_reads_legacy_receipts_and_keeps_runner_time_out_of_gates(
+    tmp_path, workload
+):
+    tasks, worker = workload
+    baseline_path = tmp_path / "baseline/capture.json"
+    baseline = capture(tasks, baseline_path.parent, command(worker, "baseline"))
+    for row, end in zip(baseline["runs"], ("00.150", "00.350", "00.200", "00.099"), strict=True):
+        row.pop("runner_elapsed_ms")
+        row.update(started_at="2026-01-01T00:00:00.100Z", ended_at=f"2026-01-01T00:00:{end}+00:00")
+    baseline_path.write_text(json.dumps(baseline), encoding="utf-8")
+    session = tmp_path / "session"
+    start(tasks, baseline_path, session)
+
+    candidate_path = tmp_path / "candidate/capture.json"
+    candidate = capture(tasks, candidate_path.parent, command(worker, "fast"))
+    for row, runner_ms in zip(candidate["runs"], (300, 350, True, 400), strict=True):
+        row["runner_elapsed_ms"] = runner_ms
+    candidate_path.write_text(json.dumps(candidate), encoding="utf-8")
+
+    report = finish(
+        session / "session.json",
+        candidate_path,
+        tmp_path / "results",
+        change="Spend less time inside the trace",
+    )
+    assert report["passed"]
+    assert report["timing_summary"]["eligible_pairs"] == 4
+    assert report["timing_summary"]["trace_elapsed_ms"]["paired_count"] == 4
+    assert report["timing_summary"]["runner_elapsed_ms"] == {
+        "paired_count": 2,
+        "baseline_median_ms": 150.0,
+        "candidate_median_ms": 325.0,
+        "median_paired_delta_ms": 175.0,
+    }
+    assert report["cases"][0]["timing"]["baseline"]["runner_clock"] == "capture_timestamps"
+    assert report["cases"][2]["timing"]["candidate"]["runner_clock"] is None
+    assert report["cases"][3]["timing"]["baseline"]["runner_elapsed_ms"] is None
 
 
 def test_interleaved_control_must_also_pass_quality_checks(tmp_path, workload):

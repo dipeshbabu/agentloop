@@ -6,9 +6,11 @@ from pathlib import Path
 
 import typer
 from rich.console import Console
+from rich.table import Table
 
 from agentloop import improvement
 from agentloop.improvement_init import initialize, project_tasks
+from agentloop.improvement_report import comparison_label, timing_summary_rows
 
 improve_app = typer.Typer(
     help="Capture fixed tasks, review baseline findings, and verify an applied change."
@@ -164,6 +166,16 @@ def finish_command(
             f"{report['passed_attempts']} of {report['planned_attempts']} planned comparisons passed.",
             markup=False,
         )
+    timing = Table(
+        "Timing",
+        f"{comparison_label(report)} median",
+        "Candidate median",
+        "Measured pairs",
+        caption="Completed, correct pairs. Latency gates use trace latency.",
+    )
+    for label, before, after, _, pairs in timing_summary_rows(report):
+        timing.add_row(label, before, after, pairs)
+    console.print(timing)
     console.print(f"Read {out / 'report.html'}", markup=False)
     for case in report["cases"]:
         if not case["passed"]:

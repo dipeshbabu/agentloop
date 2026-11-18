@@ -13,6 +13,22 @@ from agentloop.markdown import (
     markdown_text,
 )
 
+_TIMINGS = (("Trace latency", "trace_elapsed_ms"), ("Runner wall time", "runner_elapsed_ms"))
+_MEASUREMENTS = (
+    ("Input tokens", "input_tokens"),
+    ("Output tokens", "output_tokens"),
+    ("Model calls", "model_call_count"),
+    ("Tool operations", "tool_operations"),
+    ("Estimated model cost (USD)", "estimated_cost_usd"),
+    ("Quality score", "quality_score"),
+)
+_RUNNER_CLOCKS = {"monotonic": "Monotonic clock", "capture_timestamps": "Capture timestamps"}
+_TIMING_SCOPE = (
+    "Trace latency covers the instrumented execution. Runner wall time spans launch "
+    "through exit, including startup, trace export, and cleanup after interruption. "
+    "Latency gates use trace latency."
+)
+
 
 def plan_markdown(specification):
     lines = [
@@ -182,6 +198,72 @@ def _headline(report):
     return f"{report['passed_attempts']} of {report['planned_attempts']} planned attempts passed."
 
 
+def comparison_label(report):
+    return "Control" if report.get("comparison_baseline") == "interleaved_control" else "Baseline"
+
+
+def timing_summary_rows(report):
+    timing = report.get("timing_summary")
+    if timing is None:
+        return []
+    return [
+        [
+            f"{label} (ms)",
+            _metric(timing[key], "baseline_median_ms"),
+            _metric(timing[key], "candidate_median_ms"),
+            _metric(timing[key], "median_paired_delta_ms"),
+            f"{timing[key]['paired_count']}/{report['planned_attempts']}",
+        ]
+        for label, key in _TIMINGS
+    ]
+
+
+def _measurement_rows(row):
+    timing, replay = row.get("timing"), row["replay"]
+    sides = ("baseline", "candidate")
+    measurements = []
+    if timing is not None:
+        measurements.extend(
+            [f"{label} (ms)", *(_metric(timing[side], key) for side in sides)]
+            for label, key in _TIMINGS
+        )
+        measurements.append(
+            [
+                "Runner clock",
+                *(
+                    _RUNNER_CLOCKS.get(timing[side]["runner_clock"], "unavailable")
+                    for side in sides
+                ),
+            ]
+        )
+    elif replay:
+        measurements.append(
+            ["Trace latency (ms)", *(_metric(replay[side], "runtime_ms") for side in sides)]
+        )
+    if replay:
+        measurements.extend(
+            [label, *(_metric(replay[side], key) for side in sides)] for label, key in _MEASUREMENTS
+        )
+    return measurements
+
+
+_TIMING_SUMMARY_SCOPE = (
+    "Medians use pairs with completed traces, passing checks on both answers, and both "
+    "measurements for the given scope. The paired difference is candidate minus "
+    "comparison time for each pair, then summarized by the median."
+)
+
+
+def _timing_headers(comparison):
+    return [
+        "Timing",
+        f"{comparison} median",
+        "Candidate median",
+        "Median paired difference",
+        "Pairs measured",
+    ]
+
+
 def _basis(report):
     if report.get("comparison_baseline") == "interleaved_control":
         return (
@@ -224,6 +306,7 @@ def _decision_lines(report):
 
 
 def report_markdown(report):
+    comparison = comparison_label(report)
     lines = [
         f"# {markdown_heading(report['name'])}",
         "",
@@ -248,6 +331,23 @@ def report_markdown(report):
                 "",
             ]
         )
+    timing_rows = timing_summary_rows(report)
+    if timing_rows:
+        headers = _timing_headers(comparison)
+        lines.extend(
+            [
+                "## Paired timing",
+                "",
+                _TIMING_SCOPE,
+                "",
+                _TIMING_SUMMARY_SCOPE,
+                "",
+                "| " + " | ".join(headers) + " |",
+                "| " + " | ".join(["---"] * len(headers)) + " |",
+                *("| " + " | ".join(values) + " |" for values in timing_rows),
+                "",
+            ]
+        )
     for row in report["cases"]:
         lines.extend(
             [
@@ -258,21 +358,11 @@ def report_markdown(report):
             ]
         )
         lines.extend(f"- {markdown_text(reason)}" for reason in row["reasons"])
+        measurements = _measurement_rows(row)
+        if measurements:
+            lines.extend(["", f"| Measurement | {comparison} | Candidate |", "| --- | --- | --- |"])
+            lines.extend("| " + " | ".join(values) + " |" for values in measurements)
         if row["replay"]:
-            lines.extend(["", "| Measurement | Baseline | Candidate |", "| --- | --- | --- |"])
-            for label, metric in (
-                ("Runtime (ms)", "runtime_ms"),
-                ("Input tokens", "input_tokens"),
-                ("Output tokens", "output_tokens"),
-                ("Model calls", "model_call_count"),
-                ("Tool operations", "tool_operations"),
-                ("Estimated model cost (USD)", "estimated_cost_usd"),
-                ("Quality score", "quality_score"),
-            ):
-                replay = row["replay"]
-                lines.append(
-                    f"| {label} | {_metric(replay['baseline'], metric)} | {_metric(replay['candidate'], metric)} |"
-                )
             lines.extend(["", "| Gate | Result | Detail |", "| --- | --- | --- |"])
             for gate in row["replay"]["gates"]["results"]:
                 status = (
@@ -301,6 +391,7 @@ def export_report(root, report):
     write_once(root, "report.json", report)
     markdown = report_markdown(report)
     (root / "report.md").write_text(markdown, encoding="utf-8")
+    comparison = comparison_label(report)
     sections = [
         f"<header><h1>{_text(report['name'])}</h1><p>{_text(_headline(report))}</p></header>",
         f"<h2>Applied change</h2><p>{_text(report['change'])}</p>",
@@ -311,36 +402,35 @@ def export_report(root, report):
         sections.append(
             '<p class="notice">This comparison includes synthetic evidence. Results apply to the supplied fixtures.</p>'
         )
-    measurements = (
-        ("Runtime (ms)", "runtime_ms"),
-        ("Input tokens", "input_tokens"),
-        ("Output tokens", "output_tokens"),
-        ("Model calls", "model_call_count"),
-        ("Tool operations", "tool_operations"),
-        ("Estimated model cost (USD)", "estimated_cost_usd"),
-        ("Quality score", "quality_score"),
-    )
+    timing_rows = timing_summary_rows(report)
+    if timing_rows:
+        sections.extend(
+            [
+                f"<h2>Paired timing</h2><p>{_text(_TIMING_SCOPE)}</p><p>{_text(_TIMING_SUMMARY_SCOPE)}</p>",
+                _table(
+                    _timing_headers(comparison),
+                    [[_text(cell) for cell in values] for values in timing_rows],
+                    caption="Measured timing for completed, correct pairs",
+                ),
+            ]
+        )
     for index, row in enumerate(report["cases"]):
         status = "Passed" if row["passed"] else "Rejected"
         sections.append(
             f"<section><h2>{_text(row['task_id'])}, repetition {row['repetition']}</h2><p><strong>{status}</strong></p>"
         )
         sections.extend(f"<p>{_text(reason)}</p>" for reason in row["reasons"])
-        if row["replay"]:
-            replay = row["replay"]
-            values = [
-                [
-                    label,
-                    _text(_metric(replay["baseline"], metric)),
-                    _text(_metric(replay["candidate"], metric)),
-                ]
-                for label, metric in measurements
-            ]
+        measurements = _measurement_rows(row)
+        if measurements:
             sections.append(
                 _table(
-                    ["Measurement", "Baseline", "Candidate"], values, caption="Paired measurements"
+                    ["Measurement", comparison, "Candidate"],
+                    [[_text(cell) for cell in values] for values in measurements],
+                    caption="Paired measurements",
                 )
             )
+        if row["replay"]:
+            replay = row["replay"]
             checks = [
                 [
                     _text(gate["name"]),
@@ -359,7 +449,7 @@ def export_report(root, report):
                 + "</details>"
             )
             sections.append(
-                f'<p><a href="traces/baseline/{index:04d}.json">Baseline trace</a> · <a href="traces/candidate/{index:04d}.json">Candidate trace</a></p>'
+                f'<p><a href="traces/baseline/{index:04d}.json">{comparison} trace</a> · <a href="traces/candidate/{index:04d}.json">Candidate trace</a></p>'
             )
         sections.append("</section>")
     sections.append(

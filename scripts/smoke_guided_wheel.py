@@ -147,6 +147,11 @@ def smoke(root):
             raise RuntimeError("Installed guided outcome lost a planned attempt or quality failure")
         if not (root / ("report-" + mode) / "report.html").is_file():
             raise RuntimeError("Installed guided HTML report missing")
+        timing = report["cases"][0]["timing"]["candidate"]
+        if timing["runner_clock"] != "monotonic" or timing["runner_elapsed_ms"] <= 0:
+            raise RuntimeError("Installed guided capture lost process timing")
+        if report["timing_summary"]["runner_elapsed_ms"]["paired_count"] != int(report["passed"]):
+            raise RuntimeError("Installed guided timing counted an incorrect or incomplete pair")
     cli(
         "improve",
         "finish",
