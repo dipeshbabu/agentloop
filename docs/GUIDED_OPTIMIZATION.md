@@ -252,6 +252,47 @@ baseline. The control must pass the same quality checks. Intervention records
 link the control's matching findings. The report states which comparison basis
 it used, and each case records whether the control ran first.
 
+## Run an existing correctness check
+
+Builds after 0.2.3 can require a trusted local Python verifier alongside the
+task's built-in scorer. Use the built-in scorer for basic output shape and the
+verifier for application behavior, such as checking a code change against your
+tests or checking that a retrieval answer cites the expected document.
+
+Save this simple citation check as `verify_citation.py`. It assumes the task
+input names the expected source and the trace output includes its citation.
+
+```python
+import json
+import sys
+
+request = json.load(sys.stdin)
+output = request["output"]
+passed = isinstance(output, dict) and output.get("source") == request["input"]["source"]
+raise SystemExit(0 if passed else 1)
+```
+
+```bash
+agentloop improve start --tasks tasks.json --baseline runs/baseline/capture.json --out runs/optimization --verifier verify_citation.py
+agentloop improve finish --session runs/optimization/session.json --candidate runs/candidate/capture.json --change "Reuse one lookup per request" --out runs/results --verifier verify_citation.py
+```
+
+Capture the candidate after `start`, as usual. The verifier receives one JSON
+object on stdin with `schema_version`, `task_id`, zero-based `repetition`,
+`input`, and the recorded `output`. It can call your own test code. Exit zero
+means pass. Nonzero exit, timeout, cancellation, or unavailable output fails
+verification. Output from the verifier process is discarded. Reports show the
+status and the exit code or timeout reason.
+
+`start` checks baseline outputs and freezes the entry script's SHA-256 and
+`--verifier-timeout` (30 seconds by default). `finish` requires explicit
+selection of matching source and rechecks the comparison baseline or control
+and the candidate. The task manifest and session metadata contain only data.
+The verifier runs with your account's permissions and working directory using
+the AgentLoop Python environment. Pin the test fixtures and dependencies
+separately. Their contents are outside the entry-script hash. Verification
+runs after capture, outside trace and runner timing.
+
 ## Failures, evidence and execution
 
 `capture` retains every planned attempt, including failed, timed-out, cancelled,

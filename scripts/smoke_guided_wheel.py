@@ -112,6 +112,11 @@ def smoke(root):
         )
 
     capture("baseline")
+    verifier = root / "verify.py"
+    verifier.write_text(
+        'import json, sys\nraise SystemExit(0 if json.load(sys.stdin)["output"] == "correct" else 1)\n',
+        encoding="utf-8",
+    )
     for objective in ("latency", "cost"):
         cli(
             "improve",
@@ -124,6 +129,7 @@ def smoke(root):
             objective,
             "--out",
             root / ("session-" + objective),
+            *(["--verifier", verifier] if objective == "latency" else []),
         )
     for mode in ("candidate", "wrong", "incomplete", "missing-usage", "cancelled"):
         capture(mode, 1 if mode == "cancelled" else 0)
@@ -138,6 +144,8 @@ def smoke(root):
             "Synthetic fixture comparison",
             "--out",
             root / ("report-" + mode),
+            "--verifier",
+            verifier,
             expected=0 if mode in {"candidate", "missing-usage"} else 1,
         )
         report = json.loads((root / ("report-" + mode) / "report.json").read_text(encoding="utf-8"))
@@ -148,6 +156,9 @@ def smoke(root):
         if not (root / ("report-" + mode) / "report.html").is_file():
             raise RuntimeError("Installed guided HTML report missing")
         timing = report["cases"][0]["timing"]["candidate"]
+        verified = report["cases"][0]["verifier"]["candidate"]
+        if verified["passed"] is not (mode in {"candidate", "missing-usage"}):
+            raise RuntimeError("Installed guided local verifier lost its outcome")
         if timing["runner_clock"] != "monotonic" or timing["runner_elapsed_ms"] <= 0:
             raise RuntimeError("Installed guided capture lost process timing")
         if report["timing_summary"]["runner_elapsed_ms"]["paired_count"] != int(report["passed"]):

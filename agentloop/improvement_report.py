@@ -43,10 +43,14 @@ def plan_markdown(specification):
         else "The frozen decision requires every pair to improve the objective.",
         "",
     ]
+    if specification.get("verifier"):
+        lines.extend([_verifier_scope(specification["verifier"]), ""])
     for case in specification["cases"]:
         lines.extend(
             [f"## {markdown_heading(case['task_id'])}, repetition {case['repetition']}", ""]
         )
+        if verification := case.get("baseline_verifier"):
+            lines.extend([f"Local verification: {markdown_text(verification['detail'])}.", ""])
         diagnosis = case["diagnosis"]
         quality = case.get("baseline_quality")
         lines.extend(
@@ -244,6 +248,8 @@ def _measurement_rows(row):
         measurements.extend(
             [label, *(_metric(replay[side], key) for side in sides)] for label, key in _MEASUREMENTS
         )
+    if verification := row.get("verifier"):
+        measurements.append(["Local verifier", *(verification[side]["detail"] for side in sides)])
     return measurements
 
 
@@ -278,6 +284,13 @@ def _basis(report):
 
 def decision_objective(verdict):
     return "trace latency" if verdict["objective"] == "latency" else verdict["objective"]
+
+
+def _verifier_scope(verifier):
+    return (
+        f"Local verifier SHA-256 {verifier['sha256']}. Each execution has a "
+        f"{verifier['timeout_s']:g}-second timeout. Both sides must pass."
+    )
 
 
 def _decision_lines(report):
@@ -336,6 +349,8 @@ def report_markdown(report):
                 "",
             ]
         )
+    if report.get("verifier"):
+        lines.extend([_verifier_scope(report["verifier"]), ""])
     timing_rows = timing_summary_rows(report)
     if timing_rows:
         headers = _timing_headers(comparison)
@@ -407,6 +422,8 @@ def export_report(root, report):
         sections.append(
             '<p class="notice">This comparison includes synthetic evidence. Results apply to the supplied fixtures.</p>'
         )
+    if report.get("verifier"):
+        sections.append(f"<p>{_text(_verifier_scope(report['verifier']))}</p>")
     timing_rows = timing_summary_rows(report)
     if timing_rows:
         sections.extend(

@@ -11,6 +11,7 @@ from rich.table import Table
 from agentloop import improvement
 from agentloop.improvement_init import initialize, project_tasks
 from agentloop.improvement_report import comparison_label, decision_objective, timing_summary_rows
+from agentloop.improvement_verifier import DEFAULT_TIMEOUT
 
 improve_app = typer.Typer(
     help="Capture fixed tasks, review baseline findings, and verify an applied change."
@@ -108,6 +109,13 @@ def start_command(
         help="per-pair requires every pair to improve; aggregate judges the median "
         "paired improvement for noisy agents. Correctness is checked per pair in both.",
     ),
+    verifier: Path | None = typer.Option(None, help="Explicit trusted local Python verifier file."),
+    verifier_timeout: float = typer.Option(
+        DEFAULT_TIMEOUT,
+        min=0.01,
+        max=3600,
+        help="Seconds per verifier execution, frozen in the session.",
+    ),
 ):
     """Freeze task checks and original findings before editing the agent."""
     try:
@@ -119,6 +127,8 @@ def start_command(
             objective=objective,
             minimum_improvement=minimum_improvement,
             decision=decision,
+            verifier=verifier,
+            verifier_timeout=verifier_timeout,
         )
     except (OSError, ValueError, TypeError, KeyError) as exc:
         raise typer.BadParameter(str(exc)) from exc
@@ -130,6 +140,12 @@ def start_command(
         markup=False,
     )
     console.print(f"Frozen session written to {out / 'session.json'}", markup=False)
+    if verifier is not None:
+        passed = sum(case["baseline_verifier"]["passed"] for case in specification["cases"])
+        total = len(specification["cases"])
+        console.print(
+            f"Local verifier passed on {passed} of {total} baseline attempts.", markup=False
+        )
 
 
 @improve_app.command("finish")
@@ -138,10 +154,13 @@ def finish_command(
     candidate: Path = typer.Option(..., help="Candidate capture.json recorded after start."),
     change: str = typer.Option(..., help="Describe the change you applied."),
     out: Path = typer.Option(..., help="Fresh report directory."),
+    verifier: Path | None = typer.Option(
+        None, help="Explicit trusted Python verifier matching the frozen session."
+    ),
 ):
     """Compare every planned attempt and write JSON, Markdown and HTML results."""
     try:
-        report = improvement.finish(session, candidate, out, change=change)
+        report = improvement.finish(session, candidate, out, change=change, verifier=verifier)
     except (OSError, ValueError, TypeError, KeyError) as exc:
         raise typer.BadParameter(str(exc)) from exc
     verdict = report["decision"]
