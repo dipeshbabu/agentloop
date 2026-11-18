@@ -7,6 +7,8 @@ trace, study, receipt, API and database schema versions.
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-11-18
+
 ### Fixed
 
 - Repeated-tool findings now ask developers to investigate when only the tool
@@ -18,8 +20,8 @@ trace, study, receipt, API and database schema versions.
 
 - Guided comparisons show trace latency and runner wall time in the CLI, JSON,
   Markdown, and HTML. Per-attempt timing identifies the clock source. Paired
-  summaries show medians and coverage for completed, correct attempts. Latency
-  gates continue to use the trace measurement.
+  summaries show medians and coverage for completed, correct attempts. The
+  latency objective uses trace measurements.
 - Guided comparisons can require a trusted local Python verifier selected by
   the developer. The frozen session binds the script and timeout, and both
   sides must pass the verifier and their built-in quality checks.
@@ -237,7 +239,8 @@ trace, study, receipt, API and database schema versions.
 - Optional live-provider validation, Harbor post-job plugins, active approval
   resolution and research trajectory export remain outside this release.
 
-[Unreleased]: https://github.com/dipeshbabu/agentloop/compare/v0.2.3...HEAD
+[Unreleased]: https://github.com/dipeshbabu/agentloop/compare/v0.2.4...HEAD
+[0.2.4]: https://github.com/dipeshbabu/agentloop/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/dipeshbabu/agentloop/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/dipeshbabu/agentloop/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/dipeshbabu/agentloop/compare/v0.2.0...v0.2.1
