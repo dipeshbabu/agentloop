@@ -7,6 +7,13 @@ trace, study, receipt, API and database schema versions.
 
 ## [Unreleased]
 
+### Added
+
+- Guided comparisons show trace latency and runner wall time in the CLI, JSON,
+  Markdown, and HTML. Per-attempt timing identifies the clock source. Paired
+  summaries show medians and coverage for completed, correct attempts. Latency
+  gates continue to use the trace measurement.
+
 ## [0.2.3] - 2026-11-17
 
 ### Added

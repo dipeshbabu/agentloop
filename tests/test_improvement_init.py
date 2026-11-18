@@ -18,7 +18,7 @@ def run_cli(project, *args, allowed=(0,)):
         [sys.executable, "-c", "from agentloop.entrypoint import app; app()", *map(str, args)],
         cwd=project,
         capture_output=True,
-        text=True,
+        encoding="utf-8",
         timeout=60,
     )
     assert result.returncode in allowed, result.stdout + result.stderr

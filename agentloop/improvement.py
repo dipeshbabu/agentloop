@@ -12,6 +12,7 @@ import subprocess  # nosec B404 - execution requires explicit CLI argv
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
+from time import perf_counter_ns
 
 from agentloop.experiment_artifacts import local_path, read_json, write_once
 from agentloop.experiment_types import fingerprint
@@ -21,6 +22,7 @@ from agentloop.quality import build_quality_report, validate_quality_fixtures
 from agentloop.repetitions import add_repetition_findings
 from agentloop.replay import ReplayGates, build_replay_report
 from agentloop.replay import _summary as replay_summary
+from agentloop.schema import TraceValidationError, validate_elapsed_ms
 from agentloop.tracer import AgentTrace
 
 VERSION = "1.0"
@@ -234,12 +236,15 @@ def _attempt(root, index, row, task, command, timeout, show_output):
         "trace_path": str(path),
     }
     row["started_at"] = now()
+    started = perf_counter_ns()
     try:
         row.update(_invoke(command, request, timeout, show_output=show_output))
     except KeyboardInterrupt:
         row["status"] = "cancelled"
         raise
     finally:
+        if row["status"] != "runner_error":
+            row["runner_elapsed_ms"] = (perf_counter_ns() - started) / 1_000_000
         row["ended_at"] = now()
         if path.exists():
             try:
@@ -506,6 +511,65 @@ def _trace_usable(trace):
     return not any(event.parent_id is None and event.status == "error" for event in trace.events)
 
 
+def _attempt_timing(row, trace):
+    """Describe the trace boundary and the capture process boundary independently."""
+    timing = {
+        "trace_elapsed_ms": trace.elapsed_ms if trace is not None else None,
+        "runner_elapsed_ms": None,
+        "runner_clock": None,
+    }
+    if row.get("status") in {"runner_error", "not_started"}:
+        return timing
+    if "runner_elapsed_ms" in row:
+        try:
+            elapsed = validate_elapsed_ms(row["runner_elapsed_ms"])
+        except TraceValidationError:
+            return timing
+        clock = "monotonic"
+    else:
+        # Capture 1.0 manifests predating runner timing retain UTC boundaries.
+        try:
+            started = datetime.fromisoformat(row.get("started_at"))
+            ended = datetime.fromisoformat(row.get("ended_at"))
+            if started.utcoffset() is None or ended.utcoffset() is None:
+                return timing
+            elapsed = (ended - started).total_seconds() * 1000
+        except (TypeError, ValueError, OverflowError):
+            return timing
+        clock = "capture_timestamps"
+    if elapsed is not None and elapsed >= 0:
+        timing.update(runner_elapsed_ms=elapsed, runner_clock=clock)
+    return timing
+
+
+def _median_duration(values):
+    if not values:
+        return None
+    ordered = sorted(values)
+    low, high = ordered[(len(ordered) - 1) // 2], ordered[len(ordered) // 2]
+    # Preserve the usual median and guard against overflow from adding two values.
+    middle = low + high
+    return middle / 2 if math.isfinite(middle) else low / 2 + high / 2
+
+
+def _timing_summary(rows):
+    eligible = [row["timing"] for row in rows if row["timing"]["eligible"]]
+    summary = {"eligible_pairs": len(eligible)}
+    for metric in ("trace_elapsed_ms", "runner_elapsed_ms"):
+        pairs = [
+            (timing["baseline"][metric], timing["candidate"][metric])
+            for timing in eligible
+            if all(timing[side][metric] is not None for side in ("baseline", "candidate"))
+        ]
+        summary[metric] = {
+            "paired_count": len(pairs),
+            "baseline_median_ms": _median_duration([before for before, _ in pairs]),
+            "candidate_median_ms": _median_duration([after for _, after in pairs]),
+            "median_paired_delta_ms": _median_duration([after - before for before, after in pairs]),
+        }
+    return summary
+
+
 def _sign_test_p_value(improved, regressed):
     """One-sided exact sign test: chance of at least this many improvements."""
     trials = improved + regressed
@@ -668,6 +732,15 @@ def finish(session_path, candidate_path, root, *, change):
             _completed(control_manifest, controls),
         )
     gates = ReplayGates(**specification["gates"])
+    comparison_manifest = (
+        specification["baseline_capture"] if controls is None else control_manifest
+    )
+    baseline_rows = {
+        (row["task_id"], row["repetition"]): row for row in comparison_manifest["runs"]
+    }
+    candidate_rows = {
+        (row["task_id"], row["repetition"]): row for row in candidate_manifest["runs"]
+    }
     root = Path(root).resolve()
     root.mkdir(parents=True, exist_ok=False)
     rows, study_paths = [], {"baseline": [], "candidate": []}
@@ -675,9 +748,7 @@ def finish(session_path, candidate_path, root, *, change):
         key = (case["task_id"], case["repetition"])
         task = next(task for task in workload["tasks"] if task["id"] == key[0])
         candidate = candidates.get(key)
-        candidate_row = next(
-            row for row in candidate_manifest["runs"] if (row["task_id"], row["repetition"]) == key
-        )
+        baseline_row, candidate_row = baseline_rows.get(key, {}), candidate_rows[key]
         if controls is None:
             label, baseline = "Baseline", baselines.get(key)
             baseline_status = case["capture_status"]
@@ -687,13 +758,8 @@ def finish(session_path, candidate_path, root, *, change):
             # Findings stay frozen from the original baseline. Measurements compare
             # the candidate with the unchanged control run alongside it.
             label, baseline = "Control", controls.get(key)
-            control_row = next(
-                row
-                for row in control_manifest["runs"]
-                if (row["task_id"], row["repetition"]) == key
-            )
-            baseline_status = control_row["status"]
-            baseline_diagnostic = control_row.get("diagnostic")
+            baseline_status = baseline_row["status"]
+            baseline_diagnostic = baseline_row.get("diagnostic")
             diagnosis = control_diagnoses.get(key)
             finding_ids = (
                 [
@@ -714,11 +780,16 @@ def finish(session_path, candidate_path, root, *, change):
             "quality": None,
             "replay": None,
             "intervention": None,
+            "timing": {
+                "baseline": _attempt_timing(baseline_row, baseline),
+                "candidate": _attempt_timing(candidate_row, candidate),
+                "eligible": False,
+            },
         }
         if controls is not None:
             row.update(
                 frozen_baseline_status=case["capture_status"],
-                control_ran_first=control_row.get("order") == 0,
+                control_ran_first=baseline_row.get("order") == 0,
             )
         if baseline is None or candidate is None:
             row["reasons"].append(f"A planned {label.lower()} or candidate trace is unavailable")
@@ -733,17 +804,18 @@ def finish(session_path, candidate_path, root, *, change):
         else:
             quality = _quality(task, baseline, candidate)
             replay = build_replay_report(baseline, candidate, gates=gates, quality_report=quality)
-            if (
-                baseline_status != "completed"
-                or candidate_row["status"] != "completed"
-                or not all(_trace_usable(trace) for trace in (baseline, candidate))
-            ):
-                row["reasons"].append("An attempt failed, was interrupted or did not complete")
-            if not quality["passed"] or any(
-                not result[side]["passed"]
+            completed = baseline_status == candidate_row["status"] == "completed" and all(
+                _trace_usable(trace) for trace in (baseline, candidate)
+            )
+            quality_passed = quality["passed"] and all(
+                result[side]["passed"]
                 for result in quality["cases"]
                 for side in ("baseline", "candidate")
-            ):
+            )
+            row["timing"]["eligible"] = completed and quality_passed
+            if not completed:
+                row["reasons"].append("An attempt failed, was interrupted or did not complete")
+            if not quality_passed:
                 row["reasons"].append(
                     f"{label} and candidate must both pass the declared quality checks"
                 )
@@ -879,6 +951,7 @@ def finish(session_path, candidate_path, root, *, change):
             ]
         ),
         "cases": rows,
+        "timing_summary": _timing_summary(rows),
         "study": study,
     }
     from agentloop.improvement_report import export_report

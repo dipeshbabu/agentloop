@@ -166,9 +166,23 @@ agentloop improve capture --tasks tasks.json --out runs/candidate -- python your
 agentloop improve finish --session runs/optimization/session.json --candidate runs/candidate/capture.json --change "Describe the change applied to the agent" --out runs/results
 ```
 
-Open `runs/results/report.html`. The report shows per-attempt quality, latency,
+Open `runs/results/report.html`. The report shows per-attempt quality, timing,
 token provenance, model/tool counts, available model-cost estimates, and native
-replay gate decisions. JSON and Markdown accompany it. Pairs with matching frozen
+replay gate decisions. Builds after 0.2.3 show paired timing medians in the CLI,
+HTML, and Markdown.
+Trace latency covers the instrumented execution and drives latency gates. Runner
+wall time covers process launch through exit, including startup, trace export,
+and cleanup after interruption. It can help explain a small end-to-end gain when
+the traced change is much faster. Runner wall time is descriptive.
+
+Timing medians use completed, correct pairs with available measurements on both
+sides. Each metric lists how many pairs it could measure out of the full planned
+set. Failed attempts retain any recorded timings in their individual rows. New
+captures use a monotonic clock. Older captures with valid start and end timestamps
+show the derived duration and its clock source. Missing timings show as
+unavailable.
+
+JSON and Markdown accompany the HTML. Pairs with matching frozen
 findings also produce native intervention records. Available baseline and candidate
 traces produce a paired study. Study views retain the original trace fingerprints.
 
