@@ -129,7 +129,11 @@ def smoke(root):
             objective,
             "--out",
             root / ("session-" + objective),
-            *(["--verifier", verifier] if objective == "latency" else []),
+            *(
+                ["--verifier", verifier, "--max-runner-regression-ms", "3600000"]
+                if objective == "latency"
+                else []
+            ),
         )
     for mode in ("candidate", "wrong", "incomplete", "missing-usage", "cancelled"):
         capture(mode, 1 if mode == "cancelled" else 0)
@@ -157,8 +161,11 @@ def smoke(root):
             raise RuntimeError("Installed guided HTML report missing")
         timing = report["cases"][0]["timing"]["candidate"]
         verified = report["cases"][0]["verifier"]["candidate"]
+        runner_gate = report["cases"][0]["runner_gate"]
         if verified["passed"] is not (mode in {"candidate", "missing-usage"}):
             raise RuntimeError("Installed guided local verifier lost its outcome")
+        if runner_gate["passed"] is not (mode != "cancelled"):
+            raise RuntimeError("Installed guided runner gate lost comparison coverage")
         if timing["runner_clock"] != "monotonic" or timing["runner_elapsed_ms"] <= 0:
             raise RuntimeError("Installed guided capture lost process timing")
         if report["timing_summary"]["runner_elapsed_ms"]["paired_count"] != int(report["passed"]):

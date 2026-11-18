@@ -23,6 +23,9 @@ trace, study, receipt, API and database schema versions.
 - Guided comparisons can require a trusted local Python verifier selected by
   the developer. The frozen session binds the script and timeout, and both
   sides must pass the verifier and their built-in quality checks.
+- `improve start --max-runner-regression-ms` freezes an optional per-pair limit
+  on runner wall-time increases. A configured gate requires measured monotonic
+  timings and works with interleaved controls and either decision mode.
 
 ## [0.2.3] - 2026-11-17
 

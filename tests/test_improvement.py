@@ -435,6 +435,7 @@ def test_timing_summary_reads_legacy_receipts_and_keeps_runner_time_out_of_gates
         change="Spend less time inside the trace",
     )
     assert report["passed"]
+    assert "runner_gate" not in report
     assert report["timing_summary"]["eligible_pairs"] == 4
     assert report["timing_summary"]["trace_elapsed_ms"]["paired_count"] == 4
     assert report["timing_summary"]["runner_elapsed_ms"] == {
@@ -446,6 +447,94 @@ def test_timing_summary_reads_legacy_receipts_and_keeps_runner_time_out_of_gates
     assert report["cases"][0]["timing"]["baseline"]["runner_clock"] == "capture_timestamps"
     assert report["cases"][2]["timing"]["candidate"]["runner_clock"] is None
     assert report["cases"][3]["timing"]["baseline"]["runner_elapsed_ms"] is None
+
+
+@pytest.mark.parametrize("decision", ["per-pair", "aggregate"])
+def test_runner_wall_gate_uses_interleaved_control_and_rejects_unavailable_measurements(
+    tmp_path, workload, decision
+):
+    tasks, worker = workload
+    baseline_path = tmp_path / "baseline/capture.json"
+    baseline = capture(tasks, baseline_path.parent, command(worker, "baseline"))
+    for row in baseline["runs"]:
+        row["runner_elapsed_ms"] = 1000
+    baseline_path.write_text(json.dumps(baseline), encoding="utf-8")
+    session = tmp_path / "session"
+    cli = CliRunner()
+    initialized = cli.invoke(
+        app,
+        [
+            "improve",
+            "start",
+            "--tasks",
+            str(tasks),
+            "--baseline",
+            str(baseline_path),
+            "--out",
+            str(session),
+            "--max-runner-regression-ms",
+            "30",
+            "--decision",
+            decision,
+        ],
+    )
+    assert initialized.exit_code == 0, initialized.output
+    assert (
+        json.loads((session / "session.json").read_bytes())["specification"][
+            "max_runner_regression_ms"
+        ]
+        == 30
+    )
+
+    paired = tmp_path / "paired"
+    candidate = capture(tasks, paired, command(worker, "fast"), control=command(worker, "baseline"))
+    control_path = paired / "control/capture.json"
+    control = json.loads(control_path.read_bytes())
+    for row in control["runs"]:
+        row["runner_elapsed_ms"] = 100
+    control_path.write_text(json.dumps(control), encoding="utf-8")
+    candidate["control"]["manifest_hash"] = fingerprint(control)
+    for row, elapsed in zip(candidate["runs"], (99, 130, 131), strict=False):
+        row["runner_elapsed_ms"] = elapsed
+    candidate["runs"][3].pop(
+        "runner_elapsed_ms"
+    )  # A valid legacy timestamp pair stays descriptive.
+    candidate_path = paired / "capture.json"
+    candidate_path.write_text(json.dumps(candidate), encoding="utf-8")
+
+    output = tmp_path / "results"
+    result = cli.invoke(
+        app,
+        [
+            "improve",
+            "finish",
+            "--session",
+            str(session / "session.json"),
+            "--candidate",
+            str(candidate_path),
+            "--change",
+            "Fast trace with a slow runner",
+            "--out",
+            str(output),
+        ],
+    )
+    assert result.exit_code == 1, result.output
+    assert "Runner wall-time gate passed on 2 of 4 pairs" in result.output
+    report = json.loads((output / "report.json").read_bytes())
+    assert report["runner_gate"] == {"limit_ms": 30, "passed_pairs": 2, "unavailable_pairs": 1}
+    assert report["passed"] is False
+    assert [row["runner_gate"]["delta_ms"] for row in report["cases"]] == [-1, 30, 31, None]
+    assert all(row["quality"]["passed"] for row in report["cases"])
+    for row in report["cases"][2:]:
+        assert row["passed"] is False
+        assert row["intervention"]["gates_passed"] is False
+        assert any(
+            gate["name"] == "runner_wall_time_regression" and not gate["passed"]
+            for gate in row["replay"]["gates"]["results"]
+        )
+    assert "Runner wall-time gate passed on 2 of 4 pairs" in (output / "report.html").read_text(
+        encoding="utf-8"
+    )
 
 
 def test_interleaved_control_must_also_pass_quality_checks(tmp_path, workload):
