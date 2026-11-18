@@ -173,7 +173,8 @@ HTML, and Markdown.
 Trace latency covers the instrumented execution and drives latency gates. Runner
 wall time covers process launch through exit, including startup, trace export,
 and cleanup after interruption. It can help explain a small end-to-end gain when
-the traced change is much faster. Runner wall time is descriptive.
+the traced change is much faster. Set a runner regression budget to make this
+measurement part of acceptance.
 
 Timing medians use completed, correct pairs with available measurements on both
 sides. Each metric lists how many pairs it could measure out of the full planned
@@ -192,6 +193,24 @@ gates, and a positive measured improvement in the selected objective. Unknown
 cost stays unavailable. A latency comparison can pass with an indeterminate,
 non-gating cost estimate. A required cost improvement fails when pricing or
 usable usage is missing.
+
+## Limit runner wall-time regressions
+
+In AgentLoop 0.2.4 and newer, freeze an optional budget with
+`agentloop improve start --max-runner-regression-ms 25` alongside the baseline
+and output options. Each candidate attempt may take at most that many additional
+milliseconds from process launch to exit compared with its matching baseline
+or interleaved control. A limit of `0` requires each candidate runner to be at
+least as fast as its comparison attempt. Choose a tolerance that reflects
+run-to-run variability on your workload.
+
+Every pair must meet the budget, including with `--decision aggregate`. The
+latency objective still judges trace time. Both sides need completed attempts
+with monotonic runner measurements. Legacy timestamp-derived timings remain
+visible in reports. For a gated comparison with an older baseline, capture a
+fresh interleaved control and candidate after freezing the session. An overage
+or missing measurement makes `improve finish` return exit code 1 and retain
+the evidence and gate reason.
 
 ## Judge noisy agents across all pairs
 

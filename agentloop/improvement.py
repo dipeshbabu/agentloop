@@ -415,6 +415,15 @@ def _quality(task, baseline, candidate, verification=None):
     )
 
 
+def _runner_budget(value):
+    try:
+        return validate_elapsed_ms(value)
+    except TraceValidationError as error:
+        raise ValueError(
+            "Runner regression budget must be a finite nonnegative number in ms"
+        ) from error
+
+
 def start(
     workload_path,
     baseline_path,
@@ -426,6 +435,7 @@ def start(
     decision="per_pair",
     verifier=None,
     verifier_timeout=DEFAULT_TIMEOUT,
+    max_runner_regression_ms=None,
 ):
     workload = read_workload(workload_path)
     manifest, traces = read_capture(baseline_path, workload)
@@ -433,6 +443,7 @@ def start(
     require(objective in {"latency", "cost"}, "Objective must be latency or cost")
     decision = decision.replace("-", "_") if isinstance(decision, str) else decision
     require(decision in DECISIONS, "Decision must be per-pair or aggregate")
+    runner_budget = _runner_budget(max_runner_regression_ms)
     require(
         type(minimum_improvement) in (int, float)
         and math.isfinite(minimum_improvement)
@@ -507,6 +518,8 @@ def start(
     }
     if verifier is not None:
         specification["verifier"] = verifier.declaration()
+    if runner_budget is not None:
+        specification["max_runner_regression_ms"] = runner_budget
     write_once(
         root,
         "session.json",
@@ -563,6 +576,26 @@ def _attempt_timing(row, trace):
     if elapsed is not None and elapsed >= 0:
         timing.update(runner_elapsed_ms=elapsed, runner_clock=clock)
     return timing
+
+
+def _runner_wall_gate(row, limit_ms, comparison):
+    before, after = (row["timing"][side] for side in ("baseline", "candidate"))
+    complete = row["baseline_status"] == row["candidate_status"] == "completed"
+    if complete and before["runner_clock"] == after["runner_clock"] == "monotonic":
+        delta = after["runner_elapsed_ms"] - before["runner_elapsed_ms"]
+        passed = delta <= limit_ms
+        detail = f"Candidate minus {comparison.lower()} runner time was {delta:+.3f} ms. Limit {limit_ms:g} ms."
+    else:
+        delta, passed = None, False
+        detail = "Both completed attempts need monotonic runner times. Recapture the missing side, or capture a fresh interleaved control and candidate."
+    return {
+        "name": "runner_wall_time_regression",
+        "passed": passed,
+        "detail": detail,
+        "indeterminate": False,
+        "delta_ms": delta,
+        "limit_ms": limit_ms,
+    }
 
 
 def _median_duration(values):
@@ -681,6 +714,7 @@ def finish(session_path, candidate_path, root, *, change, verifier=None):
     require(specification.get("schema_version") == VERSION, "Unsupported frozen session version")
     workload = validate_workload(specification["workload"])
     verifier = resume_verifier(specification.get("verifier"), verifier)
+    runner_budget = _runner_budget(specification.get("max_runner_regression_ms"))
     require(specification.get("objective") in {"latency", "cost"}, "Unsupported frozen objective")
     # Sessions frozen before 0.2.3 have no decision field and keep per-pair judgment.
     decision = specification.get("decision", "per_pair")
@@ -815,6 +849,11 @@ def finish(session_path, candidate_path, root, *, change, verifier=None):
                 frozen_baseline_status=case["capture_status"],
                 control_ran_first=baseline_row.get("order") == 0,
             )
+        if runner_budget is not None:
+            gate = _runner_wall_gate(row, runner_budget, label)
+            row["runner_gate"] = gate
+            if not gate["passed"]:
+                row["reasons"].append(f"Runner wall-time gate failed. {gate['detail']}")
         verification = None
         if verifier is not None:
             verification = {
@@ -896,6 +935,8 @@ def finish(session_path, candidate_path, root, *, change, verifier=None):
             row.update(
                 quality=quality, replay=replay, passed=not row["reasons"], objective_gain_pct=gain
             )
+            if runner_budget is not None:
+                replay["gates"]["results"].append(row["runner_gate"])
             replay["gates"]["results"].append(
                 {
                     "name": "guided_evidence",
@@ -903,7 +944,7 @@ def finish(session_path, candidate_path, root, *, change, verifier=None):
                     "detail": (
                         "All guided execution, quality and measured-objective checks passed"
                         if decision == "per_pair"
-                        else "All guided execution and quality checks passed; performance is judged across all pairs"
+                        else "All guided per-pair checks passed. The selected objective is judged across all pairs"
                     )
                     if row["passed"]
                     else " ".join(row["reasons"]),
@@ -923,7 +964,14 @@ def finish(session_path, candidate_path, root, *, change, verifier=None):
                     candidate,
                     target_finding_ids=finding_ids,
                     intervention_type=specification["focus"],
-                    configuration={"change": change},
+                    configuration={
+                        "change": change,
+                        **(
+                            {"max_runner_regression_ms": runner_budget}
+                            if runner_budget is not None
+                            else {}
+                        ),
+                    },
                     diagnosis=diagnosis,
                     gates=gates,
                     quality_report=quality,
@@ -1002,6 +1050,12 @@ def finish(session_path, candidate_path, root, *, change, verifier=None):
     }
     if verifier is not None:
         report["verifier"] = verifier.declaration()
+    if runner_budget is not None:
+        report["runner_gate"] = {
+            "limit_ms": runner_budget,
+            "passed_pairs": sum(row["runner_gate"]["passed"] for row in rows),
+            "unavailable_pairs": sum(row["runner_gate"]["delta_ms"] is None for row in rows),
+        }
     from agentloop.improvement_report import export_report
 
     export_report(root, report)

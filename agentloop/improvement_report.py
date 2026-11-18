@@ -26,7 +26,7 @@ _RUNNER_CLOCKS = {"monotonic": "Monotonic clock", "capture_timestamps": "Capture
 _TIMING_SCOPE = (
     "Trace latency covers the instrumented execution. Runner wall time spans launch "
     "through exit, including startup, trace export, and cleanup after interruption. "
-    "Latency gates use trace latency."
+    "The latency objective uses trace time."
 )
 
 
@@ -45,6 +45,10 @@ def plan_markdown(specification):
     ]
     if specification.get("verifier"):
         lines.extend([_verifier_scope(specification["verifier"]), ""])
+    if (limit := specification.get("max_runner_regression_ms")) is not None:
+        lines.extend(
+            [f"Runner wall-time gate allows an increase of up to {limit:g} ms in each pair.", ""]
+        )
     for case in specification["cases"]:
         lines.extend(
             [f"## {markdown_heading(case['task_id'])}, repetition {case['repetition']}", ""]
@@ -195,10 +199,10 @@ def _metric(summary, name):
 
 def _headline(report):
     if (report.get("decision") or {}).get("mode") == "aggregate":
-        return (
-            f"{report['passed_attempts']} of {report['planned_attempts']} pairs passed "
-            "correctness and completion checks."
+        checks = (
+            "per-pair checks" if report.get("runner_gate") else "correctness and completion checks"
         )
+        return f"{report['passed_attempts']} of {report['planned_attempts']} pairs passed {checks}."
     return f"{report['passed_attempts']} of {report['planned_attempts']} planned attempts passed."
 
 
@@ -286,6 +290,16 @@ def decision_objective(verdict):
     return "trace latency" if verdict["objective"] == "latency" else verdict["objective"]
 
 
+def runner_gate_summary(report):
+    if gate := report.get("runner_gate"):
+        return (
+            f"Runner wall-time gate passed on {gate['passed_pairs']} of {report['planned_attempts']} pairs. "
+            f"Limit {gate['limit_ms']:g} ms more per pair. "
+            f"{gate['unavailable_pairs']} pairs lacked completed monotonic timing."
+        )
+    return None
+
+
 def _verifier_scope(verifier):
     return (
         f"Local verifier SHA-256 {verifier['sha256']}. Each execution has a "
@@ -351,6 +365,8 @@ def report_markdown(report):
         )
     if report.get("verifier"):
         lines.extend([_verifier_scope(report["verifier"]), ""])
+    if summary := runner_gate_summary(report):
+        lines.extend([summary, ""])
     timing_rows = timing_summary_rows(report)
     if timing_rows:
         headers = _timing_headers(comparison)
@@ -424,6 +440,8 @@ def export_report(root, report):
         )
     if report.get("verifier"):
         sections.append(f"<p>{_text(_verifier_scope(report['verifier']))}</p>")
+    if summary := runner_gate_summary(report):
+        sections.append(f"<p>{_text(summary)}</p>")
     timing_rows = timing_summary_rows(report)
     if timing_rows:
         sections.extend(

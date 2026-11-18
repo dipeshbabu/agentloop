@@ -10,7 +10,13 @@ from rich.table import Table
 
 from agentloop import improvement
 from agentloop.improvement_init import initialize, project_tasks
-from agentloop.improvement_report import comparison_label, decision_objective, timing_summary_rows
+from agentloop.improvement_report import (
+    _headline,
+    comparison_label,
+    decision_objective,
+    runner_gate_summary,
+    timing_summary_rows,
+)
 from agentloop.improvement_verifier import DEFAULT_TIMEOUT
 
 improve_app = typer.Typer(
@@ -104,6 +110,9 @@ def start_command(
     minimum_improvement: float = typer.Option(
         0, min=0, help="Required percentage gain in the selected objective."
     ),
+    max_runner_regression_ms: float | None = typer.Option(
+        None, min=0, help="Optional maximum runner wall-time increase in ms for each pair."
+    ),
     decision: str = typer.Option(
         "per-pair",
         help="per-pair requires every pair to improve; aggregate judges the median "
@@ -126,6 +135,7 @@ def start_command(
             focus=focus,
             objective=objective,
             minimum_improvement=minimum_improvement,
+            max_runner_regression_ms=max_runner_regression_ms,
             decision=decision,
             verifier=verifier,
             verifier_timeout=verifier_timeout,
@@ -165,11 +175,7 @@ def finish_command(
         raise typer.BadParameter(str(exc)) from exc
     verdict = report["decision"]
     if verdict["mode"] == "aggregate":
-        console.print(
-            f"{report['passed_attempts']} of {report['planned_attempts']} pairs passed "
-            "correctness and completion checks.",
-            markup=False,
-        )
+        console.print(_headline(report), markup=False)
         median = verdict["median_improvement_pct"]
         console.print(
             f"Aggregate {decision_objective(verdict)} check "
@@ -185,12 +191,14 @@ def finish_command(
             f"{report['passed_attempts']} of {report['planned_attempts']} planned comparisons passed.",
             markup=False,
         )
+    if summary := runner_gate_summary(report):
+        console.print(summary, markup=False)
     timing = Table(
         "Timing",
         f"{comparison_label(report)} median",
         "Candidate median",
         "Measured pairs",
-        caption="Completed, correct pairs. Latency gates use trace latency.",
+        caption="Completed, correct pairs. The latency objective uses trace time.",
     )
     for label, before, after, _, pairs in timing_summary_rows(report):
         timing.add_row(label, before, after, pairs)
