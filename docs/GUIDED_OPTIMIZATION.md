@@ -168,7 +168,8 @@ agentloop improve finish --session runs/optimization/session.json --candidate ru
 
 Open `runs/results/report.html`. The report shows per-attempt quality, timing,
 token provenance, model/tool counts, available model-cost estimates, and native
-replay gate decisions. The CLI, HTML, and Markdown show paired timing medians.
+replay gate decisions. Builds after 0.2.3 show paired timing medians in the CLI,
+HTML, and Markdown.
 Trace latency covers the instrumented execution and drives latency gates. Runner
 wall time covers process launch through exit, including startup, trace export,
 and cleanup after interruption. It can help explain a small end-to-end gain when
