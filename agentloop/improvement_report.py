@@ -276,16 +276,21 @@ def _basis(report):
     )
 
 
+def decision_objective(verdict):
+    return "trace latency" if verdict["objective"] == "latency" else verdict["objective"]
+
+
 def _decision_lines(report):
     verdict = report.get("decision") or {"mode": "per_pair"}
     if verdict["mode"] != "aggregate":
         return ["Decision: every pair must pass correctness, completion and performance checks."]
     median = verdict["median_improvement_pct"]
     p_value = verdict["sign_test_p_value"]
+    objective = decision_objective(verdict)
     lines = [
         "Decision: every pair must pass correctness and completion checks; "
-        f"{verdict['objective']} is judged across all pairs.",
-        f"Aggregate {verdict['objective']} decision "
+        f"{objective} is judged across all pairs.",
+        f"Aggregate {objective} check "
         + ("passed" if verdict["passed"] else "failed")
         + ": median paired improvement "
         + ("unavailable" if median is None else f"{median:.2f}%")

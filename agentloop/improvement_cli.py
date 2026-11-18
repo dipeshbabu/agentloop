@@ -10,7 +10,7 @@ from rich.table import Table
 
 from agentloop import improvement
 from agentloop.improvement_init import initialize, project_tasks
-from agentloop.improvement_report import comparison_label, timing_summary_rows
+from agentloop.improvement_report import comparison_label, decision_objective, timing_summary_rows
 
 improve_app = typer.Typer(
     help="Capture fixed tasks, review baseline findings, and verify an applied change."
@@ -153,7 +153,7 @@ def finish_command(
         )
         median = verdict["median_improvement_pct"]
         console.print(
-            f"Aggregate {verdict['objective']} decision "
+            f"Aggregate {decision_objective(verdict)} check "
             + ("passed" if verdict["passed"] else "failed")
             + f": median improvement {'unavailable' if median is None else f'{median:.2f}%'}, "
             f"{verdict['improved_pairs']} improved, {verdict['regressed_pairs']} regressed.",
