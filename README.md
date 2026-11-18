@@ -102,6 +102,12 @@ fictional notes; it is labeled synthetic. Its timings describe this example only
 A faster answer that fails the frozen correctness checks is rejected with exit
 code 1. Failed attempts and unknown costs remain in the report.
 
+When you already have both versions, `agentloop improve compare` runs the
+baseline, the frozen session, an interleaved before/after capture and the
+verdict in one command. Pass the unchanged runner as repeated `--before-arg`
+values and the changed runner after `--`. See
+[comparing two versions in one command](https://dipeshbabu.github.io/agentloop/GUIDED_OPTIMIZATION/#compare-two-versions-in-one-command).
+
 To connect your application, run `agentloop improve init --agent my_agent:answer`
 in its project directory. The generated adapter supports synchronous and async
 Python callables. Replace the example task inputs and expected outputs with
