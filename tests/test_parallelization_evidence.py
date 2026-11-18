@@ -8,6 +8,7 @@ from agentloop.events import AgentEvent
 from agentloop.findings import build_diagnosis, diagnosis_to_markdown
 from agentloop.graph import ExecutionEdge, ExecutionGraph
 from agentloop.optimizer import build_optimization_plan
+from agentloop.patches import build_patch_plan
 from agentloop.plan_export import export_optimization_markdown
 from agentloop.tracer import AgentTrace
 
@@ -51,6 +52,48 @@ def test_repeated_names_are_inferred_candidates_with_explicit_assumptions():
     assert group["estimated_savings_ms"] == 200
     assert "serial and independent" not in card["why"]
     assert "appear independent" not in str(report["recommendations"])
+    assert card["title"] == "Investigate repeated `search` tool calls"
+    assert "Compare inputs" in card["rewrite_hint"]
+
+
+def test_declared_identical_read_only_work_prefers_request_local_reuse(tmp_path):
+    metadata = {"read_only": True, "tool_reuse_key": "opaque-test-key", "parallel_safe": True}
+    trace = _trace(intervals=[(100, 220), (0, 100), (220, 300)], metadata=[metadata] * 3)
+    card = trace.report()["finding_candidates"][0]
+    assert card["observations"]["recommended_action"] == "test_request_local_reuse"
+    assert card["observations"]["retained_span_id"] == "tool-1"
+    assert card["estimated_latency_savings_ms"] == 200
+    assert card["estimate"]["estimator_id"] == "request_local_tool_reuse"
+    assert card["estimate"]["inputs"]["retained_duration_ms"] == 100
+    assert card["estimate"]["formula"] == "sum_duration_ms - retained_duration_ms"
+    assert "opaque-test-key" not in str(card)
+    [patch] = build_patch_plan(trace, repo_path=tmp_path, allowed_root=tmp_path)["patch_plans"]
+    assert "reusing the first result" in patch["proposed_rewrite"]
+    assert "asyncio.gather" not in str(patch)
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"read_only": False},
+        {"read_only": 1},
+        {"tool_reuse_key": "other"},
+        {"tool_reuse_key": " "},
+        {"tool_reuse_key": ["opaque"]},
+    ],
+)
+def test_uncertain_reuse_remains_an_investigation(change):
+    metadata = {"read_only": True, "tool_reuse_key": "opaque"}
+    trace = _trace(metadata=[metadata, metadata, {**metadata, **change}])
+    [card] = trace.report()["finding_candidates"]
+    assert card["observations"]["recommended_action"] == "inspect_repetition"
+
+
+def test_failed_call_does_not_support_result_reuse():
+    trace = _trace(metadata=[{"read_only": True, "tool_reuse_key": "opaque"}] * 3)
+    trace.events[0].status = "error"
+    [card] = trace.report()["finding_candidates"]
+    assert card["observations"]["recommended_action"] == "inspect_repetition"
 
 
 def test_declared_concurrency_safety_is_distinct_from_verified_evidence():

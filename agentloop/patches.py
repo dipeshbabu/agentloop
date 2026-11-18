@@ -237,7 +237,21 @@ def _plan_for_finding(
     evidence_names = _evidence_names(finding)
     files = _candidate_files(source_index, evidence_names)
     framework = _select_framework(frameworks, files)
-    templates = _rewrite_templates(finding_type, framework)
+    action = (finding.get("observations") or {}).get("recommended_action")
+    notes = _notes(finding_type, files)
+    if finding_type == "parallelize_tools" and action in {
+        "inspect_repetition",
+        "test_request_local_reuse",
+    }:
+        templates = {
+            "risk": "medium",
+            "before_pattern": str(finding.get("metadata", {}).get("why", "Repeated tool calls.")),
+            "proposed_rewrite": finding["rewrite"]["hint"],
+            "suggested_diff": "Change one behavior after reviewing the call inputs, then capture it again and verify the result with replay.",
+        }
+        notes = _notes("", files)
+    else:
+        templates = _rewrite_templates(finding_type, framework)
     return PatchPlan(
         patch_id=f"patch_{index:03d}",
         finding_id=str(finding["finding_id"]),
@@ -255,7 +269,7 @@ def _plan_for_finding(
             finding.get("validation", {}).get("acceptance_criteria")
             or "before/after replay passes configured quality and budget gates"
         ),
-        notes=_notes(finding_type, files),
+        notes=notes,
     )
 
 

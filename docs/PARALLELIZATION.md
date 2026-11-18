@@ -1,9 +1,10 @@
 # Parallelization evidence
 
-Three or more same-named tool calls in the same parent scope can suggest a
-concurrency experiment. Names and ordering do not establish that their outputs
-or shared state are independent. AgentLoop reports a candidate with explicit
-assumptions and validates improvements through baseline/candidate replay.
+Three or more same-named tool calls in the same parent scope are worth
+investigating. The finding asks you to compare inputs and inspect dependencies
+and shared state. When all calls declare concurrency safety, the plan suggests
+testing concurrency. Matching read-only calls can instead qualify for a reuse
+experiment.
 
 ## Evidence levels
 
@@ -42,6 +43,21 @@ malformed dependency lists, and references to missing dependency spans exclude t
 affected group. Declarations cannot override these conflicts. Omit `parallel_safe`
 when safety is unknown; a declaration on only some calls leaves the group inferred.
 
+## Identical read-only calls
+
+For an immutable request-scoped lookup, instrument each call with
+`metadata.read_only: true` and the same opaque `metadata.tool_reuse_key`. Use a
+nonempty string of at most 128 characters. The key must account for the effective
+arguments, resource version, and execution context. Do not put raw arguments or
+secrets in the key. Use distinct keys when the effective inputs differ.
+
+The canonical finding suggests testing request-local reuse when the whole group
+shares one key and all calls succeeded with complete, non-overlapping timing.
+Existing dependency and safety exclusions still apply. The estimate subtracts
+the first call's duration from total tool time. Cache lookup overhead, source
+stability, and task correctness still need verification with replay. Tool keys
+are omitted from the finding.
+
 ## Savings assumptions and limits
 
 The estimated parallel time is the maximum selected call duration. Estimated
@@ -58,6 +74,8 @@ candidate and an additional assumption that the calls ran serially. The legacy
 `sequential_time_ms` field is the sum of span durations, not a claim that serial
 execution was measured. Estimated savings are hypotheses, not measured speedups.
 
-Existing titles and finding IDs remain stable when the selected spans are unchanged.
-Groups now excluded by dependency, scope, or timing evidence can become superseded
-on explicit re-diagnosis under the existing finding lifecycle.
+`parallelize_tools` remains the finding family. A clearer title for a name-only
+investigation preserves the existing finding ID. A request-local reuse finding
+has a distinct ID for the different proposed change. Dependency, scope, and
+timing changes can supersede findings on an explicit re-diagnosis under the
+existing lifecycle.

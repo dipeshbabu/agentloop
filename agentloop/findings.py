@@ -256,6 +256,13 @@ def _finding_from_card(
     ]
     semantic = (card.get("estimate") or {}).get("estimator_id") == "semantic_leaf_removal"
     observations = dict(card.get("observations", {}))
+    identity_title = title
+    if (
+        finding_type == "parallelize_tools"
+        and observations.get("recommended_action") == "inspect_repetition"
+    ):
+        # The wording change preserves existing reviewed finding IDs.
+        identity_title = f"Parallelize repeated `{observations['tool_name']}` tool calls"
     if semantic:
         severity = "medium" if card.get("confidence") == "medium" else "low"
         evidence.extend(
@@ -265,7 +272,7 @@ def _finding_from_card(
     return OptimizationFinding(
         finding_id=_stable_finding_id(
             finding_type,
-            title,
+            identity_title,
             affected_spans,
             context={
                 "investigation_id": observations.get("investigation_id"),
