@@ -26,7 +26,7 @@ def plan():
 
     with trace_agent("patchable") as trace:
         for _ in range(3):
-            with trace_tool_call("read_source"):
+            with trace_tool_call("read_source", metadata={"parallel_safe": True}):
                 pass
         repeated = "same stable instruction " * 100
         with trace_model_call("plan", input_text=repeated, output_tokens=1):

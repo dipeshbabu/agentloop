@@ -11,7 +11,7 @@ from agentloop.batching import model_batch_groups
 from agentloop.costs import is_cost_evaluable
 from agentloop.estimates import ESTIMATORS, estimate_snapshot
 from agentloop.graph import ExecutionGraph
-from agentloop.parallelism import PARALLELISM_REWRITE
+from agentloop.parallelism import PARALLELISM_NOTICE, PARALLELISM_REWRITE, REUSE_REWRITE
 from agentloop.ranking import requirements
 from agentloop.tokens import UNAVAILABLE
 
@@ -163,13 +163,19 @@ def run_rules(
 
 def _parallelization_cards(graph: ExecutionGraph) -> list[FindingCandidate]:
     cards = []
-    for group in graph.parallelizable_groups():
+    for group in graph.parallelizable_groups(consider_reuse=True):
+        action = group["observations"]["recommended_action"]
+        title, rewrite = {
+            "test_request_local_reuse": ("Test request-local reuse for", REUSE_REWRITE),
+            "test_parallelization": ("Parallelize repeated", PARALLELISM_REWRITE),
+            "inspect_repetition": ("Investigate repeated", PARALLELISM_NOTICE),
+        }[action]
         cards.append(
             FindingCandidate(
                 type=RecommendationType.PARALLELIZE_TOOLS,
-                title=f"Parallelize repeated `{group['name']}` tool calls",
+                title=f"{title} `{group['name']}` tool calls",
                 why=f"{group['count']} repeated calls. {group['description']}",
-                rewrite_hint=PARALLELISM_REWRITE,
+                rewrite_hint=rewrite,
                 confidence=group["confidence"],
                 estimated_latency_savings_ms=group["estimated_savings_ms"],
                 affected_nodes=group["node_ids"],
@@ -383,7 +389,7 @@ def _semantic_cards(context, family):
 
 
 BUILTIN_RULES = (
-    FindingRule("parallelize_tools", "1.1", lambda ctx: _parallelization_cards(ctx.graph)),
+    FindingRule("parallelize_tools", "1.2", lambda ctx: _parallelization_cards(ctx.graph)),
     FindingRule("cache_context", "1.1", lambda ctx: _context_cache_cards(ctx.report, ctx.graph)),
     FindingRule("add_schema_validation", "1.2", lambda ctx: _retry_cards(ctx.graph)),
     FindingRule("batch_model_calls", "1.2", lambda ctx: _batch_model_cards(ctx.graph)),

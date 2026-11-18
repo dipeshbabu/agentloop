@@ -290,9 +290,10 @@ class ExecutionGraph:
             and len(identities) == len(self.nodes),
         }
 
-    def parallelizable_groups(self) -> list[dict[str, Any]]:
+    def parallelizable_groups(self, *, consider_reuse: bool = False) -> list[dict[str, Any]]:
         return parallelization_candidates(
             self.nodes,
+            consider_reuse=consider_reuse,
             dependency_edges=(
                 (edge.source, edge.target)
                 for edge in self.edges

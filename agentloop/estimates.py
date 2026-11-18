@@ -8,6 +8,7 @@ from typing import Any
 
 from agentloop.costs import is_cost_evaluable
 from agentloop.markdown import markdown_code_span, markdown_text
+from agentloop.parallelism import REUSE_FORMULA
 
 
 @dataclass(frozen=True)
@@ -92,8 +93,18 @@ def estimate_snapshot(candidate: Any, report: dict[str, Any], nodes: list[Any]) 
     affected = set(candidate.affected_nodes or [])
     durations = [node.duration_ms for node in nodes if node.node_id in affected]
     cost_status = report.get("cost_status", "complete")
+    estimator_id = candidate.rule_id
+    extra_inputs = {}
+    if candidate.rule_id == "parallelize_tools":
+        retained = (candidate.observations or {}).get("retained_span_id")
+        if retained is not None:
+            estimator_id = "request_local_tool_reuse"
+            spec = Estimator(REUSE_FORMULA, ())
+            extra_inputs["retained_duration_ms"] = next(
+                node.duration_ms for node in nodes if node.node_id == retained
+            )
     return {
-        "estimator_id": candidate.rule_id,
+        "estimator_id": estimator_id,
         "estimator_version": spec.version,
         "method": "heuristic",
         "confidence": candidate.confidence,
@@ -110,6 +121,7 @@ def estimate_snapshot(candidate: Any, report: dict[str, Any], nodes: list[Any]) 
             "repeated_context_ratio": report.get("repeated_context_ratio", 0.0),
             "cost_status": cost_status,
             "token_status": report.get("token_status", "unspecified"),
+            **extra_inputs,
         },
         "assumptions": list(dict.fromkeys([*(candidate.assumptions or []), *spec.assumptions])),
         "unmodeled_metrics": (["latency"] if candidate.rule_id == "cache_context" else ["cost"]),
