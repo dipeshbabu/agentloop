@@ -17,6 +17,7 @@ from time import perf_counter_ns
 from agentloop.experiment_artifacts import local_path, read_json, write_once
 from agentloop.experiment_types import fingerprint
 from agentloop.findings import build_diagnosis
+from agentloop.improvement_verifier import DEFAULT_TIMEOUT, LocalVerifier, resume_verifier
 from agentloop.interventions import build_intervention
 from agentloop.quality import build_quality_report, validate_quality_fixtures
 from agentloop.repetitions import add_repetition_findings
@@ -389,15 +390,25 @@ def _completed(manifest, traces):
     return {key: trace for key, trace in traces.items() if key in done}
 
 
-def _quality(task, baseline, candidate):
-    return build_quality_report(
-        [
+def _quality(task, baseline, candidate, verification=None):
+    fixtures = [
+        {
+            "id": task["id"],
+            "expected": task["expected"],
+            "scorer": task.get("scorer", {"type": "exact_match"}),
+        }
+    ]
+    if verification is not None:
+        fixtures.append(
             {
-                "id": task["id"],
-                "expected": task["expected"],
-                "scorer": task.get("scorer", {"type": "exact_match"}),
+                "id": f"{task['id']}:local-verifier",
+                "expected": True,
+                "baseline_output": verification["baseline"]["passed"],
+                "candidate_output": verification["candidate"]["passed"],
             }
-        ],
+        )
+    return build_quality_report(
+        fixtures,
         baseline_trace=baseline,
         candidate_trace=candidate,
         min_score=1.0,
@@ -413,9 +424,12 @@ def start(
     objective="latency",
     minimum_improvement=0,
     decision="per_pair",
+    verifier=None,
+    verifier_timeout=DEFAULT_TIMEOUT,
 ):
     workload = read_workload(workload_path)
     manifest, traces = read_capture(baseline_path, workload)
+    verifier = LocalVerifier.read(verifier, verifier_timeout) if verifier is not None else None
     require(objective in {"latency", "cost"}, "Objective must be latency or cost")
     decision = decision.replace("-", "_") if isinstance(decision, str) else decision
     require(decision in DECISIONS, "Decision must be per-pair or aggregate")
@@ -473,6 +487,13 @@ def start(
                 else [],
             }
         )
+        if verifier is not None:
+            cases[-1]["baseline_verifier"] = verifier.check(
+                task,
+                repetition,
+                trace,
+                usable=row["status"] == "completed" and trace is not None and _trace_usable(trace),
+            )
     specification = {
         "schema_version": VERSION,
         "frozen_at": now(),
@@ -484,6 +505,8 @@ def start(
         "cases": cases,
         "baseline_capture": manifest,
     }
+    if verifier is not None:
+        specification["verifier"] = verifier.declaration()
     write_once(
         root,
         "session.json",
@@ -647,7 +670,7 @@ def _aggregate_decision(rows, objective, gates):
     }
 
 
-def finish(session_path, candidate_path, root, *, change):
+def finish(session_path, candidate_path, root, *, change, verifier=None):
     session_path = Path(session_path).resolve()
     saved = load_json(session_path)
     specification = saved["specification"]
@@ -657,6 +680,7 @@ def finish(session_path, candidate_path, root, *, change):
     )
     require(specification.get("schema_version") == VERSION, "Unsupported frozen session version")
     workload = validate_workload(specification["workload"])
+    verifier = resume_verifier(specification.get("verifier"), verifier)
     require(specification.get("objective") in {"latency", "cost"}, "Unsupported frozen objective")
     # Sessions frozen before 0.2.3 have no decision field and keep per-pair judgment.
     decision = specification.get("decision", "per_pair")
@@ -791,6 +815,28 @@ def finish(session_path, candidate_path, root, *, change):
                 frozen_baseline_status=case["capture_status"],
                 control_ran_first=baseline_row.get("order") == 0,
             )
+        verification = None
+        if verifier is not None:
+            verification = {
+                side: verifier.check(
+                    task,
+                    key[1],
+                    trace,
+                    usable=(
+                        trace is not None
+                        and row[f"{side}_status"] == "completed"
+                        and _trace_usable(trace)
+                    ),
+                )
+                for side, trace in (("baseline", baseline), ("candidate", candidate))
+            }
+            row["verifier"] = verification
+            for side, result in verification.items():
+                if not result["passed"]:
+                    side_label = label if side == "baseline" else "Candidate"
+                    row["reasons"].append(
+                        f"{side_label} local verification failed: {result['detail']}"
+                    )
         if baseline is None or candidate is None:
             row["reasons"].append(f"A planned {label.lower()} or candidate trace is unavailable")
             for side, status, diagnostic in (
@@ -802,7 +848,7 @@ def finish(session_path, candidate_path, root, *, change):
                         f"{side} attempt is {status}. {diagnostic or 'Recapture this task with --show-runner-output to inspect the failure.'}"
                     )
         else:
-            quality = _quality(task, baseline, candidate)
+            quality = _quality(task, baseline, candidate, verification)
             replay = build_replay_report(baseline, candidate, gates=gates, quality_report=quality)
             completed = baseline_status == candidate_row["status"] == "completed" and all(
                 _trace_usable(trace) for trace in (baseline, candidate)
@@ -819,12 +865,12 @@ def finish(session_path, candidate_path, root, *, change):
                 row["reasons"].append(
                     f"{label} and candidate must both pass the declared quality checks"
                 )
-                for result in quality["cases"]:
-                    for side in ("baseline", "candidate"):
-                        if not result[side]["passed"]:
-                            row["reasons"].append(
-                                f"{label if side == 'baseline' else 'Candidate'} answer failed the declared {task.get('scorer', {}).get('type', 'exact_match')} criterion: {result[side]['detail']}"
-                            )
+                fixture_result = quality["cases"][0]
+                for side in ("baseline", "candidate"):
+                    if not fixture_result[side]["passed"]:
+                        row["reasons"].append(
+                            f"{label if side == 'baseline' else 'Candidate'} answer failed the declared {task.get('scorer', {}).get('type', 'exact_match')} criterion: {fixture_result[side]['detail']}"
+                        )
             # Aggregate decisions judge speed and cost across all pairs after
             # this loop; every other gate still applies to each pair.
             judged = [
@@ -894,10 +940,10 @@ def finish(session_path, candidate_path, root, *, change):
                     source_trace_hash=fingerprint(trace.to_dict()),
                 )
                 if row["quality"]:
-                    result = row["quality"]["cases"][0][side]
+                    quality_cases = row["quality"]["cases"]
                     viewed["metadata"].update(
-                        quality_score=result["score"],
-                        success=result["passed"]
+                        quality_score=row["quality"][f"{side}_score"],
+                        success=all(result[side]["passed"] for result in quality_cases)
                         and _trace_usable(trace)
                         and row[f"{side}_status"] == "completed",
                     )
@@ -954,6 +1000,8 @@ def finish(session_path, candidate_path, root, *, change):
         "timing_summary": _timing_summary(rows),
         "study": study,
     }
+    if verifier is not None:
+        report["verifier"] = verifier.declaration()
     from agentloop.improvement_report import export_report
 
     export_report(root, report)

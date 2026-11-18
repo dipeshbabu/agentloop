@@ -20,6 +20,9 @@ trace, study, receipt, API and database schema versions.
   Markdown, and HTML. Per-attempt timing identifies the clock source. Paired
   summaries show medians and coverage for completed, correct attempts. Latency
   gates continue to use the trace measurement.
+- Guided comparisons can require a trusted local Python verifier selected by
+  the developer. The frozen session binds the script and timeout, and both
+  sides must pass the verifier and their built-in quality checks.
 
 ## [0.2.3] - 2026-11-17
 
