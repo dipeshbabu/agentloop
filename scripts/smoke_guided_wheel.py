@@ -87,7 +87,7 @@ def smoke(root):
             check=False,
             timeout=60,
             capture_output=True,
-            text=True,
+            encoding="utf-8",
         )
         allowed = expected if isinstance(expected, tuple) else (expected,)
         if result.returncode not in allowed:
