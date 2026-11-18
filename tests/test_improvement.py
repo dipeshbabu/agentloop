@@ -9,7 +9,7 @@ from typer.testing import CliRunner
 
 from agentloop.entrypoint import app
 from agentloop.experiment_types import fingerprint
-from agentloop.improvement import capture, finish, read_workload, start
+from agentloop.improvement import capture, compare, finish, read_workload, start
 
 WORKER = """import json,sys,time
 from pathlib import Path
@@ -796,3 +796,105 @@ def test_cli_output_survives_unicode_names_on_a_legacy_code_page(tmp_path):
     assert result.returncode == 1, result.stderr.decode("utf-8", "replace")
     assert "UnicodeEncodeError" not in result.stderr.decode("utf-8", "replace")
     assert "检查-✓ repetition 0" in output
+
+
+def test_compare_runs_every_stage_with_an_interleaved_control(tmp_path, workload):
+    tasks, worker = workload
+    messages = []
+    report = compare(
+        tasks,
+        tmp_path / "compare",
+        command(worker, "baseline"),
+        command(worker, "fast"),
+        change="Remove repeated work",
+        progress=messages.append,
+    )
+    assert report["passed"] is True
+    assert report["comparison_baseline"] == "interleaved_control"
+    assert report["decision"]["mode"] == "aggregate"
+    for stage in ("baseline/capture.json", "session/session.json", "session/plan.md"):
+        assert (tmp_path / "compare" / stage).is_file()
+    assert (tmp_path / "compare/paired/control/capture.json").is_file()
+    assert (tmp_path / "compare/results/report.html").is_file()
+    assert len(messages) == 4
+
+
+def test_compare_rejects_a_wrong_after_runner(tmp_path, workload):
+    tasks, worker = workload
+    report = compare(
+        tasks,
+        tmp_path / "compare",
+        command(worker, "baseline"),
+        command(worker, "wrong"),
+        change="Faster but wrong",
+        decision="per-pair",
+    )
+    assert report["passed"] is False
+    assert report["decision"]["mode"] == "per_pair"
+
+
+@pytest.mark.parametrize(
+    ("override", "message"),
+    [
+        ({"change": " "}, "Describe the change"),
+        ({"after": None}, "before and after runners must differ"),
+        ({"decision": "median"}, "per-pair or aggregate"),
+        ({"objective": "speed"}, "latency or cost"),
+        ({"minimum_improvement": -1}, "nonnegative"),
+    ],
+)
+def test_compare_checks_inputs_before_running_anything(tmp_path, workload, override, message):
+    tasks, worker = workload
+    before = command(worker, "baseline")
+    arguments = {
+        "change": "Change",
+        "after": command(worker, "fast"),
+        "decision": "aggregate",
+        "objective": "latency",
+        "minimum_improvement": 0,
+    }
+    arguments.update(override)
+    if arguments["after"] is None:
+        arguments["after"] = list(before)
+    after = arguments.pop("after")
+    with pytest.raises(ValueError, match=message):
+        compare(tasks, tmp_path / "compare", before, after, **arguments)
+    assert not (tmp_path / "compare").exists()
+
+
+def test_compare_stops_when_no_baseline_attempt_completes(tmp_path, workload):
+    tasks, worker = workload
+    with pytest.raises(ValueError, match="No baseline attempt completed"):
+        compare(
+            tasks,
+            tmp_path / "compare",
+            command(worker, "failure"),
+            command(worker, "fast"),
+            change="Change",
+        )
+    assert (tmp_path / "compare/baseline/capture.json").is_file()
+    assert not (tmp_path / "compare/session").exists()
+
+
+def test_cli_compare_accepts_repeated_before_arguments(tmp_path, workload):
+    tasks, worker = workload
+    result = CliRunner().invoke(
+        app,
+        [
+            "improve",
+            "compare",
+            "--tasks",
+            str(tasks),
+            "--out",
+            str(tmp_path / "compare"),
+            *[item for arg in command(worker, "baseline") for item in ("--before-arg", arg)],
+            "--change",
+            "Remove repeated work",
+            "--",
+            *command(worker, "fast"),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert "Capturing the baseline with the before runner" in result.output
+    assert "Aggregate" in result.output
+    assert (tmp_path / "compare/results/report.json").is_file()

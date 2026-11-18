@@ -126,6 +126,41 @@ The request contains `task_id`, zero-based `repetition`, `input`, and an absolut
 in `metadata.output` so the quality scorer can evaluate it. Existing native model
 outputs are also supported through the usual quality-report lookup.
 
+## Compare two versions in one command
+
+When you already have the change, `improve compare` runs the whole workflow
+below in one command. It needs AgentLoop 0.2.5 or newer. Keep the unchanged
+agent runnable, for example in a separate `git worktree`, and pass its command
+as repeated `--before-arg` values. Put the changed agent's command after `--`:
+
+```bash
+git worktree add ../agent-before HEAD
+agentloop improve compare --tasks tasks.json --out runs/compare --change "Describe the change" --before-arg python --before-arg ../agent-before/your_agent.py -- python your_agent.py
+```
+
+`compare` runs these stages in order:
+
+1. It captures the baseline with the before runner in `runs/compare/baseline/`.
+2. It freezes the findings and checks in `runs/compare/session/`. Review its
+   `plan.md` afterwards.
+3. It captures the after runner, alternating with the before runner as an
+   [interleaved control](#compare-against-an-interleaved-control), in
+   `runs/compare/paired/`.
+4. It writes the verdict to `runs/compare/results/`.
+
+It checks the change description, decision, objective and verifier before any
+runner executes. It stops after the baseline when no baseline attempt completed.
+Unlike `start`, it defaults to `--decision aggregate`, which suits agents whose
+timing varies between runs. Pass `--decision per-pair` to require every pair to
+improve. `--focus`, `--objective`, `--minimum-improvement`,
+`--max-runner-regression-ms`, `--verifier` and `--timeout` work as they do for
+the individual commands. Use at least two repetitions per task, and an even
+number so that each runner goes first equally often.
+
+Because the session is frozen after the baseline runs, `compare` cannot let the
+plan inform the change. To investigate findings before writing a change, use
+the individual commands below.
+
 ## Capture and review the baseline
 
 ```bash

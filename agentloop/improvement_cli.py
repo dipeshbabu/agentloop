@@ -173,6 +173,11 @@ def finish_command(
         report = improvement.finish(session, candidate, out, change=change, verifier=verifier)
     except (OSError, ValueError, TypeError, KeyError) as exc:
         raise typer.BadParameter(str(exc)) from exc
+    _print_report(report, out)
+
+
+def _print_report(report, out):
+    """Print the verdict and timing summary; exit 1 when the change is rejected."""
     verdict = report["decision"]
     if verdict["mode"] == "aggregate":
         console.print(_headline(report), markup=False)
@@ -213,3 +218,70 @@ def finish_command(
             )
     if not report["passed"]:
         raise typer.Exit(1)
+
+
+@improve_app.command("compare")
+def compare_command(
+    tasks: Path | None = typer.Option(None, help="Fixed tasks, overriding the project config."),
+    project: Path = typer.Option(
+        Path("agentloop.toml"), help="Data-only project config used when --tasks is omitted."
+    ),
+    out: Path = typer.Option(..., help="Fresh directory for every stage of the comparison."),
+    before_arg: list[str] = typer.Option(
+        ...,
+        "--before-arg",
+        help="One argument of the unchanged before runner; repeat for each argument. "
+        "It runs the baseline and then alternates with the after runner as a control.",
+    ),
+    change: str = typer.Option(..., help="Describe the change the after runner applies."),
+    timeout: float = typer.Option(180, min=0.01, max=3600, help="Seconds per task attempt."),
+    show_runner_output: bool = typer.Option(
+        False, help="Stream the runners' stdout and stderr for diagnosis."
+    ),
+    focus: str | None = typer.Option(
+        None, help="Finding type to investigate. Defaults to the first baseline finding."
+    ),
+    objective: str = typer.Option("latency", help="latency or cost."),
+    minimum_improvement: float = typer.Option(
+        0, min=0, help="Required percentage gain in the selected objective."
+    ),
+    max_runner_regression_ms: float | None = typer.Option(
+        None, min=0, help="Optional maximum runner wall-time increase in ms for each pair."
+    ),
+    decision: str = typer.Option(
+        "aggregate",
+        help="aggregate (default here) judges the median paired improvement; per-pair "
+        "requires every pair to improve. Correctness is checked per pair in both.",
+    ),
+    verifier: Path | None = typer.Option(None, help="Explicit trusted local Python verifier file."),
+    verifier_timeout: float = typer.Option(
+        DEFAULT_TIMEOUT, min=0.01, max=3600, help="Seconds per verifier execution."
+    ),
+    command: list[str] = typer.Argument(
+        ..., help="Explicit after-runner argv after --. Receives a JSON request on stdin."
+    ),
+):
+    """Capture, freeze, interleave and compare an unchanged and a changed runner."""
+    try:
+        report = improvement.compare(
+            tasks_path(tasks, project),
+            out,
+            before_arg,
+            command,
+            change=change,
+            timeout=timeout,
+            show_output=show_runner_output,
+            focus=focus,
+            objective=objective,
+            minimum_improvement=minimum_improvement,
+            decision=decision,
+            verifier=verifier,
+            verifier_timeout=verifier_timeout,
+            max_runner_regression_ms=max_runner_regression_ms,
+            progress=lambda message: console.print(message, markup=False),
+        )
+    except (OSError, ValueError, TypeError, KeyError) as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    session = out / improvement.COMPARE_LAYOUT["session"]
+    console.print(f"Baseline findings and plan: {session / 'plan.md'}", markup=False)
+    _print_report(report, out / improvement.COMPARE_LAYOUT["results"])

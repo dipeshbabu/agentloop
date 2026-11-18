@@ -7,6 +7,15 @@ trace, study, receipt, API and database schema versions.
 
 ## [Unreleased]
 
+### Added
+
+- `agentloop improve compare` runs a whole guided comparison in one command.
+  It captures the baseline with the unchanged runner (`--before-arg`), freezes
+  the session, captures the changed runner alternating with the unchanged one
+  as an interleaved control, and writes the verdict. It checks inputs before
+  any runner executes, stops if no baseline attempt completes, and defaults to
+  the aggregate decision. `improvement.compare()` exposes the same workflow.
+
 ## [0.2.4] - 2026-11-18
 
 ### Fixed
