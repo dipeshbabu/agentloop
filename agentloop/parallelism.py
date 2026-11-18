@@ -10,8 +10,8 @@ from agentloop.timing import duration_ms, event_interval_ms
 from agentloop.workflow_types import stage_summary
 
 PARALLELISM_NOTICE = (
-    "Repeated tool calls may be candidates for concurrent execution. "
-    "Verify output independence and shared-state safety before changing them."
+    "The tool name repeats in the same scope. Compare inputs and check dependencies "
+    "and shared state before changing the calls."
 )
 PARALLELISM_REWRITE = (
     "After verifying output independence and shared-state safety, use asyncio.gather "
@@ -19,6 +19,16 @@ PARALLELISM_REWRITE = (
 )
 PARALLELISM_FORMULA = (
     "sum(tool durations) - max(tool duration), assuming the calls can run concurrently"
+)
+REUSE_REWRITE = (
+    "Test reusing the first result within the same request. Confirm that the key covers "
+    "all effective inputs, the source stays stable, and task checks still pass."
+)
+REUSE_FORMULA = "sum_duration_ms - retained_duration_ms"
+_REUSE_ASSUMPTIONS = (
+    "The declared key covers all effective inputs and the source stays stable within the request.",
+    "Reused results preserve required behavior and add negligible overhead.",
+    "The skipped calls are on the runtime-limiting path.",
 )
 _ASSUMPTIONS = (
     "No call consumes another call's output.",
@@ -28,7 +38,10 @@ _ASSUMPTIONS = (
 
 
 def parallelization_candidates(
-    events: Iterable[Any], *, dependency_edges: Iterable[tuple[str, str]] = ()
+    events: Iterable[Any],
+    *,
+    dependency_edges: Iterable[tuple[str, str]] = (),
+    consider_reuse: bool = False,
 ) -> list[dict[str, Any]]:
     """Return hypotheses, never proof of independence or verified savings.
 
@@ -42,6 +55,7 @@ def parallelization_candidates(
     invalid_dependencies: set[str] = set()
     unsafe: set[str] = set()
     declarations: set[str] = set()
+    reuse_keys: dict[str, str] = {}
     for index, event in enumerate(events):
         span_id = (
             getattr(event, "event_id", None) or getattr(event, "node_id", None) or f"node_{index}"
@@ -70,6 +84,16 @@ def parallelization_candidates(
                 unsafe.add(span_id)
         if operation_kind(event) == "tool":
             groups.setdefault((event.name, getattr(event, "parent_id", None)), []).append(span_id)
+            reuse_key = metadata.get("tool_reuse_key")
+            if (
+                consider_reuse
+                and metadata.get("read_only") is True
+                and getattr(event, "status", None) == "ok"
+                and isinstance(reuse_key, str)
+                and 0 < len(reuse_key) <= 128
+                and reuse_key == reuse_key.strip()
+            ):
+                reuse_keys[span_id] = reuse_key
     for span_id, event in by_id.items():
         parent_id = getattr(event, "parent_id", None)
         if parent_id in by_id:
@@ -106,6 +130,35 @@ def parallelization_candidates(
         sequential, parallel = sum(durations), max(durations)
         if sequential <= parallel:
             continue
+        keys = [reuse_keys.get(span_id) for span_id in span_ids]
+        if complete_timing and keys[0] is not None and all(key == keys[0] for key in keys):
+            retained = min(range(len(intervals)), key=intervals.__getitem__)
+            candidates.append(
+                {
+                    "name": name,
+                    "event_type": "tool_call",
+                    "count": len(span_ids),
+                    "node_ids": sorted(span_ids),
+                    "sequential_time_ms": round(sequential, 3),
+                    "estimated_savings_ms": round(sequential - durations[retained], 3),
+                    "evidence_level": "declared",
+                    "confidence": "medium",
+                    "assumptions": list(_REUSE_ASSUMPTIONS),
+                    "observations": {
+                        "evidence_level": "observed",
+                        "tool_call_count": len(span_ids),
+                        "cumulative_span_time_ms": round(sequential, 3),
+                        "timing": "non_overlapping",
+                        "recommended_action": "test_request_local_reuse",
+                        "same_input_key_declared": True,
+                        "read_only_declared": True,
+                        "retained_span_id": span_ids[retained],
+                    },
+                    "description": "The integration declares matching input keys and read-only behavior for these successful calls.",
+                    "estimate_formula": REUSE_FORMULA,
+                }
+            )
+            continue
         declared = members <= declarations
         assumptions = list(_ASSUMPTIONS)
         if not complete_timing:
@@ -127,6 +180,10 @@ def parallelization_candidates(
                     "tool_call_count": len(span_ids),
                     "cumulative_span_time_ms": round(sequential, 3),
                     "timing": "non_overlapping" if complete_timing else "unavailable",
+                    "tool_name": name,
+                    "recommended_action": "test_parallelization"
+                    if declared
+                    else "inspect_repetition",
                 },
                 "description": (
                     "The integration declares these calls safe to run concurrently; validate with replay."

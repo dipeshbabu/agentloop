@@ -7,6 +7,13 @@ trace, study, receipt, API and database schema versions.
 
 ## [Unreleased]
 
+### Fixed
+
+- Repeated-tool findings now ask developers to investigate when only the tool
+  name repeats. Matching opaque input keys and declared read-only behavior can
+  support testing request-local reuse ahead of concurrency. Plans and estimates
+  identify which change the evidence supports.
+
 ### Added
 
 - Guided comparisons show trace latency and runner wall time in the CLI, JSON,
