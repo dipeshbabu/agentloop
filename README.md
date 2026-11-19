@@ -107,6 +107,10 @@ baseline, the frozen session, an interleaved before/after capture and the
 verdict in one command. Pass the unchanged runner as repeated `--before-arg`
 values and the changed runner after `--`. See
 [comparing two versions in one command](https://dipeshbabu.github.io/agentloop/GUIDED_OPTIMIZATION/#compare-two-versions-in-one-command).
+Example runners for [OpenAI Codex CLI](https://dipeshbabu.github.io/agentloop/CODEX/)
+and [Claude Code](https://dipeshbabu.github.io/agentloop/CLAUDE_CODE/) turn each
+coding-agent run into a native trace, so the same workflow compares models,
+instructions or settings for those agents.
 
 To connect your application, run `agentloop improve init --agent my_agent:answer`
 in its project directory. The generated adapter supports synchronous and async
@@ -397,13 +401,13 @@ where the examples show `agentloop`.
 <summary>Download and verify a standalone executable</summary>
 
 Download the executable and `SHA256SUMS` from the same release. These examples use
-version 0.2.0. Change the version when choosing another release.
+version 0.2.5. Change the version when choosing another release.
 
 Linux (Bash):
 
 ```bash
 set -euo pipefail
-version=0.2.0
+version=0.2.5
 asset="agentloop-v${version}-linux-x86_64"
 curl --fail --location --remote-name "https://github.com/dipeshbabu/agentloop/releases/download/v${version}/${asset}"
 curl --fail --location --remote-name "https://github.com/dipeshbabu/agentloop/releases/download/v${version}/SHA256SUMS"
@@ -420,7 +424,7 @@ chmod +x "$asset"
 Windows PowerShell:
 
 ```powershell
-$Version = "0.2.0"
+$Version = "0.2.5"
 $Asset = "agentloop-v$Version-windows-x86_64.exe"
 Invoke-WebRequest "https://github.com/dipeshbabu/agentloop/releases/download/v$Version/$Asset" -OutFile agentloop.exe
 Invoke-WebRequest "https://github.com/dipeshbabu/agentloop/releases/download/v$Version/SHA256SUMS" -OutFile SHA256SUMS
