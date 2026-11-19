@@ -15,6 +15,11 @@ trace, study, receipt, API and database schema versions.
   as an interleaved control, and writes the verdict. It checks inputs before
   any runner executes, stops if no baseline attempt completes, and defaults to
   the aggregate decision. `improvement.compare()` exposes the same workflow.
+- `improve start` and `improve compare` warn when a plan is too weak to
+  separate a change from noise: fewer than five pairs, one repetition per task,
+  or baseline latency that varies between repetitions by at least 10% and more
+  than the required improvement. Notes are recorded in the frozen session and
+  listed under "Evidence strength" in `plan.md`; they do not change decisions.
 
 ## [0.2.4] - 2026-11-18
 

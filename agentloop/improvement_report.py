@@ -45,6 +45,10 @@ def plan_markdown(specification):
     ]
     if specification.get("verifier"):
         lines.extend([_verifier_scope(specification["verifier"]), ""])
+    if notes := specification.get("planning_notes"):
+        lines.extend(["## Evidence strength", ""])
+        lines.extend(f"- {markdown_text(note['message'])}" for note in notes)
+        lines.append("")
     if (limit := specification.get("max_runner_regression_ms")) is not None:
         lines.extend(
             [f"Runner wall-time gate allows an increase of up to {limit:g} ms in each pair.", ""]
