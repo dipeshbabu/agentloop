@@ -7,6 +7,8 @@ trace, study, receipt, API and database schema versions.
 
 ## [Unreleased]
 
+## [0.2.5] - 2026-11-18
+
 ### Added
 
 - `agentloop improve compare` runs a whole guided comparison in one command.
@@ -248,7 +250,8 @@ trace, study, receipt, API and database schema versions.
 - Optional live-provider validation, Harbor post-job plugins, active approval
   resolution and research trajectory export remain outside this release.
 
-[Unreleased]: https://github.com/dipeshbabu/agentloop/compare/v0.2.4...HEAD
+[Unreleased]: https://github.com/dipeshbabu/agentloop/compare/v0.2.5...HEAD
+[0.2.5]: https://github.com/dipeshbabu/agentloop/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/dipeshbabu/agentloop/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/dipeshbabu/agentloop/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/dipeshbabu/agentloop/compare/v0.2.1...v0.2.2
