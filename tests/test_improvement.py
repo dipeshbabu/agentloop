@@ -2,14 +2,21 @@ from __future__ import annotations
 
 import json
 import sys
-from types import ModuleType
+from types import ModuleType, SimpleNamespace
 
 import pytest
 from typer.testing import CliRunner
 
 from agentloop.entrypoint import app
 from agentloop.experiment_types import fingerprint
-from agentloop.improvement import capture, compare, finish, read_workload, start
+from agentloop.improvement import (
+    capture,
+    compare,
+    finish,
+    planning_guidance,
+    read_workload,
+    start,
+)
 
 WORKER = """import json,sys,time
 from pathlib import Path
@@ -816,7 +823,9 @@ def test_compare_runs_every_stage_with_an_interleaved_control(tmp_path, workload
         assert (tmp_path / "compare" / stage).is_file()
     assert (tmp_path / "compare/paired/control/capture.json").is_file()
     assert (tmp_path / "compare/results/report.html").is_file()
-    assert len(messages) == 4
+    notes = [message for message in messages if message.startswith("Note: ")]
+    assert len(notes) == 1 and "Only 4 pairs planned" in notes[0]
+    assert len(messages) == 5
 
 
 def test_compare_rejects_a_wrong_after_runner(tmp_path, workload):
@@ -898,3 +907,46 @@ def test_cli_compare_accepts_repeated_before_arguments(tmp_path, workload):
     assert "Capturing the baseline with the before runner" in result.output
     assert "Aggregate" in result.output
     assert (tmp_path / "compare/results/report.json").is_file()
+
+
+def _guidance(repetitions, elapsed, *, objective="latency", minimum=0, tasks=3):
+    workload = {
+        "tasks": [{"id": f"t{index}"} for index in range(tasks)],
+        "repetitions": repetitions,
+    }
+    runs, traces = [], {}
+    for index in range(tasks):
+        for repetition in range(repetitions):
+            key = (f"t{index}", repetition)
+            runs.append({"task_id": key[0], "repetition": repetition, "status": "completed"})
+            traces[key] = SimpleNamespace(elapsed_ms=elapsed[repetition], metadata={}, events=[])
+    return planning_guidance(workload, {"runs": runs}, traces, objective, minimum)
+
+
+def test_planning_guidance_flags_too_few_pairs_for_a_sign_test():
+    notes = _guidance(1, [100], tasks=4)
+    assert [note["kind"] for note in notes] == ["few_pairs", "noise_unmeasured"]
+    assert notes[0]["pairs"] == 4
+    assert "fewer than 5 pairs" in notes[0]["message"]
+
+
+def test_planning_guidance_flags_baseline_noise_above_the_required_gain():
+    notes = _guidance(2, [100, 140], minimum=5)
+    assert [note["kind"] for note in notes] == ["noisy_baseline"]
+    assert notes[0]["spread_pct"] == pytest.approx(33.33, abs=0.01)
+    assert "33.3%" in notes[0]["message"] and "5% required" in notes[0]["message"]
+
+
+def test_planning_guidance_is_quiet_for_stable_or_well_bounded_baselines():
+    assert _guidance(2, [100, 104]) == []
+    assert _guidance(2, [100, 140], minimum=50) == []
+    assert _guidance(2, [100, 140], objective="cost") == []
+
+
+def test_start_records_planning_notes_in_the_session_and_plan(tmp_path, workload):
+    tasks, _ = prepare(tmp_path, workload)
+    saved = json.loads((tmp_path / "session/session.json").read_text(encoding="utf-8"))
+    notes = saved["specification"]["planning_notes"]
+    assert notes[0]["kind"] == "few_pairs"
+    plan = (tmp_path / "session/plan.md").read_text(encoding="utf-8")
+    assert "## Evidence strength" in plan and "Only 4 pairs planned" in plan
