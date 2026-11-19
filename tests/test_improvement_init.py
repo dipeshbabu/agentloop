@@ -278,7 +278,9 @@ def test_node_init_generates_an_esm_runner_example_and_package(tmp_path):
         "AGENTLOOP.md",
     }
     runner = (root / "agentloop_runner.mjs").read_text(encoding="utf-8")
-    assert 'import { AgentTrace } from "agentloop-profiler";' in runner
+    # Loaded inside main() so a missing package gets an actionable message.
+    assert '({ AgentTrace } = await import("agentloop-profiler"));' in runner
+    assert 'from "agentloop-profiler"' not in runner
     assert 'const MODULE = "./agentloop_example.mjs";' in runner
     assert 'const EXPORT = "answer";' in runner
     assert '"synthetic": true' in runner
@@ -315,6 +317,8 @@ def test_node_init_connects_an_existing_module_without_overwriting_the_project(t
         "/abs/agent.mjs:answer",
         "C:/abs/agent.mjs:answer",
         "./a/../../agent.mjs:answer",
+        "../agent.mjs:answer",
+        "src/../../agent.mjs:answer",
         "./agent.mjs:not-valid",
         "./agent.mjs:class",
         "agent.mjs",
@@ -337,3 +341,14 @@ def test_node_init_cli_points_to_npm_install(tmp_path):
     )
     assert result.exit_code == 0, result.output
     assert "npm install, then node agentloop_runner.mjs --check" in unstyle(result.output)
+    (tmp_path / "app").mkdir()
+    (tmp_path / "app" / "agent.mjs").write_text(
+        "export const answer = () => 1;\n", encoding="utf-8"
+    )
+    existing = CliRunner().invoke(
+        app,
+        ["improve", "init", "--language", "node", "--agent", "agent.mjs:answer"]
+        + ["--out", str(tmp_path / "app")],
+    )
+    assert existing.exit_code == 0, existing.output
+    assert "npm install agentloop-profiler, then node" in unstyle(existing.output)

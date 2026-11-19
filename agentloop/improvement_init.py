@@ -130,7 +130,6 @@ export async function answer(payload, trace) {
 NODE_RUNNER = Template("""// Adapter for $target_label. Inspect this file before running it.
 // Requires Node.js 22 or newer and the agentloop-profiler npm package.
 import { writeFile } from "node:fs/promises";
-import { AgentTrace } from "agentloop-profiler";
 
 const MODULE = $module;
 const EXPORT = $export;
@@ -145,6 +144,18 @@ async function readStdin() {
 }
 
 async function main() {
+  let AgentTrace;
+  try {
+    // Imported here so a missing package gets an actionable message.
+    ({ AgentTrace } = await import("agentloop-profiler"));
+  } catch (error) {
+    console.error(
+      `Cannot load the agentloop-profiler npm package ($${error?.name ?? "Error"}). ` +
+        "Run npm install agentloop-profiler in this project.",
+    );
+    if (options.has("--debug")) console.error(error);
+    return 2;
+  }
   let answer;
   try {
     const connected = await import(new URL(MODULE, import.meta.url).href);
@@ -153,7 +164,7 @@ async function main() {
   } catch (error) {
     console.error(
       `Cannot connect $${TARGET} ($${error?.name ?? "Error"}). ` +
-        "Install agentloop-profiler with npm and check the module path in this runner.",
+        "Check the module path and export name in this runner.",
     );
     if (options.has("--debug")) console.error(error);
     return 2;
@@ -183,7 +194,16 @@ async function main() {
     trace.setMetadata("success", false);
     trace.markOutputUnavailable();
   }
-  trace.finish();
+  try {
+    trace.finish();
+  } catch (error) {
+    console.error(
+      "The agent returned while a traced call was still running. " +
+        "Await every trace.tool(...) and trace.model(...) call before returning.",
+    );
+    if (options.has("--debug")) console.error(error);
+    return 1;
+  }
   await writeFile(request.trace_path, trace.toJSONString());
   if (failure !== null) {
     console.error(
@@ -255,10 +275,10 @@ def _node_files(root, target, name):
         not module.startswith("/") and not re.match(r"^[A-Za-z]:", module),
         "Node agent module must be a relative path inside the project, such as ./src/agent.mjs",
     )
-    if not module.startswith(("./", "../")):
+    if not module.startswith("./"):
         module = "./" + module
     require(
-        bool(NODE_MODULE.match(module)) and ".." not in module.split("/")[1:],
+        bool(NODE_MODULE.match(module)) and ".." not in module.split("/"),
         "Node agent module must be a relative .mjs, .js or .cjs path inside the project, "
         "such as ./src/agent.mjs:answer",
     )

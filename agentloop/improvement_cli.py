@@ -51,7 +51,7 @@ def init_command(
     check = (
         "npm install, then node agentloop_runner.mjs --check"
         if language == "node" and "package.json" in files
-        else "node agentloop_runner.mjs --check"
+        else "npm install agentloop-profiler, then node agentloop_runner.mjs --check"
         if language == "node"
         else "python agentloop_runner.py --check"
     )
