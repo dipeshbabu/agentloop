@@ -8,6 +8,7 @@ from test_structured_quality import case
 from workflow_fixtures import pipeline
 
 st = pytest.importorskip("streamlit")
+from dashboard_apptest import APPTEST_TIMEOUT  # noqa: E402
 from streamlit.testing.v1 import AppTest  # noqa: E402
 
 from agentloop.store import SQLiteTraceStore  # noqa: E402
@@ -22,7 +23,8 @@ def test_dashboard_renders_indeterminate_structured_scores(tmp_path, monkeypatch
         store.save_trace(pipeline(run_id="before"))
         store.save_trace(pipeline(run_id="after"))
         app = AppTest.from_file(
-            str(Path(__file__).resolve().parents[1] / "dashboard" / "app.py"), default_timeout=60
+            str(Path(__file__).resolve().parents[1] / "dashboard" / "app.py"),
+            default_timeout=APPTEST_TIMEOUT,
         )
         app.run()
         app.sidebar.radio[0].set_value("Quality Gates").run()
