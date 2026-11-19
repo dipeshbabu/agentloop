@@ -7,6 +7,14 @@ trace, study, receipt, API and database schema versions.
 
 ## [Unreleased]
 
+### Added
+
+- Evidence-strength notes cover the cost objective. `improve start` and
+  `improve compare` flag a noisy baseline when estimated cost of the same task
+  varies between repetitions by at least 10% and more than the required
+  improvement, and report baseline attempts whose cost cannot be measured
+  because of unknown pricing or estimated token counts.
+
 ### Documentation
 
 - The README has an Install section covering the PyPI package, the npm

@@ -909,17 +909,31 @@ def test_cli_compare_accepts_repeated_before_arguments(tmp_path, workload):
     assert (tmp_path / "compare/results/report.json").is_file()
 
 
-def _guidance(repetitions, elapsed, *, objective="latency", minimum=0, tasks=3):
+def _guidance(
+    repetitions, elapsed, *, objective="latency", minimum=0, tasks=3, costs=None, report=None
+):
     workload = {
         "tasks": [{"id": f"t{index}"} for index in range(tasks)],
         "repetitions": repetitions,
     }
+    costs = costs or [0.0] * repetitions
     runs, traces = [], {}
     for index in range(tasks):
         for repetition in range(repetitions):
             key = (f"t{index}", repetition)
             runs.append({"task_id": key[0], "repetition": repetition, "status": "completed"})
-            traces[key] = SimpleNamespace(elapsed_ms=elapsed[repetition], metadata={}, events=[])
+            summary = {
+                "estimated_cost_usd": costs[repetition],
+                "has_unknown_cost": False,
+                "token_status": "exact",
+                **(report or {}),
+            }
+            traces[key] = SimpleNamespace(
+                elapsed_ms=elapsed[repetition],
+                metadata={},
+                events=[],
+                report=lambda summary=summary: summary,
+            )
     return planning_guidance(workload, {"runs": runs}, traces, objective, minimum)
 
 
@@ -940,7 +954,25 @@ def test_planning_guidance_flags_baseline_noise_above_the_required_gain():
 def test_planning_guidance_is_quiet_for_stable_or_well_bounded_baselines():
     assert _guidance(2, [100, 104]) == []
     assert _guidance(2, [100, 140], minimum=50) == []
-    assert _guidance(2, [100, 140], objective="cost") == []
+    assert _guidance(2, [100, 140], objective="cost", costs=[0.010, 0.0104]) == []
+    assert _guidance(2, [100, 104], objective="cost", costs=[0.0, 0.0]) == []
+
+
+def test_planning_guidance_flags_noisy_baseline_cost():
+    notes = _guidance(2, [100, 100], objective="cost", costs=[0.010, 0.016], minimum=10)
+    assert [note["kind"] for note in notes] == ["noisy_baseline"]
+    assert notes[0]["objective"] == "cost"
+    assert notes[0]["spread_pct"] == pytest.approx(46.15, abs=0.01)
+    assert "Baseline cost of the same task" in notes[0]["message"]
+
+
+@pytest.mark.parametrize("report", [{"has_unknown_cost": True}, {"token_status": "estimated"}])
+def test_planning_guidance_reports_unmeasurable_cost(report):
+    notes = _guidance(2, [100, 100], objective="cost", costs=[0.01, 0.02], report=report)
+    assert [note["kind"] for note in notes] == ["cost_unmeasurable"]
+    assert notes[0]["attempts"] == 6
+    assert "6 of 6 completed baseline attempts" in notes[0]["message"]
+    assert _guidance(2, [100, 100], report=report) == []
 
 
 def test_start_records_planning_notes_in_the_session_and_plan(tmp_path, workload):
