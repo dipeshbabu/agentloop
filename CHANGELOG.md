@@ -7,6 +7,15 @@ trace, study, receipt, API and database schema versions.
 
 ## [Unreleased]
 
+### Added
+
+- `agentloop improve init --language node` generates a Node.js adapter
+  (`agentloop_runner.mjs`) for the guided workflow. It imports an agent from a
+  relative `.mjs`, `.js` or `.cjs` module, calls it as `answer(input, trace)`
+  with a TypeScript SDK trace, and writes a failed trace when the agent throws.
+  Without `--agent` it creates an offline example and a `package.json`. CI runs
+  the complete guided workflow against the packed SDK on Node.js 22 and 24.
+
 ### Documentation
 
 - The README has an Install section covering the PyPI package, the npm

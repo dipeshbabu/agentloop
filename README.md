@@ -129,7 +129,9 @@ for those agents.
 
 To connect your application, run `agentloop improve init --agent my_agent:answer`
 in its project directory. The generated adapter supports synchronous and async
-Python callables. Replace the example task inputs and expected outputs with
+Python callables. For a Node.js agent, run
+`agentloop improve init --language node --agent ./src/agent.mjs:answer`; see
+[connecting a Node.js agent](https://dipeshbabu.github.io/agentloop/GUIDED_OPTIMIZATION/#connect-an-existing-nodejs-agent). Replace the example task inputs and expected outputs with
 independent checks for your agent, and keep your model and tool instrumentation.
 Initialization refuses to overwrite existing files. Read the generated
 `AGENTLOOP.md` and [onboarding guide](https://dipeshbabu.github.io/agentloop/GUIDED_OPTIMIZATION/).

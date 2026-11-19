@@ -76,6 +76,35 @@ checking the environment and runner import. A missing trace suggests exporting
 the finalized trace to `request["trace_path"]`. A timeout suggests inspecting the
 agent before increasing `--timeout`.
 
+## Connect an existing Node.js agent
+
+AgentLoop 0.2.7 and newer generate a Node.js adapter for agents written in
+JavaScript or compiled TypeScript. It needs Node.js 22 or newer, the
+`agentloop-profiler` npm package for the runner, and the Python package for the
+`agentloop` command. From your project directory, run:
+
+```bash
+npm install agentloop-profiler
+agentloop improve init --language node --agent ./src/agent.mjs:answer
+node agentloop_runner.mjs --check
+agentloop improve capture --out baseline -- node agentloop_runner.mjs
+```
+
+`--agent` names a relative `.mjs`, `.js` or `.cjs` module inside the project and
+its exported function. The runner calls it as `answer(input, trace)`, where
+`trace` is the [TypeScript SDK](../sdk/typescript/README.md) trace for this
+attempt. Wrap model and tool calls with `trace.model(...)` and `trace.tool(...)`
+so repeated or slow calls appear as spans, and return finite JSON. If the
+function throws or returns non-JSON, the runner still writes a failed trace and
+capture reports the task as failed. Use `--debug` after the runner filename, with
+`--show-runner-output` on capture, to print the error.
+
+Without `--agent`, `--language node` creates the offline example: an
+`agentloop_example.mjs` that repeats a traced lookup and a `package.json` that
+depends on `agentloop-profiler`. Run `npm install` in that directory first. The
+same capture, start and finish commands then apply, with
+`node agentloop_runner.mjs` as the runner.
+
 ## Define tasks and correctness first
 
 Save a workload such as this in `tasks.json`. Choose expected values independently
