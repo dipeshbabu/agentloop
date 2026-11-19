@@ -9,6 +9,11 @@ trace, study, receipt, API and database schema versions.
 
 ### Added
 
+- `examples/claude_code_runner.py` runs Claude Code (`claude -p --output-format
+  stream-json`) on guided tasks with only read-only tools pre-approved. It
+  records one model span per API response with per-request usage including
+  cache tokens, and one tool span per tool use. `docs/CLAUDE_CODE.md` explains
+  the mapping and a one-command comparison.
 - `agentloop improve compare` runs a whole guided comparison in one command.
   It captures the baseline with the unchanged runner (`--before-arg`), freezes
   the session, captures the changed runner alternating with the unchanged one
