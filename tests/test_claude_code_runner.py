@@ -11,8 +11,8 @@ import pytest
 
 from agentloop.events import AgentEvent
 from agentloop.findings import build_diagnosis
+from agentloop.runners.claude_code import convert, task_prompt
 from agentloop.tracer import AgentTrace
-from examples.claude_code_runner import convert, task_prompt
 
 USAGE = {
     "input_tokens": 12,
@@ -243,7 +243,8 @@ def test_runner_drives_the_cli_and_writes_a_successful_trace(tmp_path):
     completed = subprocess.run(  # noqa: S603
         [
             sys.executable,
-            "examples/claude_code_runner.py",
+            "-m",
+            "agentloop.runners.claude_code",
             "--claude",
             str(executable),
             "--cd",
@@ -285,3 +286,20 @@ def test_runner_drives_the_cli_and_writes_a_successful_trace(tmp_path):
     assert trace.metadata["integration"] == "claude_code"
     kinds = [event.event_type for event in trace.events]
     assert kinds.count("model_call") == 2 and kinds.count("tool_call") == 1
+
+
+@pytest.mark.parametrize(
+    ("module", "example", "option"),
+    [
+        ("agentloop.runners.codex", "examples/codex_exec_runner.py", "--codex"),
+        ("agentloop.runners.claude_code", "examples/claude_code_runner.py", "--claude"),
+    ],
+)
+def test_packaged_runners_and_example_scripts_share_one_entry_point(module, example, option):
+    for command in ([sys.executable, "-m", module], [sys.executable, example]):
+        completed = subprocess.run(  # noqa: S603
+            [*command, "--help"], capture_output=True, text=True, timeout=60, check=False
+        )
+        assert completed.returncode == 0, completed.stderr
+        assert option in completed.stdout
+        assert f"python -m {module}" in completed.stdout
