@@ -511,19 +511,44 @@ jobs:
         run: |
           # Change only the registry for CI; retain the source Python tag and all
           # application/build instructions. Validate that exactly one base exists.
-          mirror_file="$RUNNER_TEMP/Dockerfile.agentloop-ci"
+          # ECR Public can throttle hosted runners (429) for minutes, so each round
+          # tries the same official image from ECR Public, Google's Docker Hub
+          # mirror and Docker Hub before backing off.
           test "$(grep -c '^FROM python:' Dockerfile)" -eq 1
-          sed 's|^FROM python:|FROM public.ecr.aws/docker/library/python:|' Dockerfile > "$mirror_file"
-          # The public mirror occasionally answers 429 Too Many Requests; retry
-          # with backoff before failing the job.
-          for delay in 20 60 120 0; do
-            if docker build --file "$mirror_file" --tag agentloop:local .; then
-              exit 0
-            fi
+          mirror_file="$RUNNER_TEMP/Dockerfile.agentloop-ci"
+          for delay in 30 90 0; do
+            for registry in public.ecr.aws/docker/library mirror.gcr.io/library docker.io/library; do
+              sed "s|^FROM python:|FROM $registry/python:|" Dockerfile > "$mirror_file"
+              if docker build --file "$mirror_file" --tag agentloop:local .; then
+                exit 0
+              fi
+              echo "::warning::Image build from $registry failed"
+            done
             if [ "$delay" -eq 0 ]; then
               exit 1
             fi
-            echo "::warning::Image build failed; retrying in ${delay}s"
+            echo "::warning::Retrying image build in ${delay}s"
+            sleep "$delay"
+          done
+
+      - name: Pull the Postgres image used by Compose
+        shell: bash
+        run: |
+          # Compose uses the ECR Public name from .github/docker-compose.ci.yml.
+          # Fall back to identical official mirrors and tag the result locally.
+          target=public.ecr.aws/docker/library/postgres:16-alpine
+          for delay in 30 90 0; do
+            for registry in public.ecr.aws/docker/library mirror.gcr.io/library docker.io/library; do
+              if docker pull "$registry/postgres:16-alpine"; then
+                docker tag "$registry/postgres:16-alpine" "$target"
+                exit 0
+              fi
+              echo "::warning::Postgres pull from $registry failed"
+            done
+            if [ "$delay" -eq 0 ]; then
+              exit 1
+            fi
+            echo "::warning::Retrying Postgres pull in ${delay}s"
             sleep "$delay"
           done
 
