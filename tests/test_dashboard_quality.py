@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from dashboard_apptest import APPTEST_TIMEOUT
 from streamlit.testing.v1 import AppTest
 
 from agentloop.store import SQLiteTraceStore
@@ -17,7 +18,7 @@ def test_quality_gate_dashboard_reports_empty_fixture_suite_inline(tmp_path, mon
     store.save_trace(AgentTrace(name="baseline"))
     store.save_trace(AgentTrace(name="candidate"))
 
-    app = AppTest.from_file(str(ROOT / "dashboard" / "app.py"), default_timeout=60)
+    app = AppTest.from_file(str(ROOT / "dashboard" / "app.py"), default_timeout=APPTEST_TIMEOUT)
     app.run()
     app.sidebar.radio[0].set_value("Quality Gates").run()
     app.text_area[0].set_value('{"fixtures": []}')
