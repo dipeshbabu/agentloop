@@ -144,10 +144,31 @@ def smoke(sdk: Path, work: Path) -> None:
         ],
         broken,
     )
+    # Before the SDK is installed, --check says how to install it.
+    result = run(["node", "agentloop_runner.mjs", "--check"], broken, expect=2)
+    if "npm install agentloop-profiler" not in result.stderr:
+        raise SystemExit("A missing SDK package must be reported by --check")
     run(["npm", "install", "--no-audit", "--no-fund", str(sdk)], broken)
     result = run(["node", "agentloop_runner.mjs", "--check"], broken, expect=2)
     if "Cannot connect ./agent.mjs:answer" not in result.stderr:
         raise SystemExit("A missing export must be reported by --check")
+
+    # An agent that returns before its traced call finishes gets a clear error.
+    (broken / "agent.mjs").write_text(
+        "export async function answer(input, trace) {\n"
+        '  trace.tool("slow", () => new Promise((resolve) => setTimeout(resolve, 200)));\n'
+        "  return { ok: true };\n"
+        "}\n",
+        encoding="utf-8",
+    )
+    result = run(
+        ["node", "agentloop_runner.mjs"],
+        broken,
+        expect=1,
+        stdin=json.dumps({"input": {}, "trace_path": "unawaited.json"}),
+    )
+    if "Await every trace.tool" not in result.stderr:
+        raise SystemExit("An unawaited traced call must be reported")
 
 
 def main() -> None:
