@@ -17,6 +17,7 @@ from pathlib import Path
 
 import pytest
 import streamlit as st
+from dashboard_apptest import APPTEST_TIMEOUT
 from streamlit.testing.v1 import AppTest
 
 from agentloop.store import SQLiteTraceStore
@@ -64,7 +65,7 @@ def _store_with_a_trace(tmp_path, monkeypatch) -> SQLiteTraceStore:
 
 def _ingest_page(tmp_path, monkeypatch) -> AppTest:
     _store_with_a_trace(tmp_path, monkeypatch)
-    app = AppTest.from_file(APP, default_timeout=60)
+    app = AppTest.from_file(APP, default_timeout=APPTEST_TIMEOUT)
     app.run()
     app.sidebar.radio[0].set_value("Ingest").run()
     return app
@@ -86,7 +87,7 @@ def _upload_errors(app):
 def test_patch_plan_reports_a_missing_repository_path_inline(tmp_path, monkeypatch) -> None:
     _store_with_a_trace(tmp_path, monkeypatch)
 
-    app = AppTest.from_file(APP, default_timeout=60)
+    app = AppTest.from_file(APP, default_timeout=APPTEST_TIMEOUT)
     app.run()
     app.sidebar.radio[0].set_value("Patch Plan").run()
     _repo_path_input(app).set_value(str(tmp_path / "does-not-exist")).run()
@@ -102,7 +103,7 @@ def test_patch_plan_reports_a_path_outside_the_allowed_root_inline(tmp_path, mon
     """
     _store_with_a_trace(tmp_path, monkeypatch)
 
-    app = AppTest.from_file(APP, default_timeout=60)
+    app = AppTest.from_file(APP, default_timeout=APPTEST_TIMEOUT)
     app.run()
     app.sidebar.radio[0].set_value("Patch Plan").run()
     _repo_path_input(app).set_value("../../..").run()
@@ -115,7 +116,7 @@ def test_patch_plan_still_works_for_a_valid_path(tmp_path, monkeypatch) -> None:
     """The control: the guard must not swallow the working case."""
     _store_with_a_trace(tmp_path, monkeypatch)
 
-    app = AppTest.from_file(APP, default_timeout=60)
+    app = AppTest.from_file(APP, default_timeout=APPTEST_TIMEOUT)
     app.run()
     app.sidebar.radio[0].set_value("Patch Plan").run()
 
@@ -195,7 +196,7 @@ def test_storing_a_valid_uploaded_trace_persists_it(tmp_path, monkeypatch) -> No
     store = _store_with_a_trace(tmp_path, monkeypatch)
     trace = AgentTrace(name="uploaded")
 
-    app = AppTest.from_file(APP, default_timeout=60)
+    app = AppTest.from_file(APP, default_timeout=APPTEST_TIMEOUT)
     app.run()
     app.sidebar.radio[0].set_value("Ingest").run()
     _upload(app, json.dumps(trace.to_dict()).encode("utf-8"))
