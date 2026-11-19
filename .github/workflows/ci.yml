@@ -197,21 +197,6 @@ jobs:
       matrix:
         python-version: ["3.11", "3.13", "3.14", "3.15"]
 
-    services:
-      postgres:
-        image: public.ecr.aws/docker/library/postgres:16-alpine
-        env:
-          POSTGRES_USER: agentloop
-          POSTGRES_PASSWORD: agentloop-ci-test-only
-          POSTGRES_DB: agentloop_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U agentloop -d agentloop_test"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-
     env:
       AGENTLOOP_TEST_POSTGRES_DSN: postgresql://agentloop:agentloop-ci-test-only@localhost:5432/agentloop_test
       UV_PYTHON: ${{ matrix.python-version }}
@@ -220,6 +205,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Start Postgres
+        # A step instead of a service container so the image pull can fall
+        # back to other official mirrors when ECR Public throttles runners.
+        shell: bash
+        run: |
+          image="$(.github/scripts/pull-official-image.sh postgres:16-alpine)"
+          docker run --detach --name agentloop-postgres --publish 5432:5432 \
+            --env POSTGRES_USER=agentloop \
+            --env POSTGRES_PASSWORD=agentloop-ci-test-only \
+            --env POSTGRES_DB=agentloop_test \
+            "$image"
 
       - name: Set up stable Python
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
@@ -511,21 +508,19 @@ jobs:
         run: |
           # Change only the registry for CI; retain the source Python tag and all
           # application/build instructions. Validate that exactly one base exists.
-          mirror_file="$RUNNER_TEMP/Dockerfile.agentloop-ci"
           test "$(grep -c '^FROM python:' Dockerfile)" -eq 1
-          sed 's|^FROM python:|FROM public.ecr.aws/docker/library/python:|' Dockerfile > "$mirror_file"
-          # The public mirror occasionally answers 429 Too Many Requests; retry
-          # with backoff before failing the job.
-          for delay in 20 60 120 0; do
-            if docker build --file "$mirror_file" --tag agentloop:local .; then
-              exit 0
-            fi
-            if [ "$delay" -eq 0 ]; then
-              exit 1
-            fi
-            echo "::warning::Image build failed; retrying in ${delay}s"
-            sleep "$delay"
-          done
+          tag="$(sed -n 's|^FROM python:\([^ ]*\).*|\1|p' Dockerfile)"
+          base="$(.github/scripts/pull-official-image.sh "python:$tag")"
+          mirror_file="$RUNNER_TEMP/Dockerfile.agentloop-ci"
+          sed "s|^FROM python:$tag|FROM $base|" Dockerfile > "$mirror_file"
+          docker build --pull=false --file "$mirror_file" --tag agentloop:local .
+
+      - name: Pull the Postgres image used by Compose
+        shell: bash
+        run: |
+          # Compose uses the ECR Public name from .github/docker-compose.ci.yml.
+          .github/scripts/pull-official-image.sh postgres:16-alpine \
+            public.ecr.aws/docker/library/postgres:16-alpine
 
       - name: Validate Compose configuration without rendering secrets
         run: docker compose config --quiet

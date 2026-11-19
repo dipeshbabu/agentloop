@@ -11,12 +11,22 @@ trace, study, receipt, API and database schema versions.
 
 ### Added
 
+- `examples/claude_code_runner.py` runs Claude Code (`claude -p --output-format
+  stream-json`) on guided tasks with only read-only tools pre-approved. It
+  records one model span per API response with per-request usage including
+  cache tokens, and one tool span per tool use. `docs/CLAUDE_CODE.md` explains
+  the mapping and a one-command comparison.
 - `agentloop improve compare` runs a whole guided comparison in one command.
   It captures the baseline with the unchanged runner (`--before-arg`), freezes
   the session, captures the changed runner alternating with the unchanged one
   as an interleaved control, and writes the verdict. It checks inputs before
   any runner executes, stops if no baseline attempt completes, and defaults to
   the aggregate decision. `improvement.compare()` exposes the same workflow.
+- `improve start` and `improve compare` warn when a plan is too weak to
+  separate a change from noise: fewer than five pairs, one repetition per task,
+  or baseline latency that varies between repetitions by at least 10% and more
+  than the required improvement. Notes are recorded in the frozen session and
+  listed under "Evidence strength" in `plan.md`; they do not change decisions.
 
 ## [0.2.4] - 2026-11-18
 

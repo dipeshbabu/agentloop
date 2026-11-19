@@ -13,18 +13,22 @@ data are explicitly qualified. Demo generators continue to mark their traces.
 
 ## Hosted container pulls
 
-Hosted Python/Postgres and deployment checks pull Docker's Official Images from
-ECR Public (`public.ecr.aws/docker/library`) to avoid shared unauthenticated
-Docker Hub pull quotas. CI keeps the `postgres:16-alpine` service/version and the
-source Dockerfile's Python tag. Deployment uses a CI-only Compose image override
-and a temporary Dockerfile with only the registry prefix replaced. Production
-Dockerfile/Compose defaults, health checks, database contracts and application
-validation remain unchanged.
+Hosted Python/Postgres and deployment checks pull Docker's Official Images
+through `.github/scripts/pull-official-image.sh`. It tries ECR Public
+(`public.ecr.aws/docker/library`), Google's `mirror.gcr.io` Docker Hub mirror and
+Docker Hub in turn, backing off between rounds, because each can throttle shared
+hosted runners. CI keeps the `postgres:16-alpine` version and the source
+Dockerfile's Python tag. The Python test jobs start Postgres in a step rather
+than a service container so its pull can fall back. Deployment uses a CI-only
+Compose image override and a temporary Dockerfile with only the base image
+reference replaced. Production Dockerfile/Compose defaults, health checks,
+database contracts and application validation remain unchanged.
 
 Docker lists Python/Postgres in its
 [official ECR publisher gallery](https://gallery.ecr.aws/docker/). These mirrors
-do not replace checks: pull failures still fail CI, and the full interpreter,
-Postgres and deployment tests must run before a PR can merge.
+do not replace checks: a pull that fails from every mirror still fails CI, and
+the full interpreter, Postgres and deployment tests must run before a PR can
+merge.
 
 ## Compare application traces
 
