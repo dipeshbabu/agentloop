@@ -354,6 +354,8 @@ gate. Run `agentloop COMMAND --help` to see its output options and thresholds.
 | Source | Integration path |
 | --- | --- |
 | Custom Python agents and pipelines | Decorators, context managers, and [workflow annotations](https://dipeshbabu.github.io/agentloop/WORKFLOW_TRACING/). |
+| TypeScript and JavaScript applications | `npm install agentloop-profiler`, then record model, tool and retry spans with the [TypeScript SDK](https://dipeshbabu.github.io/agentloop/reference/typescript/). |
+| OpenAI Codex CLI and Claude Code | Built-in [Codex](https://dipeshbabu.github.io/agentloop/CODEX/) and [Claude Code](https://dipeshbabu.github.io/agentloop/CLAUDE_CODE/) runners for the guided workflow. |
 | OpenAI SDK | Wrap a client or callable to capture calls, streams, and reported usage. |
 | OpenAI Agents SDK | Attach an AgentLoop tracing processor. |
 | LangGraph | Instrument the builder before adding nodes, then wrap the compiled runnable. |
@@ -419,7 +421,9 @@ uv run --frozen --all-extras streamlit run dashboard/app.py
 Open Streamlit's printed URL and leave the sidebar's Project field set to `default`.
 Use `store-trace` to load your own files. Storage uses SQLite by default and also
 supports Postgres. The optional HTTP API serves project-scoped traces and reports
-through `/v1` endpoints.
+through `/v1` endpoints. Python applications use `agentloop.AgentLoopClient`;
+TypeScript applications use `AgentLoopClient` from the npm package to upload
+traces and read reports.
 
 See [dashboard setup](https://dipeshbabu.github.io/agentloop/DASHBOARD/), [API versioning](https://dipeshbabu.github.io/agentloop/API_VERSIONING/),
 and [production deployment](https://dipeshbabu.github.io/agentloop/PRODUCTION/) for configuration and authentication.

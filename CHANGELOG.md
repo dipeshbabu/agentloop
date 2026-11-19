@@ -14,6 +14,9 @@ trace, study, receipt, API and database schema versions.
   tracing example verified against the published npm package. The
   installation guide documents `npm install agentloop-profiler` instead of
   saying npm publication is pending.
+- The README integrations table lists the TypeScript SDK and the Codex and
+  Claude Code runners. The API, upgrade and installation guides cover the
+  npm package's client, upgrades and version check.
 
 ## [0.2.6] - 2026-11-19
 

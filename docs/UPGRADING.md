@@ -1,5 +1,10 @@
 # Existing installations and stored data
 
+The TypeScript SDK is published on npm as `agentloop-profiler` and is versioned
+separately from the Python package. Upgrade it in your application with
+`npm install agentloop-profiler@latest`. Native trace schema 1.1 and API v1,
+not package versions, determine compatibility with the Python CLI and server.
+
 Version `0.2.0` adds the guided `improve init`, `capture`, `start` and `finish`
 workflow. Python 3.11 remains the minimum. Existing explicit `--tasks FILE`
 commands and runner argv remain valid; `agentloop.toml` is optional data-only
@@ -27,8 +32,8 @@ Version `0.1.1` requires **Python 3.11 or newer** so supported installations can
 use patched dependencies. It adds Hermes tracing and fixes CLI output collisions,
 retry/error reporting, and API client credential handling. Native trace schema
 1.1, API v1, and database migration IDs continue unchanged; retain existing data.
-The TypeScript SDK remains a separately versioned source package, with npm
-publication pending.
+The TypeScript SDK was then a separately versioned source package; it has since
+been published on npm.
 
 Version `0.1.0` includes the evidence workflow: canonical findings and estimator
 provenance, intervention records, paired studies, offline HTML reports, telemetry

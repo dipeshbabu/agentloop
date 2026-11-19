@@ -99,6 +99,9 @@ Node.js 22 and newer. Install it in your application:
 npm install agentloop-profiler
 ```
 
+Upgrade an existing install with `npm install agentloop-profiler@latest` and check
+the installed version with `npm ls agentloop-profiler`.
+
 It is an ESM package with TypeScript declarations and no runtime dependencies.
 Import from `agentloop-profiler` for tracing and `agentloop-profiler/client` for
 the HTTP API client. Published versions are listed on

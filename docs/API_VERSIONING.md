@@ -16,6 +16,10 @@ This sends `GET /v1/traces?page_size=20`. A mount such as
 requires a server with v1 support; upgrade the server before upgrading clients.
 Older clients can continue using the deprecated unversioned aliases during 0.x.
 
+The TypeScript SDK's `AgentLoopClient`, installed with
+`npm install agentloop-profiler`, uses the same `/v1` routes. See the
+[TypeScript SDK guide](../sdk/typescript/README.md#use-the-api).
+
 The Python client rejects redirects so project and admin keys cannot be forwarded
 to another endpoint. Credentials are omitted from its representation, and HTTP
 errors report the status without copying response bodies. Responses must be JSON
