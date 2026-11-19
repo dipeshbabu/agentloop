@@ -6,6 +6,7 @@ import pytest
 from test_semantic_findings import prepare
 
 st = pytest.importorskip("streamlit")
+from dashboard_apptest import APPTEST_TIMEOUT  # noqa: E402
 from streamlit.testing.v1 import AppTest  # noqa: E402
 
 from agentloop.store import SQLiteTraceStore  # noqa: E402
@@ -19,7 +20,8 @@ def test_dashboard_queue_and_diagnosis_render_unknown_semantic_savings(tmp_path,
         store = SQLiteTraceStore(str(path))
         store.save_trace(prepare())
         app = AppTest.from_file(
-            str(Path(__file__).resolve().parents[1] / "dashboard" / "app.py"), default_timeout=60
+            str(Path(__file__).resolve().parents[1] / "dashboard" / "app.py"),
+            default_timeout=APPTEST_TIMEOUT,
         )
         app.run()
         app.sidebar.radio[0].set_value("Optimization Queue").run()
