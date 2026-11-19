@@ -22,7 +22,10 @@ Dockerfile/Compose defaults, health checks, database contracts and application
 validation remain unchanged.
 
 Docker lists Python/Postgres in its
-[official ECR publisher gallery](https://gallery.ecr.aws/docker/). These mirrors
+[official ECR publisher gallery](https://gallery.ecr.aws/docker/). ECR Public can
+also throttle hosted runners, so the deployment smoke tries the same official
+tags from ECR Public, Google's `mirror.gcr.io` Docker Hub mirror and Docker Hub,
+with backoff between rounds. These mirrors
 do not replace checks: pull failures still fail CI, and the full interpreter,
 Postgres and deployment tests must run before a PR can merge.
 
