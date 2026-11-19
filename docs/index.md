@@ -33,6 +33,9 @@ agentloop analyze runs/agentloop_quickstart.json --html runs/report.html
 Open `runs/report.html` to inspect the timeline and findings.
 This example runs locally with synthetic data.
 
+For Node.js or browser code, `npm install agentloop-profiler` installs the
+[TypeScript SDK](../sdk/typescript/README.md); analyze its traces with the same CLI.
+
 </div>
 
 ## How AgentLoop fits your workflow

@@ -5,8 +5,14 @@ search:
 
 # Installation
 
-AgentLoop requires Python 3.11 or newer. The package is `agentloop-profiler` and
-the Python import and CLI command are `agentloop`.
+AgentLoop is published as `agentloop-profiler` on PyPI and on npm:
+
+- the Python package (Python 3.11 or newer) provides the Python SDK and the
+  `agentloop` CLI, which analyzes traces, writes reports and runs the guided
+  workflow. The Python import and CLI command are `agentloop`;
+- the npm package (Node.js 22 or newer) provides the
+  [TypeScript SDK](#typescript) for recording traces from Node.js and browser
+  code. Analyze its traces with the `agentloop` CLI.
 
 ## Published package
 
@@ -86,6 +92,18 @@ client compatibility and optional dependency updates.
 
 ## TypeScript
 
-The separately versioned TypeScript SDK supports Node.js 22 and newer. Follow
-its [source installation instructions](../sdk/typescript/README.md).
-Its initial npm publication is pending.
+The TypeScript SDK is versioned separately from the Python package and supports
+Node.js 22 and newer. Install it in your application:
+
+```bash
+npm install agentloop-profiler
+```
+
+It is an ESM package with TypeScript declarations and no runtime dependencies.
+Import from `agentloop-profiler` for tracing and `agentloop-profiler/client` for
+the HTTP API client. Published versions are listed on
+[npm](https://www.npmjs.com/package/agentloop-profiler), with provenance linking
+each version to the workflow that built it.
+
+The [TypeScript SDK guide](../sdk/typescript/README.md) covers tracing, model usage,
+the API client and building the SDK from source.

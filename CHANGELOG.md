@@ -7,6 +7,14 @@ trace, study, receipt, API and database schema versions.
 
 ## [Unreleased]
 
+### Documentation
+
+- The README has an Install section covering the PyPI package, the npm
+  TypeScript SDK and standalone executables, an npm badge, and a JavaScript
+  tracing example verified against the published npm package. The
+  installation guide documents `npm install agentloop-profiler` instead of
+  saying npm publication is pending.
+
 ## [0.2.6] - 2026-11-19
 
 ### Added
