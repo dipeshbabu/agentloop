@@ -278,6 +278,20 @@ context and does not gate the decision. Use enough repetitions for the median
 to mean something, and combine aggregate decisions with an
 [interleaved control](#compare-against-an-interleaved-control).
 
+`improve start` and `improve compare` warn before the candidate runs when the
+plan is too weak to separate a change from noise. AgentLoop 0.2.5 and newer
+print these notes, record them in the frozen session, and list them under
+**Evidence strength** in `plan.md`:
+
+- fewer than five pairs: even if every pair improves, the sign test cannot fall
+  below p = 0.05;
+- one repetition per task: run-to-run variation cannot be measured;
+- noisy baseline latency: repetitions of the same task varied by a median of at
+  least 10%, more than `--minimum-improvement`.
+
+The notes do not change the decision. Respond by adding tasks or repetitions,
+requiring a larger improvement, or comparing against an interleaved control.
+
 ## Compare against an interleaved control
 
 Interleaved controls require AgentLoop 0.2.2 or newer.
