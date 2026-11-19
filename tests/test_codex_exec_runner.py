@@ -7,8 +7,8 @@ import pytest
 
 from agentloop.events import AgentEvent
 from agentloop.findings import build_diagnosis
+from agentloop.runners.codex import convert, task_prompt
 from agentloop.tracer import AgentTrace
-from examples.codex_exec_runner import convert, task_prompt
 
 # Shape recorded from `codex exec --json` (Codex CLI 0.167.1), shortened.
 STREAM = [

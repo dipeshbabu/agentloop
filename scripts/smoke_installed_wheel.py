@@ -90,6 +90,9 @@ def smoke(expected_version: str) -> None:
             run("-c", "from agentloop.entrypoint import app; app()", *args)
 
         run(str(Path(__file__).resolve().parent / "smoke_guided_wheel.py"))
+        # The coding-agent runners ship in the wheel and start without a checkout.
+        for runner in ("agentloop.runners.codex", "agentloop.runners.claude_code"):
+            run("-m", runner, "--help")
 
         fixture = external_fixtures / "harbor" / "atif_v18_multimodal.json"
         cli("harbor", "import-atif", str(fixture), "--out", "atif", "--synthetic")

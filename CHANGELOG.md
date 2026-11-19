@@ -7,6 +7,15 @@ trace, study, receipt, API and database schema versions.
 
 ## [Unreleased]
 
+### Added
+
+- The Codex and Claude Code runners ship in the package as
+  `python -m agentloop.runners.codex` and
+  `python -m agentloop.runners.claude_code`, so they work from a `pip` install
+  without a repository checkout. `examples/codex_exec_runner.py` and
+  `examples/claude_code_runner.py` forward to them. The installed-wheel smoke
+  check starts both runners.
+
 ### Documentation
 
 - The README points to the Codex and Claude Code runners, and its standalone

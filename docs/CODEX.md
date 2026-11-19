@@ -1,10 +1,15 @@
 # OpenAI Codex CLI
 
 AgentLoop can profile and compare [Codex CLI](https://github.com/openai/codex)
-runs through the guided workflow. The example
-[runner](https://github.com/dipeshbabu/agentloop/blob/main/examples/codex_exec_runner.py)
+runs through the guided workflow. The
+[runner](https://github.com/dipeshbabu/agentloop/blob/main/agentloop/runners/codex.py)
 runs `codex exec --json` for each task and converts its event stream into a
 native AgentLoop trace. Codex is not modified and no plugin is installed.
+
+AgentLoop 0.2.6 and newer install the runner with the package: run it as
+`python -m agentloop.runners.codex`, using the Python environment where
+AgentLoop is installed. Earlier releases need a repository checkout and
+`python examples/codex_exec_runner.py`, which still works.
 
 Each task attempt is a real Codex run on your ChatGPT plan or API key and counts
 against that usage.
@@ -34,7 +39,7 @@ Tasks use a prompt string or an object with `prompt`. The checked-in
 asks three metadata questions about this repository with exact expected values.
 
 ```bash
-agentloop improve capture --tasks examples/codex_repository_tasks.json --out runs/codex/baseline --timeout 600 -- python examples/codex_exec_runner.py --cd .
+agentloop improve capture --tasks examples/codex_repository_tasks.json --out runs/codex/baseline --timeout 600 -- python -m agentloop.runners.codex --cd .
 agentloop improve start --tasks examples/codex_repository_tasks.json --baseline runs/codex/baseline/capture.json --out runs/codex/session
 ```
 
@@ -44,7 +49,7 @@ editing the runner. Capture it with the unchanged runner as an
 [interleaved control](GUIDED_OPTIMIZATION.md#compare-against-an-interleaved-control):
 
 ```bash
-agentloop improve capture --tasks examples/codex_repository_tasks.json --out runs/codex/paired --timeout 600 --control-arg python --control-arg examples/codex_exec_runner.py --control-arg --cd --control-arg . -- python examples/codex_exec_runner.py --cd . -- -c model_reasoning_effort="low"
+agentloop improve capture --tasks examples/codex_repository_tasks.json --out runs/codex/paired --timeout 600 --control-arg python --control-arg -m --control-arg agentloop.runners.codex --control-arg --cd --control-arg . -- python -m agentloop.runners.codex --cd . -- -c model_reasoning_effort="low"
 agentloop improve finish --session runs/codex/session/session.json --candidate runs/codex/paired/capture.json --change "Lower reasoning effort for lookups" --out runs/codex/results
 ```
 

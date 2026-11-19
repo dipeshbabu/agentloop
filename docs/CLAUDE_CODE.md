@@ -1,11 +1,16 @@
 # Claude Code
 
 AgentLoop can profile and compare [Claude Code](https://docs.claude.com/en/docs/claude-code/overview)
-runs through the guided workflow. The example
-[runner](https://github.com/dipeshbabu/agentloop/blob/main/examples/claude_code_runner.py)
+runs through the guided workflow. The
+[runner](https://github.com/dipeshbabu/agentloop/blob/main/agentloop/runners/claude_code.py)
 runs `claude -p --output-format stream-json --verbose` for each task and
 converts its event stream into a native AgentLoop trace. Claude Code is not
 modified and no plugin is installed.
+
+AgentLoop 0.2.6 and newer install the runner with the package: run it as
+`python -m agentloop.runners.claude_code`, using the Python environment where
+AgentLoop is installed. In 0.2.5 it is only in a repository checkout, as
+`python examples/claude_code_runner.py`.
 
 Each task attempt is a real Claude Code run on your Claude plan or API key and
 counts against that usage.
@@ -36,12 +41,12 @@ Tasks use a prompt string or an object with `prompt`. The Codex
 works unchanged: it asks three metadata questions about this repository with
 exact expected values.
 
-AgentLoop 0.2.5 and newer compare an unchanged and a changed configuration in
-one command. Arguments after a second `--` go to `claude` unchanged, so the
+`improve compare` (AgentLoop 0.2.5 and newer) compares an unchanged and a
+changed configuration in one command. Arguments after a second `--` go to `claude` unchanged, so the
 candidate below only lowers the turn limit:
 
 ```bash
-agentloop improve compare --tasks examples/codex_repository_tasks.json --out runs/claude --timeout 600 --change "Limit lookups to four turns" --before-arg python --before-arg examples/claude_code_runner.py --before-arg --cd --before-arg . -- python examples/claude_code_runner.py --cd . -- --max-turns 4
+agentloop improve compare --tasks examples/codex_repository_tasks.json --out runs/claude --timeout 600 --change "Limit lookups to four turns" --before-arg python --before-arg -m --before-arg agentloop.runners.claude_code --before-arg --cd --before-arg . -- python -m agentloop.runners.claude_code --cd . -- --max-turns 4
 ```
 
 Runner options: `--cd` sets the directory Claude Code works in,

@@ -107,10 +107,12 @@ baseline, the frozen session, an interleaved before/after capture and the
 verdict in one command. Pass the unchanged runner as repeated `--before-arg`
 values and the changed runner after `--`. See
 [comparing two versions in one command](https://dipeshbabu.github.io/agentloop/GUIDED_OPTIMIZATION/#compare-two-versions-in-one-command).
-Example runners for [OpenAI Codex CLI](https://dipeshbabu.github.io/agentloop/CODEX/)
-and [Claude Code](https://dipeshbabu.github.io/agentloop/CLAUDE_CODE/) turn each
-coding-agent run into a native trace, so the same workflow compares models,
-instructions or settings for those agents.
+Built-in runners for [OpenAI Codex CLI](https://dipeshbabu.github.io/agentloop/CODEX/)
+(`python -m agentloop.runners.codex`) and
+[Claude Code](https://dipeshbabu.github.io/agentloop/CLAUDE_CODE/)
+(`python -m agentloop.runners.claude_code`) turn each coding-agent run into a
+native trace, so the same workflow compares models, instructions or settings
+for those agents.
 
 To connect your application, run `agentloop improve init --agent my_agent:answer`
 in its project directory. The generated adapter supports synchronous and async
