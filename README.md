@@ -13,6 +13,7 @@
 <p align="center">
   <a href="https://github.com/dipeshbabu/agentloop/actions/workflows/ci.yml"><img src="https://github.com/dipeshbabu/agentloop/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://pypi.org/project/agentloop-profiler/"><img src="https://img.shields.io/pypi/v/agentloop-profiler.svg?cacheSeconds=300" alt="PyPI"></a>
+  <a href="https://www.npmjs.com/package/agentloop-profiler"><img src="https://img.shields.io/npm/v/agentloop-profiler.svg?cacheSeconds=300" alt="npm"></a>
   <a href="https://pepy.tech/projects/agentloop-profiler"><img src="https://static.pepy.tech/badge/agentloop-profiler/month" alt="Downloads/month"></a>
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.11%2B-3776AB.svg" alt="Python 3.11 or newer"></a>
   <a href="https://github.com/dipeshbabu/agentloop/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="License: Apache-2.0"></a>
@@ -20,6 +21,7 @@
 
 <p align="center">
   <a href="https://dipeshbabu.github.io/agentloop/">Documentation</a> ·
+  <a href="#install">Install</a> ·
   <a href="#quickstart">Quickstart</a> ·
   <a href="#guided-optimization">Improve an agent</a> ·
   <a href="#record-your-own-run">Trace your code</a> ·
@@ -37,13 +39,24 @@ The core Python SDK and CLI work with JSON files. You can trace and analyze your
 code without a hosted account or database. A dashboard, HTTP API, and shared
 storage are available as optional components.
 
-For Node.js and browser applications, the source checkout includes a
-[TypeScript SDK](https://github.com/dipeshbabu/agentloop/blob/main/sdk/typescript/README.md) with native tracing and an API v1 client.
-It has no runtime dependencies and installs with `npm install agentloop-profiler`.
+## Install
+
+AgentLoop is published as `agentloop-profiler` on PyPI and on npm.
+
+| Install | For | Requires |
+| --- | --- | --- |
+| `python -m pip install agentloop-profiler` | Python SDK and the `agentloop` CLI, which analyzes traces, writes reports and runs the guided workflow | Python 3.11+ |
+| `npm install agentloop-profiler` | [TypeScript SDK](https://github.com/dipeshbabu/agentloop/blob/main/sdk/typescript/README.md) for Node.js and browser code: native tracing and an API v1 client, with no runtime dependencies | Node.js 22+ |
+| [Standalone executable](#standalone-cli) | The `agentloop` CLI without installing Python | Linux, macOS or Windows |
+
+The two packages are versioned separately and share the trace format, so traces
+recorded with the TypeScript SDK are analyzed with the `agentloop` CLI. See the
+[installation guide](https://dipeshbabu.github.io/agentloop/installation/) for
+virtual environments, optional extras and installing from source.
 
 ## Quickstart
 
-Install with Python 3.11 or newer:
+Install the Python package and record an example trace:
 
 ```bash
 python -m pip install agentloop-profiler
@@ -54,9 +67,9 @@ agentloop analyze runs/agentloop_quickstart.json --html runs/report.html --json-
 Open `runs/report.html` in your browser to inspect the timeline and findings.
 `runs/analysis.json` contains the trace, metrics, diagnosis, and optimization plan.
 
-The package name is `agentloop-profiler`; the Python import and CLI command are
-both `agentloop`. `quickstart` creates a labeled synthetic trace and makes no model
-API calls. It tests your installation, not your application's performance.
+The Python import and CLI command are both `agentloop`. `quickstart` creates a
+labeled synthetic trace and makes no model API calls. It tests your installation,
+not your application's performance.
 
 If your shell cannot find `agentloop`, activate the Python environment where you
 installed it. Run `agentloop doctor` to check the installation and available adapters.
@@ -177,6 +190,40 @@ usage from an arbitrary return value.
 Saving `metadata["output"]` is an explicit choice in this example. Review the
 inputs, outputs, errors, and metadata you retain before sharing real traces.
 See [trace retention](https://dipeshbabu.github.io/agentloop/TRACE_RETENTION/) for capture controls.
+
+### From TypeScript or JavaScript
+
+After `npm install agentloop-profiler`, save this as `example_agent.mjs`:
+
+```javascript
+import { writeFile } from "node:fs/promises";
+import { AgentTrace } from "agentloop-profiler";
+
+const NOTES = {
+  tracing: "Record the steps in a workflow.",
+  optimization: "Investigate repeated or expensive work.",
+};
+
+const trace = new AgentTrace("research_agent", { metadata: { synthetic: true } });
+const notes = [];
+for (const topic of Object.keys(NOTES)) {
+  notes.push(await trace.tool("lookup_note", async () => NOTES[topic]));
+}
+trace.setOutput({ notes });
+trace.finish();
+await writeFile("research_agent_js.json", trace.toJSONString());
+```
+
+Run it and analyze the trace with the `agentloop` CLI:
+
+```bash
+node example_agent.mjs
+agentloop analyze research_agent_js.json --html research_agent_js.html
+```
+
+The SDK also records model calls with provider token usage, retries and nested
+spans, and can send traces to the HTTP API. See the
+[TypeScript SDK guide](https://dipeshbabu.github.io/agentloop/reference/typescript/).
 
 ## Inspect findings
 
@@ -307,6 +354,8 @@ gate. Run `agentloop COMMAND --help` to see its output options and thresholds.
 | Source | Integration path |
 | --- | --- |
 | Custom Python agents and pipelines | Decorators, context managers, and [workflow annotations](https://dipeshbabu.github.io/agentloop/WORKFLOW_TRACING/). |
+| TypeScript and JavaScript applications | `npm install agentloop-profiler`, then record model, tool and retry spans with the [TypeScript SDK](https://dipeshbabu.github.io/agentloop/reference/typescript/). |
+| OpenAI Codex CLI and Claude Code | Built-in [Codex](https://dipeshbabu.github.io/agentloop/CODEX/) and [Claude Code](https://dipeshbabu.github.io/agentloop/CLAUDE_CODE/) runners for the guided workflow. |
 | OpenAI SDK | Wrap a client or callable to capture calls, streams, and reported usage. |
 | OpenAI Agents SDK | Attach an AgentLoop tracing processor. |
 | LangGraph | Instrument the builder before adding nodes, then wrap the compiled runnable. |
@@ -372,7 +421,9 @@ uv run --frozen --all-extras streamlit run dashboard/app.py
 Open Streamlit's printed URL and leave the sidebar's Project field set to `default`.
 Use `store-trace` to load your own files. Storage uses SQLite by default and also
 supports Postgres. The optional HTTP API serves project-scoped traces and reports
-through `/v1` endpoints.
+through `/v1` endpoints. Python applications use `agentloop.AgentLoopClient`;
+TypeScript applications use `AgentLoopClient` from the npm package to upload
+traces and read reports.
 
 See [dashboard setup](https://dipeshbabu.github.io/agentloop/DASHBOARD/), [API versioning](https://dipeshbabu.github.io/agentloop/API_VERSIONING/),
 and [production deployment](https://dipeshbabu.github.io/agentloop/PRODUCTION/) for configuration and authentication.
