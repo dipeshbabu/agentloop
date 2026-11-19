@@ -17,6 +17,8 @@ trace, study, receipt, API and database schema versions.
 - The README integrations table lists the TypeScript SDK and the Codex and
   Claude Code runners. The API, upgrade and installation guides cover the
   npm package's client, upgrades and version check.
+- The TypeScript SDK README says how to install the `agentloop` CLI that
+  analyzes its traces.
 
 ## [0.2.6] - 2026-11-19
 

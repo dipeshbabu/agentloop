@@ -61,9 +61,13 @@ trace.finish();
 await writeFile("trace.json", trace.toJSONString());
 ```
 
-Analyze this local example with the Python CLI:
+Analyze this local example with the `agentloop` CLI. It comes from the Python
+package (Python 3.11 or newer), or use a
+[standalone executable](https://github.com/dipeshbabu/agentloop#standalone-cli)
+that needs no Python:
 
 ```bash
+python -m pip install agentloop-profiler
 agentloop analyze trace.json --html report.html
 ```
 
