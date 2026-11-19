@@ -424,6 +424,66 @@ def _runner_budget(value):
         ) from error
 
 
+MIN_SIGN_TEST_PAIRS = 5
+NOISY_SPREAD_PCT = 10.0
+
+
+def planning_guidance(workload, manifest, traces, objective, minimum_improvement):
+    """Warn when the planned comparison cannot separate a change from noise.
+
+    The sign test needs at least five pairs before even a unanimous result can
+    fall below p = 0.05. When repeated baseline attempts of the same task vary
+    by more than the required improvement, smaller differences may be noise.
+    """
+    notes = []
+    pairs = len(workload["tasks"]) * workload["repetitions"]
+    if pairs < MIN_SIGN_TEST_PAIRS:
+        notes.append(
+            {
+                "kind": "few_pairs",
+                "pairs": pairs,
+                "message": f"Only {pairs} pair{'s' if pairs != 1 else ''} planned. Even if every "
+                "pair improves, a one-sided sign test cannot fall below p = 0.05 with fewer than "
+                f"{MIN_SIGN_TEST_PAIRS} pairs. Add tasks or raise repetitions in the task file.",
+            }
+        )
+    if workload["repetitions"] < 2:
+        notes.append(
+            {
+                "kind": "noise_unmeasured",
+                "message": "Each task runs once, so baseline run-to-run variation cannot be "
+                "measured. Use at least 2 repetitions to see how noisy the agent is.",
+            }
+        )
+    elif objective == "latency":
+        completed = _completed(manifest, traces)
+        spreads = []
+        for task in workload["tasks"]:
+            values = [
+                trace.elapsed_ms
+                for (task_id, _), trace in completed.items()
+                if task_id == task["id"] and _trace_usable(trace)
+            ]
+            middle = statistics.median(values) if len(values) >= 2 else 0
+            if middle > 0:
+                spreads.append((max(values) - min(values)) / middle * 100)
+        if spreads:
+            spread = statistics.median(spreads)
+            if spread >= NOISY_SPREAD_PCT and spread > minimum_improvement:
+                notes.append(
+                    {
+                        "kind": "noisy_baseline",
+                        "spread_pct": round(spread, 2),
+                        "message": f"Baseline latency of the same task varied by a median "
+                        f"{spread:.1f}% between repetitions, more than the "
+                        f"{minimum_improvement:g}% required improvement. Smaller differences "
+                        "may be noise: require a larger improvement, add repetitions, or "
+                        "compare against an interleaved control with the aggregate decision.",
+                    }
+                )
+    return notes
+
+
 def start(
     workload_path,
     baseline_path,
@@ -515,6 +575,9 @@ def start(
         "gates": asdict(gates),
         "cases": cases,
         "baseline_capture": manifest,
+        "planning_notes": planning_guidance(
+            workload, manifest, traces, objective, minimum_improvement
+        ),
     }
     if verifier is not None:
         specification["verifier"] = verifier.declaration()
@@ -1139,7 +1202,7 @@ def compare(
     notify(
         f"Baseline captured {completed} of {len(baseline['runs'])} attempts; freezing the session"
     )
-    start(
+    specification = start(
         workload_path,
         paths["baseline"] / "capture.json",
         paths["session"],
@@ -1151,6 +1214,8 @@ def compare(
         verifier_timeout=verifier_timeout,
         max_runner_regression_ms=max_runner_regression_ms,
     )
+    for note in specification["planning_notes"]:
+        notify(f"Note: {note['message']}")
     notify("Capturing the after runner, alternating with the before runner as a control")
     capture(
         workload_path,

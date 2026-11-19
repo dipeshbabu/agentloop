@@ -145,6 +145,7 @@ def start_command(
     console.print(
         f"Investigation focus is {specification['focus'] or 'unavailable'}.", markup=False
     )
+    _print_planning_notes(specification)
     console.print(
         f"Review {out / 'plan.md'}, apply your change, then capture the same tasks again.",
         markup=False,
@@ -174,6 +175,11 @@ def finish_command(
     except (OSError, ValueError, TypeError, KeyError) as exc:
         raise typer.BadParameter(str(exc)) from exc
     _print_report(report, out)
+
+
+def _print_planning_notes(specification):
+    for note in specification.get("planning_notes", []):
+        console.print(f"Note: {note['message']}", markup=False)
 
 
 def _print_report(report, out):
