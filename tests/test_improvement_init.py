@@ -264,3 +264,76 @@ def test_init_rolls_back_its_files_after_a_partial_write(tmp_path, monkeypatch):
     with pytest.raises(OSError, match="disk full"):
         initialize(tmp_path)
     assert [path.name for path in tmp_path.iterdir()] == ["owned.txt"]
+
+
+def test_node_init_generates_an_esm_runner_example_and_package(tmp_path):
+    root = tmp_path / "node-project"
+    names = initialize(root, language="node")
+    assert set(names) == {
+        "agentloop.toml",
+        "agentloop_tasks.json",
+        "agentloop_runner.mjs",
+        "agentloop_example.mjs",
+        "package.json",
+        "AGENTLOOP.md",
+    }
+    runner = (root / "agentloop_runner.mjs").read_text(encoding="utf-8")
+    assert 'import { AgentTrace } from "agentloop-profiler";' in runner
+    assert 'const MODULE = "./agentloop_example.mjs";' in runner
+    assert 'const EXPORT = "answer";' in runner
+    assert '"synthetic": true' in runner
+    assert "$" not in runner.replace("${", "")
+    package = json.loads((root / "package.json").read_text(encoding="utf-8"))
+    assert package["type"] == "module"
+    assert "agentloop-profiler" in package["dependencies"]
+    guide = (root / "AGENTLOOP.md").read_text(encoding="utf-8")
+    assert "-- node agentloop_runner.mjs" in guide
+    assert "answer(input, trace)" in guide
+    tasks = json.loads((root / "agentloop_tasks.json").read_text(encoding="utf-8"))
+    assert [task["id"] for task in tasks["tasks"]] == ["tracing", "quality"]
+
+
+def test_node_init_connects_an_existing_module_without_overwriting_the_project(tmp_path):
+    root = tmp_path / "app"
+    (root / "src").mkdir(parents=True)
+    (root / "package.json").write_text('{"name": "app"}\n', encoding="utf-8")
+    names = initialize(root, target=r"src\agent.js:runAgent", name="My agent", language="node")
+    assert "package.json" not in names and "agentloop_example.mjs" not in names
+    assert (root / "package.json").read_text(encoding="utf-8") == '{"name": "app"}\n'
+    runner = (root / "agentloop_runner.mjs").read_text(encoding="utf-8")
+    assert 'const MODULE = "./src/agent.js";' in runner
+    assert 'const EXPORT = "runAgent";' in runner
+    assert 'new AgentTrace("My agent"' in runner
+    assert '"source": "improve_init_node_adapter"' in runner
+    assert "npm install agentloop-profiler" in (root / "AGENTLOOP.md").read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize(
+    "target",
+    [
+        "agent.ts:answer",
+        "/abs/agent.mjs:answer",
+        "C:/abs/agent.mjs:answer",
+        "./a/../../agent.mjs:answer",
+        "./agent.mjs:not-valid",
+        "./agent.mjs:class",
+        "agent.mjs",
+    ],
+)
+def test_node_init_rejects_targets_outside_a_relative_module_export(tmp_path, target):
+    with pytest.raises(ValueError):
+        initialize(tmp_path / "node", target=target, language="node")
+    assert not (tmp_path / "node").exists()
+
+
+def test_init_rejects_unknown_languages(tmp_path):
+    with pytest.raises(ValueError, match="python or node"):
+        initialize(tmp_path / "x", language="ruby")
+
+
+def test_node_init_cli_points_to_npm_install(tmp_path):
+    result = CliRunner().invoke(
+        app, ["improve", "init", "--language", "node", "--out", str(tmp_path / "demo")]
+    )
+    assert result.exit_code == 0, result.output
+    assert "npm install, then node agentloop_runner.mjs --check" in unstyle(result.output)

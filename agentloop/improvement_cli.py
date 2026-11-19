@@ -32,19 +32,30 @@ def tasks_path(tasks: Path | None, project: Path) -> Path:
 @improve_app.command("init")
 def init_command(
     out: Path = typer.Option(Path("."), help="Existing project directory or a new directory."),
-    agent: str | None = typer.Option(None, help="Existing Python package.module:callable."),
+    agent: str | None = typer.Option(
+        None,
+        help="Existing agent: a Python package.module:callable, or with --language node "
+        "a relative ./module.mjs:exportName.",
+    ),
     name: str | None = typer.Option(None, help="Name shown in the trace and reports."),
+    language: str = typer.Option(
+        "python", help="Adapter language: python, or node for Node.js 22+ agents."
+    ),
 ):
-    """Create task data, a Python adapter, and an executable offline example."""
+    """Create task data, a Python or Node.js adapter, and an executable offline example."""
     try:
-        files = initialize(out, target=agent, name=name)
+        files = initialize(out, target=agent, name=name, language=language)
     except (OSError, ValueError, TypeError) as exc:
         raise typer.BadParameter(str(exc)) from exc
     console.print(f"Created {len(files)} files in {out.resolve()}", markup=False)
-    console.print(
-        "Read AGENTLOOP.md, then run python agentloop_runner.py --check from that directory.",
-        markup=False,
+    check = (
+        "npm install, then node agentloop_runner.mjs --check"
+        if language == "node" and "package.json" in files
+        else "node agentloop_runner.mjs --check"
+        if language == "node"
+        else "python agentloop_runner.py --check"
     )
+    console.print(f"Read AGENTLOOP.md, then run {check} from that directory.", markup=False)
 
 
 @improve_app.command("capture")

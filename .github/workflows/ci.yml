@@ -181,6 +181,12 @@ jobs:
         working-directory: sdk/typescript
       - name: Installed artifact interoperability
         run: uv run --frozen --extra server python scripts/smoke_typescript_sdk.py --module "$RUNNER_TEMP/agentloop-sdk-installed/node_modules/agentloop-profiler/dist/index.js" --out runs/typescript-packed-smoke
+      - name: Node.js guided workflow from improve init
+        shell: bash
+        run: |
+          package=$(find "$RUNNER_TEMP/agentloop-sdk-package" -name '*.tgz' -print -quit)
+          test -n "$package"
+          uv run --frozen python scripts/smoke_node_guided.py --sdk "$package"
       - name: Upload SDK package
         if: ${{ inputs.upload_release_artifact || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
