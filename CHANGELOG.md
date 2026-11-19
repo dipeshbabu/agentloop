@@ -7,6 +7,8 @@ trace, study, receipt, API and database schema versions.
 
 ## [Unreleased]
 
+## [0.2.6] - 2026-11-19
+
 ### Added
 
 - The Codex and Claude Code runners ship in the package as
@@ -19,7 +21,7 @@ trace, study, receipt, API and database schema versions.
 ### Documentation
 
 - The README points to the Codex and Claude Code runners, and its standalone
-  executable download examples use 0.2.5.
+  executable download examples use 0.2.6.
 - npm release instructions require allowing direct `npm publish` for the
   trusted publisher and explain the `E404` that npm returns when no trusted
   publisher matches the workflow run.
@@ -277,7 +279,8 @@ trace, study, receipt, API and database schema versions.
 - Optional live-provider validation, Harbor post-job plugins, active approval
   resolution and research trajectory export remain outside this release.
 
-[Unreleased]: https://github.com/dipeshbabu/agentloop/compare/v0.2.5...HEAD
+[Unreleased]: https://github.com/dipeshbabu/agentloop/compare/v0.2.6...HEAD
+[0.2.6]: https://github.com/dipeshbabu/agentloop/compare/v0.2.5...v0.2.6
 [0.2.5]: https://github.com/dipeshbabu/agentloop/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/dipeshbabu/agentloop/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/dipeshbabu/agentloop/compare/v0.2.2...v0.2.3

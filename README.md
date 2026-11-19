@@ -403,13 +403,13 @@ where the examples show `agentloop`.
 <summary>Download and verify a standalone executable</summary>
 
 Download the executable and `SHA256SUMS` from the same release. These examples use
-version 0.2.5. Change the version when choosing another release.
+version 0.2.6. Change the version when choosing another release.
 
 Linux (Bash):
 
 ```bash
 set -euo pipefail
-version=0.2.5
+version=0.2.6
 asset="agentloop-v${version}-linux-x86_64"
 curl --fail --location --remote-name "https://github.com/dipeshbabu/agentloop/releases/download/v${version}/${asset}"
 curl --fail --location --remote-name "https://github.com/dipeshbabu/agentloop/releases/download/v${version}/SHA256SUMS"
@@ -426,7 +426,7 @@ chmod +x "$asset"
 Windows PowerShell:
 
 ```powershell
-$Version = "0.2.5"
+$Version = "0.2.6"
 $Asset = "agentloop-v$Version-windows-x86_64.exe"
 Invoke-WebRequest "https://github.com/dipeshbabu/agentloop/releases/download/v$Version/$Asset" -OutFile agentloop.exe
 Invoke-WebRequest "https://github.com/dipeshbabu/agentloop/releases/download/v$Version/SHA256SUMS" -OutFile SHA256SUMS
