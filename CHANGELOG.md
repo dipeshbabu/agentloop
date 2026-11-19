@@ -7,6 +7,14 @@ trace, study, receipt, API and database schema versions.
 
 ## [Unreleased]
 
+### Documentation
+
+- The README points to the Codex and Claude Code runners, and its standalone
+  executable download examples use 0.2.5.
+- npm release instructions require allowing direct `npm publish` for the
+  trusted publisher and explain the `E404` that npm returns when no trusted
+  publisher matches the workflow run.
+
 ## [0.2.5] - 2026-11-18
 
 ### Added

@@ -1,5 +1,9 @@
 # TypeScript SDK: first npm release proposal
 
+> **Status:** completed. `agentloop-profiler@0.1.0` was first published on
+> 2026-11-14, and 0.1.1 was published on 2026-11-19 by `release-npm.yml` through
+> npm trusted publishing with provenance. This page is kept as the review record.
+
 Proposed package: `agentloop-profiler@0.1.0`. This proposal does not publish it.
 The maintainer approved the first publication on 2026-11-14; see
 [Releasing](RELEASING.md#typescript-sdk-on-npm) for the npm release flow.

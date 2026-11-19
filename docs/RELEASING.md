@@ -150,7 +150,11 @@ One-time setup, after the first publish exists on npm:
 
 1. On npmjs.com, open the package's **Settings → Trusted publishing** and add
    GitHub Actions with repository `dipeshbabu/agentloop`, workflow
-   `release-npm.yml` and environment `npm`.
+   `release-npm.yml` and environment `npm`. Tick **Allow npm publish**: without
+   it the publisher may only stage versions, and the workflow's direct
+   `npm publish` is refused. Saving asks for two-factor authentication; if npm
+   asks partway through, the form is discarded, so check that the publisher is
+   listed afterwards. It shows **Pending validation** until the first publish.
 2. In the GitHub repository, create the `npm` environment and set the
    repository variable `NPM_PUBLISH_ENABLED` to `true`.
 
@@ -164,6 +168,12 @@ npm ci && npm test && npm run test:types
 npm pack --dry-run
 npm publish --access public
 ```
+
+If the workflow signs provenance and then fails with `E404 Not Found - PUT
+https://registry.npmjs.org/agentloop-profiler`, npm found no trusted publisher
+matching the run. Check the repository, workflow filename and environment on
+the package's settings page, then re-run the failed job; the tag does not need
+to change.
 
 npm versions are immutable: a published version cannot be re-uploaded, and
 unpublishing is restricted after 72 hours. Fix mistakes with a new patch version.
