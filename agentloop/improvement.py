@@ -24,6 +24,7 @@ from agentloop.repetitions import add_repetition_findings
 from agentloop.replay import ReplayGates, build_replay_report
 from agentloop.replay import _summary as replay_summary
 from agentloop.schema import TraceValidationError, validate_elapsed_ms
+from agentloop.tokens import is_token_basis_evaluable
 from agentloop.tracer import AgentTrace
 
 VERSION = "1.0"
@@ -433,7 +434,9 @@ def planning_guidance(workload, manifest, traces, objective, minimum_improvement
 
     The sign test needs at least five pairs before even a unanimous result can
     fall below p = 0.05. When repeated baseline attempts of the same task vary
-    by more than the required improvement, smaller differences may be noise.
+    in the objective (latency, or estimated cost) by more than the required
+    improvement, smaller differences may be noise. For the cost objective,
+    attempts whose cost cannot be measured are reported separately.
     """
     notes = []
     pairs = len(workload["tasks"]) * workload["repetitions"]
@@ -455,26 +458,50 @@ def planning_guidance(workload, manifest, traces, objective, minimum_improvement
                 "measured. Use at least 2 repetitions to see how noisy the agent is.",
             }
         )
-    elif objective == "latency":
-        completed = _completed(manifest, traces)
+    else:
+        completed = {
+            key: trace
+            for key, trace in _completed(manifest, traces).items()
+            if _trace_usable(trace)
+        }
+        if objective == "latency":
+            values = {key: trace.elapsed_ms for key, trace in completed.items()}
+        else:
+            values, unmeasurable = {}, 0
+            for key, trace in completed.items():
+                report = trace.report()
+                if report.get("has_unknown_cost") or not is_token_basis_evaluable(
+                    report.get("token_status")
+                ):
+                    unmeasurable += 1
+                else:
+                    values[key] = float(report.get("estimated_cost_usd") or 0.0)
+            if unmeasurable:
+                notes.append(
+                    {
+                        "kind": "cost_unmeasurable",
+                        "attempts": unmeasurable,
+                        "message": f"{unmeasurable} of {len(completed)} completed baseline "
+                        "attempts have unknown model pricing or estimated token counts, so "
+                        "their cost cannot be compared and cost gates will be indeterminate. "
+                        "Record provider token usage and use models with known pricing.",
+                    }
+                )
         spreads = []
         for task in workload["tasks"]:
-            values = [
-                trace.elapsed_ms
-                for (task_id, _), trace in completed.items()
-                if task_id == task["id"] and _trace_usable(trace)
-            ]
-            middle = statistics.median(values) if len(values) >= 2 else 0
+            task_values = [value for (task_id, _), value in values.items() if task_id == task["id"]]
+            middle = statistics.median(task_values) if len(task_values) >= 2 else 0
             if middle > 0:
-                spreads.append((max(values) - min(values)) / middle * 100)
+                spreads.append((max(task_values) - min(task_values)) / middle * 100)
         if spreads:
             spread = statistics.median(spreads)
             if spread >= NOISY_SPREAD_PCT and spread > minimum_improvement:
                 notes.append(
                     {
                         "kind": "noisy_baseline",
+                        "objective": objective,
                         "spread_pct": round(spread, 2),
-                        "message": f"Baseline latency of the same task varied by a median "
+                        "message": f"Baseline {objective} of the same task varied by a median "
                         f"{spread:.1f}% between repetitions, more than the "
                         f"{minimum_improvement:g}% required improvement. Smaller differences "
                         "may be noise: require a larger improvement, add repetitions, or "

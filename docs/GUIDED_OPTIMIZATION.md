@@ -315,8 +315,12 @@ print these notes, record them in the frozen session, and list them under
 - fewer than five pairs: even if every pair improves, the sign test cannot fall
   below p = 0.05;
 - one repetition per task: run-to-run variation cannot be measured;
-- noisy baseline latency: repetitions of the same task varied by a median of at
-  least 10%, more than `--minimum-improvement`.
+- noisy baseline: repetitions of the same task varied by a median of at least
+  10% in the selected objective, more than `--minimum-improvement`. Latency uses
+  trace time; from AgentLoop 0.2.7 the cost objective uses estimated cost;
+- unmeasurable cost (0.2.7 and newer, cost objective only): some completed
+  baseline attempts have unknown model pricing or estimated token counts, so
+  cost gates for them will be indeterminate.
 
 The notes do not change the decision. Respond by adding tasks or repetitions,
 requiring a larger improvement, or comparing against an interleaved control.
