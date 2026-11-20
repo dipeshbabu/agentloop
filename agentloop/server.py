@@ -19,6 +19,7 @@ from agentloop.issues import build_issue_drafts
 from agentloop.optimizer import build_optimization_plan
 from agentloop.quality import QualityValidationError, build_quality_report
 from agentloop.ranking import RankingSort, sort_ranked
+from agentloop.request_limits import RequestSizeLimitMiddleware, max_request_bytes
 from agentloop.schema import TraceValidationError, validate_elapsed_ms
 from agentloop.store import (
     DEFAULT_PAGE_SIZE,
@@ -44,6 +45,10 @@ app = FastAPI(
 )
 versioned = APIRouter(tags=["API v1"])
 legacy = APIRouter(deprecated=True, tags=["Deprecated aliases"])
+
+# Added first so it is the innermost layer around the routes; CORS still answers
+# preflight requests and adds its headers to 413 responses.
+app.add_middleware(RequestSizeLimitMiddleware, limit=max_request_bytes())
 
 _cors_origins = get_cors_origins()
 if _cors_origins:

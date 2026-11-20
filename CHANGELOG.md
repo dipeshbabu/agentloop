@@ -7,6 +7,14 @@ trace, study, receipt, API and database schema versions.
 
 ## [Unreleased]
 
+### Changed
+
+- The API refuses request bodies larger than `AGENTLOOP_MAX_REQUEST_BYTES`
+  (default 16 MiB, `0` disables the limit) with `413`, before reading them into
+  memory. Bodies without a declared length are counted as they arrive. Earlier
+  versions accepted any size unless a proxy limited it. The cloud stack passes
+  the setting through so it can be raised together with the proxy limit.
+
 ### Added
 
 - Trace labels are visible and searchable. Paginated trace listings include
