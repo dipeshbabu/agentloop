@@ -197,3 +197,28 @@ def test_traces_page_deletes_a_trace_after_confirmation(tmp_path, monkeypatch):
     store = SQLiteTraceStore(path=str(tmp_path / "dashboard.db"))
     assert store.list_traces(project_id="alpha") == []
     assert len(store.list_traces(project_id="beta")) == 1
+
+
+def test_traces_page_filters_by_label(tmp_path, monkeypatch):
+    database = tmp_path / "dashboard.db"
+    monkeypatch.setenv("AGENTLOOP_STORE_BACKEND", "sqlite")
+    monkeypatch.setenv("AGENTLOOP_SQLITE_PATH", str(database))
+    monkeypatch.delenv("AGENTLOOP_DASHBOARD_REQUIRE_KEY", raising=False)
+    store = SQLiteTraceStore(path=str(database))
+    for name, condition in (("base-run", "baseline"), ("cand-run", "candidate")):
+        trace = AgentTrace(name=name, metadata={"labels": {"condition": condition}})
+        store.save_trace(trace, project_id="default")
+    app = AppTest.from_file(APP, default_timeout=APPTEST_TIMEOUT)
+    app.run()
+    app.sidebar.radio[0].set_value("Traces").run()
+    assert {"base-run", "cand-run"} <= _shown_names(app)
+
+    next(w for w in app.text_input if w.label == "Filter by label").input(
+        "condition=candidate"
+    ).run()
+    assert not app.exception
+    names = _shown_names(app)
+    assert "cand-run" in names and "base-run" not in names
+
+    next(w for w in app.text_input if w.label == "Filter by label").input("oops").run()
+    assert any("KEY=VALUE" in error.value for error in app.error)

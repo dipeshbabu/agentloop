@@ -101,6 +101,9 @@ After the comparison runs, whether or not its gates pass, the workflow uploads t
 baseline and candidate traces to that key's project. Each is labelled under
 `metadata.labels` with `condition` (`baseline` or `candidate`), `repository`,
 `commit`, `ref` and `workflow_run`, so the team can find the run behind a trace.
+Filter by any label in the dashboard's Traces page (for example
+`commit=abc123`), with `agentloop list-stored-traces --label commit=abc123`, or
+with `GET /v1/traces?label=commit=abc123`.
 The job fails if the URL is set without the secret. This needs an `agentloop_ref`
 that includes AgentLoop 0.2.8 or newer.
 

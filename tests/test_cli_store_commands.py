@@ -154,3 +154,23 @@ def test_delete_and_purge_traces_from_the_cli(tmp_path, monkeypatch) -> None:
 
     monkeypatch.setenv("AGENTLOOP_RETENTION_DAYS", "soon")
     assert runner.invoke(app, ["purge-traces"]).exit_code == 2
+
+
+def test_list_stored_traces_filters_by_label(tmp_path, monkeypatch) -> None:
+    db_path = tmp_path / "labels.db"
+    monkeypatch.setenv("AGENTLOOP_STORE_BACKEND", "sqlite")
+    monkeypatch.setenv("AGENTLOOP_SQLITE_PATH", str(db_path))
+    store = SQLiteTraceStore(path=str(db_path))
+    for name, commit in (("first", "abc"), ("second", "def")):
+        with trace_agent(name) as trace:
+            trace.metadata["labels"] = {"commit": commit}
+        store.save_trace(trace, project_id="acme")
+
+    result = runner.invoke(
+        app, ["list-stored-traces", "--project-id", "acme", "--label", "commit=abc"]
+    )
+    assert result.exit_code == 0, result.output
+    assert "first" in result.output and "second" not in result.output
+    assert "commit=abc" in result.output
+    bad = runner.invoke(app, ["list-stored-traces", "--label", "no-equals"])
+    assert bad.exit_code == 2

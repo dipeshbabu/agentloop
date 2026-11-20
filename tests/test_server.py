@@ -651,3 +651,24 @@ def test_project_key_deletes_only_its_own_traces(monkeypatch, tmp_path) -> None:
     assert deleted.json()["deleted"]["traces"] == 1
     assert client.get("/v1/traces/run-delete/report", headers=acme).status_code == 404
     assert client.delete("/v1/traces/run-delete", headers=acme).status_code == 404
+
+
+def test_traces_can_be_filtered_by_label(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("AGENTLOOP_STORE_BACKEND", "sqlite")
+    monkeypatch.setenv("AGENTLOOP_SQLITE_PATH", str(tmp_path / "labels.db"))
+    monkeypatch.delenv("AGENTLOOP_REQUIRE_API_KEY", raising=False)
+    client = TestClient(app)
+    for run_id, commit in (("run-a", "abc"), ("run-b", "def")):
+        trace = {
+            "name": run_id,
+            "run_id": run_id,
+            "metadata": {"labels": {"commit": commit}},
+            "events": [],
+        }
+        assert client.post("/v1/traces", json=trace).status_code == 200
+
+    filtered = client.get("/v1/traces", params={"label": "commit=abc"}).json()
+    assert [item["run_id"] for item in filtered["traces"]] == ["run-a"]
+    assert filtered["traces"][0]["labels"] == {"commit": "abc"}
+    assert client.get("/v1/traces", params={"label": "commit"}).status_code == 422
+    assert len(client.get("/v1/traces").json()["traces"]) == 2

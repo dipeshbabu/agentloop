@@ -93,6 +93,7 @@ class AgentLoopClient:
         *,
         page_size: int | None = None,
         cursor: str | None = None,
+        label: str | None = None,
     ) -> dict[str, Any]:
         params: dict[str, Any] = {}
         if project_id:
@@ -101,6 +102,8 @@ class AgentLoopClient:
             params["page_size"] = page_size
         if cursor:
             params["cursor"] = cursor
+        if label is not None:
+            params["label"] = label
         route = "/traces"
         if params:
             route += "?" + urllib.parse.urlencode(params)
