@@ -738,3 +738,63 @@ jobs:
       - name: Stop production stack
         if: always()
         run: docker compose down --volumes --remove-orphans
+
+  docker-arm64:
+    name: Docker image on ARM64
+    runs-on: ubuntu-24.04-arm
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Build the image natively on ARM64
+        shell: bash
+        run: |
+          test "$(grep -c '^FROM python:' Dockerfile)" -eq 1
+          tag="$(sed -n 's|^FROM python:\([^ ]*\).*|\1|p' Dockerfile)"
+          base="$(.github/scripts/pull-official-image.sh "python:$tag")"
+          mirror_file="$RUNNER_TEMP/Dockerfile.arm64"
+          sed "s|^FROM python:$tag|FROM $base|" Dockerfile > "$mirror_file"
+          docker build --pull=false --file "$mirror_file" --tag agentloop:arm64 .
+
+      - name: Check architecture, version and runtime user
+        shell: bash
+        run: |
+          test "$(docker image inspect --format '{{.Architecture}}' agentloop:arm64)" = arm64
+          expected="$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
+          actual="$(docker run --rm agentloop:arm64 python -c 'import agentloop; print(agentloop.__version__)')"
+          test "$actual" = "$expected"
+          docker run --rm agentloop:arm64 sh -c 'test "$(id -u)" -ne 0'
+
+      - name: Start the API and dashboard from the ARM64 image
+        run: |
+          docker run --detach --name agentloop-api --publish 127.0.0.1:8000:8000 agentloop:arm64
+          docker run --detach --name agentloop-dashboard --publish 127.0.0.1:8501:8501 agentloop:arm64 \
+            streamlit run dashboard/app.py --server.address=0.0.0.0 --server.port=8501 --server.headless=true
+
+      - name: Verify API round-trip and dashboard health
+        shell: bash
+        run: |
+          wait_for_url() {
+            for attempt in $(seq 1 60); do
+              if curl --fail --silent --show-error "$1" > /dev/null; then
+                return 0
+              fi
+              sleep 2
+            done
+            echo "$1 did not become ready" >&2
+            return 1
+          }
+          wait_for_url http://127.0.0.1:8000/readyz
+          wait_for_url http://127.0.0.1:8501/_stcore/health
+          AGENTLOOP_API_URL=http://127.0.0.1:8000 python3 scripts/smoke_api.py
+
+      - name: Show container logs on failure
+        if: failure()
+        run: |
+          docker logs agentloop-api --tail 200 || true
+          docker logs agentloop-dashboard --tail 200 || true
+
+      - name: Stop containers
+        if: always()
+        run: docker rm --force agentloop-api agentloop-dashboard || true

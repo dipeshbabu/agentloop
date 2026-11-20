@@ -97,10 +97,12 @@ Recover an interrupted tagged release by explicitly dispatching:
 gh workflow run release.yml --ref vX.Y.Z
 ```
 
-The container image job builds the Dockerfile from the tagged commit, checks that
-the image reports the release version and runs as a non-root user, and pushes
-`ghcr.io/dipeshbabu/agentloop:X.Y.Z` and `:latest` with the workflow's
-`GITHUB_TOKEN`. GitHub creates the package as private on its first push. Once,
+The container image jobs build the Dockerfile from the tagged commit natively on
+an x86-64 and an ARM64 runner. Each checks that its image has the right
+architecture, reports the release version and runs as a non-root user, and pushes
+`ghcr.io/dipeshbabu/agentloop:X.Y.Z-amd64` or `-arm64`. A final job combines them
+into the multi-architecture `:X.Y.Z` and `:latest` tags with the workflow's
+`GITHUB_TOKEN` and checks that both platforms are listed. GitHub creates the package as private on its first push. Once,
 open the package's settings under the owner's **Packages** tab, connect it to
 this repository if needed, and set its visibility to public so deployments can
 pull it without credentials.

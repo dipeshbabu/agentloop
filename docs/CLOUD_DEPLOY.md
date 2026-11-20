@@ -24,7 +24,9 @@ docker pull ghcr.io/dipeshbabu/agentloop:0.2.7
 
 The image runs as a non-root user. Its default command starts the API on port
 8000; the dashboard uses the same image with a `streamlit run dashboard/app.py`
-command. Images are built for `linux/amd64`. Pin an exact version in
+command. From 0.2.8, each tag covers `linux/amd64` and `linux/arm64`, so ARM
+servers such as AWS Graviton, Google Axion and Azure Cobalt pull the right image
+automatically; 0.2.7 is `linux/amd64` only. Pin an exact version in
 deployments; `latest` follows the newest release.
 
 ## Option 1: one server on any cloud

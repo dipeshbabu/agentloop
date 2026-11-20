@@ -7,6 +7,13 @@ trace, study, receipt, API and database schema versions.
 
 ## [Unreleased]
 
+### Added
+
+- The container image is published for `linux/arm64` as well as `linux/amd64`
+  under the same tag, so ARM cloud servers can run AgentLoop. Each architecture
+  is built natively, checked, and combined into one multi-architecture tag; CI
+  builds the ARM64 image and runs the API and dashboard from it.
+
 ## [0.2.7] - 2026-11-20
 
 ### Added
