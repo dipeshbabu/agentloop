@@ -78,10 +78,19 @@ jobs:
       - name: Publish distribution
         uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
 
-  publish-image:
-    name: Publish container image
+  build-image:
+    name: Build container image (${{ matrix.arch }})
     needs: [guard, validate]
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    # Each architecture builds natively on its own runner; no emulation.
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
       packages: write
@@ -92,6 +101,8 @@ jobs:
 
       - name: Build image from the validated tag
         shell: bash
+        env:
+          ARCH: ${{ matrix.arch }}
         run: |
           version="${GITHUB_REF_NAME#v}"
           image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/agentloop"
@@ -103,25 +114,54 @@ jobs:
           docker build --pull=false --file "$mirror_file" \
             --label "org.opencontainers.image.version=$version" \
             --label "org.opencontainers.image.revision=$GITHUB_SHA" \
-            --tag "$image:$version" --tag "$image:latest" .
+            --tag "$image:$version-$ARCH" .
           echo "IMAGE=$image" >> "$GITHUB_ENV"
           echo "VERSION=$version" >> "$GITHUB_ENV"
 
       - name: Check the image runs the released version
         shell: bash
+        env:
+          ARCH: ${{ matrix.arch }}
         run: |
-          actual="$(docker run --rm "$IMAGE:$VERSION" python -c 'import agentloop; print(agentloop.__version__)')"
+          test "$(docker image inspect --format '{{.Architecture}}' "$IMAGE:$VERSION-$ARCH")" = "$ARCH"
+          actual="$(docker run --rm "$IMAGE:$VERSION-$ARCH" python -c 'import agentloop; print(agentloop.__version__)')"
           test "$actual" = "$VERSION"
-          docker run --rm "$IMAGE:$VERSION" sh -c 'test "$(id -u)" -ne 0'
+          docker run --rm "$IMAGE:$VERSION-$ARCH" sh -c 'test "$(id -u)" -ne 0'
 
-      - name: Push to GitHub Container Registry
+      - name: Push the architecture image
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARCH: ${{ matrix.arch }}
+        shell: bash
+        run: |
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          docker push "$IMAGE:$VERSION-$ARCH"
+          docker logout ghcr.io
+
+  publish-image:
+    name: Publish container image
+    needs: build-image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Publish one tag for both architectures
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
+          version="${GITHUB_REF_NAME#v}"
+          image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/agentloop"
           printf '%s' "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
-          docker push "$IMAGE:$VERSION"
-          docker push "$IMAGE:latest"
+          docker buildx imagetools create \
+            --tag "$image:$version" --tag "$image:latest" \
+            "$image:$version-amd64" "$image:$version-arm64"
+          inspected="$(docker buildx imagetools inspect "$image:$version")"
+          printf '%s\n' "$inspected"
+          grep -q 'linux/amd64' <<< "$inspected"
+          grep -q 'linux/arm64' <<< "$inspected"
           docker logout ghcr.io
 
   publish-github:
