@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -1270,19 +1271,79 @@ def usage_summary(project_id: str | None = None) -> None:
     console.print(table)
 
 
+_LABEL_KEY = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
+_MAX_LABEL_VALUE = 500
+
+
+def _parse_labels(values: list[str] | None) -> dict[str, str]:
+    labels: dict[str, str] = {}
+    for value in values or []:
+        key, separator, text = value.partition("=")
+        if not separator or not _LABEL_KEY.match(key):
+            raise typer.BadParameter(
+                "Use KEY=VALUE with a key of letters, digits, '.', '_' or '-'",
+                param_hint="--label",
+            )
+        if len(text) > _MAX_LABEL_VALUE:
+            raise typer.BadParameter(
+                f"Label values are limited to {_MAX_LABEL_VALUE} characters", param_hint="--label"
+            )
+        labels[key] = text
+    return labels
+
+
+def _upload_files(paths: list[Path]) -> list[Path]:
+    files: list[Path] = []
+    for path in paths:
+        if path.is_dir():
+            found = sorted(item for item in path.glob("*.json") if item.is_file())
+            if not found:
+                raise typer.BadParameter(
+                    f"No .json trace files in directory {path}", param_hint="--path"
+                )
+            files.extend(found)
+        else:
+            files.append(path)
+    return files
+
+
 @app.command()
 def upload(
-    path: Path = Path("runs/research_agent_baseline.json"),
+    path: list[Path] = typer.Option(
+        [Path("runs/research_agent_baseline.json")],
+        "--path",
+        help="Trace JSON file, or a directory of them; repeat for several.",
+    ),
+    label: list[str] | None = typer.Option(
+        None,
+        "--label",
+        help="KEY=VALUE stored under metadata.labels of each uploaded trace, "
+        "such as commit=abc123; repeat for several.",
+    ),
     api_url: str = typer.Option("http://127.0.0.1:8000", help="AgentLoop API base URL."),
     api_key: str | None = typer.Option(
         None, help="Optional API key. Defaults to AGENTLOOP_API_KEY."
     ),
 ) -> None:
-    trace = _load_trace(path, param_hint="--path")
+    """Upload traces to an AgentLoop API, optionally labelled with CI context."""
+    labels = _parse_labels(label)
+    files = _upload_files(path)
+    traces = [_load_trace(file, param_hint="--path") for file in files]
     client = _remote_client(api_url, api_key)
-    response = client.upload_trace(trace)
-    console.print(f"Uploaded trace {response['run_id']} to {api_url}")
-    console.print(f"Project: {response.get('project_id', 'default')}")
+    project = None
+    for trace in traces:
+        if labels:
+            existing = trace.metadata.get("labels")
+            trace.metadata["labels"] = {
+                **(existing if isinstance(existing, dict) else {}),
+                **labels,
+            }
+        response = client.upload_trace(trace)
+        project = response.get("project_id", "default")
+        console.print(f"Uploaded trace {response['run_id']} to {api_url}", markup=False)
+    if len(traces) > 1:
+        console.print(f"Uploaded {len(traces)} traces.", markup=False)
+    console.print(f"Project: {project}", markup=False)
 
 
 @app.command("remote-delete-trace")

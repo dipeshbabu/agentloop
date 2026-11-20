@@ -78,6 +78,43 @@ own directory and installs its locked core dependencies. It does not install you
 application or SDKs. Use built-in quality scorers here; custom Python scorers that
 need application modules belong in your application's own job using `agentloop ci`.
 
+### Send the traces to your AgentLoop server
+
+To keep every compared trace on a shared [AgentLoop server](CLOUD_DEPLOY.md), add
+its URL and a project API key stored as a repository secret:
+
+```yaml
+  compare:
+    needs: record
+    uses: dipeshbabu/agentloop/.github/workflows/application-performance.yml@main
+    permissions:
+      contents: read
+    with:
+      trace_artifact: application-traces
+      agentloop_api_url: https://agentloop-api.example.com
+      agentloop_ref: main
+    secrets:
+      agentloop_api_key: ${{ secrets.AGENTLOOP_API_KEY }}
+```
+
+After the comparison runs, whether or not its gates pass, the workflow uploads the
+baseline and candidate traces to that key's project. Each is labelled under
+`metadata.labels` with `condition` (`baseline` or `candidate`), `repository`,
+`commit`, `ref` and `workflow_run`, so the team can find the run behind a trace.
+The job fails if the URL is set without the secret. This needs an `agentloop_ref`
+that includes AgentLoop 0.2.8 or newer.
+
+The same command works in any CI system or from a laptop:
+
+```bash
+agentloop upload --path traces/ --label commit="$COMMIT_SHA" \
+  --api-url https://agentloop-api.example.com
+```
+
+`--path` takes files or directories of `.json` traces and can be repeated.
+Every file is validated before any is sent. The project key is read from
+`AGENTLOOP_API_KEY` or `--api-key`.
+
 The repository smoke workflow exercises artifact upload/download, the reusable
 workflow, and quality gates using explicitly synthetic fixtures. These smoke
 results carry the same synthetic-data qualification.
