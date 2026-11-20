@@ -48,7 +48,8 @@ def _reset_postgres_tables(store: PostgresTraceStore) -> None:
     store.init()
     with store._connect() as conn:
         conn.execute(
-            "TRUNCATE trace_findings, usage_events, traces, api_keys, projects RESTART IDENTITY CASCADE"
+            "TRUNCATE audit_events, trace_findings, usage_events, traces, api_keys, projects "
+            "RESTART IDENTITY CASCADE"
         )
         conn.execute("INSERT INTO projects(project_id) VALUES ('default')")
 
