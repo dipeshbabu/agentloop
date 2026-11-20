@@ -93,3 +93,32 @@ def test_update_finding_status_command_transitions_and_rejects_invalid(
         f for f in store.list_findings(project_id="cli-test") if f["finding_id"] == finding_id
     )
     assert finding["status"] == "resolved"
+
+
+def test_list_and_revoke_api_keys_from_the_cli(tmp_path, monkeypatch) -> None:
+    db_path = tmp_path / "keys.db"
+    monkeypatch.setenv("AGENTLOOP_STORE_BACKEND", "sqlite")
+    monkeypatch.setenv("AGENTLOOP_SQLITE_PATH", str(db_path))
+    store = SQLiteTraceStore(path=str(db_path))
+    created = store.create_api_key(project_id="acme", name="ci")
+
+    listed = runner.invoke(app, ["list-api-keys", "--project-id", "acme"])
+    assert listed.exit_code == 0, listed.output
+    assert created["prefix"] in listed.output
+    assert created["api_key"] not in listed.output
+
+    missing = runner.invoke(
+        app, ["revoke-api-key", "--project-id", "other", "--prefix", created["prefix"]]
+    )
+    assert missing.exit_code == 1
+    assert store.verify_api_key(created["api_key"]) is not None
+
+    bad = runner.invoke(app, ["revoke-api-key", "--project-id", "acme", "--prefix", "al_"])
+    assert bad.exit_code == 2
+
+    revoked = runner.invoke(
+        app, ["revoke-api-key", "--project-id", "acme", "--prefix", created["prefix"]]
+    )
+    assert revoked.exit_code == 0, revoked.output
+    assert "Revoked 1" in revoked.output
+    assert store.verify_api_key(created["api_key"]) is None

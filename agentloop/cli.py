@@ -988,6 +988,32 @@ def create_api_key(project_id: str = "default", name: str = "default") -> None:
     console.print(key["api_key"])
 
 
+@app.command("list-api-keys")
+def list_api_keys(project_id: str = "default") -> None:
+    """List a project's API key prefixes and last use; key values are never shown."""
+    console.print_json(
+        data={"project_id": project_id, "api_keys": get_store().list_api_keys(project_id)}
+    )
+
+
+@app.command("revoke-api-key")
+def revoke_api_key(
+    prefix: str = typer.Option(..., help="First 10 characters of the key, as listed."),
+    project_id: str = "default",
+) -> None:
+    """Revoke a project's API key; it stops working immediately."""
+    try:
+        revoked = get_store().revoke_api_key(project_id, prefix)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    if not revoked:
+        console.print(f"No API key with prefix {prefix} in project {project_id}.", markup=False)
+        raise typer.Exit(1)
+    console.print(
+        f"Revoked {revoked} API key(s) with prefix {prefix} in project {project_id}.", markup=False
+    )
+
+
 @app.command("store-trace")
 def store_trace(
     path: Path = Path("runs/research_agent_baseline.json"),
@@ -1331,6 +1357,37 @@ def remote_create_api_key(
     key = client.create_api_key(project_id=project_id, name=name)
     console.print("Created remote API key. Save it now; it will not be shown again.")
     console.print(key["api_key"])
+
+
+@app.command("remote-list-api-keys")
+def remote_list_api_keys(
+    project_id: str = "default",
+    api_url: str = typer.Option("http://127.0.0.1:8000", help="AgentLoop API base URL."),
+    admin_api_key: str | None = typer.Option(
+        None, help="Admin API key. Defaults to AGENTLOOP_ADMIN_API_KEY."
+    ),
+) -> None:
+    """List a project's API key prefixes on a remote server."""
+    client = _remote_admin_client(api_url, admin_api_key)
+    console.print_json(data=client.list_api_keys(project_id))
+
+
+@app.command("remote-revoke-api-key")
+def remote_revoke_api_key(
+    prefix: str = typer.Option(..., help="First 10 characters of the key, as listed."),
+    project_id: str = "default",
+    api_url: str = typer.Option("http://127.0.0.1:8000", help="AgentLoop API base URL."),
+    admin_api_key: str | None = typer.Option(
+        None, help="Admin API key. Defaults to AGENTLOOP_ADMIN_API_KEY."
+    ),
+) -> None:
+    """Revoke a project's API key on a remote server."""
+    client = _remote_admin_client(api_url, admin_api_key)
+    result = client.revoke_api_key(project_id, prefix)
+    console.print(
+        f"Revoked {result['revoked']} API key(s) with prefix {prefix} in project {project_id}.",
+        markup=False,
+    )
 
 
 @app.command()

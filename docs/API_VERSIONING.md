@@ -31,6 +31,8 @@ for larger reports. `timeout_s` controls the underlying socket timeout.
 | Versioned route | Deprecated compatibility route |
 | --- | --- |
 | `POST /v1/api-keys` | `POST /api-keys` |
+| `GET /v1/api-keys?project_id=...` | None (0.2.7 and newer) |
+| `DELETE /v1/api-keys/{prefix}?project_id=...` | None (0.2.7 and newer) |
 | `GET/POST /v1/traces` | `GET/POST /traces` |
 | `GET /v1/traces/{run_id}/report` | `GET /traces/{run_id}/report` |
 | `GET /v1/traces/{run_id}/optimization` | `GET /traces/{run_id}/optimize` |

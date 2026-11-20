@@ -110,6 +110,21 @@ or from the TypeScript SDK with
 Sign in to the dashboard with the same key to see that project's traces. Each
 team can only see its own project; there is no project switcher.
 
+### Revoke a key
+
+If a key leaks or a pipeline is retired, list the project's keys and revoke the
+one by its prefix (the first 10 characters of the key):
+
+```bash
+export AGENTLOOP_ADMIN_API_KEY=...
+agentloop remote-list-api-keys --project-id my-team --api-url https://agentloop-api.example.com
+agentloop remote-revoke-api-key --project-id my-team --prefix al_AbCdEfG \
+  --api-url https://agentloop-api.example.com
+```
+
+The API rejects the key immediately, and dashboard sessions signed in with it
+end within a minute.
+
 ### Upgrade and back up
 
 Back up the database, change `AGENTLOOP_IMAGE` to the new version, then
@@ -198,7 +213,8 @@ behind an authenticating ingress.
 ## Security checklist
 
 - Require API keys (`AGENTLOOP_REQUIRE_API_KEY=true`) and keep the admin key
-  out of clients; give each team or pipeline its own project key.
+  out of clients; give each team or pipeline its own project key, and revoke
+  keys that leak or are no longer used.
 - Serve only HTTPS, never expose the dashboard without a login, and keep
   project sign-in enabled so teams only see their own traces.
 - Keep Postgres off the public internet and back it up.

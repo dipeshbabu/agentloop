@@ -40,12 +40,26 @@ PGPASSWORD=<database password>
 For file-backed secrets, set `AGENTLOOP_POSTGRES_PASSWORD_FILE` instead of
 `PGPASSWORD`. The file is read only when no complete database URL is configured.
 
-`AGENTLOOP_ADMIN_API_KEY` protects hosted API-key creation. When API auth is enabled,
+`AGENTLOOP_ADMIN_API_KEY` protects hosted API-key management. When API auth is enabled,
 `POST /v1/api-keys` returns `503` unless the admin secret is configured.
+
+From 0.2.7, the admin key can also list a project's keys and revoke one by the
+first 10 characters it starts with (its prefix). Listing returns prefixes, names
+and creation and last-use times, never key values. A revoked key is rejected by
+the API immediately and ends open dashboard sessions within a minute.
+
+```bash
+uv run agentloop remote-list-api-keys --project-id acme --api-url https://agentloop-api.example.com
+uv run agentloop remote-revoke-api-key --project-id acme --prefix al_AbCdEfG \
+  --api-url https://agentloop-api.example.com
+```
+
+Both read the admin key from `AGENTLOOP_ADMIN_API_KEY` or `--admin-api-key`. With direct
+database access, `agentloop list-api-keys` and `agentloop revoke-api-key` do the same.
 
 The Python client's credential handling is endpoint-specific. `AgentLoopClient.from_env()`
 may load both credentials, but sends `X-AgentLoop-Key` only on ordinary project requests
-and `X-AgentLoop-Admin-Key` only on `POST /v1/api-keys`; the headers are never sent together.
+and `X-AgentLoop-Admin-Key` only on the `/v1/api-keys` routes; the headers are never sent together.
 Keep the admin secret in trusted management processes and do not use it for trace uploads,
 reports, findings, usage, health checks, or other ordinary API calls.
 

@@ -588,3 +588,38 @@ def test_update_finding_status_transition_lifecycle(monkeypatch, tmp_path: Path)
     assert conflict.status_code == 409
     assert not_found.status_code == 404
     assert bad_status.status_code == 400
+
+
+def test_admin_lists_and_revokes_project_api_keys(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("AGENTLOOP_STORE_BACKEND", "sqlite")
+    monkeypatch.setenv("AGENTLOOP_SQLITE_PATH", str(tmp_path / "keys.db"))
+    monkeypatch.setenv("AGENTLOOP_REQUIRE_API_KEY", "true")
+    monkeypatch.setenv("AGENTLOOP_ADMIN_API_KEY", "admin-secret")
+    client = TestClient(app)
+    admin = {"X-AgentLoop-Admin-Key": "admin-secret"}
+    key = client.post(
+        "/v1/api-keys", json={"project_id": "acme", "name": "ci"}, headers=admin
+    ).json()
+    project = {"X-AgentLoop-Key": key["api_key"]}
+    assert client.get("/v1/traces", headers=project).status_code == 200
+
+    assert client.get("/v1/api-keys", params={"project_id": "acme"}).status_code == 401
+    assert (
+        client.get("/v1/api-keys", params={"project_id": "acme"}, headers=project).status_code
+        == 401
+    )
+    listed = client.get("/v1/api-keys", params={"project_id": "acme"}, headers=admin).json()
+    assert [item["prefix"] for item in listed["api_keys"]] == [key["prefix"]]
+    assert key["api_key"] not in str(listed)
+
+    delete = f"/v1/api-keys/{key['prefix']}"
+    assert client.delete(delete, params={"project_id": "acme"}, headers=project).status_code == 401
+    assert client.delete(delete, params={"project_id": "other"}, headers=admin).status_code == 404
+    assert (
+        client.delete("/v1/api-keys/al_", params={"project_id": "acme"}, headers=admin).status_code
+        == 422
+    )
+    revoked = client.delete(delete, params={"project_id": "acme"}, headers=admin)
+    assert revoked.status_code == 200 and revoked.json()["revoked"] == 1
+    assert client.get("/v1/traces", headers=project).status_code == 401
+    assert client.delete(delete, params={"project_id": "acme"}, headers=admin).status_code == 404

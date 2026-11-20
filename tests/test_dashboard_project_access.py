@@ -15,8 +15,10 @@ from agentloop.tracer import AgentTrace  # noqa: E402
 from dashboard.access import (  # noqa: E402
     LOCKOUT_SECONDS,
     MAX_FAILURES,
+    RECHECK_SECONDS,
     lockout_remaining,
     require_project_key,
+    session_valid,
     sign_in,
     sign_out,
     visible_pages,
@@ -146,3 +148,36 @@ def test_local_dashboard_keeps_the_free_project_field(tmp_path, monkeypatch):
     assert not app.exception
     assert [w.label for w in app.sidebar.text_input] == ["Project"]
     assert "API Keys" in app.sidebar.radio[0].options
+
+
+def test_open_sessions_lose_access_after_their_key_is_revoked(tmp_path):
+    store = _store(tmp_path)
+    created = store.create_api_key(project_id="alpha", name="team")
+    state = {}
+    assert sign_in(store, created["api_key"], state, now=0.0) == "alpha"
+    assert session_valid(store, state, now=RECHECK_SECONDS - 1)
+    store.revoke_api_key("alpha", created["prefix"])
+    # Within the recheck window the session continues; after it, it ends.
+    assert session_valid(store, state, now=RECHECK_SECONDS - 1)
+    assert not session_valid(store, state, now=RECHECK_SECONDS + 1)
+    assert "signed_in_project" not in state and "signed_in_key" not in state
+
+
+def test_a_valid_session_is_rechecked_and_kept(tmp_path):
+    store = _store(tmp_path)
+    key = store.create_api_key(project_id="alpha", name="team")["api_key"]
+    state = {}
+    sign_in(store, key, state, now=0.0)
+    assert session_valid(store, state, now=RECHECK_SECONDS + 1)
+    assert state["signed_in_checked_at"] == RECHECK_SECONDS + 1
+    assert not session_valid(store, {}, now=0.0)
+
+
+def test_shared_ingest_page_offers_only_uploads(tmp_path, monkeypatch):
+    app, key = _app(tmp_path, monkeypatch, require_key=True)
+    _sign_in(app, key)
+    app.sidebar.radio[0].set_value("Ingest").run()
+    assert not app.exception
+    labels = [button.label for button in app.button]
+    assert not any(label.startswith("Generate") for label in labels)
+    assert app.file_uploader, "uploading into the signed-in project stays available"
