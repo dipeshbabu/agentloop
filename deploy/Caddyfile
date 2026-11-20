@@ -1,0 +1,31 @@
+# HTTPS reverse proxy for the AgentLoop production stack.
+# Caddy obtains and renews certificates for both domains automatically once
+# their DNS records point at this host and ports 80 and 443 are reachable.
+
+{$AGENTLOOP_API_DOMAIN} {
+	encode zstd gzip
+	request_body {
+		max_size {$AGENTLOOP_MAX_UPLOAD}
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		-Server
+	}
+	reverse_proxy api:8000
+}
+
+# The dashboard has no login of its own, so Caddy requires one.
+{$AGENTLOOP_DASHBOARD_DOMAIN} {
+	encode zstd gzip
+	basic_auth {
+		{$AGENTLOOP_DASHBOARD_USER} {$AGENTLOOP_DASHBOARD_PASSWORD_HASH}
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		-Server
+	}
+	reverse_proxy dashboard:8501
+}

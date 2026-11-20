@@ -9,6 +9,15 @@ trace, study, receipt, API and database schema versions.
 
 ### Added
 
+- Cloud deployment. Releases publish a container image to
+  `ghcr.io/dipeshbabu/agentloop` (version and `latest` tags), built from the
+  validated tag and checked to report the release version as a non-root user.
+  `deploy/` adds a production Compose stack for one Linux server: Postgres, the
+  API, the dashboard behind a login, and Caddy with automatic HTTPS, publishing
+  only ports 80 and 443. CI runs the stack over HTTPS and checks API key use,
+  HTTPS redirects, the upload limit, the dashboard login and unpublished
+  internal ports. `docs/CLOUD_DEPLOY.md` covers single-server and managed
+  platform deployments.
 - `agentloop improve init --language node` generates a Node.js adapter
   (`agentloop_runner.mjs`) for the guided workflow. It imports an agent from a
   relative `.mjs`, `.js` or `.cjs` module, calls it as `answer(input, trace)`

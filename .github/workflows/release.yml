@@ -78,6 +78,52 @@ jobs:
       - name: Publish distribution
         uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
 
+  publish-image:
+    name: Publish container image
+    needs: [guard, validate]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Build image from the validated tag
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/agentloop"
+          test "$(grep -c '^FROM python:' Dockerfile)" -eq 1
+          tag="$(sed -n 's|^FROM python:\([^ ]*\).*|\1|p' Dockerfile)"
+          base="$(.github/scripts/pull-official-image.sh "python:$tag")"
+          mirror_file="$RUNNER_TEMP/Dockerfile.release"
+          sed "s|^FROM python:$tag|FROM $base|" Dockerfile > "$mirror_file"
+          docker build --pull=false --file "$mirror_file" \
+            --label "org.opencontainers.image.version=$version" \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            --tag "$image:$version" --tag "$image:latest" .
+          echo "IMAGE=$image" >> "$GITHUB_ENV"
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Check the image runs the released version
+        shell: bash
+        run: |
+          actual="$(docker run --rm "$IMAGE:$VERSION" python -c 'import agentloop; print(agentloop.__version__)')"
+          test "$actual" = "$VERSION"
+          docker run --rm "$IMAGE:$VERSION" sh -c 'test "$(id -u)" -ne 0'
+
+      - name: Push to GitHub Container Registry
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          docker push "$IMAGE:$VERSION"
+          docker push "$IMAGE:latest"
+          docker logout ghcr.io
+
   publish-github:
     name: Publish GitHub release
     needs: [guard, validate]

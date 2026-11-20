@@ -592,3 +592,120 @@ jobs:
       - name: Stop deployment stack
         if: always()
         run: docker compose down --volumes --remove-orphans
+
+  deploy-stack:
+    name: Production deploy stack with HTTPS
+    runs-on: ubuntu-latest
+    env:
+      COMPOSE_FILE: deploy/docker-compose.yml
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Build the image the stack deploys
+        shell: bash
+        run: |
+          test "$(grep -c '^FROM python:' Dockerfile)" -eq 1
+          tag="$(sed -n 's|^FROM python:\([^ ]*\).*|\1|p' Dockerfile)"
+          base="$(.github/scripts/pull-official-image.sh "python:$tag")"
+          mirror_file="$RUNNER_TEMP/Dockerfile.deploy"
+          sed "s|^FROM python:$tag|FROM $base|" Dockerfile > "$mirror_file"
+          docker build --pull=false --file "$mirror_file" --tag agentloop:local .
+
+      - name: Pull Postgres and Caddy through the mirror fallback
+        shell: bash
+        run: |
+          echo "POSTGRES_IMAGE=$(.github/scripts/pull-official-image.sh postgres:16-alpine)" >> "$GITHUB_ENV"
+          echo "CADDY_IMAGE=$(.github/scripts/pull-official-image.sh caddy:2)" >> "$GITHUB_ENV"
+
+      - name: Configure synthetic production settings
+        shell: bash
+        run: |
+          dashboard_password="dash-$(openssl rand -hex 16)"
+          admin_key="ci-admin-$(openssl rand -hex 24)"
+          db_password="db-$(openssl rand -hex 16)"
+          echo "::add-mask::$dashboard_password"
+          echo "::add-mask::$admin_key"
+          echo "::add-mask::$db_password"
+          hash="$(docker run --rm "$CADDY_IMAGE" caddy hash-password --plaintext "$dashboard_password")"
+          {
+            echo "AGENTLOOP_IMAGE=agentloop:local"
+            echo "AGENTLOOP_API_DOMAIN=api.localhost"
+            echo "AGENTLOOP_DASHBOARD_DOMAIN=dashboard.localhost"
+            echo "AGENTLOOP_ADMIN_API_KEY=$admin_key"
+            echo "AGENTLOOP_DASHBOARD_USER=operator"
+            echo "AGENTLOOP_DASHBOARD_PASSWORD_HASH='$hash'"
+            echo "POSTGRES_PASSWORD=$db_password"
+            echo "POSTGRES_IMAGE=$POSTGRES_IMAGE"
+            echo "CADDY_IMAGE=$CADDY_IMAGE"
+          } > deploy/.env
+          echo "DASHBOARD_PASSWORD=$dashboard_password" >> "$GITHUB_ENV"
+          echo "AGENTLOOP_ADMIN_API_KEY=$admin_key" >> "$GITHUB_ENV"
+          echo "127.0.0.1 api.localhost dashboard.localhost" | sudo tee -a /etc/hosts
+
+      - name: Validate production Compose configuration without rendering secrets
+        run: docker compose config --quiet
+
+      - name: Start production stack
+        run: docker compose up --detach
+
+      - name: Wait for HTTPS through Caddy
+        shell: bash
+        run: |
+          for attempt in $(seq 1 60); do
+            if docker compose exec -T caddy cat /data/caddy/pki/authorities/local/root.crt > caddy-root.crt 2>/dev/null \
+              && curl --fail --silent --show-error --cacert caddy-root.crt https://api.localhost/readyz > /dev/null; then
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "The API did not become ready over HTTPS" >&2
+          exit 1
+
+      - name: Verify the API over HTTPS
+        shell: bash
+        run: |
+          SSL_CERT_FILE="$PWD/caddy-root.crt" AGENTLOOP_API_URL=https://api.localhost python3 scripts/smoke_api.py
+          status="$(curl --silent --output /dev/null --write-out '%{http_code}' http://api.localhost/v1/health)"
+          test "$status" = 308
+          head -c 17000000 /dev/zero | tr '\0' 'a' > oversized.json
+          status="$(curl --silent --output /dev/null --write-out '%{http_code}' --cacert caddy-root.crt \
+            --header 'Content-Type: application/json' --data-binary @oversized.json https://api.localhost/v1/traces)"
+          test "$status" = 413
+
+      - name: Verify the dashboard requires a login
+        shell: bash
+        run: |
+          status="$(curl --silent --output /dev/null --write-out '%{http_code}' --cacert caddy-root.crt https://dashboard.localhost/)"
+          test "$status" = 401
+          status="$(curl --silent --output /dev/null --write-out '%{http_code}' --cacert caddy-root.crt \
+            --user "operator:wrong-password" https://dashboard.localhost/)"
+          test "$status" = 401
+          for attempt in $(seq 1 40); do
+            if curl --fail --silent --output /dev/null --cacert caddy-root.crt \
+              --user "operator:$DASHBOARD_PASSWORD" https://dashboard.localhost/_stcore/health; then
+              break
+            fi
+            sleep 3
+          done
+          curl --fail --silent --output /dev/null --cacert caddy-root.crt \
+            --user "operator:$DASHBOARD_PASSWORD" https://dashboard.localhost/
+
+      - name: Verify only the proxy is published
+        shell: bash
+        run: |
+          for port in 8000 8501 5432; do
+            if curl --silent --max-time 3 "http://127.0.0.1:$port/" > /dev/null; then
+              echo "Port $port must not be published on the host" >&2
+              exit 1
+            fi
+          done
+
+      - name: Show container logs on failure
+        if: failure()
+        run: docker compose logs --no-color --tail=200
+
+      - name: Stop production stack
+        if: always()
+        run: docker compose down --volumes --remove-orphans

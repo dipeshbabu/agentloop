@@ -27,6 +27,7 @@
   <a href="#record-your-own-run">Trace your code</a> ·
   <a href="#compare-before-and-after">Compare runs</a> ·
   <a href="#framework-integrations">Integrations</a> ·
+  <a href="#deploy-to-the-cloud">Deploy</a> ·
   <a href="https://dipeshbabu.github.io/agentloop/FIRST_USE/">Guide</a>
 </p>
 
@@ -408,6 +409,24 @@ code changes.
 </picture>
 
 </details>
+
+## Deploy to the cloud
+
+Run a shared AgentLoop server for your team on any cloud. From 0.2.7 each release
+publishes a container image, `ghcr.io/dipeshbabu/agentloop`, and `deploy/`
+contains a production stack for one Linux server: Postgres, the API, the
+dashboard behind a login, and Caddy for automatic HTTPS. Only ports 80 and 443
+are exposed.
+
+```bash
+cp deploy/.env.example deploy/.env   # set the image, domains and secrets
+docker compose -f deploy/docker-compose.yml up --detach
+```
+
+CI runs this exact stack over HTTPS on every change. The
+[cloud deployment guide](https://dipeshbabu.github.io/agentloop/CLOUD_DEPLOY/)
+covers server setup, API keys, upgrades, backups, and managed platforms such as
+Cloud Run, App Runner, ECS and Azure Container Apps.
 
 ## Dashboard and persistence
 
