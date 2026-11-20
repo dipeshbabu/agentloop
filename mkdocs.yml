@@ -123,6 +123,7 @@ nav:
       - Workflow tracing: WORKFLOW_TRACING.md
       - Dashboard: DASHBOARD.md
       - Server deployment: PRODUCTION.md
+      - Deploy to the cloud: CLOUD_DEPLOY.md
       - Operations: OPERATIONS.md
       - Advanced runtime controls:
           - Harness overview: HARNESS.md

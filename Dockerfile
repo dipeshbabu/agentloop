@@ -1,5 +1,10 @@
 FROM python:3.15-slim
 
+LABEL org.opencontainers.image.title="AgentLoop" \
+      org.opencontainers.image.description="AgentLoop API and dashboard for agent traces and reports" \
+      org.opencontainers.image.source="https://github.com/dipeshbabu/agentloop" \
+      org.opencontainers.image.licenses="Apache-2.0"
+
 COPY --from=ghcr.io/astral-sh/uv:0.13.7 /uv /uvx /bin/
 
 ENV PYTHONDONTWRITEBYTECODE=1 \

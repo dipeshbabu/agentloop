@@ -97,6 +97,14 @@ Recover an interrupted tagged release by explicitly dispatching:
 gh workflow run release.yml --ref vX.Y.Z
 ```
 
+The container image job builds the Dockerfile from the tagged commit, checks that
+the image reports the release version and runs as a non-root user, and pushes
+`ghcr.io/dipeshbabu/agentloop:X.Y.Z` and `:latest` with the workflow's
+`GITHUB_TOKEN`. GitHub creates the package as private on its first push. Once,
+open the package's settings under the owner's **Packages** tab, connect it to
+this repository if needed, and set its visibility to public so deployments can
+pull it without credentials.
+
 Do not reuse a published version or move its tag. Publish a new patch for a fix.
 PyPI cannot restore deleted releases or accept a previously used filename.
 
@@ -120,6 +128,13 @@ path/to/wheel-env/bin/python -I scripts/smoke_installed_wheel.py --expected-vers
 
 On Windows use `path/to/wheel-env/Scripts/python.exe`. A merged PR, tag, or GitHub
 release does not prove PyPI publication; verify each destination independently.
+
+Check the container image the same way:
+
+```bash
+docker pull ghcr.io/dipeshbabu/agentloop:X.Y.Z
+docker run --rm ghcr.io/dipeshbabu/agentloop:X.Y.Z python -c "import agentloop; print(agentloop.__version__)"
+```
 
 For the initial numbering restart, install the exact `0.1.0` version in existing
 environments and refresh pinned requirements. Removing earlier PyPI releases

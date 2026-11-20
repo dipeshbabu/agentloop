@@ -6,6 +6,10 @@ AgentLoop has three production surfaces:
 - API service: receive traces, enforce API keys, store runs, and serve reports.
 - Dashboard: inspect traces, usage, optimization plans, and value reports.
 
+To run the API and dashboard on a cloud server with HTTPS and a dashboard login,
+follow [Deploy to the cloud](CLOUD_DEPLOY.md). This guide covers every setting
+behind that deployment.
+
 ## Required configuration
 
 Set secrets outside source control and configure the public origins explicitly:
@@ -214,7 +218,8 @@ Migration `0003` (issue #19) only adds indexes and has no data impact.
 
 Tag releases as `vX.Y.Z`. The release workflow builds the Python package and can
 publish to PyPI when the repository has a trusted-publishing PyPI environment
-configured.
+configured. From 0.2.7 it also publishes the container image to
+`ghcr.io/dipeshbabu/agentloop`.
 
 ## Deployment Notes
 

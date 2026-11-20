@@ -1,0 +1,119 @@
+# Production AgentLoop stack for one Linux host on any cloud.
+#
+# Caddy terminates HTTPS with automatically issued certificates, serves the API
+# on AGENTLOOP_API_DOMAIN and the dashboard behind a login on
+# AGENTLOOP_DASHBOARD_DOMAIN. Only ports 80 and 443 are published; the API,
+# dashboard and Postgres stay on the private Compose network.
+#
+#   cp deploy/.env.example deploy/.env    # then replace every placeholder
+#   docker compose -f deploy/docker-compose.yml up --detach
+#
+# See docs/CLOUD_DEPLOY.md.
+name: agentloop
+
+services:
+  db:
+    image: ${POSTGRES_IMAGE:-postgres:16-alpine}
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-agentloop}
+      POSTGRES_USER: ${POSTGRES_USER:-agentloop}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-agentloop} -d ${POSTGRES_DB:-agentloop}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    secrets:
+      - postgres_password
+
+  api:
+    image: ${AGENTLOOP_IMAGE:?Set AGENTLOOP_IMAGE in deploy/.env, for example ghcr.io/dipeshbabu/agentloop:0.2.7}
+    restart: unless-stopped
+    environment:
+      AGENTLOOP_STORE_BACKEND: postgres
+      PGHOST: db
+      PGPORT: "5432"
+      PGDATABASE: ${POSTGRES_DB:-agentloop}
+      PGUSER: ${POSTGRES_USER:-agentloop}
+      AGENTLOOP_POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      AGENTLOOP_REQUIRE_API_KEY: "true"
+      AGENTLOOP_ADMIN_API_KEY: ${AGENTLOOP_ADMIN_API_KEY:?Set AGENTLOOP_ADMIN_API_KEY in deploy/.env}
+      AGENTLOOP_CORS_ORIGINS: https://${AGENTLOOP_DASHBOARD_DOMAIN:?Set AGENTLOOP_DASHBOARD_DOMAIN in deploy/.env}
+    depends_on:
+      db:
+        condition: service_healthy
+    secrets:
+      - postgres_password
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import json, urllib.request; assert json.load(urllib.request.urlopen('http://127.0.0.1:8000/readyz'))['status'] == 'ready'",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  dashboard:
+    image: ${AGENTLOOP_IMAGE}
+    restart: unless-stopped
+    command:
+      [
+        "streamlit",
+        "run",
+        "dashboard/app.py",
+        "--server.address=0.0.0.0",
+        "--server.port=8501",
+        "--server.headless=true",
+        "--browser.gatherUsageStats=false",
+      ]
+    environment:
+      AGENTLOOP_STORE_BACKEND: postgres
+      PGHOST: db
+      PGPORT: "5432"
+      PGDATABASE: ${POSTGRES_DB:-agentloop}
+      PGUSER: ${POSTGRES_USER:-agentloop}
+      AGENTLOOP_POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      AGENTLOOP_API_URL: http://api:8000
+    depends_on:
+      api:
+        condition: service_healthy
+    secrets:
+      - postgres_password
+
+  caddy:
+    image: ${CADDY_IMAGE:-caddy:2}
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      AGENTLOOP_API_DOMAIN: ${AGENTLOOP_API_DOMAIN:?Set AGENTLOOP_API_DOMAIN in deploy/.env}
+      AGENTLOOP_DASHBOARD_DOMAIN: ${AGENTLOOP_DASHBOARD_DOMAIN}
+      AGENTLOOP_DASHBOARD_USER: ${AGENTLOOP_DASHBOARD_USER:?Set AGENTLOOP_DASHBOARD_USER in deploy/.env}
+      AGENTLOOP_DASHBOARD_PASSWORD_HASH: ${AGENTLOOP_DASHBOARD_PASSWORD_HASH:?Set AGENTLOOP_DASHBOARD_PASSWORD_HASH in deploy/.env}
+      AGENTLOOP_MAX_UPLOAD: ${AGENTLOOP_MAX_UPLOAD:-16MB}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+      dashboard:
+        condition: service_started
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:
+
+secrets:
+  postgres_password:
+    environment: POSTGRES_PASSWORD
