@@ -42,6 +42,7 @@ services:
       AGENTLOOP_REQUIRE_API_KEY: "true"
       AGENTLOOP_ADMIN_API_KEY: ${AGENTLOOP_ADMIN_API_KEY:?Set AGENTLOOP_ADMIN_API_KEY in deploy/.env}
       AGENTLOOP_CORS_ORIGINS: https://${AGENTLOOP_DASHBOARD_DOMAIN:?Set AGENTLOOP_DASHBOARD_DOMAIN in deploy/.env}
+      AGENTLOOP_MAX_REQUEST_BYTES: ${AGENTLOOP_MAX_REQUEST_BYTES:-16777216}
     depends_on:
       db:
         condition: service_healthy

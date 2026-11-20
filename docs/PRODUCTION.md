@@ -257,7 +257,10 @@ configured. From 0.2.7 it also publishes the container image to
   authenticated dashboard routes that users need.
 - Apply request-body limits, rate limits, timeouts, and access logging at the
   proxy. Trace payloads can be large and may contain sensitive prompts or tool
-  data.
+  data. From 0.2.8 the API also enforces `AGENTLOOP_MAX_REQUEST_BYTES` itself
+  (16 MiB by default, `0` for no limit): larger bodies get `413` before they are
+  read into memory, including chunked uploads without a declared length. An
+  invalid value stops the server at startup.
 - Restrict database network access to the API and dashboard workloads, require
   encrypted database connections in hosted environments, and test backups and
   restores.

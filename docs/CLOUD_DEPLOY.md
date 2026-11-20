@@ -224,8 +224,10 @@ These deployments are not exercised in CI. The same image and settings apply:
    keep it on a private network. Do not expose it publicly without one.
 
 Multiple API replicas can share one database; migrations are safe to run
-concurrently. Set the platform's request size limit to match your largest
-trace uploads.
+concurrently. From 0.2.8 the API refuses request bodies over
+`AGENTLOOP_MAX_REQUEST_BYTES` (16 MiB by default) with `413`, even without a
+proxy in front; raise it, and any platform limit, to fit your largest trace
+uploads.
 
 ## Kubernetes
 
