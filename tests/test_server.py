@@ -672,3 +672,28 @@ def test_traces_can_be_filtered_by_label(monkeypatch, tmp_path) -> None:
     assert filtered["traces"][0]["labels"] == {"commit": "abc"}
     assert client.get("/v1/traces", params={"label": "commit"}).status_code == 422
     assert len(client.get("/v1/traces").json()["traces"]) == 2
+
+
+def test_admin_reads_the_audit_log_and_project_keys_cannot(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("AGENTLOOP_STORE_BACKEND", "sqlite")
+    monkeypatch.setenv("AGENTLOOP_SQLITE_PATH", str(tmp_path / "audit.db"))
+    monkeypatch.setenv("AGENTLOOP_REQUIRE_API_KEY", "true")
+    monkeypatch.setenv("AGENTLOOP_ADMIN_API_KEY", "admin-secret")
+    client = TestClient(app)
+    admin = {"X-AgentLoop-Admin-Key": "admin-secret"}
+    key = client.post(
+        "/v1/api-keys", json={"project_id": "acme", "name": "ci"}, headers=admin
+    ).json()
+    project = {"X-AgentLoop-Key": key["api_key"]}
+    trace = {"name": "t", "run_id": "run-audit", "metadata": {}, "events": []}
+    client.post("/v1/traces", json=trace, headers=project)
+    client.delete("/v1/traces/run-audit", headers=project)
+
+    assert client.get("/v1/audit-events", headers=project).status_code == 401
+    events = client.get("/v1/audit-events", params={"project_id": "acme"}, headers=admin).json()
+    actions = [(event["action"], event["actor"]) for event in events["events"]]
+    assert actions == [
+        ("trace.deleted", f"api-key:{key['api_key'][:10]}"),
+        ("api_key.created", "admin-api"),
+    ]
+    assert key["api_key"] not in str(events)

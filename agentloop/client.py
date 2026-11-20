@@ -59,6 +59,15 @@ class AgentLoopClient:
             credential_scope="admin",
         )
 
+    def list_audit_events(self, project_id: str | None = None, limit: int = 100) -> dict[str, Any]:
+        """Newest audit events first, optionally for one project (admin key required)."""
+        params: dict[str, Any] = {"limit": limit}
+        if project_id:
+            params["project_id"] = project_id
+        return self._request(
+            "GET", "/audit-events?" + urllib.parse.urlencode(params), credential_scope="admin"
+        )
+
     def list_api_keys(self, project_id: str) -> dict[str, Any]:
         """List a project's key prefixes, names and usage times (admin key required)."""
         return self._request(

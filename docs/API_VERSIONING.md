@@ -33,6 +33,7 @@ for larger reports. `timeout_s` controls the underlying socket timeout.
 | `POST /v1/api-keys` | `POST /api-keys` |
 | `GET /v1/api-keys?project_id=...` | None (0.2.7 and newer) |
 | `DELETE /v1/api-keys/{prefix}?project_id=...` | None (0.2.7 and newer) |
+| `GET /v1/audit-events?project_id=...&limit=...` | None (0.2.8 and newer) |
 | `GET/POST /v1/traces` (`?label=KEY=VALUE` from 0.2.8) | `GET/POST /traces` |
 | `DELETE /v1/traces/{run_id}` | None (0.2.7 and newer) |
 | `GET /v1/traces/{run_id}/report` | `GET /traces/{run_id}/report` |

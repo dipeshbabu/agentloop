@@ -219,6 +219,25 @@ MIGRATIONS: tuple[Migration, ...] = (
             "PRIMARY KEY(project_id, intervention_id))",
         ),
     ),
+    Migration(
+        version=6,
+        name="audit_log",
+        sqlite_statements=(
+            "CREATE TABLE IF NOT EXISTS audit_events ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+            "occurred_at TEXT DEFAULT CURRENT_TIMESTAMP, project_id TEXT, "
+            "action TEXT NOT NULL, actor TEXT NOT NULL, target TEXT, "
+            "details_json TEXT NOT NULL DEFAULT '{}')",
+            "CREATE INDEX IF NOT EXISTS audit_events_project_id ON audit_events(project_id, id)",
+        ),
+        postgres_statements=(
+            "CREATE TABLE IF NOT EXISTS audit_events ("
+            "id BIGSERIAL PRIMARY KEY, occurred_at TIMESTAMPTZ DEFAULT now(), project_id TEXT, "
+            "action TEXT NOT NULL, actor TEXT NOT NULL, target TEXT, "
+            "details_json TEXT NOT NULL DEFAULT '{}')",
+            "CREATE INDEX IF NOT EXISTS audit_events_project_id ON audit_events(project_id, id)",
+        ),
+    ),
 )
 
 

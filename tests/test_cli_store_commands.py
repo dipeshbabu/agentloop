@@ -174,3 +174,13 @@ def test_list_stored_traces_filters_by_label(tmp_path, monkeypatch) -> None:
     assert "commit=abc" in result.output
     bad = runner.invoke(app, ["list-stored-traces", "--label", "no-equals"])
     assert bad.exit_code == 2
+
+
+def test_audit_log_command_shows_cli_actions(tmp_path, monkeypatch) -> None:
+    db_path = tmp_path / "audit.db"
+    monkeypatch.setenv("AGENTLOOP_STORE_BACKEND", "sqlite")
+    monkeypatch.setenv("AGENTLOOP_SQLITE_PATH", str(db_path))
+    assert runner.invoke(app, ["create-api-key", "--project-id", "acme"]).exit_code == 0
+    result = runner.invoke(app, ["audit-log", "--project-id", "acme"])
+    assert result.exit_code == 0, result.output
+    assert '"api_key.created"' in result.output and '"cli"' in result.output

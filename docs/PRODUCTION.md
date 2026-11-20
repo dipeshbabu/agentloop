@@ -268,6 +268,33 @@ configured. From 0.2.7 it also publishes the container image to
   before ingesting production or customer data, and enforce it with the deletion
   and retention tools below.
 
+## Audit log
+
+From 0.2.8 the store keeps an append-only audit log of actions that change who
+can access data or remove it: API keys created and revoked, traces deleted, and
+retention purges that removed traces. Each event records when it happened, the
+project, the action, what it acted on (a key prefix or run ID), counts, and who
+acted:
+
+| Actor | Meaning |
+| --- | --- |
+| `admin-api` | The admin key, through `/v1/api-keys` |
+| `api-key:<prefix>` | A project key, for example deleting a trace through the API |
+| `cli` | A command run directly against the store |
+| `retention:AGENTLOOP_RETENTION_DAYS` | A scheduled purge, such as the cloud stack's retention service |
+| `dashboard`, `dashboard:api-key:<prefix>` | The dashboard, locally or signed in with a project key |
+
+Key values are never recorded. Read the newest events with the admin key:
+
+```bash
+uv run agentloop remote-audit-log --project-id acme --api-url https://agentloop-api.example.com
+```
+
+`GET /v1/audit-events?project_id=...&limit=...` and
+`AgentLoopClient.list_audit_events` return the same events; with direct database
+access, use `agentloop audit-log`. Events are kept until removed from the
+database by hand.
+
 ## Deleting traces and retention
 
 From 0.2.7, a stored trace can be deleted together with its findings, usage

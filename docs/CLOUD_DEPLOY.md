@@ -116,6 +116,15 @@ To send traces from CI automatically, see
 Sign in to the dashboard with the same key to see that project's traces. Each
 team can only see its own project; there is no project switcher.
 
+### Review the audit log
+
+The server records key creation and revocation, trace deletions and retention
+purges, with who acted. Review it with the admin key:
+
+```bash
+agentloop remote-audit-log --api-url https://agentloop-api.example.com
+```
+
 ### Revoke a key
 
 If a key leaks or a pipeline is retired, list the project's keys and revoke the

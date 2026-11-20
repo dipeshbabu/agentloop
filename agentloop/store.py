@@ -103,13 +103,19 @@ class TraceStore(Protocol):
         self, intervention_id: str, project_id: str = "default"
     ) -> dict[str, Any] | None: ...
 
-    def create_api_key(self, project_id: str, name: str) -> dict[str, Any]: ...
+    def create_api_key(
+        self, project_id: str, name: str, actor: str = "local"
+    ) -> dict[str, Any]: ...
 
     def verify_api_key(self, api_key: str) -> dict[str, Any] | None: ...
 
     def list_api_keys(self, project_id: str) -> list[dict[str, Any]]: ...
 
-    def revoke_api_key(self, project_id: str, prefix: str) -> int: ...
+    def revoke_api_key(self, project_id: str, prefix: str, actor: str = "local") -> int: ...
+
+    def list_audit_events(
+        self, project_id: str | None = None, limit: int = 100
+    ) -> list[dict[str, Any]]: ...
 
     def save_trace(self, trace: AgentTrace, project_id: str = "default") -> None: ...
 
@@ -125,10 +131,12 @@ class TraceStore(Protocol):
 
     def get_trace(self, run_id: str, project_id: str | None = None) -> AgentTrace | None: ...
 
-    def delete_trace(self, run_id: str, project_id: str) -> dict[str, int] | None: ...
+    def delete_trace(
+        self, run_id: str, project_id: str, actor: str = "local"
+    ) -> dict[str, int] | None: ...
 
     def purge_traces(
-        self, older_than_days: float, project_id: str | None = None
+        self, older_than_days: float, project_id: str | None = None, actor: str = "local"
     ) -> dict[str, int]: ...
 
     def save_diagnosis(self, diagnosis: dict[str, Any], project_id: str = "default") -> None: ...
@@ -299,6 +307,40 @@ def _with_labels(item: dict[str, Any]) -> dict[str, Any]:
         {str(key): value for key, value in labels.items()} if isinstance(labels, dict) else {}
     )
     return item
+
+
+def _record_audit(
+    conn, mark: str, action: str, project_id: str | None, actor: str, target: str | None, details
+) -> None:
+    """Append an audit event in the caller's transaction."""
+    conn.execute(
+        "INSERT INTO audit_events(project_id, action, actor, target, details_json) "  # nosec B608
+        f"VALUES ({mark}, {mark}, {mark}, {mark}, {mark})",
+        (
+            project_id,
+            action,
+            str(actor or "unknown")[:200],
+            target,
+            json.dumps(details or {}, sort_keys=True),
+        ),
+    )
+
+
+def _audit_row(row: tuple[Any, ...]) -> dict[str, Any]:
+    event_id, occurred_at, project_id, action, actor, target, details_json = row
+    try:
+        details = json.loads(details_json) if details_json else {}
+    except ValueError:
+        details = {}
+    return {
+        "id": int(event_id),
+        "occurred_at": _timestamp_text(occurred_at),
+        "project_id": project_id,
+        "action": action,
+        "actor": actor,
+        "target": target,
+        "details": details,
+    }
 
 
 def _timestamp_text(value: Any) -> str | None:
@@ -565,7 +607,7 @@ class SQLiteTraceStore(InterventionStoreMixin):
         with self._connect() as conn:
             apply_sqlite_migrations(conn)
 
-    def create_api_key(self, project_id: str, name: str) -> dict[str, Any]:
+    def create_api_key(self, project_id: str, name: str, actor: str = "local") -> dict[str, Any]:
         self.init()
         api_key = new_api_key()
         prefix = api_key[:_API_KEY_PREFIX_LENGTH]
@@ -575,6 +617,7 @@ class SQLiteTraceStore(InterventionStoreMixin):
                 "INSERT INTO api_keys(key_hash, project_id, name, prefix) VALUES (?, ?, ?, ?)",
                 (hash_api_key(api_key), project_id, name, prefix),
             )
+            _record_audit(conn, "?", "api_key.created", project_id, actor, prefix, {"name": name})
         return {"api_key": api_key, "project_id": project_id, "name": name, "prefix": prefix}
 
     def verify_api_key(self, api_key: str) -> dict[str, Any] | None:
@@ -621,7 +664,22 @@ class SQLiteTraceStore(InterventionStoreMixin):
             for row in rows
         ]
 
-    def revoke_api_key(self, project_id: str, prefix: str) -> int:
+    def list_audit_events(
+        self, project_id: str | None = None, limit: int = 100
+    ) -> list[dict[str, Any]]:
+        """Newest audit events first, optionally for one project."""
+        limit = _validate_page_limit(limit)
+        self.init()
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT id, occurred_at, project_id, action, actor, target, details_json "
+                "FROM audit_events WHERE (? IS NULL OR project_id = ?) "
+                "ORDER BY id DESC LIMIT ?",
+                (project_id, project_id, limit),
+            ).fetchall()
+        return [_audit_row(tuple(row)) for row in rows]
+
+    def revoke_api_key(self, project_id: str, prefix: str, actor: str = "local") -> int:
         """Delete a project's keys with this prefix; returns how many were revoked."""
         _require_key_prefix(prefix)
         self.init()
@@ -630,9 +688,16 @@ class SQLiteTraceStore(InterventionStoreMixin):
                 "DELETE FROM api_keys WHERE project_id = ? AND prefix = ?",
                 (project_id, prefix),
             )
-            return int(cursor.rowcount or 0)
+            revoked = int(cursor.rowcount or 0)
+            if revoked:
+                _record_audit(
+                    conn, "?", "api_key.revoked", project_id, actor, prefix, {"revoked": revoked}
+                )
+            return revoked
 
-    def delete_trace(self, run_id: str, project_id: str) -> dict[str, int] | None:
+    def delete_trace(
+        self, run_id: str, project_id: str, actor: str = "local"
+    ) -> dict[str, int] | None:
         """Delete one trace of a project and its findings, usage and interventions."""
         self.init()
         with self._connect() as conn:
@@ -641,9 +706,13 @@ class SQLiteTraceStore(InterventionStoreMixin):
             ).fetchone()
             if exists is None:
                 return None
-            return _delete_runs(conn, "?", project_id, [run_id])
+            deleted = _delete_runs(conn, "?", project_id, [run_id])
+            _record_audit(conn, "?", "trace.deleted", project_id, actor, run_id, deleted)
+            return deleted
 
-    def purge_traces(self, older_than_days: float, project_id: str | None = None) -> dict[str, int]:
+    def purge_traces(
+        self, older_than_days: float, project_id: str | None = None, actor: str = "local"
+    ) -> dict[str, int]:
         """Delete traces stored more than ``older_than_days`` ago, optionally in one project."""
         cutoff = _retention_cutoff(older_than_days).strftime("%Y-%m-%d %H:%M:%S")
         self.init()
@@ -658,8 +727,18 @@ class SQLiteTraceStore(InterventionStoreMixin):
             for row in conn.execute(query, params).fetchall():
                 by_project.setdefault(row["project_id"], []).append(row["run_id"])
             for project, run_ids in by_project.items():
-                for name, count in _delete_runs(conn, "?", project, run_ids).items():
+                deleted = _delete_runs(conn, "?", project, run_ids)
+                for name, count in deleted.items():
                     totals[name] += count
+                _record_audit(
+                    conn,
+                    "?",
+                    "traces.purged",
+                    project,
+                    actor,
+                    None,
+                    {**deleted, "older_than_days": float(older_than_days)},
+                )
         return totals
 
     def _upsert_trace(
@@ -1105,7 +1184,7 @@ class PostgresTraceStore(InterventionStoreMixin):
         with self._connect() as conn:
             apply_postgres_migrations(conn)
 
-    def create_api_key(self, project_id: str, name: str) -> dict[str, Any]:
+    def create_api_key(self, project_id: str, name: str, actor: str = "local") -> dict[str, Any]:
         self.init()
         api_key = new_api_key()
         prefix = api_key[:_API_KEY_PREFIX_LENGTH]
@@ -1117,6 +1196,7 @@ class PostgresTraceStore(InterventionStoreMixin):
                 "INSERT INTO api_keys(key_hash, project_id, name, prefix) VALUES (%s, %s, %s, %s)",
                 (hash_api_key(api_key), project_id, name, prefix),
             )
+            _record_audit(conn, "%s", "api_key.created", project_id, actor, prefix, {"name": name})
         return {"api_key": api_key, "project_id": project_id, "name": name, "prefix": prefix}
 
     def verify_api_key(self, api_key: str) -> dict[str, Any] | None:
@@ -1159,7 +1239,22 @@ class PostgresTraceStore(InterventionStoreMixin):
             for row in rows
         ]
 
-    def revoke_api_key(self, project_id: str, prefix: str) -> int:
+    def list_audit_events(
+        self, project_id: str | None = None, limit: int = 100
+    ) -> list[dict[str, Any]]:
+        """Newest audit events first, optionally for one project."""
+        limit = _validate_page_limit(limit)
+        self.init()
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT id, occurred_at, project_id, action, actor, target, details_json "
+                "FROM audit_events WHERE (%s::text IS NULL OR project_id = %s) "
+                "ORDER BY id DESC LIMIT %s",
+                (project_id, project_id, limit),
+            ).fetchall()
+        return [_audit_row(tuple(row)) for row in rows]
+
+    def revoke_api_key(self, project_id: str, prefix: str, actor: str = "local") -> int:
         """Delete a project's keys with this prefix; returns how many were revoked."""
         _require_key_prefix(prefix)
         self.init()
@@ -1168,9 +1263,16 @@ class PostgresTraceStore(InterventionStoreMixin):
                 "DELETE FROM api_keys WHERE project_id = %s AND prefix = %s",
                 (project_id, prefix),
             )
-            return int(cursor.rowcount or 0)
+            revoked = int(cursor.rowcount or 0)
+            if revoked:
+                _record_audit(
+                    conn, "%s", "api_key.revoked", project_id, actor, prefix, {"revoked": revoked}
+                )
+            return revoked
 
-    def delete_trace(self, run_id: str, project_id: str) -> dict[str, int] | None:
+    def delete_trace(
+        self, run_id: str, project_id: str, actor: str = "local"
+    ) -> dict[str, int] | None:
         """Delete one trace of a project and its findings, usage and interventions."""
         self.init()
         with self._connect() as conn:
@@ -1179,9 +1281,13 @@ class PostgresTraceStore(InterventionStoreMixin):
             ).fetchone()
             if exists is None:
                 return None
-            return _delete_runs(conn, "%s", project_id, [run_id])
+            deleted = _delete_runs(conn, "%s", project_id, [run_id])
+            _record_audit(conn, "%s", "trace.deleted", project_id, actor, run_id, deleted)
+            return deleted
 
-    def purge_traces(self, older_than_days: float, project_id: str | None = None) -> dict[str, int]:
+    def purge_traces(
+        self, older_than_days: float, project_id: str | None = None, actor: str = "local"
+    ) -> dict[str, int]:
         """Delete traces stored more than ``older_than_days`` ago, optionally in one project."""
         cutoff = _retention_cutoff(older_than_days)
         self.init()
@@ -1196,8 +1302,18 @@ class PostgresTraceStore(InterventionStoreMixin):
             for row in conn.execute(query, params).fetchall():
                 by_project.setdefault(row[0], []).append(row[1])
             for project, run_ids in by_project.items():
-                for name, count in _delete_runs(conn, "%s", project, run_ids).items():
+                deleted = _delete_runs(conn, "%s", project, run_ids)
+                for name, count in deleted.items():
                     totals[name] += count
+                _record_audit(
+                    conn,
+                    "%s",
+                    "traces.purged",
+                    project,
+                    actor,
+                    None,
+                    {**deleted, "older_than_days": float(older_than_days)},
+                )
         return totals
 
     def _upsert_trace(self, conn, trace: AgentTrace, project_id: str) -> dict[str, Any]:
