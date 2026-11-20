@@ -172,6 +172,13 @@ else:
     )
     st.session_state["project_id"] = project_id
 
+# Recorded in the store's audit log for keys created and traces deleted here.
+dashboard_actor = (
+    f"dashboard:api-key:{st.session_state.get('signed_in_key_prefix', '')}"
+    if project_mode
+    else "dashboard"
+)
+
 page = st.sidebar.radio(
     "Navigate",
     visible_pages(
@@ -372,7 +379,7 @@ elif page == "Traces":
                     f"I want to delete {trace.run_id}", key=f"confirm_delete::{trace.run_id}"
                 )
                 if st.button("Delete trace", disabled=not confirmed, type="primary"):
-                    deleted = store.delete_trace(trace.run_id, project_id)
+                    deleted = store.delete_trace(trace.run_id, project_id, actor=dashboard_actor)
                     st.session_state[cursor_key] = [None]
                     st.session_state["trace_deleted_notice"] = (
                         f"Deleted {trace.run_id} and {deleted['findings']} findings, "
@@ -930,7 +937,7 @@ elif page == "API Keys":
     st.warning("API keys are only shown once. Copy the generated key before leaving this page.")
     key_name = st.text_input("Key name", value="local-dev")
     if st.button("Create API key"):
-        created = store.create_api_key(project_id=project_id, name=key_name)
+        created = store.create_api_key(project_id=project_id, name=key_name, actor=dashboard_actor)
         st.success(f"Created key for project `{project_id}`")
         st.code(created["api_key"])
 

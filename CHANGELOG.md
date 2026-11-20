@@ -17,6 +17,14 @@ trace, study, receipt, API and database schema versions.
 
 ### Added
 
+- An audit log of access and deletion actions. Migration 6 adds an
+  `audit_events` table recording API keys created and revoked, traces deleted
+  and retention purges, with the project, target, counts and acting identity
+  (admin API, project key prefix, CLI, dashboard or retention schedule), written
+  in the same transaction as the action. Admins read it with
+  `GET /v1/audit-events`, `AgentLoopClient.list_audit_events`,
+  `agentloop audit-log` or `agentloop remote-audit-log`. Key values are never
+  recorded.
 - Trace labels are visible and searchable. Paginated trace listings include
   each trace's `metadata.labels`, and `GET /v1/traces?label=KEY=VALUE`,
   `AgentLoopClient.list_traces(label=...)`, `agentloop list-stored-traces --label`

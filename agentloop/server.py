@@ -176,7 +176,18 @@ def create_api_key(
     _: None = Depends(resolve_admin),
     db: TraceStore = Depends(store),
 ) -> dict[str, Any]:
-    return db.create_api_key(project_id=payload.project_id, name=payload.name)
+    return db.create_api_key(project_id=payload.project_id, name=payload.name, actor="admin-api")
+
+
+@versioned.get("/audit-events")
+def list_audit_events(
+    project_id: str | None = Query(default=None, min_length=1),
+    limit: int = Query(default=100, ge=1, le=MAX_PAGE_SIZE),
+    _: None = Depends(resolve_admin),
+    db: TraceStore = Depends(store),
+) -> dict[str, Any]:
+    """Newest audit events first: key creation and revocation, deletions and purges."""
+    return {"project_id": project_id, "events": db.list_audit_events(project_id, limit=limit)}
 
 
 @versioned.get("/api-keys")
@@ -198,7 +209,7 @@ def revoke_api_key(
 ) -> dict[str, Any]:
     """Revoke a project's key by its prefix; it stops working immediately."""
     try:
-        revoked = db.revoke_api_key(project_id, prefix)
+        revoked = db.revoke_api_key(project_id, prefix, actor="admin-api")
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     if not revoked:
@@ -302,9 +313,11 @@ def delete_trace(
     run_id: str,
     project_id: str = Depends(resolve_project),
     db: TraceStore = Depends(store),
+    x_agentloop_key: str | None = Header(default=None),
 ) -> dict[str, Any]:
     """Delete a trace of the caller's project with its findings, usage and interventions."""
-    deleted = db.delete_trace(run_id, project_id)
+    actor = f"api-key:{x_agentloop_key[:10]}" if x_agentloop_key else "api"
+    deleted = db.delete_trace(run_id, project_id, actor=actor)
     if deleted is None:
         raise HTTPException(status_code=404, detail="trace not found")
     return {"run_id": run_id, "project_id": project_id, "deleted": deleted}

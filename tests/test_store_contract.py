@@ -48,7 +48,8 @@ def _reset_postgres_tables(store: PostgresTraceStore) -> None:
     store.init()
     with store._connect() as conn:
         conn.execute(
-            "TRUNCATE trace_findings, usage_events, traces, api_keys, projects RESTART IDENTITY CASCADE"
+            "TRUNCATE audit_events, trace_findings, usage_events, traces, api_keys, projects "
+            "RESTART IDENTITY CASCADE"
         )
         conn.execute("INSERT INTO projects(project_id) VALUES ('default')")
 
@@ -1044,3 +1045,39 @@ def test_traces_list_their_labels_and_filter_by_one(store):
             parse_label_filter(bad)
     with pytest.raises(ValueError, match="KEY=VALUE"):
         store.list_traces_page(label=("bad key", "x"))
+
+
+def test_audit_log_records_key_and_deletion_actions_without_secrets(store):
+    key = store.create_api_key(project_id="proj_a", name="ci", actor="admin-api")
+    store.create_api_key(project_id="proj_b", name="other", actor="cli")
+    trace = _sample_trace("audited")
+    store.save_trace(trace, project_id="proj_a")
+    store.delete_trace(trace.run_id, "proj_a", actor="api-key:al_abc1234")
+    old = _sample_trace("old")
+    store.save_trace(old, project_id="proj_a")
+    _age(store, old.run_id, 40)
+    store.purge_traces(30, actor="retention:AGENTLOOP_RETENTION_DAYS")
+    store.purge_traces(30, actor="retention:AGENTLOOP_RETENTION_DAYS")  # nothing left: no event
+    store.revoke_api_key("proj_a", key["prefix"], actor="admin-api")
+    store.revoke_api_key("proj_a", key["prefix"], actor="admin-api")  # nothing revoked: no event
+
+    events = store.list_audit_events("proj_a")
+    assert [event["action"] for event in events] == [
+        "api_key.revoked",
+        "traces.purged",
+        "trace.deleted",
+        "api_key.created",
+    ]
+    revoked, purged, deleted, created = events
+    assert created["target"] == key["prefix"] and created["details"] == {"name": "ci"}
+    assert created["actor"] == "admin-api"
+    assert deleted["target"] == trace.run_id and deleted["details"]["traces"] == 1
+    assert deleted["actor"] == "api-key:al_abc1234"
+    assert purged["details"]["traces"] == 1 and purged["details"]["older_than_days"] == 30.0
+    assert revoked["details"] == {"revoked": 1}
+    assert all(event["occurred_at"] for event in events)
+    assert key["api_key"] not in str(store.list_audit_events())
+
+    assert [event["project_id"] for event in store.list_audit_events("proj_b")] == ["proj_b"]
+    assert len(store.list_audit_events()) == 5
+    assert len(store.list_audit_events(limit=2)) == 2

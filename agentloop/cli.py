@@ -986,7 +986,7 @@ def init_store() -> None:
 @app.command("create-api-key")
 def create_api_key(project_id: str = "default", name: str = "default") -> None:
     db = get_store()
-    key = db.create_api_key(project_id=project_id, name=name)
+    key = db.create_api_key(project_id=project_id, name=name, actor="cli")
     console.print("Created API key. Save it now; it will not be shown again.")
     console.print(key["api_key"])
 
@@ -1006,7 +1006,7 @@ def revoke_api_key(
 ) -> None:
     """Revoke a project's API key; it stops working immediately."""
     try:
-        revoked = get_store().revoke_api_key(project_id, prefix)
+        revoked = get_store().revoke_api_key(project_id, prefix, actor="cli")
     except ValueError as exc:
         raise typer.BadParameter(str(exc)) from exc
     if not revoked:
@@ -1023,7 +1023,7 @@ def delete_trace(
     project_id: str = "default",
 ) -> None:
     """Delete a stored trace with its findings, usage and interventions."""
-    deleted = get_store().delete_trace(run_id, project_id)
+    deleted = get_store().delete_trace(run_id, project_id, actor="cli")
     if deleted is None:
         console.print(f"No trace {run_id} in project {project_id}.", markup=False)
         raise typer.Exit(1)
@@ -1041,6 +1041,7 @@ def purge_traces(
     project_id: str | None = typer.Option(None, help="Only purge this project."),
 ) -> None:
     """Apply a retention period: delete traces stored longer ago than allowed."""
+    actor = "cli" if older_than_days is not None else "retention:AGENTLOOP_RETENTION_DAYS"
     if older_than_days is None:
         configured = os.getenv("AGENTLOOP_RETENTION_DAYS", "").strip()
         if not configured:
@@ -1057,7 +1058,7 @@ def purge_traces(
                 param_hint="AGENTLOOP_RETENTION_DAYS",
             ) from None
     try:
-        deleted = get_store().purge_traces(older_than_days, project_id=project_id)
+        deleted = get_store().purge_traces(older_than_days, project_id=project_id, actor=actor)
     except ValueError as exc:
         raise typer.BadParameter(str(exc)) from exc
     scope = f"project {project_id}" if project_id else "all projects"
@@ -1067,6 +1068,20 @@ def purge_traces(
         f"{deleted['interventions']} interventions).",
         markup=False,
         soft_wrap=True,
+    )
+
+
+@app.command("audit-log")
+def audit_log(
+    project_id: str | None = typer.Option(None, help="Only this project's events."),
+    limit: int = typer.Option(50, min=1, max=1000, help="Newest events to show."),
+) -> None:
+    """Show recent key, deletion and retention events from the store's audit log."""
+    console.print_json(
+        data={
+            "project_id": project_id,
+            "events": get_store().list_audit_events(project_id, limit=limit),
+        }
     )
 
 
@@ -1513,6 +1528,20 @@ def remote_list_api_keys(
     """List a project's API key prefixes on a remote server."""
     client = _remote_admin_client(api_url, admin_api_key)
     console.print_json(data=client.list_api_keys(project_id))
+
+
+@app.command("remote-audit-log")
+def remote_audit_log(
+    project_id: str | None = typer.Option(None, help="Only this project's events."),
+    limit: int = typer.Option(50, min=1, max=1000, help="Newest events to show."),
+    api_url: str = typer.Option("http://127.0.0.1:8000", help="AgentLoop API base URL."),
+    admin_api_key: str | None = typer.Option(
+        None, help="Admin API key. Defaults to AGENTLOOP_ADMIN_API_KEY."
+    ),
+) -> None:
+    """Show a remote server's audit log (admin key required)."""
+    client = _remote_admin_client(api_url, admin_api_key)
+    console.print_json(data=client.list_audit_events(project_id=project_id, limit=limit))
 
 
 @app.command("remote-revoke-api-key")
