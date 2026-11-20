@@ -234,9 +234,11 @@ configured. From 0.2.7 it also publishes the container image to
   `.env` value alone does not update an existing database role. Use an authenticated
   Postgres password-change procedure before replacing the secret, and keep the old value only
   until the recreated clients connect successfully.
-- The Streamlit dashboard does not provide end-user authentication. Treat it as
-  an operator console: keep it on a private network or place it behind an
-  authenticated reverse proxy. Do not expose it directly to the internet.
+- The Streamlit dashboard has no user accounts. For a shared dashboard, set
+  `AGENTLOOP_DASHBOARD_REQUIRE_KEY=true` so each user signs in with a project API
+  key and sees only that project, and still keep it on a private network or
+  behind an authenticated reverse proxy. Do not expose it directly to the
+  internet.
 - Terminate TLS at a trusted proxy or load balancer and forward only the API and
   authenticated dashboard routes that users need.
 - Apply request-body limits, rate limits, timeouts, and access logging at the

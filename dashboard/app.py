@@ -32,9 +32,17 @@ from agentloop.tracer import AgentTrace
 from agentloop.value import build_value_report
 
 try:
+    from dashboard.access import (
+        lockout_remaining,
+        require_project_key,
+        sign_in,
+        sign_out,
+        visible_pages,
+    )
     from dashboard.trace_upload import TraceUploadError, parse_uploaded_trace
     from dashboard.value_view import assumption_inputs, percentage, render_value_report
 except ModuleNotFoundError:
+    from access import lockout_remaining, require_project_key, sign_in, sign_out, visible_pages
     from trace_upload import TraceUploadError, parse_uploaded_trace
     from value_view import assumption_inputs, percentage, render_value_report
 
@@ -114,28 +122,61 @@ def render_gate_table(results: list[dict]) -> None:
 st.sidebar.title("AgentLoop")
 st.sidebar.caption("Execution profiling and evidence")
 
-project_id = st.sidebar.text_input("Project", value=st.session_state.get("project_id", "default"))
-st.session_state["project_id"] = project_id
+store = load_store()
+project_mode = require_project_key()
+
+if project_mode:
+    # A shared dashboard shows exactly one project: the one the API key belongs to.
+    if "signed_in_project" not in st.session_state:
+        st.title("AgentLoop Dashboard")
+        st.subheader("Sign in to your project")
+        st.caption(
+            "Enter a project API key. The dashboard shows only the traces and findings "
+            "of the project that key belongs to."
+        )
+        with st.form("project_sign_in"):
+            entered_key = st.text_input("Project API key", type="password")
+            submitted = st.form_submit_button("Sign in")
+        if submitted:
+            if sign_in(store, entered_key, st.session_state) is not None:
+                st.rerun()
+            remaining = lockout_remaining(st.session_state)
+            if remaining > 0:
+                st.error(f"Too many failed attempts. Try again in {int(remaining) + 1} seconds.")
+            else:
+                st.error("That API key is not valid for any project.")
+        st.stop()
+    project_id = st.session_state["signed_in_project"]
+    st.sidebar.markdown(f"**Project:** `{project_id}`")
+    if st.sidebar.button("Sign out"):
+        sign_out(st.session_state)
+        st.rerun()
+else:
+    project_id = st.sidebar.text_input(
+        "Project", value=st.session_state.get("project_id", "default")
+    )
+    st.session_state["project_id"] = project_id
 
 page = st.sidebar.radio(
     "Navigate",
-    [
-        "Overview",
-        "Traces",
-        "Optimization Queue",
-        "Optimization",
-        "Diagnosis",
-        "Patch Plan",
-        "Replay Proof",
-        "Quality Gates",
-        "Value & Pricing",
-        "API Keys",
-        "Ingest",
-        "Setup",
-    ],
+    visible_pages(
+        [
+            "Overview",
+            "Traces",
+            "Optimization Queue",
+            "Optimization",
+            "Diagnosis",
+            "Patch Plan",
+            "Replay Proof",
+            "Quality Gates",
+            "Value & Pricing",
+            "API Keys",
+            "Ingest",
+            "Setup",
+        ],
+        project_mode=project_mode,
+    ),
 )
-
-store = load_store()
 
 st.title("AgentLoop Dashboard")
 st.caption("Cost, latency, and execution-graph optimization for production AI agents")
