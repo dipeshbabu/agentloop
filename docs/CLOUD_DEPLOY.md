@@ -39,7 +39,8 @@ The `deploy/` directory contains the stack:
   [Caddy](https://caddyserver.com/), which obtains and renews HTTPS
   certificates automatically;
 - `deploy/Caddyfile` serves the API on one hostname and the dashboard on
-  another, with a login in front of the dashboard;
+  another, with a login in front of the dashboard. Inside, the dashboard also
+  asks for a project API key and shows only that project;
 - `deploy/.env.example` lists every setting.
 
 Only ports 80 and 443 are published. The API, dashboard and database are
@@ -80,8 +81,9 @@ docker compose -f deploy/docker-compose.yml ps
 curl https://agentloop-api.example.com/v1/readyz
 ```
 
-Open the dashboard hostname in a browser and sign in with the user and password
-you chose.
+Open the dashboard hostname in a browser and enter the user and password you
+chose. The dashboard then asks for a project API key (created in the next
+step) and shows only that key's project.
 
 ### Create a project key and upload traces
 
@@ -105,7 +107,8 @@ client.upload_trace(trace)
 
 or from the TypeScript SDK with
 `new AgentLoopClient({ baseUrl: "https://agentloop-api.example.com", apiKey: "..." })`.
-In the dashboard, set the sidebar's Project field to the same project ID.
+Sign in to the dashboard with the same key to see that project's traces. Each
+team can only see its own project; there is no project switcher.
 
 ### Upgrade and back up
 
@@ -132,8 +135,8 @@ checks that:
 
 - the API is ready over HTTPS and stores and returns a trace with a project key;
 - plain HTTP redirects to HTTPS, and uploads over the size limit are refused;
-- the dashboard returns 401 without the login or with a wrong password, and
-  loads with the right one;
+- the dashboard returns 401 without the login or with a wrong password, loads
+  with the right one, and runs with project sign-in enabled;
 - the API, dashboard and database ports are not published on the host.
 
 ## Option 2: managed container platforms
@@ -175,9 +178,10 @@ These deployments are not exercised in CI. The same image and settings apply:
 
 3. Optionally run the dashboard as a second service from the same image with
    the command `streamlit run dashboard/app.py --server.address=0.0.0.0
-   --server.port=8501 --server.headless=true`, the same database settings, and
-   `AGENTLOOP_API_URL` set to the API's URL. The dashboard has no login of its
-   own: put it behind the platform's identity layer, such as Identity-Aware
+   --server.port=8501 --server.headless=true`, the same database settings,
+   `AGENTLOOP_API_URL` set to the API's URL, and
+   `AGENTLOOP_DASHBOARD_REQUIRE_KEY=true` so users sign in with a project key.
+   Also put it behind the platform's identity layer, such as Identity-Aware
    Proxy on Google Cloud or built-in authentication on Azure Container Apps, or
    keep it on a private network. Do not expose it publicly without one.
 
@@ -195,7 +199,8 @@ behind an authenticating ingress.
 
 - Require API keys (`AGENTLOOP_REQUIRE_API_KEY=true`) and keep the admin key
   out of clients; give each team or pipeline its own project key.
-- Serve only HTTPS, and never expose the dashboard without a login.
+- Serve only HTTPS, never expose the dashboard without a login, and keep
+  project sign-in enabled so teams only see their own traces.
 - Keep Postgres off the public internet and back it up.
 - Traces can contain prompts, tool inputs and outputs. Decide what you capture
   and how long you keep it before sending production data; see

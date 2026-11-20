@@ -80,6 +80,8 @@ services:
       PGUSER: ${POSTGRES_USER:-agentloop}
       AGENTLOOP_POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
       AGENTLOOP_API_URL: http://api:8000
+      # Each user signs in with a project API key and sees only that project.
+      AGENTLOOP_DASHBOARD_REQUIRE_KEY: "true"
     depends_on:
       api:
         condition: service_healthy

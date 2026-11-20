@@ -71,13 +71,27 @@ uv run agentloop upload --path runs/research_agent_baseline.json \
 
 Select project `acme` in a dashboard connected to the same store.
 
+## Project sign-in for shared dashboards
+
+Set `AGENTLOOP_DASHBOARD_REQUIRE_KEY=true` when several teams share one
+dashboard (AgentLoop 0.2.7 and newer). The dashboard then asks for a project API
+key, checks it the same way the HTTP API does, and shows only the traces,
+findings and reports of the project that key belongs to. The free-text Project
+field is replaced by the signed-in project and a Sign out button. The `API Keys`
+page (creating keys is an administrator task) and the `Patch Plan` page (it
+reads files on the dashboard host) are hidden. After five failed sign-ins in a
+browser session, further attempts wait one minute.
+
+Create project keys with the API's admin key or `agentloop create-api-key`.
+Without the setting, the dashboard keeps its local, single-user behaviour.
+
 ## Security boundaries
 
-The dashboard does not provide built-in user authentication. Keep it bound to a
-trusted interface for local use. For shared or internet-facing deployments, put
-it behind an authenticated reverse proxy and follow
-[PRODUCTION.md](PRODUCTION.md), including TLS, explicit CORS, API-key auth,
-retention, backups, and database access controls.
+Keep a local dashboard bound to a trusted interface. For shared or
+internet-facing deployments, enable project sign-in, put the dashboard behind an
+authenticated reverse proxy, and follow [PRODUCTION.md](PRODUCTION.md), including
+TLS, explicit CORS, API-key auth, retention, backups, and database access
+controls. The [cloud deployment stack](CLOUD_DEPLOY.md) does all of this.
 
 Quality fixture validation runs only when the Quality Gates form is submitted.
 Empty suites, missing scorer requirements, and malformed JSON are shown beside

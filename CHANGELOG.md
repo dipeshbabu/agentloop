@@ -9,6 +9,11 @@ trace, study, receipt, API and database schema versions.
 
 ### Added
 
+- Shared dashboards can sign users in by project. With
+  `AGENTLOOP_DASHBOARD_REQUIRE_KEY=true`, the dashboard asks for a project API
+  key, verifies it like the HTTP API, and shows only that project; the project
+  field, API-key creation and the host-file patch plan are unavailable, and
+  repeated failed sign-ins wait a minute. The cloud deployment stack enables it.
 - Cloud deployment. Releases publish a container image to
   `ghcr.io/dipeshbabu/agentloop` (version and `latest` tags), built from the
   validated tag and checked to report the release version as a non-root user.

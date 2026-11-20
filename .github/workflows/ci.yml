@@ -677,6 +677,7 @@ jobs:
       - name: Verify the dashboard requires a login
         shell: bash
         run: |
+          test "$(docker compose exec -T dashboard printenv AGENTLOOP_DASHBOARD_REQUIRE_KEY)" = true
           status="$(curl --silent --output /dev/null --write-out '%{http_code}' --cacert caddy-root.crt https://dashboard.localhost/)"
           test "$status" = 401
           status="$(curl --silent --output /dev/null --write-out '%{http_code}' --cacert caddy-root.crt \
