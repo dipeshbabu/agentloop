@@ -181,3 +181,19 @@ def test_shared_ingest_page_offers_only_uploads(tmp_path, monkeypatch):
     labels = [button.label for button in app.button]
     assert not any(label.startswith("Generate") for label in labels)
     assert app.file_uploader, "uploading into the signed-in project stays available"
+
+
+def test_traces_page_deletes_a_trace_after_confirmation(tmp_path, monkeypatch):
+    app, key = _app(tmp_path, monkeypatch, require_key=True)
+    _sign_in(app, key)
+    app.sidebar.radio[0].set_value("Traces").run()
+    assert not app.exception
+    delete = next(b for b in app.button if b.label == "Delete trace")
+    assert delete.disabled, "deleting needs the confirmation checkbox"
+    next(c for c in app.checkbox if c.label.startswith("I want to delete")).check().run()
+    next(b for b in app.button if b.label == "Delete trace").click().run()
+    assert not app.exception
+    assert any("Deleted" in success.value for success in app.success)
+    store = SQLiteTraceStore(path=str(tmp_path / "dashboard.db"))
+    assert store.list_traces(project_id="alpha") == []
+    assert len(store.list_traces(project_id="beta")) == 1

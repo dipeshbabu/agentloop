@@ -262,7 +262,28 @@ configured. From 0.2.7 it also publishes the container image to
   encrypted database connections in hosted environments, and test backups and
   restores.
 - Retain traces only as long as needed. Establish a deletion and redaction policy
-  before ingesting production or customer data.
+  before ingesting production or customer data, and enforce it with the deletion
+  and retention tools below.
+
+## Deleting traces and retention
+
+From 0.2.7, a stored trace can be deleted together with its findings, usage
+records and any interventions that compare it:
+
+- `DELETE /v1/traces/{run_id}` with a project key deletes a trace of that key's
+  project; other projects' traces return `404`;
+- `AgentLoopClient.delete_trace(run_id)` and `agentloop remote-delete-trace RUN_ID`
+  call that route;
+- `agentloop delete-trace RUN_ID --project-id PROJECT` deletes directly in the
+  configured store;
+- the dashboard's Traces page has a **Delete this trace** control that requires a
+  confirmation and deletes only within the current project.
+
+To enforce a retention period, run
+`agentloop purge-traces --older-than-days 90` (optionally `--project-id`) on a
+schedule. Without `--older-than-days` it reads `AGENTLOOP_RETENTION_DAYS` and does
+nothing when that is unset. Age is measured from when the server stored the trace.
+Deletion is permanent; restore from a backup if a trace is removed by mistake.
 
 The Compose ports bind to `127.0.0.1` by default to keep the local stack off the
 LAN. Use an explicit production deployment configuration instead of weakening

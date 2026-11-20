@@ -231,6 +231,8 @@ if page == "Overview":
 
 elif page == "Traces":
     st.subheader("Stored traces")
+    if notice := st.session_state.pop("trace_deleted_notice", None):
+        st.success(notice)
 
     cursor_key = f"traces_cursor_stack::{project_id}"
     if cursor_key not in st.session_state:
@@ -333,6 +335,25 @@ elif page == "Traces":
                 file_name=f"{trace.run_id}.json",
                 mime="application/json",
             )
+
+            with st.expander("Delete this trace"):
+                st.caption(
+                    "Permanently removes the trace with its findings, usage records and any "
+                    "interventions that compare it. This cannot be undone."
+                )
+                confirmed = st.checkbox(
+                    f"I want to delete {trace.run_id}", key=f"confirm_delete::{trace.run_id}"
+                )
+                if st.button("Delete trace", disabled=not confirmed, type="primary"):
+                    deleted = store.delete_trace(trace.run_id, project_id)
+                    st.session_state[cursor_key] = [None]
+                    st.session_state["trace_deleted_notice"] = (
+                        f"Deleted {trace.run_id} and {deleted['findings']} findings, "
+                        f"{deleted['interventions']} interventions."
+                        if deleted
+                        else f"{trace.run_id} was already deleted."
+                    )
+                    st.rerun()
 
 elif page == "Optimization Queue":
     st.subheader("Optimization queue")

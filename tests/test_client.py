@@ -269,3 +269,31 @@ def test_client_lists_and_revokes_keys_with_only_the_admin_key(monkeypatch) -> N
     for _, _, headers in captured:
         assert headers["x-agentloop-admin-key"] == "admin"
         assert "x-agentloop-key" not in headers
+
+
+def test_client_deletes_traces_with_the_project_key(monkeypatch) -> None:
+    captured: list[tuple[str, str, dict[str, str]]] = []
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):  # type: ignore[no-untyped-def]
+            return None
+
+        def read(self, size=-1) -> bytes:
+            return b"{}"
+
+    def fake_urlopen(request, timeout):  # type: ignore[no-untyped-def]
+        headers = {name.lower(): value for name, value in request.header_items()}
+        captured.append((request.get_method(), request.full_url, headers))
+        return Response()
+
+    monkeypatch.setattr("agentloop.client._open_request", fake_urlopen)
+    AgentLoopClient(
+        base_url="https://agentloop.example", api_key="project", admin_api_key="admin"
+    ).delete_trace("run/1")
+    method, url, headers = captured[0]
+    assert (method, url) == ("DELETE", "https://agentloop.example/v1/traces/run%2F1")
+    assert headers["x-agentloop-key"] == "project"
+    assert "x-agentloop-admin-key" not in headers

@@ -122,3 +122,35 @@ def test_list_and_revoke_api_keys_from_the_cli(tmp_path, monkeypatch) -> None:
     assert revoked.exit_code == 0, revoked.output
     assert "Revoked 1" in revoked.output
     assert store.verify_api_key(created["api_key"]) is None
+
+
+def test_delete_and_purge_traces_from_the_cli(tmp_path, monkeypatch) -> None:
+    db_path = tmp_path / "retention.db"
+    monkeypatch.setenv("AGENTLOOP_STORE_BACKEND", "sqlite")
+    monkeypatch.setenv("AGENTLOOP_SQLITE_PATH", str(db_path))
+    monkeypatch.delenv("AGENTLOOP_RETENTION_DAYS", raising=False)
+    run_id, _ = _seed_store(db_path, project_id="acme")
+    store = SQLiteTraceStore(path=str(db_path))
+
+    assert runner.invoke(app, ["delete-trace", run_id, "--project-id", "other"]).exit_code == 1
+    deleted = runner.invoke(app, ["delete-trace", run_id, "--project-id", "acme"])
+    assert deleted.exit_code == 0, deleted.output
+    assert store.get_trace(run_id, project_id="acme") is None
+
+    unconfigured = runner.invoke(app, ["purge-traces"])
+    assert unconfigured.exit_code == 0
+    assert "not configured" in unconfigured.output
+
+    old_run, _ = _seed_store(db_path, project_id="acme")
+    with store._connect() as conn:
+        conn.execute(
+            "UPDATE traces SET created_at = '2000-01-01 00:00:00' WHERE run_id = ?", (old_run,)
+        )
+    monkeypatch.setenv("AGENTLOOP_RETENTION_DAYS", "30")
+    purged = runner.invoke(app, ["purge-traces"])
+    assert purged.exit_code == 0, purged.output
+    assert "Deleted 1 trace(s) older than 30 days in all projects" in purged.output
+    assert store.get_trace(old_run, project_id="acme") is None
+
+    monkeypatch.setenv("AGENTLOOP_RETENTION_DAYS", "soon")
+    assert runner.invoke(app, ["purge-traces"]).exit_code == 2

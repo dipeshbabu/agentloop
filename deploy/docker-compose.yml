@@ -88,6 +88,31 @@ services:
     secrets:
       - postgres_password
 
+  retention:
+    # Deletes traces stored longer ago than AGENTLOOP_RETENTION_DAYS, once a day.
+    # Leave the setting empty to keep traces until they are deleted by hand.
+    image: ${AGENTLOOP_IMAGE}
+    restart: unless-stopped
+    command:
+      [
+        "sh",
+        "-c",
+        "trap 'exit 0' TERM INT; while true; do agentloop purge-traces; sleep 86400 & wait $$!; done",
+      ]
+    environment:
+      AGENTLOOP_STORE_BACKEND: postgres
+      PGHOST: db
+      PGPORT: "5432"
+      PGDATABASE: ${POSTGRES_DB:-agentloop}
+      PGUSER: ${POSTGRES_USER:-agentloop}
+      AGENTLOOP_POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      AGENTLOOP_RETENTION_DAYS: ${AGENTLOOP_RETENTION_DAYS:-}
+    depends_on:
+      api:
+        condition: service_healthy
+    secrets:
+      - postgres_password
+
   caddy:
     image: ${CADDY_IMAGE:-caddy:2}
     restart: unless-stopped

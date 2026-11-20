@@ -4,6 +4,10 @@ These APIs are included in 0.1.0. Retention acts on completed native
 traces, before configured finalization destinations. It reduces persisted trace
 volume; it does not reduce the live tracer's memory use or provide a warehouse.
 
+This page covers what is captured. To delete stored traces or enforce a
+retention period on a server, see
+[deleting traces and retention](PRODUCTION.md#deleting-traces-and-retention).
+
 ```python
 from agentloop import RetentionContext, RetentionPolicy, RetentionSession
 

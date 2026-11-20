@@ -41,6 +41,8 @@ The `deploy/` directory contains the stack:
 - `deploy/Caddyfile` serves the API on one hostname and the dashboard on
   another, with a login in front of the dashboard. Inside, the dashboard also
   asks for a project API key and shows only that project;
+- a `retention` service deletes traces older than `AGENTLOOP_RETENTION_DAYS`
+  once a day, when that is set;
 - `deploy/.env.example` lists every setting.
 
 Only ports 80 and 443 are published. The API, dashboard and database are
@@ -124,6 +126,23 @@ agentloop remote-revoke-api-key --project-id my-team --prefix al_AbCdEfG \
 
 The API rejects the key immediately, and dashboard sessions signed in with it
 end within a minute.
+
+### Delete traces and set a retention period
+
+Set `AGENTLOOP_RETENTION_DAYS` in `deploy/.env` to delete traces once they are
+older than that many days. The stack's `retention` service applies it once a day;
+leave it empty to keep traces until they are deleted by hand. After changing it,
+run `docker compose -f deploy/docker-compose.yml up --detach` again.
+
+To delete one trace, use the dashboard's **Delete this trace** control on the
+Traces page, or with the project's key in `AGENTLOOP_API_KEY`:
+
+```bash
+agentloop remote-delete-trace RUN_ID --api-url https://agentloop-api.example.com
+```
+
+Deleting a trace also removes its findings, usage records and any interventions
+that compare it. It cannot be undone except by restoring a backup.
 
 ### Upgrade and back up
 
@@ -219,8 +238,8 @@ behind an authenticating ingress.
   project sign-in enabled so teams only see their own traces.
 - Keep Postgres off the public internet and back it up.
 - Traces can contain prompts, tool inputs and outputs. Decide what you capture
-  and how long you keep it before sending production data; see
-  [trace retention](TRACE_RETENTION.md).
+  ([trace retention](TRACE_RETENTION.md)) and how long the server keeps it
+  (`AGENTLOOP_RETENTION_DAYS`) before sending production data.
 
 The [production guide](PRODUCTION.md) covers every setting, health checks and
 password rotation in detail.
