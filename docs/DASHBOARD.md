@@ -26,7 +26,8 @@ Open the URL printed by Streamlit and select project `demo` in the sidebar.
 
 - `Overview`: run count, runtime, cost, token volume, model and tool calls,
   retries, recent runs, and runtime charts.
-- `Traces`: stored trace metadata, event timelines, and trace JSON downloads.
+- `Traces`: stored trace metadata, event timelines, trace JSON downloads, and
+  deleting a trace after confirmation.
 - `Optimization Queue`: recurring findings ranked across stored traces.
 - `Optimization`: bottlenecks, parallelizable groups, optimization findings,
   and plan downloads.

@@ -10,6 +10,7 @@ import os
 import secrets
 import sqlite3
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -122,6 +123,12 @@ class TraceStore(Protocol):
 
     def get_trace(self, run_id: str, project_id: str | None = None) -> AgentTrace | None: ...
 
+    def delete_trace(self, run_id: str, project_id: str) -> dict[str, int] | None: ...
+
+    def purge_traces(
+        self, older_than_days: float, project_id: str | None = None
+    ) -> dict[str, int]: ...
+
     def save_diagnosis(self, diagnosis: dict[str, Any], project_id: str = "default") -> None: ...
 
     def list_findings(
@@ -194,6 +201,60 @@ def _encode_hash_bytes(value: bytes) -> str:
 def _decode_hash_bytes(value: str) -> bytes:
     padded = value + "=" * (-len(value) % 4)
     return base64.b64decode(padded.encode("ascii"), altchars=b"-_", validate=True)
+
+
+_DELETE_CHUNK = 500
+
+
+def _retention_cutoff(older_than_days: Any) -> datetime:
+    if (
+        isinstance(older_than_days, bool)
+        or not isinstance(older_than_days, (int, float))
+        or not math.isfinite(older_than_days)
+        or older_than_days <= 0
+    ):
+        raise ValueError("Retention must be a positive number of days")
+    return datetime.now(timezone.utc) - timedelta(days=float(older_than_days))
+
+
+def _delete_runs(conn, mark: str, project_id: str, run_ids: list[str]) -> dict[str, int]:
+    """Delete traces and everything derived from them, children first.
+
+    Interventions that compare a deleted trace go too, since their evidence is
+    gone. Counts are per table.
+    """
+    counts = {"traces": 0, "findings": 0, "usage_events": 0, "interventions": 0}
+    for start in range(0, len(run_ids), _DELETE_CHUNK):
+        chunk = run_ids[start : start + _DELETE_CHUNK]
+        marks = ", ".join([mark] * len(chunk))
+        statements = (
+            (
+                "interventions",
+                f"DELETE FROM interventions WHERE project_id = {mark} AND "  # nosec B608
+                f"(baseline_run_id IN ({marks}) OR candidate_run_id IN ({marks}))",
+                (project_id, *chunk, *chunk),
+            ),
+            (
+                "findings",
+                f"DELETE FROM trace_findings WHERE project_id = {mark} AND run_id IN ({marks})",  # nosec B608
+                (project_id, *chunk),
+            ),
+            (
+                "usage_events",
+                f"DELETE FROM usage_events WHERE project_id = {mark} AND run_id IN ({marks})",  # nosec B608
+                (project_id, *chunk),
+            ),
+            (
+                "traces",
+                f"DELETE FROM traces WHERE project_id = {mark} AND run_id IN ({marks})",  # nosec B608
+                (project_id, *chunk),
+            ),
+        )
+        for name, sql, params in statements:
+            # The statements above interpolate only "?"/"%s" placeholders, never values.
+            cursor = conn.execute(sql, params)
+            counts[name] += int(cursor.rowcount or 0)
+    return counts
 
 
 def _timestamp_text(value: Any) -> str | None:
@@ -526,6 +587,36 @@ class SQLiteTraceStore(InterventionStoreMixin):
                 (project_id, prefix),
             )
             return int(cursor.rowcount or 0)
+
+    def delete_trace(self, run_id: str, project_id: str) -> dict[str, int] | None:
+        """Delete one trace of a project and its findings, usage and interventions."""
+        self.init()
+        with self._connect() as conn:
+            exists = conn.execute(
+                "SELECT 1 FROM traces WHERE run_id = ? AND project_id = ?", (run_id, project_id)
+            ).fetchone()
+            if exists is None:
+                return None
+            return _delete_runs(conn, "?", project_id, [run_id])
+
+    def purge_traces(self, older_than_days: float, project_id: str | None = None) -> dict[str, int]:
+        """Delete traces stored more than ``older_than_days`` ago, optionally in one project."""
+        cutoff = _retention_cutoff(older_than_days).strftime("%Y-%m-%d %H:%M:%S")
+        self.init()
+        totals = {"traces": 0, "findings": 0, "usage_events": 0, "interventions": 0}
+        with self._connect() as conn:
+            query = "SELECT project_id, run_id FROM traces WHERE created_at < ?"
+            params: tuple[Any, ...] = (cutoff,)
+            if project_id:
+                query += " AND project_id = ?"
+                params += (project_id,)
+            by_project: dict[str, list[str]] = {}
+            for row in conn.execute(query, params).fetchall():
+                by_project.setdefault(row["project_id"], []).append(row["run_id"])
+            for project, run_ids in by_project.items():
+                for name, count in _delete_runs(conn, "?", project, run_ids).items():
+                    totals[name] += count
+        return totals
 
     def _upsert_trace(
         self, conn: sqlite3.Connection, trace: AgentTrace, project_id: str
@@ -1020,6 +1111,36 @@ class PostgresTraceStore(InterventionStoreMixin):
                 (project_id, prefix),
             )
             return int(cursor.rowcount or 0)
+
+    def delete_trace(self, run_id: str, project_id: str) -> dict[str, int] | None:
+        """Delete one trace of a project and its findings, usage and interventions."""
+        self.init()
+        with self._connect() as conn:
+            exists = conn.execute(
+                "SELECT 1 FROM traces WHERE run_id = %s AND project_id = %s", (run_id, project_id)
+            ).fetchone()
+            if exists is None:
+                return None
+            return _delete_runs(conn, "%s", project_id, [run_id])
+
+    def purge_traces(self, older_than_days: float, project_id: str | None = None) -> dict[str, int]:
+        """Delete traces stored more than ``older_than_days`` ago, optionally in one project."""
+        cutoff = _retention_cutoff(older_than_days)
+        self.init()
+        totals = {"traces": 0, "findings": 0, "usage_events": 0, "interventions": 0}
+        with self._connect() as conn:
+            query = "SELECT project_id, run_id FROM traces WHERE created_at < %s"
+            params: tuple[Any, ...] = (cutoff,)
+            if project_id:
+                query += " AND project_id = %s"
+                params += (project_id,)
+            by_project: dict[str, list[str]] = {}
+            for row in conn.execute(query, params).fetchall():
+                by_project.setdefault(row[0], []).append(row[1])
+            for project, run_ids in by_project.items():
+                for name, count in _delete_runs(conn, "%s", project, run_ids).items():
+                    totals[name] += count
+        return totals
 
     def _upsert_trace(self, conn, trace: AgentTrace, project_id: str) -> dict[str, Any]:
         report = trace.report()

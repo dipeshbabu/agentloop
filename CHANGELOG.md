@@ -9,6 +9,14 @@ trace, study, receipt, API and database schema versions.
 
 ### Added
 
+- Stored traces can be deleted, and a retention period enforced. Deleting a
+  trace also removes its findings, usage records and interventions that compare
+  it. Use `DELETE /v1/traces/{run_id}` with a project key (own project only),
+  `AgentLoopClient.delete_trace`, `agentloop delete-trace` /
+  `remote-delete-trace`, or the dashboard's confirmed Delete control.
+  `agentloop purge-traces --older-than-days N` (or `AGENTLOOP_RETENTION_DAYS`)
+  removes older traces, and the cloud stack's new `retention` service runs it
+  daily.
 - Project API keys can be listed and revoked. Admin routes
   `GET /v1/api-keys?project_id=` and `DELETE /v1/api-keys/{prefix}?project_id=`,
   `AgentLoopClient.list_api_keys` / `revoke_api_key`, and the CLI commands

@@ -283,6 +283,19 @@ def get_report(
     return _load_trace_or_404(db, run_id, project_id).report()
 
 
+@versioned.delete("/traces/{run_id}")
+def delete_trace(
+    run_id: str,
+    project_id: str = Depends(resolve_project),
+    db: TraceStore = Depends(store),
+) -> dict[str, Any]:
+    """Delete a trace of the caller's project with its findings, usage and interventions."""
+    deleted = db.delete_trace(run_id, project_id)
+    if deleted is None:
+        raise HTTPException(status_code=404, detail="trace not found")
+    return {"run_id": run_id, "project_id": project_id, "deleted": deleted}
+
+
 @versioned.get("/traces/{run_id}/optimization")
 @legacy.get("/traces/{run_id}/optimize")
 def optimize_trace(

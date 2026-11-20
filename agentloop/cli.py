@@ -1014,6 +1014,59 @@ def revoke_api_key(
     )
 
 
+@app.command("delete-trace")
+def delete_trace(
+    run_id: str,
+    project_id: str = "default",
+) -> None:
+    """Delete a stored trace with its findings, usage and interventions."""
+    deleted = get_store().delete_trace(run_id, project_id)
+    if deleted is None:
+        console.print(f"No trace {run_id} in project {project_id}.", markup=False)
+        raise typer.Exit(1)
+    console.print_json(data={"run_id": run_id, "project_id": project_id, "deleted": deleted})
+
+
+@app.command("purge-traces")
+def purge_traces(
+    older_than_days: float | None = typer.Option(
+        None,
+        min=0.0001,
+        help="Delete traces stored more than this many days ago. "
+        "Defaults to AGENTLOOP_RETENTION_DAYS.",
+    ),
+    project_id: str | None = typer.Option(None, help="Only purge this project."),
+) -> None:
+    """Apply a retention period: delete traces stored longer ago than allowed."""
+    if older_than_days is None:
+        configured = os.getenv("AGENTLOOP_RETENTION_DAYS", "").strip()
+        if not configured:
+            console.print(
+                "Retention is not configured; set --older-than-days or AGENTLOOP_RETENTION_DAYS.",
+                markup=False,
+            )
+            return
+        try:
+            older_than_days = float(configured)
+        except ValueError:
+            raise typer.BadParameter(
+                "AGENTLOOP_RETENTION_DAYS must be a number of days",
+                param_hint="AGENTLOOP_RETENTION_DAYS",
+            ) from None
+    try:
+        deleted = get_store().purge_traces(older_than_days, project_id=project_id)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    scope = f"project {project_id}" if project_id else "all projects"
+    console.print(
+        f"Deleted {deleted['traces']} trace(s) older than {older_than_days:g} days in {scope} "
+        f"({deleted['findings']} findings, {deleted['usage_events']} usage events, "
+        f"{deleted['interventions']} interventions).",
+        markup=False,
+        soft_wrap=True,
+    )
+
+
 @app.command("store-trace")
 def store_trace(
     path: Path = Path("runs/research_agent_baseline.json"),
@@ -1230,6 +1283,19 @@ def upload(
     response = client.upload_trace(trace)
     console.print(f"Uploaded trace {response['run_id']} to {api_url}")
     console.print(f"Project: {response.get('project_id', 'default')}")
+
+
+@app.command("remote-delete-trace")
+def remote_delete_trace(
+    run_id: str,
+    api_url: str = typer.Option("http://127.0.0.1:8000", help="AgentLoop API base URL."),
+    api_key: str | None = typer.Option(
+        None, help="Project API key. Defaults to AGENTLOOP_API_KEY."
+    ),
+) -> None:
+    """Delete a trace of the key's project on a remote server."""
+    client = _remote_client(api_url, api_key)
+    console.print_json(data=client.delete_trace(run_id))
 
 
 @app.command("remote-optimize")

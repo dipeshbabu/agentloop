@@ -623,3 +623,31 @@ def test_admin_lists_and_revokes_project_api_keys(monkeypatch, tmp_path) -> None
     assert revoked.status_code == 200 and revoked.json()["revoked"] == 1
     assert client.get("/v1/traces", headers=project).status_code == 401
     assert client.delete(delete, params={"project_id": "acme"}, headers=admin).status_code == 404
+
+
+def test_project_key_deletes_only_its_own_traces(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("AGENTLOOP_STORE_BACKEND", "sqlite")
+    monkeypatch.setenv("AGENTLOOP_SQLITE_PATH", str(tmp_path / "delete.db"))
+    monkeypatch.setenv("AGENTLOOP_REQUIRE_API_KEY", "true")
+    monkeypatch.setenv("AGENTLOOP_ADMIN_API_KEY", "admin-secret")
+    client = TestClient(app)
+    admin = {"X-AgentLoop-Admin-Key": "admin-secret"}
+
+    def key(project):
+        response = client.post(
+            "/v1/api-keys", json={"project_id": project, "name": "ci"}, headers=admin
+        )
+        return {"X-AgentLoop-Key": response.json()["api_key"]}
+
+    acme, other = key("acme"), key("other")
+    trace = {"name": "t", "run_id": "run-delete", "metadata": {}, "events": []}
+    assert client.post("/v1/traces", json=trace, headers=acme).status_code == 200
+
+    assert client.delete("/v1/traces/run-delete").status_code == 401
+    assert client.delete("/v1/traces/run-delete", headers=other).status_code == 404
+    assert client.get("/v1/traces/run-delete/report", headers=acme).status_code == 200
+    deleted = client.delete("/v1/traces/run-delete", headers=acme)
+    assert deleted.status_code == 200
+    assert deleted.json()["deleted"]["traces"] == 1
+    assert client.get("/v1/traces/run-delete/report", headers=acme).status_code == 404
+    assert client.delete("/v1/traces/run-delete", headers=acme).status_code == 404

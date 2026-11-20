@@ -639,6 +639,7 @@ jobs:
             echo "POSTGRES_PASSWORD=$db_password"
             echo "POSTGRES_IMAGE=$POSTGRES_IMAGE"
             echo "CADDY_IMAGE=$CADDY_IMAGE"
+            echo "AGENTLOOP_RETENTION_DAYS=365"
           } > deploy/.env
           echo "DASHBOARD_PASSWORD=$dashboard_password" >> "$GITHUB_ENV"
           echo "AGENTLOOP_ADMIN_API_KEY=$admin_key" >> "$GITHUB_ENV"
@@ -692,6 +693,33 @@ jobs:
           done
           curl --fail --silent --output /dev/null --cacert caddy-root.crt \
             --user "operator:$DASHBOARD_PASSWORD" https://dashboard.localhost/
+
+      - name: Verify trace deletion and the retention service
+        shell: bash
+        run: |
+          api() { curl --silent --show-error --cacert caddy-root.crt "$@"; }
+          key="$(api --fail -X POST https://api.localhost/v1/api-keys \
+            -H "X-AgentLoop-Admin-Key: $AGENTLOOP_ADMIN_API_KEY" -H 'Content-Type: application/json' \
+            -d '{"project_id": "retention-check", "name": "ci"}' \
+            | python3 -c 'import json, sys; print(json.load(sys.stdin)["api_key"])')"
+          echo "::add-mask::$key"
+          api --fail -X POST https://api.localhost/v1/traces -H "X-AgentLoop-Key: $key" \
+            -H 'Content-Type: application/json' \
+            -d '{"name": "delete-me", "run_id": "ci-delete-me", "metadata": {}, "events": []}' > /dev/null
+          status="$(api --output /dev/null --write-out '%{http_code}' -X DELETE \
+            https://api.localhost/v1/traces/ci-delete-me -H "X-AgentLoop-Key: $key")"
+          test "$status" = 200
+          status="$(api --output /dev/null --write-out '%{http_code}' \
+            https://api.localhost/v1/traces/ci-delete-me/report -H "X-AgentLoop-Key: $key")"
+          test "$status" = 404
+          for attempt in $(seq 1 20); do
+            if docker compose logs retention | grep -q "older than 365 days in all projects"; then
+              break
+            fi
+            sleep 3
+          done
+          docker compose logs retention | grep "older than 365 days in all projects"
+          docker compose exec -T retention agentloop purge-traces --older-than-days 3650
 
       - name: Verify only the proxy is published
         shell: bash

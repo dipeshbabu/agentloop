@@ -112,6 +112,11 @@ class AgentLoopClient:
             route += "?" + urllib.parse.urlencode({"project_id": project_id})
         return self._request("GET", route)
 
+    def delete_trace(self, run_id: str) -> dict[str, Any]:
+        """Delete a trace of this key's project, with its findings, usage and interventions."""
+        encoded_run_id = urllib.parse.quote(run_id, safe="")
+        return self._request("DELETE", f"/traces/{encoded_run_id}")
+
     def get_report(self, run_id: str) -> dict[str, Any]:
         encoded_run_id = urllib.parse.quote(run_id, safe="")
         return self._request("GET", f"/traces/{encoded_run_id}/report")

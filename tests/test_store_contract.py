@@ -9,9 +9,11 @@ from __future__ import annotations
 import copy
 import os
 import threading
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
+from agentloop.findings import build_diagnosis
 from agentloop.store import (
     FindingNotFoundError,
     FindingTransitionError,
@@ -906,3 +908,92 @@ def test_loop_feedback_preserves_schema_and_project_isolation(store):
         record["reason_code"] == "identical_step_limit" and record["outcome"] == "proposed"
         for record in expected["decisions"].values()
     )
+
+
+def _mark(store):
+    return "?" if isinstance(store, SQLiteTraceStore) else "%s"
+
+
+def _add_intervention(store, project_id, intervention_id, baseline, candidate):
+    mark = _mark(store)
+    with store._connect() as conn:
+        conn.execute(
+            "INSERT INTO interventions(project_id, intervention_id, baseline_run_id, "
+            f"candidate_run_id, payload_json) VALUES ({mark}, {mark}, {mark}, {mark}, {mark})",
+            (project_id, intervention_id, baseline, candidate, "{}"),
+        )
+
+
+def _age(store, run_id, days):
+    mark = _mark(store)
+    stamp = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
+    with store._connect() as conn:
+        conn.execute(
+            f"UPDATE traces SET created_at = {mark} WHERE run_id = {mark}", (stamp, run_id)
+        )
+
+
+def _count(store, table, run_id):
+    mark = _mark(store)
+    column = "baseline_run_id" if table == "interventions" else "run_id"
+    with store._connect() as conn:
+        return conn.execute(
+            f"SELECT COUNT(*) FROM {table} WHERE {column} = {mark}", (run_id,)
+        ).fetchone()[0]
+
+
+def _trace_with_findings(name):
+    with trace_agent(name) as trace:
+        repeated = "stable context " * 100
+        for _ in range(2):
+            with trace_model_call("summarize", input_text=repeated, output_tokens=10):
+                pass
+    return trace
+
+
+def test_delete_trace_removes_derived_records_only_in_its_project(store):
+    baseline = _trace_with_findings("baseline")
+    candidate = _sample_trace("candidate")
+    other = _sample_trace("other-project")
+    store.save_trace(baseline, project_id="proj_a")
+    store.save_trace(candidate, project_id="proj_a")
+    store.save_trace(other, project_id="proj_b")
+    store.save_diagnosis(build_diagnosis(baseline), project_id="proj_a")
+    _add_intervention(store, "proj_a", "int_1", baseline.run_id, candidate.run_id)
+    assert _count(store, "trace_findings", baseline.run_id) > 0
+
+    # The wrong project cannot delete it.
+    assert store.delete_trace(baseline.run_id, "proj_b") is None
+    assert store.get_trace(baseline.run_id, project_id="proj_a") is not None
+
+    deleted = store.delete_trace(baseline.run_id, "proj_a")
+    assert deleted["traces"] == 1 and deleted["interventions"] == 1
+    assert deleted["findings"] >= 1 and deleted["usage_events"] == 1
+    assert store.get_trace(baseline.run_id, project_id="proj_a") is None
+    for table in ("trace_findings", "usage_events", "interventions"):
+        assert _count(store, table, baseline.run_id) == 0
+    assert store.get_trace(candidate.run_id, project_id="proj_a") is not None
+    assert store.get_trace(other.run_id, project_id="proj_b") is not None
+    assert store.delete_trace(baseline.run_id, "proj_a") is None
+
+
+def test_purge_deletes_only_traces_older_than_the_retention_period(store):
+    old_a, new_a, old_b = _sample_trace("old-a"), _sample_trace("new-a"), _sample_trace("old-b")
+    store.save_trace(old_a, project_id="proj_a")
+    store.save_trace(new_a, project_id="proj_a")
+    store.save_trace(old_b, project_id="proj_b")
+    _age(store, old_a.run_id, 40)
+    _age(store, old_b.run_id, 40)
+
+    only_b = store.purge_traces(30, project_id="proj_b")
+    assert only_b["traces"] == 1
+    assert store.get_trace(old_a.run_id, project_id="proj_a") is not None
+
+    everywhere = store.purge_traces(30)
+    assert everywhere["traces"] == 1 and everywhere["usage_events"] == 1
+    assert store.get_trace(old_a.run_id, project_id="proj_a") is None
+    assert store.get_trace(new_a.run_id, project_id="proj_a") is not None
+    assert store.purge_traces(30)["traces"] == 0
+    for invalid in (0, -1, float("nan"), True, "30"):
+        with pytest.raises(ValueError, match="positive number of days"):
+            store.purge_traces(invalid)
