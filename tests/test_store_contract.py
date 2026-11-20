@@ -997,3 +997,50 @@ def test_purge_deletes_only_traces_older_than_the_retention_period(store):
     for invalid in (0, -1, float("nan"), True, "30"):
         with pytest.raises(ValueError, match="positive number of days"):
             store.purge_traces(invalid)
+
+
+def test_traces_list_their_labels_and_filter_by_one(store):
+    from agentloop.store import parse_label_filter
+
+    def labelled(name, **labels):
+        trace = _sample_trace(name)
+        if labels:
+            trace.metadata["labels"] = labels
+        store.save_trace(trace, project_id="proj_a")
+        return trace
+
+    base = labelled("base", condition="baseline", commit="abc", **{"ci.run": "7"})
+    cand = labelled("cand", condition="candidate", commit="abc")
+    other = labelled("other", condition="candidate", commit="def")
+    plain = labelled("plain")
+    store.save_trace(_sample_trace("elsewhere"), project_id="proj_b")
+
+    page = store.list_traces_page(project_id="proj_a", limit=10)
+    by_run = {item["run_id"]: item["labels"] for item in page["items"]}
+    assert by_run[base.run_id] == {"condition": "baseline", "commit": "abc", "ci.run": "7"}
+    assert by_run[plain.run_id] == {}
+
+    commit_abc = store.list_traces_page(project_id="proj_a", limit=10, label=("commit", "abc"))
+    assert {item["run_id"] for item in commit_abc["items"]} == {base.run_id, cand.run_id}
+    dotted = store.list_traces_page(project_id="proj_a", limit=10, label=("ci.run", "7"))
+    assert [item["run_id"] for item in dotted["items"]] == [base.run_id]
+    assert store.list_traces_page(project_id="proj_b", label=("commit", "abc"))["items"] == []
+
+    # Pagination keeps the filter: two candidates, one per page.
+    first = store.list_traces_page(project_id="proj_a", limit=1, label=("condition", "candidate"))
+    assert first["next_cursor"] is not None
+    second = store.list_traces_page(
+        project_id="proj_a", limit=1, cursor=first["next_cursor"], label=("condition", "candidate")
+    )
+    assert {first["items"][0]["run_id"], second["items"][0]["run_id"]} == {
+        cand.run_id,
+        other.run_id,
+    }
+    assert second["next_cursor"] is None
+
+    assert parse_label_filter("commit=a=b") == ("commit", "a=b")
+    for bad in ("no-equals", "=x", "bad key=1", "k=" + "v" * 501):
+        with pytest.raises(ValueError, match="KEY=VALUE"):
+            parse_label_filter(bad)
+    with pytest.raises(ValueError, match="KEY=VALUE"):
+        store.list_traces_page(label=("bad key", "x"))

@@ -27,6 +27,7 @@ from agentloop.store import (
     FindingNotFoundError,
     FindingTransitionError,
     get_store,
+    parse_label_filter,
 )
 from agentloop.tracer import AgentTrace
 from agentloop.value import build_value_report
@@ -234,16 +235,38 @@ elif page == "Traces":
     if notice := st.session_state.pop("trace_deleted_notice", None):
         st.success(notice)
 
-    cursor_key = f"traces_cursor_stack::{project_id}"
+    label_text = st.text_input(
+        "Filter by label",
+        placeholder="KEY=VALUE, for example commit=abc123 or condition=candidate",
+    ).strip()
+    label_filter = None
+    if label_text:
+        try:
+            label_filter = parse_label_filter(label_text)
+        except ValueError as exc:
+            st.error(f"{exc}. Showing all traces.")
+
+    cursor_key = f"traces_cursor_stack::{project_id}::{label_filter}"
     if cursor_key not in st.session_state:
         st.session_state[cursor_key] = [None]  # cursor to fetch the *current* page
 
     page_index = len(st.session_state[cursor_key]) - 1
     page_size = st.number_input("Page size", min_value=5, max_value=200, value=25, step=5)
     page = store.list_traces_page(
-        project_id=project_id, limit=int(page_size), cursor=st.session_state[cursor_key][-1]
+        project_id=project_id,
+        limit=int(page_size),
+        cursor=st.session_state[cursor_key][-1],
+        label=label_filter,
     )
-    traces = page["items"]
+    traces = [
+        {
+            **item,
+            "labels": ", ".join(
+                f"{key}={value}" for key, value in sorted((item.get("labels") or {}).items())
+            ),
+        }
+        for item in page["items"]
+    ]
 
     nav_cols = st.columns([1, 1, 6])
     if nav_cols[0].button("◀ Previous", disabled=page_index == 0):
@@ -255,7 +278,11 @@ elif page == "Traces":
     st.caption(f"Page {page_index + 1}")
 
     if not traces:
-        st.info("No traces stored for this project yet.")
+        st.info(
+            f"No traces labelled {label_filter[0]}={label_filter[1]} in this project."
+            if label_filter
+            else "No traces stored for this project yet."
+        )
     else:
         df = pd.DataFrame(traces)
         st.dataframe(df, width="stretch")

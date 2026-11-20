@@ -7,6 +7,7 @@ import hmac
 import json
 import math
 import os
+import re
 import secrets
 import sqlite3
 from dataclasses import dataclass
@@ -119,6 +120,7 @@ class TraceStore(Protocol):
         project_id: str | None = None,
         limit: int = DEFAULT_PAGE_SIZE,
         cursor: str | None = None,
+        label: tuple[str, str] | None = None,
     ) -> dict[str, Any]: ...
 
     def get_trace(self, run_id: str, project_id: str | None = None) -> AgentTrace | None: ...
@@ -255,6 +257,48 @@ def _delete_runs(conn, mark: str, project_id: str, run_ids: list[str]) -> dict[s
             cursor = conn.execute(sql, params)
             counts[name] += int(cursor.rowcount or 0)
     return counts
+
+
+LABEL_KEY_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
+MAX_LABEL_VALUE_LENGTH = 500
+
+
+def validate_label_filter(label: Any) -> tuple[str, str]:
+    """Check a (key, value) label filter; keys use letters, digits, '.', '_' and '-'."""
+    if (
+        not isinstance(label, tuple)
+        or len(label) != 2
+        or not all(isinstance(part, str) for part in label)
+        or not LABEL_KEY_PATTERN.match(label[0])
+        or len(label[1]) > MAX_LABEL_VALUE_LENGTH
+    ):
+        raise ValueError(
+            "Label filters are KEY=VALUE with a key of letters, digits, '.', '_' or '-'"
+        )
+    return label
+
+
+def parse_label_filter(text: str) -> tuple[str, str]:
+    """Parse ``KEY=VALUE`` into a validated label filter."""
+    key, separator, value = text.partition("=") if isinstance(text, str) else ("", "", "")
+    if not separator:
+        raise ValueError(
+            "Label filters are KEY=VALUE with a key of letters, digits, '.', '_' or '-'"
+        )
+    return validate_label_filter((key, value))
+
+
+def _with_labels(item: dict[str, Any]) -> dict[str, Any]:
+    labels = item.get("labels")
+    if isinstance(labels, str):
+        try:
+            labels = json.loads(labels)
+        except ValueError:
+            labels = None
+    item["labels"] = (
+        {str(key): value for key, value in labels.items()} if isinstance(labels, dict) else {}
+    )
+    return item
 
 
 def _timestamp_text(value: Any) -> str | None:
@@ -807,26 +851,40 @@ class SQLiteTraceStore(InterventionStoreMixin):
         project_id: str | None = None,
         limit: int = DEFAULT_PAGE_SIZE,
         cursor: str | None = None,
+        label: tuple[str, str] | None = None,
     ) -> dict[str, Any]:
         after_created_at, after_run_id = (
             decode_cursor(cursor, expected_parts=2) if cursor else (None, None)
         )
         limit = _validate_page_limit(limit)
+        label_key, label_value = validate_label_filter(label) if label else (None, None)
         self.init()
         with self._connect() as conn:
             rows = conn.execute(
                 """
                 SELECT run_id, project_id, name, started_at, total_runtime_ms, estimated_cost_usd,
-                    cost_status, priced_model_call_count, unavailable_model_call_count, created_at
+                    cost_status, priced_model_call_count, unavailable_model_call_count, created_at,
+                    json_extract(payload_json, '$.metadata.labels') AS labels
                 FROM traces
                 WHERE project_id = COALESCE(?, project_id)
                   AND (? = 0 OR (created_at, run_id) < (?, ?))
+                  AND (? IS NULL OR
+                       json_extract(payload_json, '$.metadata.labels."' || ? || '"') = ?)
                 ORDER BY created_at DESC, run_id DESC
                 LIMIT ?
                 """,
-                (project_id, 1 if cursor else 0, after_created_at, after_run_id, limit + 1),
+                (
+                    project_id,
+                    1 if cursor else 0,
+                    after_created_at,
+                    after_run_id,
+                    label_key,
+                    label_key,
+                    label_value,
+                    limit + 1,
+                ),
             ).fetchall()
-        items = [dict(row) for row in rows[:limit]]
+        items = [_with_labels(dict(row)) for row in rows[:limit]]
         next_cursor = None
         if len(rows) > limit:
             last = items[-1]
@@ -1311,6 +1369,7 @@ class PostgresTraceStore(InterventionStoreMixin):
         project_id: str | None = None,
         limit: int = DEFAULT_PAGE_SIZE,
         cursor: str | None = None,
+        label: tuple[str, str] | None = None,
     ) -> dict[str, Any]:
         after_created_at, after_run_id = (
             decode_cursor(cursor, expected_parts=2) if cursor else (None, None)
@@ -1327,22 +1386,36 @@ class PostgresTraceStore(InterventionStoreMixin):
             "priced_model_call_count",
             "unavailable_model_call_count",
             "created_at",
+            "labels",
         ]
+        label_key, label_value = validate_label_filter(label) if label else (None, None)
         self.init()
         with self._connect() as conn:
             rows = conn.execute(
                 """
                 SELECT run_id, project_id, name, started_at, total_runtime_ms, estimated_cost_usd,
-                    cost_status, priced_model_call_count, unavailable_model_call_count, created_at::text
+                    cost_status, priced_model_call_count, unavailable_model_call_count,
+                    created_at::text, payload_json -> 'metadata' -> 'labels'
                 FROM traces
                 WHERE project_id = COALESCE(%s, project_id)
                   AND (%s = 0 OR (created_at, run_id) < (%s, %s))
+                  AND (%s::text IS NULL OR
+                       payload_json -> 'metadata' -> 'labels' ->> %s::text = %s::text)
                 ORDER BY created_at DESC, run_id DESC
                 LIMIT %s
                 """,
-                (project_id, 1 if cursor else 0, after_created_at, after_run_id, limit + 1),
+                (
+                    project_id,
+                    1 if cursor else 0,
+                    after_created_at,
+                    after_run_id,
+                    label_key,
+                    label_key,
+                    label_value,
+                    limit + 1,
+                ),
             ).fetchall()
-        items = [dict(zip(keys, row, strict=True)) for row in rows[:limit]]
+        items = [_with_labels(dict(zip(keys, row, strict=True))) for row in rows[:limit]]
         next_cursor = None
         if len(rows) > limit:
             last = items[-1]

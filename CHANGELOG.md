@@ -9,6 +9,11 @@ trace, study, receipt, API and database schema versions.
 
 ### Added
 
+- Trace labels are visible and searchable. Paginated trace listings include
+  each trace's `metadata.labels`, and `GET /v1/traces?label=KEY=VALUE`,
+  `AgentLoopClient.list_traces(label=...)`, `agentloop list-stored-traces --label`
+  and a dashboard Traces filter return only traces with that label, in SQLite
+  and Postgres.
 - CI can send traces to an AgentLoop server. `agentloop upload` accepts
   several `--path` values and directories, validates every file before sending,
   and adds `--label KEY=VALUE` pairs under `metadata.labels`. The reusable

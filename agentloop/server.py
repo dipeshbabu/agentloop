@@ -29,6 +29,7 @@ from agentloop.store import (
     TraceProjectConflictError,
     TraceStore,
     get_store,
+    parse_label_filter,
 )
 from agentloop.tracer import AgentTrace
 from agentloop.value import build_value_report
@@ -236,6 +237,7 @@ def list_traces(
     project_id_filter: str | None = Query(default=None, alias="project_id"),
     page_size: int | None = Query(default=None, ge=1, le=MAX_PAGE_SIZE),
     cursor: str | None = Query(default=None),
+    label: str | None = Query(default=None, description="Only traces with this KEY=VALUE label."),
     project_id: str = Depends(resolve_project),
     db: TraceStore = Depends(store),
 ) -> dict[str, Any]:
@@ -247,7 +249,11 @@ def list_traces(
     fetch the next page; `next_cursor: null` means there are no more rows.
     """
     selected_project = _selected_project(project_id_filter, project_id)
-    if page_size is None and cursor is None:
+    try:
+        label_filter = parse_label_filter(label) if label is not None else None
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
+    if page_size is None and cursor is None and label_filter is None:
         return {
             "project_id": selected_project,
             "traces": db.list_traces(project_id=selected_project),
@@ -255,7 +261,10 @@ def list_traces(
         }
     try:
         page = db.list_traces_page(
-            project_id=selected_project, limit=page_size or DEFAULT_PAGE_SIZE, cursor=cursor
+            project_id=selected_project,
+            limit=page_size or DEFAULT_PAGE_SIZE,
+            cursor=cursor,
+            label=label_filter,
         )
     except InvalidCursorError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from None

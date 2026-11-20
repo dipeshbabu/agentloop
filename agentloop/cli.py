@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import os
-import re
 import sys
 from pathlib import Path
 
@@ -57,9 +56,12 @@ from agentloop.ranking import RankingSort, sort_ranked
 from agentloop.replay import ReplayGates, build_replay_report, replay_report_to_markdown
 from agentloop.store import (
     DEFAULT_PAGE_SIZE,
+    LABEL_KEY_PATTERN,
+    MAX_LABEL_VALUE_LENGTH,
     FindingNotFoundError,
     FindingTransitionError,
     get_store,
+    parse_label_filter,
 )
 from agentloop.studies import StudyValidationError, study_to_markdown, summarize_study
 from agentloop.timing import format_duration_ms
@@ -1086,14 +1088,24 @@ def list_stored_traces(
     cursor: str | None = typer.Option(
         None, help="Continuation cursor from a previous --limit call's printed next-cursor."
     ),
+    label: str | None = typer.Option(
+        None, help="Only traces with this KEY=VALUE label, such as commit=abc123."
+    ),
 ) -> None:
     db = get_store()
-    if limit is None and cursor is None:
+    try:
+        label_filter = parse_label_filter(label) if label is not None else None
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc), param_hint="--label") from exc
+    if limit is None and cursor is None and label_filter is None:
         traces = db.list_traces(project_id=project_id)
         next_cursor = None
     else:
         page = db.list_traces_page(
-            project_id=project_id, limit=limit or DEFAULT_PAGE_SIZE, cursor=cursor
+            project_id=project_id,
+            limit=limit or DEFAULT_PAGE_SIZE,
+            cursor=cursor,
+            label=label_filter,
         )
         traces = page["items"]
         next_cursor = page["next_cursor"]
@@ -1103,8 +1115,11 @@ def list_stored_traces(
     table.add_column("Name")
     table.add_column("Runtime ms")
     table.add_column("Cost")
+    show_labels = any(item.get("labels") for item in traces)
+    if show_labels:
+        table.add_column("Labels")
     for item in traces:
-        table.add_row(
+        row = [
             str(item.get("project_id", "")),
             str(item.get("run_id", "")),
             str(item.get("name", "")),
@@ -1112,7 +1127,11 @@ def list_stored_traces(
             if item.get("total_runtime_ms") is None
             else f"{float(item.get('total_runtime_ms', 0)):.2f}",
             format_cost_usd(item.get("estimated_cost_usd"), item.get("cost_status", "complete")),
-        )
+        ]
+        if show_labels:
+            labels = item.get("labels") or {}
+            row.append(", ".join(f"{key}={value}" for key, value in sorted(labels.items())))
+        table.add_row(*row, end_section=False)
     console.print(table)
     if next_cursor:
         console.print(f"More results available. Next cursor: {next_cursor}")
@@ -1271,22 +1290,19 @@ def usage_summary(project_id: str | None = None) -> None:
     console.print(table)
 
 
-_LABEL_KEY = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
-_MAX_LABEL_VALUE = 500
-
-
 def _parse_labels(values: list[str] | None) -> dict[str, str]:
     labels: dict[str, str] = {}
     for value in values or []:
         key, separator, text = value.partition("=")
-        if not separator or not _LABEL_KEY.match(key):
+        if not separator or not LABEL_KEY_PATTERN.match(key):
             raise typer.BadParameter(
                 "Use KEY=VALUE with a key of letters, digits, '.', '_' or '-'",
                 param_hint="--label",
             )
-        if len(text) > _MAX_LABEL_VALUE:
+        if len(text) > MAX_LABEL_VALUE_LENGTH:
             raise typer.BadParameter(
-                f"Label values are limited to {_MAX_LABEL_VALUE} characters", param_hint="--label"
+                f"Label values are limited to {MAX_LABEL_VALUE_LENGTH} characters",
+                param_hint="--label",
             )
         labels[key] = text
     return labels
