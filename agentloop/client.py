@@ -59,6 +59,25 @@ class AgentLoopClient:
             credential_scope="admin",
         )
 
+    def list_api_keys(self, project_id: str) -> dict[str, Any]:
+        """List a project's key prefixes, names and usage times (admin key required)."""
+        return self._request(
+            "GET",
+            "/api-keys?" + urllib.parse.urlencode({"project_id": project_id}),
+            credential_scope="admin",
+        )
+
+    def revoke_api_key(self, project_id: str, prefix: str) -> dict[str, Any]:
+        """Revoke a project's key by its prefix (admin key required)."""
+        return self._request(
+            "DELETE",
+            "/api-keys/"
+            + urllib.parse.quote(prefix, safe="")
+            + "?"
+            + urllib.parse.urlencode({"project_id": project_id}),
+            credential_scope="admin",
+        )
+
     def upload_trace(self, trace: AgentTrace | str | Path | dict[str, Any]) -> dict[str, Any]:
         if isinstance(trace, AgentTrace):
             payload = trace.to_dict()

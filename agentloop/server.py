@@ -173,6 +173,33 @@ def create_api_key(
     return db.create_api_key(project_id=payload.project_id, name=payload.name)
 
 
+@versioned.get("/api-keys")
+def list_api_keys(
+    project_id: str = Query(min_length=1),
+    _: None = Depends(resolve_admin),
+    db: TraceStore = Depends(store),
+) -> dict[str, Any]:
+    """List a project's key prefixes and usage times; never the keys themselves."""
+    return {"project_id": project_id, "api_keys": db.list_api_keys(project_id)}
+
+
+@versioned.delete("/api-keys/{prefix}")
+def revoke_api_key(
+    prefix: str,
+    project_id: str = Query(min_length=1),
+    _: None = Depends(resolve_admin),
+    db: TraceStore = Depends(store),
+) -> dict[str, Any]:
+    """Revoke a project's key by its prefix; it stops working immediately."""
+    try:
+        revoked = db.revoke_api_key(project_id, prefix)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if not revoked:
+        raise HTTPException(status_code=404, detail="no API key with that prefix in this project")
+    return {"project_id": project_id, "prefix": prefix, "revoked": revoked}
+
+
 @versioned.post("/traces")
 @legacy.post("/traces")
 def ingest_trace(

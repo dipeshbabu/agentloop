@@ -17,6 +17,8 @@ import time
 PROJECT_HIDDEN_PAGES = frozenset({"API Keys", "Patch Plan"})
 MAX_FAILURES = 5
 LOCKOUT_SECONDS = 60.0
+# A revoked key stops working in open dashboard sessions within this time.
+RECHECK_SECONDS = 60.0
 
 
 def require_project_key() -> bool:
@@ -63,9 +65,39 @@ def sign_in(store, api_key: str, state, now: float | None = None) -> str | None:
     state["signin_failures"] = 0
     state["signed_in_project"] = str(record["project_id"])
     state["signed_in_key_prefix"] = str(record.get("prefix") or "")
+    # Held only in this server-side session so the key can be re-verified.
+    state["signed_in_key"] = key
+    state["signed_in_checked_at"] = now
     return state["signed_in_project"]
 
 
+def session_valid(store, state, now: float | None = None) -> bool:
+    """Re-verify a signed-in session's key at most every ``RECHECK_SECONDS``.
+
+    A key that was revoked, or that now belongs to another project, signs the
+    session out.
+    """
+    now = time.monotonic() if now is None else now
+    project = state.get("signed_in_project")
+    key = state.get("signed_in_key")
+    if not project or not key:
+        sign_out(state)
+        return False
+    if now - float(state.get("signed_in_checked_at", float("-inf"))) < RECHECK_SECONDS:
+        return True
+    record = store.verify_api_key(key)
+    if record is None or str(record["project_id"]) != project:
+        sign_out(state)
+        return False
+    state["signed_in_checked_at"] = now
+    return True
+
+
 def sign_out(state) -> None:
-    for name in ("signed_in_project", "signed_in_key_prefix"):
+    for name in (
+        "signed_in_project",
+        "signed_in_key_prefix",
+        "signed_in_key",
+        "signed_in_checked_at",
+    ):
         state.pop(name, None)

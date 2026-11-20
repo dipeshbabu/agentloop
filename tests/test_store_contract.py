@@ -212,6 +212,27 @@ def test_api_key_roundtrip(store):
     assert store.verify_api_key("al_wrong-key-entirely") is None
 
 
+def test_api_keys_are_listed_without_secrets_and_revoked_per_project(store):
+    first = store.create_api_key(project_id="proj_a", name="ci")
+    second = store.create_api_key(project_id="proj_a", name="laptop")
+    other = store.create_api_key(project_id="proj_b", name="ci")
+    listed = store.list_api_keys("proj_a")
+    assert sorted(item["name"] for item in listed) == ["ci", "laptop"]
+    assert {item["prefix"] for item in listed} == {first["prefix"], second["prefix"]}
+    for item in listed:
+        assert set(item) == {"project_id", "prefix", "name", "created_at", "last_used_at"}
+        assert first["api_key"] not in str(item)
+    # Another project's key cannot be revoked through this project.
+    assert store.revoke_api_key("proj_a", other["prefix"]) == 0
+    assert store.verify_api_key(other["api_key"]) is not None
+    assert store.revoke_api_key("proj_a", first["prefix"]) == 1
+    assert store.verify_api_key(first["api_key"]) is None
+    assert store.verify_api_key(second["api_key"]) is not None
+    assert [item["name"] for item in store.list_api_keys("proj_a")] == ["laptop"]
+    with pytest.raises(ValueError, match="prefix"):
+        store.revoke_api_key("proj_a", "al_")
+
+
 # --- trace upsert / conflicts -------------------------------------------
 
 

@@ -35,6 +35,7 @@ try:
     from dashboard.access import (
         lockout_remaining,
         require_project_key,
+        session_valid,
         sign_in,
         sign_out,
         visible_pages,
@@ -42,7 +43,14 @@ try:
     from dashboard.trace_upload import TraceUploadError, parse_uploaded_trace
     from dashboard.value_view import assumption_inputs, percentage, render_value_report
 except ModuleNotFoundError:
-    from access import lockout_remaining, require_project_key, sign_in, sign_out, visible_pages
+    from access import (
+        lockout_remaining,
+        require_project_key,
+        session_valid,
+        sign_in,
+        sign_out,
+        visible_pages,
+    )
     from trace_upload import TraceUploadError, parse_uploaded_trace
     from value_view import assumption_inputs, percentage, render_value_report
 
@@ -127,8 +135,14 @@ project_mode = require_project_key()
 
 if project_mode:
     # A shared dashboard shows exactly one project: the one the API key belongs to.
+    if "signed_in_project" in st.session_state and not session_valid(store, st.session_state):
+        st.session_state["signin_notice"] = (
+            "Your project API key was revoked or is no longer valid. Sign in again."
+        )
     if "signed_in_project" not in st.session_state:
         st.title("AgentLoop Dashboard")
+        if notice := st.session_state.pop("signin_notice", None):
+            st.warning(notice)
         st.subheader("Sign in to your project")
         st.caption(
             "Enter a project API key. The dashboard shows only the traces and findings "
@@ -880,16 +894,19 @@ elif page == "API Keys":
     )
 
 elif page == "Ingest":
-    st.subheader("Generate or upload traces")
-    col_a, col_b, col_c, col_d = st.columns(4)
+    # Demo generators write files into the dashboard host's shared runs directory,
+    # so a shared dashboard offers only uploads into the signed-in project.
+    st.subheader("Upload traces" if project_mode else "Generate or upload traces")
     generated_path: Path | None = None
-    if col_a.button("Generate baseline"):
+    if not project_mode:
+        col_a, col_b, col_c, col_d = st.columns(4)
+    if not project_mode and col_a.button("Generate baseline"):
         generated_path = run_baseline(runs_dir)
-    if col_b.button("Generate optimized"):
+    if not project_mode and col_b.button("Generate optimized"):
         generated_path = run_optimized(runs_dir)
-    if col_c.button("Generate LangGraph-style"):
+    if not project_mode and col_c.button("Generate LangGraph-style"):
         generated_path = run_langgraph_style(runs_dir)
-    if col_d.button("Generate all"):
+    if not project_mode and col_d.button("Generate all"):
         proof_baseline, proof_candidate = run_proof_pair(runs_dir)
         for path in [
             run_baseline(runs_dir),
@@ -901,7 +918,7 @@ elif page == "Ingest":
             store.save_trace(AgentTrace.from_json(path), project_id=project_id)
         st.success(f"Generated and stored all demo traces under project `{project_id}`")
 
-    if st.button("Generate proof demo pair"):
+    if not project_mode and st.button("Generate proof demo pair"):
         proof_baseline, proof_candidate = run_proof_pair(runs_dir)
         for path in [proof_baseline, proof_candidate]:
             store.save_trace(AgentTrace.from_json(path), project_id=project_id)

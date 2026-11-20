@@ -105,6 +105,10 @@ class TraceStore(Protocol):
 
     def verify_api_key(self, api_key: str) -> dict[str, Any] | None: ...
 
+    def list_api_keys(self, project_id: str) -> list[dict[str, Any]]: ...
+
+    def revoke_api_key(self, project_id: str, prefix: str) -> int: ...
+
     def save_trace(self, trace: AgentTrace, project_id: str = "default") -> None: ...
 
     def list_traces(self, project_id: str | None = None) -> list[dict[str, Any]]: ...
@@ -190,6 +194,19 @@ def _encode_hash_bytes(value: bytes) -> str:
 def _decode_hash_bytes(value: str) -> bytes:
     padded = value + "=" * (-len(value) % 4)
     return base64.b64decode(padded.encode("ascii"), altchars=b"-_", validate=True)
+
+
+def _timestamp_text(value: Any) -> str | None:
+    if value is None:
+        return None
+    return value.isoformat() if hasattr(value, "isoformat") else str(value)
+
+
+def _require_key_prefix(prefix: Any) -> None:
+    if not isinstance(prefix, str) or len(prefix) != _API_KEY_PREFIX_LENGTH:
+        raise ValueError(
+            f"API key prefix must be the first {_API_KEY_PREFIX_LENGTH} characters of the key"
+        )
 
 
 def new_api_key() -> str:
@@ -478,6 +495,37 @@ class SQLiteTraceStore(InterventionStoreMixin):
                 (row["key_hash"],),
             )
             return {key: row[key] for key in ("project_id", "name", "prefix")}
+
+    def list_api_keys(self, project_id: str) -> list[dict[str, Any]]:
+        """Key metadata for one project; key values and hashes are never returned."""
+        self.init()
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT prefix, name, created_at, last_used_at FROM api_keys "
+                "WHERE project_id = ? ORDER BY created_at, prefix",
+                (project_id,),
+            ).fetchall()
+        return [
+            {
+                "project_id": project_id,
+                "prefix": row["prefix"],
+                "name": row["name"],
+                "created_at": _timestamp_text(row["created_at"]),
+                "last_used_at": _timestamp_text(row["last_used_at"]),
+            }
+            for row in rows
+        ]
+
+    def revoke_api_key(self, project_id: str, prefix: str) -> int:
+        """Delete a project's keys with this prefix; returns how many were revoked."""
+        _require_key_prefix(prefix)
+        self.init()
+        with self._connect() as conn:
+            cursor = conn.execute(
+                "DELETE FROM api_keys WHERE project_id = ? AND prefix = ?",
+                (project_id, prefix),
+            )
+            return int(cursor.rowcount or 0)
 
     def _upsert_trace(
         self, conn: sqlite3.Connection, trace: AgentTrace, project_id: str
@@ -941,6 +989,37 @@ class PostgresTraceStore(InterventionStoreMixin):
                 (row[0],),
             )
             return {"project_id": row[1], "name": row[2], "prefix": row[3]}
+
+    def list_api_keys(self, project_id: str) -> list[dict[str, Any]]:
+        """Key metadata for one project; key values and hashes are never returned."""
+        self.init()
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT prefix, name, created_at, last_used_at FROM api_keys "
+                "WHERE project_id = %s ORDER BY created_at, prefix",
+                (project_id,),
+            ).fetchall()
+        return [
+            {
+                "project_id": project_id,
+                "prefix": row[0],
+                "name": row[1],
+                "created_at": _timestamp_text(row[2]),
+                "last_used_at": _timestamp_text(row[3]),
+            }
+            for row in rows
+        ]
+
+    def revoke_api_key(self, project_id: str, prefix: str) -> int:
+        """Delete a project's keys with this prefix; returns how many were revoked."""
+        _require_key_prefix(prefix)
+        self.init()
+        with self._connect() as conn:
+            cursor = conn.execute(
+                "DELETE FROM api_keys WHERE project_id = %s AND prefix = %s",
+                (project_id, prefix),
+            )
+            return int(cursor.rowcount or 0)
 
     def _upsert_trace(self, conn, trace: AgentTrace, project_id: str) -> dict[str, Any]:
         report = trace.report()

@@ -9,6 +9,14 @@ trace, study, receipt, API and database schema versions.
 
 ### Added
 
+- Project API keys can be listed and revoked. Admin routes
+  `GET /v1/api-keys?project_id=` and `DELETE /v1/api-keys/{prefix}?project_id=`,
+  `AgentLoopClient.list_api_keys` / `revoke_api_key`, and the CLI commands
+  `list-api-keys`, `revoke-api-key`, `remote-list-api-keys` and
+  `remote-revoke-api-key` show prefixes and usage times, never key values. A
+  revoked key is rejected immediately, and project-mode dashboard sessions
+  re-check their key every minute. Shared dashboards no longer offer the demo
+  generators that write files on the host.
 - Shared dashboards can sign users in by project. With
   `AGENTLOOP_DASHBOARD_REQUIRE_KEY=true`, the dashboard asks for a project API
   key, verifies it like the HTTP API, and shows only that project; the project

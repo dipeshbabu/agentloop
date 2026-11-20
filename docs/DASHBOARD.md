@@ -79,10 +79,14 @@ key, checks it the same way the HTTP API does, and shows only the traces,
 findings and reports of the project that key belongs to. The free-text Project
 field is replaced by the signed-in project and a Sign out button. The `API Keys`
 page (creating keys is an administrator task) and the `Patch Plan` page (it
-reads files on the dashboard host) are hidden. After five failed sign-ins in a
-browser session, further attempts wait one minute.
+reads files on the dashboard host) are hidden, and the `Ingest` page offers only
+uploads into the signed-in project, without the demo generators that write files
+on the host. After five failed sign-ins in a browser session, further attempts
+wait one minute. Open sessions re-check their key at least once a minute, so a
+revoked key loses access within a minute.
 
-Create project keys with the API's admin key or `agentloop create-api-key`.
+Create and revoke project keys with the API's admin key, or with
+`agentloop create-api-key` and `agentloop revoke-api-key`.
 Without the setting, the dashboard keeps its local, single-user behaviour.
 
 ## Security boundaries
