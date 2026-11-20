@@ -9,6 +9,12 @@ trace, study, receipt, API and database schema versions.
 
 ### Added
 
+- CI can send traces to an AgentLoop server. `agentloop upload` accepts
+  several `--path` values and directories, validates every file before sending,
+  and adds `--label KEY=VALUE` pairs under `metadata.labels`. The reusable
+  `application-performance.yml` workflow takes an optional `agentloop_api_url`
+  input and `agentloop_api_key` secret, and uploads the compared baseline and
+  candidate traces labelled with the repository, commit, ref and workflow run.
 - The container image is published for `linux/arm64` as well as `linux/amd64`
   under the same tag, so ARM cloud servers can run AgentLoop. Each architecture
   is built natively, checked, and combined into one multi-architecture tag; CI

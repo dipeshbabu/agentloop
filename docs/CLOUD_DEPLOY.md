@@ -111,6 +111,8 @@ client.upload_trace(trace)
 
 or from the TypeScript SDK with
 `new AgentLoopClient({ baseUrl: "https://agentloop-api.example.com", apiKey: "..." })`.
+To send traces from CI automatically, see
+[sending traces to your AgentLoop server](CI.md#send-the-traces-to-your-agentloop-server).
 Sign in to the dashboard with the same key to see that project's traces. Each
 team can only see its own project; there is no project switcher.
 

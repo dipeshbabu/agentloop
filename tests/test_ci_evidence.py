@@ -91,3 +91,26 @@ def test_reusable_workflow_never_generates_missing_application_traces():
     assert scripts.index('test -f "inputs/$CANDIDATE"') < scripts.index("agentloop ci")
     assert 'test -f "inputs/$QUALITY"' in scripts
     assert "--no-fail-on-gate" not in scripts
+
+
+def test_reusable_workflow_uploads_only_when_asked_and_only_with_a_project_key():
+    text = (ROOT / ".github/workflows/application-performance.yml").read_text(encoding="utf-8")
+    workflow = yaml.load(text, Loader=yaml.BaseLoader)
+    call = workflow["on"]["workflow_call"]
+    assert call["inputs"]["agentloop_api_url"]["default"] == ""
+    assert call["secrets"]["agentloop_api_key"]["required"] == "false"
+    steps = workflow["jobs"]["compare"]["steps"]
+    upload = next(step for step in steps if "AgentLoop server" in step.get("name", ""))
+    assert "inputs.agentloop_api_url != ''" in upload["if"]
+    assert "!cancelled()" in upload["if"]
+    assert upload["env"]["AGENTLOOP_API_KEY"] == "${{ secrets.agentloop_api_key }}"
+    assert "ADMIN" not in text
+    script = upload["run"]
+    assert script.index('-z "$AGENTLOOP_API_KEY"') < script.index("agentloop upload")
+    for label in ("condition=", "repository=", "commit=", "ref=", "workflow_run="):
+        assert f'--label "{label}' in script
+    # The upload runs after the comparison and before the reports are attached.
+    names = [step.get("name", "") for step in steps]
+    assert names.index(upload["name"]) > names.index(
+        "Compare supplied artifacts without generating demo data"
+    )
