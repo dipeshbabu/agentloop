@@ -7,6 +7,8 @@ trace, study, receipt, API and database schema versions.
 
 ## [Unreleased]
 
+## [0.2.8] - 2026-11-23
+
 ### Changed
 
 - `agentloop production-check` checks shared-server settings: non-HTTPS CORS
@@ -380,7 +382,8 @@ trace, study, receipt, API and database schema versions.
 - Optional live-provider validation, Harbor post-job plugins, active approval
   resolution and research trajectory export remain outside this release.
 
-[Unreleased]: https://github.com/dipeshbabu/agentloop/compare/v0.2.7...HEAD
+[Unreleased]: https://github.com/dipeshbabu/agentloop/compare/v0.2.8...HEAD
+[0.2.8]: https://github.com/dipeshbabu/agentloop/compare/v0.2.7...v0.2.8
 [0.2.7]: https://github.com/dipeshbabu/agentloop/compare/v0.2.6...v0.2.7
 [0.2.6]: https://github.com/dipeshbabu/agentloop/compare/v0.2.5...v0.2.6
 [0.2.5]: https://github.com/dipeshbabu/agentloop/compare/v0.2.4...v0.2.5
