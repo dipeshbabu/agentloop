@@ -40,6 +40,9 @@ Open the URL printed by Streamlit and select project `demo` in the sidebar.
 - `Quality Gates`: fixture scoring with built-in scorer types.
 - `Value & Pricing`: operational ROI, reliability risk, and configurable pricing
   scenarios.
+- `Audit Log`: key creation and revocation, trace deletions and retention purges
+  in the current project, newest first, with who acted. Signed-in project users
+  see only their own project.
 - `API Keys`: project-scoped API-key creation.
 - `Ingest`: demo generation, trace upload, and project storage.
 - `Setup`: local, API, and Postgres command references.

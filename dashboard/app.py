@@ -192,6 +192,7 @@ page = st.sidebar.radio(
             "Replay Proof",
             "Quality Gates",
             "Value & Pricing",
+            "Audit Log",
             "API Keys",
             "Ingest",
             "Setup",
@@ -931,6 +932,34 @@ elif page == "Value & Pricing":
                 "--out runs/value_report.json",
                 language="bash",
             )
+
+elif page == "Audit Log":
+    st.subheader("Audit log")
+    st.caption(
+        "Key creation and revocation, trace deletions and retention purges in this "
+        "project, newest first. Key values are never recorded."
+    )
+    limit = st.number_input("Events to show", min_value=10, max_value=500, value=100, step=10)
+    events = store.list_audit_events(project_id, limit=int(limit))
+    if not events:
+        st.info("No audit events for this project yet.")
+    else:
+        st.dataframe(
+            pd.DataFrame(
+                [
+                    {
+                        "When": event["occurred_at"],
+                        "Action": event["action"],
+                        "Actor": event["actor"],
+                        "Target": event["target"],
+                        "Details": json.dumps(event["details"], sort_keys=True),
+                    }
+                    for event in events
+                ]
+            ),
+            width="stretch",
+            hide_index=True,
+        )
 
 elif page == "API Keys":
     st.subheader("Create project API key")

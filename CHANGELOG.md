@@ -24,7 +24,8 @@ trace, study, receipt, API and database schema versions.
   in the same transaction as the action. Admins read it with
   `GET /v1/audit-events`, `AgentLoopClient.list_audit_events`,
   `agentloop audit-log` or `agentloop remote-audit-log`. Key values are never
-  recorded.
+  recorded. The dashboard's Audit Log page shows the current project's events,
+  including to signed-in project users.
 - Trace labels are visible and searchable. Paginated trace listings include
   each trace's `metadata.labels`, and `GET /v1/traces?label=KEY=VALUE`,
   `AgentLoopClient.list_traces(label=...)`, `agentloop list-stored-traces --label`
