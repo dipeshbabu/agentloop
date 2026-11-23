@@ -222,3 +222,25 @@ def test_traces_page_filters_by_label(tmp_path, monkeypatch):
 
     next(w for w in app.text_input if w.label == "Filter by label").input("oops").run()
     assert any("KEY=VALUE" in error.value for error in app.error)
+
+
+def test_audit_log_page_shows_only_the_signed_in_project(tmp_path, monkeypatch):
+    app, key = _app(tmp_path, monkeypatch, require_key=True)
+    store = SQLiteTraceStore(path=str(tmp_path / "dashboard.db"))
+    other = store.create_api_key(project_id="beta", name="beta-team", actor="cli")
+    _sign_in(app, key)
+    app.sidebar.radio[0].set_value("Audit Log").run()
+    assert not app.exception
+    table = app.dataframe[0].value
+    assert list(table["Action"]) == ["api_key.created"]
+    assert other["prefix"] not in set(table["Target"])
+    assert key[:10] in set(table["Target"])
+
+    # Deleting a trace from the dashboard is recorded with the signed-in key's prefix.
+    app.sidebar.radio[0].set_value("Traces").run()
+    next(c for c in app.checkbox if c.label.startswith("I want to delete")).check().run()
+    next(b for b in app.button if b.label == "Delete trace").click().run()
+    app.sidebar.radio[0].set_value("Audit Log").run()
+    table = app.dataframe[0].value
+    assert table["Action"].iloc[0] == "trace.deleted"
+    assert table["Actor"].iloc[0] == f"dashboard:api-key:{key[:10]}"

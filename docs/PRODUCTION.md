@@ -292,8 +292,9 @@ uv run agentloop remote-audit-log --project-id acme --api-url https://agentloop-
 
 `GET /v1/audit-events?project_id=...&limit=...` and
 `AgentLoopClient.list_audit_events` return the same events; with direct database
-access, use `agentloop audit-log`. Events are kept until removed from the
-database by hand.
+access, use `agentloop audit-log`. The dashboard's Audit Log page shows the
+current project's events, including to signed-in project users. Events are kept
+until removed from the database by hand.
 
 ## Deleting traces and retention
 
