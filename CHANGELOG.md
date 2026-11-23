@@ -9,6 +9,11 @@ trace, study, receipt, API and database schema versions.
 
 ### Changed
 
+- `agentloop production-check` checks shared-server settings: non-HTTPS CORS
+  origins fail, an invalid request-size limit or retention period fails, and a
+  disabled request limit, missing retention, dashboards without project sign-in
+  and a shared `AGENTLOOP_API_KEY` warn. CI runs it inside the cloud stack.
+  `doctor` and `production-check` now state the actual minimum, Python 3.11.
 - The API refuses request bodies larger than `AGENTLOOP_MAX_REQUEST_BYTES`
   (default 16 MiB, `0` disables the limit) with `413`, before reading them into
   memory. Bodies without a declared length are counted as they arrive. Earlier
