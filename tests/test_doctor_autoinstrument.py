@@ -195,3 +195,61 @@ def test_production_check_accepts_libpq_environment(monkeypatch) -> None:
     assert result["ok"] is True
     database_check = next(check for check in result["checks"] if check["name"] == "database_url")
     assert database_check["detail"] == "configured via libpq environment"
+
+
+def _safe_production_env(monkeypatch) -> None:
+    monkeypatch.setenv("AGENTLOOP_STORE_BACKEND", "postgres")
+    monkeypatch.setenv(
+        "AGENTLOOP_DATABASE_URL", "postgresql://agentloop:secret@example.com:5432/agentloop"
+    )
+    monkeypatch.setenv("AGENTLOOP_REQUIRE_API_KEY", "true")
+    monkeypatch.setenv("AGENTLOOP_ADMIN_API_KEY", "x" * 40)
+    monkeypatch.setenv("AGENTLOOP_CORS_ORIGINS", "https://dashboard.example.com")
+    monkeypatch.setenv("AGENTLOOP_API_URL", "https://api.example.com")
+    for name in (
+        "AGENTLOOP_API_KEY",
+        "AGENTLOOP_MAX_REQUEST_BYTES",
+        "AGENTLOOP_DASHBOARD_REQUIRE_KEY",
+        "AGENTLOOP_RETENTION_DAYS",
+    ):
+        monkeypatch.delenv(name, raising=False)
+
+
+def _by_name(result):
+    return {check["name"]: check for check in result["checks"]}
+
+
+def test_production_check_reports_hosting_policies(monkeypatch) -> None:
+    _safe_production_env(monkeypatch)
+    defaults = _by_name(run_production_check(check_api=False, check_store=False))
+    assert defaults["request_size_limit"]["status"] == "ok"
+    assert defaults["dashboard_access"]["status"] == "warn"
+    assert defaults["retention"]["status"] == "warn"
+    assert "shared_api_key" not in defaults
+
+    monkeypatch.setenv("AGENTLOOP_DASHBOARD_REQUIRE_KEY", "true")
+    monkeypatch.setenv("AGENTLOOP_RETENTION_DAYS", "90")
+    configured = run_production_check(check_api=False, check_store=False)
+    checks = _by_name(configured)
+    assert configured["ok"] is True and configured["warnings"] == 0
+    assert checks["retention"]["detail"] == "90 days"
+
+
+@pytest.mark.parametrize(
+    ("name", "value", "check", "status"),
+    [
+        ("AGENTLOOP_MAX_REQUEST_BYTES", "0", "request_size_limit", "warn"),
+        ("AGENTLOOP_MAX_REQUEST_BYTES", "lots", "request_size_limit", "fail"),
+        ("AGENTLOOP_RETENTION_DAYS", "-3", "retention", "fail"),
+        ("AGENTLOOP_RETENTION_DAYS", "nan", "retention", "fail"),
+        ("AGENTLOOP_API_KEY", "shared-secret", "shared_api_key", "warn"),
+        ("AGENTLOOP_CORS_ORIGINS", "http://dashboard.example.com", "cors_origins", "fail"),
+        ("AGENTLOOP_CORS_ORIGINS", "http://localhost:8501", "cors_origins", "ok"),
+    ],
+)
+def test_production_check_flags_unsafe_hosting_settings(monkeypatch, name, value, check, status):
+    _safe_production_env(monkeypatch)
+    monkeypatch.setenv(name, value)
+    result = run_production_check(check_api=False, check_store=False)
+    assert _by_name(result)[check]["status"] == status
+    assert result["ok"] is (status != "fail")

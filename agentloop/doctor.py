@@ -105,6 +105,70 @@ def _ready_check(api_url: str, timeout: float = 2.0) -> DoctorCheck:
         return _fail("api_ready", f"Could not reach {url}: {exc}")
 
 
+def _is_local_origin(origin: str) -> bool:
+    host = urlsplit(origin).hostname or ""
+    return host in {"localhost", "127.0.0.1", "::1"} or host.endswith(".localhost")
+
+
+def _hosting_policy_checks() -> list[DoctorCheck]:
+    """Checks for settings added for shared deployments (0.2.7 and newer)."""
+    from agentloop.request_limits import ENVIRONMENT_VARIABLE, max_request_bytes
+
+    checks: list[DoctorCheck] = []
+    try:
+        limit = max_request_bytes()
+    except ValueError as exc:
+        checks.append(_fail("request_size_limit", str(exc), f"Fix {ENVIRONMENT_VARIABLE}."))
+    else:
+        if limit is None:
+            checks.append(
+                _warn(
+                    "request_size_limit",
+                    "disabled; request bodies of any size are read into memory",
+                    f"Unset {ENVIRONMENT_VARIABLE} for the 16 MiB default or set a size.",
+                )
+            )
+        else:
+            checks.append(_ok("request_size_limit", f"{limit} bytes"))
+
+    if _env_enabled("AGENTLOOP_DASHBOARD_REQUIRE_KEY"):
+        checks.append(_ok("dashboard_access", "project API key sign-in required"))
+    else:
+        checks.append(
+            _warn(
+                "dashboard_access",
+                "the dashboard shows any project to anyone who can reach it",
+                "Set AGENTLOOP_DASHBOARD_REQUIRE_KEY=true on the dashboard service.",
+            )
+        )
+
+    retention = os.getenv("AGENTLOOP_RETENTION_DAYS", "").strip()
+    if not retention:
+        checks.append(
+            _warn(
+                "retention",
+                "not configured; traces are kept until deleted by hand",
+                "Set AGENTLOOP_RETENTION_DAYS and run agentloop purge-traces on a schedule.",
+            )
+        )
+    else:
+        try:
+            days = float(retention)
+        except ValueError:
+            days = -1.0
+        if days > 0 and days == days and days != float("inf"):
+            checks.append(_ok("retention", f"{days:g} days"))
+        else:
+            checks.append(
+                _fail(
+                    "retention",
+                    f"AGENTLOOP_RETENTION_DAYS={retention!r} is not a positive number of days",
+                    "Set it to a positive number of days, or unset it.",
+                )
+            )
+    return checks
+
+
 def _env_enabled(name: str) -> bool:
     return os.getenv(name, "").lower() in {"1", "true", "yes", "on"}
 
@@ -115,14 +179,14 @@ def run_doctor(*, check_api: bool = True, runs_dir: Path | str = "runs") -> dict
     checks: list[DoctorCheck] = []
 
     py_version = sys.version_info
-    if py_version >= (3, 10):
+    if py_version >= (3, 11):
         checks.append(_ok("python", f"Python {platform.python_version()}"))
     else:
         checks.append(
             _fail(
                 "python",
                 f"Python {platform.python_version()} is too old",
-                "Use Python 3.10 or newer.",
+                "Use Python 3.11 or newer.",
             )
         )
 
@@ -220,14 +284,14 @@ def run_production_check(
     checks: list[DoctorCheck] = []
 
     py_version = sys.version_info
-    if py_version >= (3, 10):
+    if py_version >= (3, 11):
         checks.append(_ok("python", f"Python {platform.python_version()}"))
     else:
         checks.append(
             _fail(
                 "python",
                 f"Python {platform.python_version()} is too old",
-                "Use Python 3.10 or newer.",
+                "Use Python 3.11 or newer.",
             )
         )
 
@@ -313,7 +377,42 @@ def run_production_check(
             )
         )
     else:
-        checks.append(_ok("cors_origins", ", ".join(cors_origins)))
+        insecure = [
+            origin
+            for origin in cors_origins
+            if not origin.startswith("https://") and not _is_local_origin(origin)
+        ]
+        if insecure and not allow_http:
+            checks.append(
+                _fail(
+                    "cors_origins",
+                    f"non-HTTPS origins: {', '.join(insecure)}",
+                    "Serve the dashboard over HTTPS and list its https:// origin.",
+                )
+            )
+        elif insecure:
+            checks.append(
+                _warn(
+                    "cors_origins",
+                    f"non-HTTPS origins: {', '.join(insecure)}",
+                    "Use HTTPS origins for production traffic.",
+                )
+            )
+        else:
+            checks.append(_ok("cors_origins", ", ".join(cors_origins)))
+
+    if os.getenv("AGENTLOOP_API_KEY"):
+        checks.append(
+            _warn(
+                "shared_api_key",
+                "AGENTLOOP_API_KEY grants access to project 'default'; it cannot be revoked, "
+                "listed or attributed in the audit log",
+                "Unset AGENTLOOP_API_KEY on the server and give each team a project key "
+                "created with the admin key.",
+            )
+        )
+
+    checks.extend(_hosting_policy_checks())
 
     api_url = os.getenv("AGENTLOOP_API_URL", "")
     if not api_url:

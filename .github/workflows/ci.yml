@@ -721,6 +721,17 @@ jobs:
           docker compose logs retention | grep "older than 365 days in all projects"
           docker compose exec -T retention agentloop purge-traces --older-than-days 3650
 
+      - name: Run the production check inside the deployed API
+        shell: bash
+        run: |
+          # Dashboard and retention settings live on their own services; pass the
+          # stack's values so the check judges the deployment as a whole.
+          docker compose exec -T \
+            -e AGENTLOOP_API_URL=https://api.localhost \
+            -e AGENTLOOP_DASHBOARD_REQUIRE_KEY="$(docker compose exec -T dashboard printenv AGENTLOOP_DASHBOARD_REQUIRE_KEY)" \
+            -e AGENTLOOP_RETENTION_DAYS="$(docker compose exec -T retention printenv AGENTLOOP_RETENTION_DAYS)" \
+            api agentloop production-check --no-check-api
+
       - name: Verify only the proxy is published
         shell: bash
         run: |
