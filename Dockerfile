@@ -10,6 +10,7 @@ COPY --from=ghcr.io/astral-sh/uv:0.13.7 /uv /uvx /bin/
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     AGENTLOOP_SQLITE_PATH=/data/agentloop.db \
+    AGENTLOOP_DASHBOARD_RUNS_DIR=/data/runs \
     UV_LINK_MODE=copy \
     UV_NO_CACHE=1
 
