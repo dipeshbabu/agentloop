@@ -835,7 +835,10 @@ jobs:
           base="$(.github/scripts/pull-official-image.sh "python:$tag")"
           sed "s|^FROM python:$tag|FROM $base|" Dockerfile > "$RUNNER_TEMP/Dockerfile.k8s"
           docker build --pull=false --file "$RUNNER_TEMP/Dockerfile.k8s" --tag agentloop:ci .
-          echo "POSTGRES_IMAGE=$(.github/scripts/pull-official-image.sh postgres:16-alpine)" >> "$GITHUB_ENV"
+          postgres="$(.github/scripts/pull-official-image.sh postgres:16-alpine)"
+          # kind cannot import a pulled multi-platform index whose other platforms
+          # are absent; a local build yields a single-platform image it can load.
+          printf 'FROM %s\n' "$postgres" | docker build --pull=false --tag agentloop-postgres:ci -
 
       - name: Create a kind cluster and load the images
         shell: bash
@@ -847,7 +850,7 @@ jobs:
           fi
           kind version
           kind create cluster --name agentloop --wait 180s
-          kind load docker-image agentloop:ci "$POSTGRES_IMAGE" --name agentloop
+          kind load docker-image agentloop:ci agentloop-postgres:ci --name agentloop
 
       - name: Apply the manifests with CI settings
         shell: bash
@@ -872,8 +875,8 @@ jobs:
             echo "    newName: agentloop"
             echo "    newTag: ci"
             echo "  - name: postgres"
-            echo "    newName: ${POSTGRES_IMAGE%:*}"
-            echo "    newTag: ${POSTGRES_IMAGE##*:}"
+            echo "    newName: agentloop-postgres"
+            echo "    newTag: ci"
           } > .ci-kubernetes/kustomization.yaml
           kubectl create namespace agentloop
           kubectl apply -k .ci-kubernetes --namespace agentloop
