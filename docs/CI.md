@@ -104,6 +104,14 @@ baseline and candidate traces to that key's project. Each is labelled under
 Filter by any label in the dashboard's Traces page (for example
 `commit=abc123`), with `agentloop list-stored-traces --label commit=abc123`, or
 with `GET /v1/traces?label=commit=abc123`.
+
+From 0.2.9 the dashboard's **CI Runs** page lists each uploaded run with its
+commit and ref and compares its newest baseline and candidate in one step, with
+the same gates, metric deltas and PR comment preview as Replay Proof. The same
+comparison is available from `GET /v1/ci-runs` and
+`GET /v1/ci-runs/{workflow_run}/comparison` (with optional
+`min_latency_improvement_pct` and `min_cost_improvement_pct`), or
+`AgentLoopClient.list_ci_runs()` and `compare_ci_run(...)`, using a project key.
 The job fails if the URL is set without the secret. This needs an `agentloop_ref`
 that includes AgentLoop 0.2.8 or newer.
 

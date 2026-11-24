@@ -118,6 +118,27 @@ class AgentLoopClient:
             route += "?" + urllib.parse.urlencode(params)
         return self._request("GET", route)
 
+    def list_ci_runs(self, scan: int = 500) -> dict[str, Any]:
+        """CI runs among this key's project's newest uploads, by workflow_run label."""
+        return self._request("GET", "/ci-runs?" + urllib.parse.urlencode({"scan": scan}))
+
+    def compare_ci_run(
+        self,
+        workflow_run: str,
+        *,
+        min_latency_improvement_pct: float = 0.0,
+        min_cost_improvement_pct: float = 0.0,
+    ) -> dict[str, Any]:
+        """Replay comparison and PR Markdown for one CI run's baseline and candidate."""
+        params = urllib.parse.urlencode(
+            {
+                "min_latency_improvement_pct": min_latency_improvement_pct,
+                "min_cost_improvement_pct": min_cost_improvement_pct,
+            }
+        )
+        encoded = urllib.parse.quote(workflow_run, safe="")
+        return self._request("GET", f"/ci-runs/{encoded}/comparison?{params}")
+
     def usage_summary(self, project_id: str | None = None) -> dict[str, Any]:
         route = "/usage"
         if project_id:

@@ -7,6 +7,7 @@ import pandas as pd
 import streamlit as st
 
 from agentloop.ci import build_ci_report, ci_report_to_markdown
+from agentloop.ci_runs import CIRunNotFoundError, ci_run_pair, list_ci_runs
 from agentloop.costs import format_cost_usd
 from agentloop.demo import run_baseline, run_langgraph_style, run_optimized, run_proof_pair
 from agentloop.findings import build_diagnosis
@@ -128,6 +129,73 @@ def render_gate_table(results: list[dict]) -> None:
     st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
 
 
+def render_comparison(baseline: AgentTrace | None, candidate: AgentTrace | None, key: str) -> None:
+    """Gate inputs, replay proof and PR comment for one baseline/candidate pair."""
+    st.markdown("#### Gates")
+    g1, g2, g3, g4 = st.columns(4)
+    min_latency = g1.number_input(
+        "Min latency improvement %", min_value=0.0, value=20.0, key=f"{key}_latency"
+    )
+    min_cost = g2.number_input(
+        "Min cost improvement %", min_value=0.0, value=5.0, key=f"{key}_cost"
+    )
+    require_schema = g3.checkbox("Require schema valid", value=False, key=f"{key}_schema")
+    min_quality = g4.number_input(
+        "Min quality score", min_value=0.0, max_value=1.0, value=0.0, key=f"{key}_quality"
+    )
+    quality_threshold = min_quality if min_quality > 0 else None
+
+    if baseline is not None and candidate is not None:
+        gates = ReplayGates(
+            min_latency_improvement_pct=min_latency,
+            min_cost_improvement_pct=min_cost,
+            require_schema_valid=require_schema,
+            min_quality_score=quality_threshold,
+        )
+        replay = build_replay_report(baseline, candidate, gates=gates)
+        ci_report = build_ci_report(baseline, candidate, gates=gates)
+        status = "passed" if replay["gates"]["passed"] else "failed"
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Status", status)
+        c2.metric("Latency improvement", f"{replay['deltas']['latency_improvement_pct']:.1f}%")
+        cost_improvement = replay["deltas"]["cost_improvement_pct"]
+        c3.metric("Cost improvement", percentage(cost_improvement))
+        c4.metric("Retry delta", replay["deltas"]["retry_count_delta"])
+
+        st.subheader("Gate results")
+        render_gate_table(replay["gates"]["results"])
+
+        st.subheader("Metric deltas")
+        metric_rows = [
+            {"metric": name, "value": value}
+            for name, value in replay["deltas"].items()
+            if name.endswith("_delta") or name.endswith("_pct")
+        ]
+        st.dataframe(pd.DataFrame(metric_rows), width="stretch", hide_index=True)
+
+        st.subheader("PR comment preview")
+        st.code(
+            "Trace in. Rewrite plan out. Replay proof in the PR.\n\n"
+            + ci_report_to_markdown(ci_report)
+        )
+
+        col_json, col_md = st.columns(2)
+        col_json.download_button(
+            "Download replay JSON",
+            data=json.dumps(replay, indent=2),
+            file_name="agentloop_replay_report.json",
+            mime="application/json",
+            key=f"{key}_json",
+        )
+        col_md.download_button(
+            "Download PR Markdown",
+            data=ci_report_to_markdown(ci_report),
+            file_name="agentloop_ci.md",
+            mime="text/markdown",
+            key=f"{key}_markdown",
+        )
+
+
 st.sidebar.title("AgentLoop")
 st.sidebar.caption("Execution profiling and evidence")
 
@@ -190,6 +258,7 @@ page = st.sidebar.radio(
             "Diagnosis",
             "Patch Plan",
             "Replay Proof",
+            "CI Runs",
             "Quality Gates",
             "Value & Pricing",
             "Audit Log",
@@ -713,6 +782,55 @@ elif page == "Patch Plan":
                 mime="application/json",
             )
 
+elif page == "CI Runs":
+    st.subheader("CI runs")
+    st.caption(
+        "Baseline and candidate traces uploaded by the reusable comparison workflow, grouped "
+        "by their workflow_run label. Choose a run to see its comparison."
+    )
+    runs = list_ci_runs(store, project_id)
+    if not runs:
+        st.info(
+            "No traces with a workflow_run label in this project yet. Upload them from CI with "
+            "agentloop_api_url on the reusable comparison workflow."
+        )
+    else:
+        st.dataframe(
+            pd.DataFrame(
+                [
+                    {
+                        "Workflow run": run["workflow_run"],
+                        "Commit": (run["commit"] or "")[:12],
+                        "Ref": run["ref"],
+                        "Repository": run["repository"],
+                        "Baseline": run["baseline_run_id"],
+                        "Candidate": run["candidate_run_id"],
+                        "Latest upload": run["latest_upload"],
+                    }
+                    for run in runs
+                ]
+            ),
+            width="stretch",
+            hide_index=True,
+        )
+        comparable = [run for run in runs if run["comparable"]]
+        if not comparable:
+            st.warning("No run has both a baseline and a candidate trace yet.")
+        else:
+            labels = {
+                f"{run['workflow_run']} · {(run['commit'] or 'unknown commit')[:12]} · "
+                f"{run['ref'] or 'unknown ref'}": run["workflow_run"]
+                for run in comparable
+            }
+            chosen = labels[st.selectbox("Compare run", list(labels))]
+            try:
+                baseline, candidate = ci_run_pair(store, project_id, chosen)
+            except CIRunNotFoundError as exc:
+                st.error(str(exc))
+            else:
+                st.caption(f"Baseline {baseline.run_id} · candidate {candidate.run_id}")
+                render_comparison(baseline, candidate, key="ci_run")
+
 elif page == "Replay Proof":
     traces = store.list_traces(project_id=project_id)
     st.subheader("Before/after replay proof")
@@ -726,61 +844,7 @@ elif page == "Replay Proof":
         baseline = load_trace_for_project(options[baseline_label], project_id)
         candidate = load_trace_for_project(options[candidate_label], project_id)
 
-        st.markdown("#### Gates")
-        g1, g2, g3, g4 = st.columns(4)
-        min_latency = g1.number_input("Min latency improvement %", min_value=0.0, value=20.0)
-        min_cost = g2.number_input("Min cost improvement %", min_value=0.0, value=5.0)
-        require_schema = g3.checkbox("Require schema valid", value=False)
-        min_quality = g4.number_input("Min quality score", min_value=0.0, max_value=1.0, value=0.0)
-        quality_threshold = min_quality if min_quality > 0 else None
-
-        if baseline is not None and candidate is not None:
-            gates = ReplayGates(
-                min_latency_improvement_pct=min_latency,
-                min_cost_improvement_pct=min_cost,
-                require_schema_valid=require_schema,
-                min_quality_score=quality_threshold,
-            )
-            replay = build_replay_report(baseline, candidate, gates=gates)
-            ci_report = build_ci_report(baseline, candidate, gates=gates)
-            status = "passed" if replay["gates"]["passed"] else "failed"
-            c1, c2, c3, c4 = st.columns(4)
-            c1.metric("Status", status)
-            c2.metric("Latency improvement", f"{replay['deltas']['latency_improvement_pct']:.1f}%")
-            cost_improvement = replay["deltas"]["cost_improvement_pct"]
-            c3.metric("Cost improvement", percentage(cost_improvement))
-            c4.metric("Retry delta", replay["deltas"]["retry_count_delta"])
-
-            st.subheader("Gate results")
-            render_gate_table(replay["gates"]["results"])
-
-            st.subheader("Metric deltas")
-            metric_rows = [
-                {"metric": key, "value": value}
-                for key, value in replay["deltas"].items()
-                if key.endswith("_delta") or key.endswith("_pct")
-            ]
-            st.dataframe(pd.DataFrame(metric_rows), width="stretch", hide_index=True)
-
-            st.subheader("PR comment preview")
-            st.code(
-                "Trace in. Rewrite plan out. Replay proof in the PR.\n\n"
-                + ci_report_to_markdown(ci_report)
-            )
-
-            col_json, col_md = st.columns(2)
-            col_json.download_button(
-                "Download replay JSON",
-                data=json.dumps(replay, indent=2),
-                file_name="agentloop_replay_report.json",
-                mime="application/json",
-            )
-            col_md.download_button(
-                "Download PR Markdown",
-                data=ci_report_to_markdown(ci_report),
-                file_name="agentloop_ci.md",
-                mime="text/markdown",
-            )
+        render_comparison(baseline, candidate, key="replay")
 
 elif page == "Quality Gates":
     traces = store.list_traces(project_id=project_id)

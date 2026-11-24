@@ -37,6 +37,9 @@ Open the URL printed by Streamlit and select project `demo` in the sidebar.
 - `Patch Plan`: dry-run, framework-aware workflow rewrite plans.
 - `Replay Proof`: before-and-after metrics, quality gates, and PR comment
   previews.
+- `CI Runs`: traces uploaded by the reusable comparison workflow, grouped by
+  their `workflow_run` label, with the run's newest baseline and candidate
+  compared in one step using the same gates and PR comment as `Replay Proof`.
 - `Quality Gates`: fixture scoring with built-in scorer types.
 - `Value & Pricing`: operational ROI, reliability risk, and configurable pricing
   scenarios.
