@@ -12,6 +12,8 @@ export interface ClientOptions {
 }
 export interface RequestOptions { signal?: AbortSignal }
 export interface PageOptions { projectId?: string; pageSize?: number; cursor?: string }
+export interface TracePageOptions extends PageOptions { /** Only traces with this KEY=VALUE label (server 0.2.8+). */ label?: string }
+export interface CiRunGates { minLatencyImprovementPct?: number; minCostImprovementPct?: number }
 export class AgentLoopClientError extends Error {
   readonly status: number | undefined;
   readonly code: "http" | "network" | "timeout" | "aborted" | "response";
@@ -121,9 +123,39 @@ export class AgentLoopClient {
     const payload = trace instanceof AgentTrace ? trace.toJSON() : trace;
     return this.#request("POST", "/traces", payload as unknown as JsonObject, options);
   }
-  listTraces(page: PageOptions = {}, options: RequestOptions = {}): Promise<JsonObject> {
+  listTraces(page: TracePageOptions = {}, options: RequestOptions = {}): Promise<JsonObject> {
     if (page.pageSize !== undefined) positive(page.pageSize, "pageSize");
-    return this.#request("GET", query("/traces", { project_id: page.projectId, page_size: page.pageSize, cursor: page.cursor }), undefined, options);
+    if (page.label !== undefined && !/^[^=]+=/.test(page.label)) throw new TypeError("label must be KEY=VALUE");
+    return this.#request("GET", query("/traces", { project_id: page.projectId, page_size: page.pageSize, cursor: page.cursor, label: page.label }), undefined, options);
+  }
+  /** Delete a trace of this key's project with its findings, usage and interventions (server 0.2.7+). */
+  deleteTrace(runId: string, options: RequestOptions = {}): Promise<JsonObject> { return this.#request("DELETE", `/traces/${segment(runId)}`, undefined, options); }
+  /** CI runs among this key's project's newest uploads, grouped by the workflow_run label (server 0.2.9+). */
+  listCiRuns(scan = 500, options: RequestOptions = {}): Promise<JsonObject> {
+    return this.#request("GET", query("/ci-runs", { scan: positive(scan, "scan") }), undefined, options);
+  }
+  /** Replay comparison and PR Markdown for one CI run's baseline and candidate (server 0.2.9+). */
+  compareCiRun(workflowRun: string, gates: CiRunGates = {}, options: RequestOptions = {}): Promise<JsonObject> {
+    for (const [name, value] of Object.entries(gates)) {
+      if (value !== undefined && (!Number.isFinite(value) || value < 0)) throw new TypeError(`${name} must be a finite, non-negative number`);
+    }
+    return this.#request("GET", query(`/ci-runs/${segment(workflowRun)}/comparison`, {
+      min_latency_improvement_pct: gates.minLatencyImprovementPct, min_cost_improvement_pct: gates.minCostImprovementPct,
+    }), undefined, options);
+  }
+  /** Key prefixes, names and usage times of a project; never key values (admin key, server 0.2.7+). */
+  listApiKeys(projectId: string, options: RequestOptions = {}): Promise<JsonObject> {
+    nonempty(projectId, "projectId");
+    return this.#request("GET", query("/api-keys", { project_id: projectId }), undefined, options, "admin");
+  }
+  /** Revoke a project's key by its first 10 characters (admin key, server 0.2.7+). */
+  revokeApiKey(projectId: string, prefix: string, options: RequestOptions = {}): Promise<JsonObject> {
+    nonempty(projectId, "projectId");
+    return this.#request("DELETE", query(`/api-keys/${segment(prefix)}`, { project_id: projectId }), undefined, options, "admin");
+  }
+  /** Newest audit events first, optionally for one project (admin key, server 0.2.8+). */
+  listAuditEvents(settings: { projectId?: string; limit?: number } = {}, options: RequestOptions = {}): Promise<JsonObject> {
+    return this.#request("GET", query("/audit-events", { project_id: settings.projectId, limit: positive(settings.limit ?? 100, "limit") }), undefined, options, "admin");
   }
   usageSummary(projectId?: string, options: RequestOptions = {}): Promise<JsonObject> { return this.#request("GET", query("/usage", { project_id: projectId }), undefined, options); }
   getReport(runId: string, options: RequestOptions = {}): Promise<JsonObject> { return this.#request("GET", `/traces/${segment(runId)}/report`, undefined, options); }

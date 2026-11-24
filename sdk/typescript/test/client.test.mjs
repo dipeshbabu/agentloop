@@ -121,3 +121,41 @@ test("invalid URLs, credentials, and options are rejected before requests", () =
   for (const timeoutMs of [0, -1, Infinity, NaN, 2147483648]) assert.throws(() => new AgentLoopClient({ timeoutMs }));
   assert.throws(() => new AgentLoopClient({ apiKey: "x\ny" }));
 });
+
+test("labels, deletion and CI run comparison use project credentials and the Python API routes", async () => {
+  const { client, requests } = capture({ apiKey: "project-key", adminApiKey: "admin-key" });
+  await client.listTraces({ label: "commit=abc=1", pageSize: 5 });
+  await client.deleteTrace("run/a");
+  await client.listCiRuns(50);
+  await client.compareCiRun("run 7", { minLatencyImprovementPct: 10, minCostImprovementPct: 0 });
+  assert.ok(requests[0].url.endsWith("/v1/traces?page_size=5&label=commit%3Dabc%3D1"));
+  assert.equal(requests[1].method, "DELETE");
+  assert.ok(requests[1].url.endsWith("/v1/traces/run%2Fa"));
+  assert.ok(requests[2].url.endsWith("/v1/ci-runs?scan=50"));
+  assert.ok(requests[3].url.endsWith("/v1/ci-runs/run%207/comparison?min_latency_improvement_pct=10&min_cost_improvement_pct=0"));
+  for (const request of requests) {
+    assert.equal(request.headers.get("X-AgentLoop-Key"), "project-key");
+    assert.equal(request.headers.get("X-AgentLoop-Admin-Key"), null);
+  }
+  assert.throws(() => client.listTraces({ label: "no-equals" }), TypeError);
+  assert.throws(() => client.compareCiRun("7", { minLatencyImprovementPct: -1 }), TypeError);
+  assert.throws(() => client.listCiRuns(0), TypeError);
+});
+
+test("key listing, revocation and the audit log send only the admin key", async () => {
+  const { client, requests } = capture({ apiKey: "project-key", adminApiKey: "admin-key" });
+  await client.listApiKeys("team a");
+  await client.revokeApiKey("team a", "al_ab/cdefg");
+  await client.listAuditEvents({ projectId: "team a", limit: 5 });
+  await client.listAuditEvents();
+  assert.ok(requests[0].url.endsWith("/v1/api-keys?project_id=team+a"));
+  assert.equal(requests[1].method, "DELETE");
+  assert.ok(requests[1].url.endsWith("/v1/api-keys/al_ab%2Fcdefg?project_id=team+a"));
+  assert.ok(requests[2].url.endsWith("/v1/audit-events?project_id=team+a&limit=5"));
+  assert.ok(requests[3].url.endsWith("/v1/audit-events?limit=100"));
+  for (const request of requests) {
+    assert.equal(request.headers.get("X-AgentLoop-Admin-Key"), "admin-key");
+    assert.equal(request.headers.get("X-AgentLoop-Key"), null);
+  }
+  assert.throws(() => client.listApiKeys(""), TypeError);
+});

@@ -132,16 +132,18 @@ is normalized before requests. IDs and query parameters are encoded.
 | Methods | Purpose |
 | --- | --- |
 | `health`, `ready` | Check server availability and store readiness. |
-| `uploadTrace`, `listTraces`, `usageSummary` | Store native traces and inspect project usage. |
+| `uploadTrace`, `listTraces`, `usageSummary` | Store native traces and inspect project usage. `listTraces({ label: "commit=abc" })` filters by a label (server 0.2.8+). |
+| `deleteTrace` | Delete a trace of the key's project with its findings and usage (server 0.2.7+). |
+| `listCiRuns`, `compareCiRun` | List CI runs by their `workflow_run` label and compare a run's baseline and candidate, with PR Markdown (server 0.2.9+). |
 | `getReport`, `getOptimizationPlan`, `getValueReport` | Read analysis and estimates. |
 | `getDiagnosis`, `saveDiagnosis` | Compute findings or explicitly persist a diagnosis. |
 | `listFindings`, `updateFindingStatus`, `optimizationQueue`, `githubIssueDrafts` | Review findings and proposed work. |
 | `buildQualityReport` | Evaluate fixtures through the existing API. |
 | `createIntervention`, `getIntervention` | Write or read intervention evidence. |
-| `createApiKey` | Create a project credential using a separately configured admin key. |
+| `createApiKey`, `listApiKeys`, `revokeApiKey`, `listAuditEvents` | Manage project credentials and read the audit log with a separately configured admin key (server 0.2.7+ for listing and revocation, 0.2.8+ for the audit log). |
 
-Ordinary requests send only the project key. `createApiKey` sends only the admin
-key; neither credential substitutes for the other. Requests reject redirects.
+Ordinary requests send only the project key. The key-management and audit-log
+methods send only the admin key; neither credential substitutes for the other. Requests reject redirects.
 HTTP errors include their status without copying response bodies into error messages.
 
 Pass `{ signal }` to a method to cancel it. `timeoutMs` bounds the request, and
