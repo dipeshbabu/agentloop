@@ -1,0 +1,56 @@
+# Deletes traces stored more than AGENTLOOP_RETENTION_DAYS ago, once a day.
+# With the setting empty it reports that retention is not configured.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: agentloop-retention
+  labels:
+    app.kubernetes.io/name: agentloop-retention
+spec:
+  schedule: "17 3 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: agentloop-retention
+        spec:
+          restartPolicy: OnFailure
+          automountServiceAccountToken: false
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: retention
+              image: agentloop
+              imagePullPolicy: IfNotPresent
+              command: ["agentloop", "purge-traces"]
+              envFrom:
+                - configMapRef:
+                    name: agentloop-config
+              env:
+                - name: AGENTLOOP_STORE_BACKEND
+                  value: postgres
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: agentloop-secrets
+                      key: PGPASSWORD
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              volumeMounts:
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: tmp
+              emptyDir: {}

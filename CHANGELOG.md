@@ -19,6 +19,13 @@ trace, study, receipt, API and database schema versions.
 
 ### Added
 
+- Kubernetes manifests in `deploy/kubernetes/` for `kubectl apply -k`: the API
+  (two replicas), the dashboard with project sign-in, a daily retention CronJob
+  and an evaluation Postgres, with settings and secrets generated from local
+  `config.env` and `secrets.env` files and an example HTTPS Ingress. Containers
+  run as a non-root user with a read-only root filesystem and no capabilities.
+  CI deploys them to a kind cluster and checks the API, every dashboard page,
+  the hardening and the retention job. See `docs/KUBERNETES.md`.
 - CI runs can be compared in one step. A dashboard **CI Runs** page groups
   uploaded traces by their `workflow_run` label and compares a run's newest
   baseline and candidate with the Replay Proof gates and PR comment.

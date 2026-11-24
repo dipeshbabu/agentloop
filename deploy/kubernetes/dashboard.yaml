@@ -1,0 +1,97 @@
+# The dashboard asks for a project API key and shows only that project. It has
+# no user accounts: keep it behind an authenticating ingress or on a private network.
+apiVersion: v1
+kind: Service
+metadata:
+  name: agentloop-dashboard
+  labels:
+    app.kubernetes.io/name: agentloop-dashboard
+spec:
+  selector:
+    app.kubernetes.io/name: agentloop-dashboard
+  ports:
+    - name: http
+      port: 8501
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agentloop-dashboard
+  labels:
+    app.kubernetes.io/name: agentloop-dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: agentloop-dashboard
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: agentloop-dashboard
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: dashboard
+          image: agentloop
+          imagePullPolicy: IfNotPresent
+          command:
+            - streamlit
+            - run
+            - dashboard/app.py
+            - --server.address=0.0.0.0
+            - --server.port=8501
+            - --server.headless=true
+            - --browser.gatherUsageStats=false
+          envFrom:
+            - configMapRef:
+                name: agentloop-config
+          env:
+            - name: AGENTLOOP_STORE_BACKEND
+              value: postgres
+            - name: AGENTLOOP_DASHBOARD_REQUIRE_KEY
+              value: "true"
+            - name: AGENTLOOP_API_URL
+              value: http://agentloop-api:8000
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: agentloop-secrets
+                  key: PGPASSWORD
+            - name: HOME
+              value: /tmp/home
+          ports:
+            - name: http
+              containerPort: 8501
+          readinessProbe:
+            httpGet:
+              path: /_stcore/health
+              port: http
+            periodSeconds: 10
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: data
+          emptyDir: {}

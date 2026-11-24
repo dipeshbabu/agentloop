@@ -818,3 +818,108 @@ jobs:
       - name: Stop containers
         if: always()
         run: docker rm --force agentloop-api agentloop-dashboard || true
+
+  kubernetes:
+    name: Kubernetes manifests on kind
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Build the image the manifests deploy
+        shell: bash
+        run: |
+          test "$(grep -c '^FROM python:' Dockerfile)" -eq 1
+          tag="$(sed -n 's|^FROM python:\([^ ]*\).*|\1|p' Dockerfile)"
+          base="$(.github/scripts/pull-official-image.sh "python:$tag")"
+          sed "s|^FROM python:$tag|FROM $base|" Dockerfile > "$RUNNER_TEMP/Dockerfile.k8s"
+          docker build --pull=false --file "$RUNNER_TEMP/Dockerfile.k8s" --tag agentloop:ci .
+          echo "POSTGRES_IMAGE=$(.github/scripts/pull-official-image.sh postgres:16-alpine)" >> "$GITHUB_ENV"
+
+      - name: Create a kind cluster and load the images
+        shell: bash
+        run: |
+          if ! command -v kind > /dev/null; then
+            go install sigs.k8s.io/kind@v0.27.0
+            echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+            export PATH="$(go env GOPATH)/bin:$PATH"
+          fi
+          kind version
+          kind create cluster --name agentloop --wait 180s
+          kind load docker-image agentloop:ci "$POSTGRES_IMAGE" --name agentloop
+
+      - name: Apply the manifests with CI settings
+        shell: bash
+        run: |
+          admin_key="ci-admin-$(openssl rand -hex 24)"
+          db_password="db-$(openssl rand -hex 16)"
+          echo "::add-mask::$admin_key"
+          echo "::add-mask::$db_password"
+          echo "AGENTLOOP_ADMIN_API_KEY=$admin_key" >> "$GITHUB_ENV"
+          sed -e 's|^AGENTLOOP_RETENTION_DAYS=.*|AGENTLOOP_RETENTION_DAYS=365|' \
+            deploy/kubernetes/config.env.example > deploy/kubernetes/config.env
+          printf 'AGENTLOOP_ADMIN_API_KEY=%s\nPGPASSWORD=%s\n' "$admin_key" "$db_password" \
+            > deploy/kubernetes/secrets.env
+          mkdir -p .ci-kubernetes
+          {
+            echo "apiVersion: kustomize.config.k8s.io/v1beta1"
+            echo "kind: Kustomization"
+            echo "resources:"
+            echo "  - ../deploy/kubernetes"
+            echo "images:"
+            echo "  - name: ghcr.io/dipeshbabu/agentloop"
+            echo "    newName: agentloop"
+            echo "    newTag: ci"
+            echo "  - name: postgres"
+            echo "    newName: ${POSTGRES_IMAGE%:*}"
+            echo "    newTag: ${POSTGRES_IMAGE##*:}"
+          } > .ci-kubernetes/kustomization.yaml
+          kubectl create namespace agentloop
+          kubectl apply -k .ci-kubernetes --namespace agentloop
+
+      - name: Wait for the database, API and dashboard
+        run: |
+          kubectl -n agentloop rollout status statefulset/agentloop-postgres --timeout=300s
+          kubectl -n agentloop rollout status deployment/agentloop-api --timeout=300s
+          kubectl -n agentloop rollout status deployment/agentloop-dashboard --timeout=300s
+
+      - name: Verify the API through its Service
+        shell: bash
+        run: |
+          kubectl -n agentloop port-forward service/agentloop-api 8000:8000 > "$RUNNER_TEMP/port-forward.log" 2>&1 &
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8000/readyz > /dev/null; then
+              break
+            fi
+            sleep 2
+          done
+          AGENTLOOP_API_URL=http://127.0.0.1:8000 python3 scripts/smoke_api.py
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8000/docs)" = 404
+
+      - name: Verify the dashboard and container hardening
+        shell: bash
+        run: |
+          kubectl -n agentloop exec deployment/agentloop-dashboard -- python scripts/smoke_dashboard_pages.py
+          kubectl -n agentloop exec deployment/agentloop-api -- sh -c 'test "$(id -u)" = 1000'
+          if kubectl -n agentloop exec deployment/agentloop-api -- sh -c 'touch /app/write-check'; then
+            echo "The API container's root filesystem must be read-only" >&2
+            exit 1
+          fi
+
+      - name: Run the retention CronJob once
+        run: |
+          kubectl -n agentloop create job --from=cronjob/agentloop-retention retention-now
+          kubectl -n agentloop wait --for=condition=complete job/retention-now --timeout=180s
+          kubectl -n agentloop logs job/retention-now | grep "older than 365 days in all projects"
+
+      - name: Show cluster state on failure
+        if: failure()
+        run: |
+          kubectl -n agentloop get all,cronjobs,pvc || true
+          kubectl -n agentloop describe pods || true
+          kubectl -n agentloop logs --all-containers --prefix --tail=100 -l app.kubernetes.io/part-of=agentloop || true
+
+      - name: Delete the kind cluster
+        if: always()
+        run: kind delete cluster --name agentloop || true

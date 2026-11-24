@@ -241,9 +241,9 @@ uploads.
 
 ## Kubernetes
 
-No manifests or Helm chart are provided yet. The image, port, health check and
-environment variables above are all a deployment needs; keep the dashboard
-behind an authenticating ingress.
+From 0.2.9, [`deploy/kubernetes/`](KUBERNETES.md) has hardened manifests for
+the API, the dashboard, a retention CronJob and an evaluation Postgres, applied
+with `kubectl apply -k`. CI deploys them to a kind cluster on every change.
 
 ## Security checklist
 

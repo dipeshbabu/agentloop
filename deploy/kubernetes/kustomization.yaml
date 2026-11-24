@@ -1,0 +1,38 @@
+# AgentLoop on Kubernetes: the API, the dashboard (project sign-in required),
+# a daily retention CronJob and an evaluation Postgres.
+#
+#   cp deploy/kubernetes/secrets.env.example deploy/kubernetes/secrets.env
+#   cp deploy/kubernetes/config.env.example deploy/kubernetes/config.env
+#   # edit both, then:
+#   kubectl apply -k deploy/kubernetes --namespace agentloop
+#
+# See docs/KUBERNETES.md. Pin the image tag below to the release you deploy.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: agentloop
+    includeSelectors: false
+    includeTemplates: true
+
+resources:
+  - postgres.yaml
+  - api.yaml
+  - dashboard.yaml
+  - retention.yaml
+
+images:
+  - name: agentloop
+    newName: ghcr.io/dipeshbabu/agentloop
+    newTag: "0.2.8"
+
+configMapGenerator:
+  - name: agentloop-config
+    envs:
+      - config.env
+
+secretGenerator:
+  - name: agentloop-secrets
+    envs:
+      - secrets.env
