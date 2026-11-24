@@ -9,6 +9,12 @@ trace, study, receipt, API and database schema versions.
 
 ### Added
 
+- CI runs can be compared in one step. A dashboard **CI Runs** page groups
+  uploaded traces by their `workflow_run` label and compares a run's newest
+  baseline and candidate with the Replay Proof gates and PR comment.
+  `GET /v1/ci-runs`, `GET /v1/ci-runs/{workflow_run}/comparison`,
+  `AgentLoopClient.list_ci_runs` and `compare_ci_run` do the same with a
+  project key; runs missing either trace return a clear 404.
 - The API sends `Cache-Control: no-store`, `X-Content-Type-Options: nosniff`
   and `Referrer-Policy: no-referrer` on every response, including 413 and CORS
   preflight responses, without a proxy. `AGENTLOOP_API_DOCS=false` stops serving

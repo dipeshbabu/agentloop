@@ -244,3 +244,27 @@ def test_audit_log_page_shows_only_the_signed_in_project(tmp_path, monkeypatch):
     table = app.dataframe[0].value
     assert table["Action"].iloc[0] == "trace.deleted"
     assert table["Actor"].iloc[0] == f"dashboard:api-key:{key[:10]}"
+
+
+def test_ci_runs_page_compares_a_run_in_one_step(tmp_path, monkeypatch):
+    database = tmp_path / "dashboard.db"
+    monkeypatch.setenv("AGENTLOOP_STORE_BACKEND", "sqlite")
+    monkeypatch.setenv("AGENTLOOP_SQLITE_PATH", str(database))
+    monkeypatch.delenv("AGENTLOOP_DASHBOARD_REQUIRE_KEY", raising=False)
+    store = SQLiteTraceStore(path=str(database))
+    for condition in ("baseline", "candidate"):
+        trace = AgentTrace(
+            name=f"ci-{condition}",
+            metadata={"labels": {"workflow_run": "777", "condition": condition, "commit": "abc"}},
+        )
+        trace.finish()
+        store.save_trace(trace, project_id="default")
+    app = AppTest.from_file(APP, default_timeout=APPTEST_TIMEOUT)
+    app.run()
+    app.sidebar.radio[0].set_value("CI Runs").run()
+    assert not app.exception
+    runs = app.dataframe[0].value
+    assert list(runs["Workflow run"]) == ["777"]
+    assert app.selectbox[0].value.startswith("777")
+    assert any(metric.label == "Status" for metric in app.metric)
+    assert any("Baseline" in caption.value for caption in app.caption)

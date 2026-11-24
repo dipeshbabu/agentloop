@@ -7,6 +7,9 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from agentloop.ci import build_ci_report, ci_report_to_markdown
+from agentloop.ci_runs import DEFAULT_SCAN as DEFAULT_CI_SCAN
+from agentloop.ci_runs import CIRunNotFoundError, ci_run_pair, list_ci_runs
 from agentloop.config import get_admin_api_key, get_api_key, get_cors_origins, require_api_key
 from agentloop.findings import build_diagnosis
 from agentloop.http_security import SecurityHeadersMiddleware, api_docs_enabled
@@ -20,6 +23,7 @@ from agentloop.issues import build_issue_drafts
 from agentloop.optimizer import build_optimization_plan
 from agentloop.quality import QualityValidationError, build_quality_report
 from agentloop.ranking import RankingSort, sort_ranked
+from agentloop.replay import ReplayGates, build_replay_report
 from agentloop.request_limits import RequestSizeLimitMiddleware, max_request_bytes
 from agentloop.schema import TraceValidationError, validate_elapsed_ms
 from agentloop.store import (
@@ -553,6 +557,44 @@ def value_report(
         engineer_hourly_rate_usd=engineer_hourly_rate_usd,
         incident_cost_usd=incident_cost_usd,
     )
+
+
+@versioned.get("/ci-runs")
+def list_ci_runs_endpoint(
+    scan: int = Query(default=DEFAULT_CI_SCAN, ge=1, le=5000),
+    project_id: str = Depends(resolve_project),
+    db: TraceStore = Depends(store),
+) -> dict[str, Any]:
+    """CI runs among the project's newest uploads, grouped by the workflow_run label."""
+    return {"project_id": project_id, "runs": list_ci_runs(db, project_id, scan=scan)}
+
+
+@versioned.get("/ci-runs/{workflow_run}/comparison")
+def compare_ci_run(
+    workflow_run: str,
+    min_latency_improvement_pct: float = Query(default=0.0, ge=0),
+    min_cost_improvement_pct: float = Query(default=0.0, ge=0),
+    project_id: str = Depends(resolve_project),
+    db: TraceStore = Depends(store),
+) -> dict[str, Any]:
+    """Replay comparison of a CI run's newest baseline and candidate traces."""
+    try:
+        baseline, candidate = ci_run_pair(db, project_id, workflow_run)
+    except CIRunNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from None
+    gates = ReplayGates(
+        min_latency_improvement_pct=min_latency_improvement_pct,
+        min_cost_improvement_pct=min_cost_improvement_pct,
+    )
+    ci_report = build_ci_report(baseline, candidate, gates=gates)
+    return {
+        "project_id": project_id,
+        "workflow_run": workflow_run,
+        "baseline_run_id": baseline.run_id,
+        "candidate_run_id": candidate.run_id,
+        "replay": build_replay_report(baseline, candidate, gates=gates),
+        "markdown": ci_report_to_markdown(ci_report),
+    }
 
 
 @versioned.get("/usage")
