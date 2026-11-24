@@ -211,6 +211,7 @@ def _safe_production_env(monkeypatch) -> None:
         "AGENTLOOP_MAX_REQUEST_BYTES",
         "AGENTLOOP_DASHBOARD_REQUIRE_KEY",
         "AGENTLOOP_RETENTION_DAYS",
+        "AGENTLOOP_API_DOCS",
     ):
         monkeypatch.delenv(name, raising=False)
 
@@ -227,8 +228,10 @@ def test_production_check_reports_hosting_policies(monkeypatch) -> None:
     assert defaults["retention"]["status"] == "warn"
     assert "shared_api_key" not in defaults
 
+    assert defaults["api_docs"]["status"] == "warn"
     monkeypatch.setenv("AGENTLOOP_DASHBOARD_REQUIRE_KEY", "true")
     monkeypatch.setenv("AGENTLOOP_RETENTION_DAYS", "90")
+    monkeypatch.setenv("AGENTLOOP_API_DOCS", "false")
     configured = run_production_check(check_api=False, check_store=False)
     checks = _by_name(configured)
     assert configured["ok"] is True and configured["warnings"] == 0
@@ -245,6 +248,7 @@ def test_production_check_reports_hosting_policies(monkeypatch) -> None:
         ("AGENTLOOP_API_KEY", "shared-secret", "shared_api_key", "warn"),
         ("AGENTLOOP_CORS_ORIGINS", "http://dashboard.example.com", "cors_origins", "fail"),
         ("AGENTLOOP_CORS_ORIGINS", "http://localhost:8501", "cors_origins", "ok"),
+        ("AGENTLOOP_API_DOCS", "maybe", "api_docs", "fail"),
     ],
 )
 def test_production_check_flags_unsafe_hosting_settings(monkeypatch, name, value, check, status):

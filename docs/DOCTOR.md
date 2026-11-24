@@ -29,6 +29,7 @@ From 0.2.8 it also checks the settings for shared servers:
 | `retention` | `AGENTLOOP_RETENTION_DAYS` is not a positive number | it is unset, so traces are kept forever |
 | `dashboard_access` | | `AGENTLOOP_DASHBOARD_REQUIRE_KEY` is not enabled |
 | `shared_api_key` | | `AGENTLOOP_API_KEY` is set; it maps to project `default` and cannot be revoked or audited |
+| `api_docs` | `AGENTLOOP_API_DOCS` is not true or false | the interactive API docs are enabled |
 
 Warnings do not change the exit code. Run the check with the settings of the
 service you are checking; dashboard and retention settings usually live on their

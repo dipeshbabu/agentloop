@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from agentloop.config import get_admin_api_key, get_api_key, get_cors_origins, require_api_key
 from agentloop.findings import build_diagnosis
+from agentloop.http_security import SecurityHeadersMiddleware, api_docs_enabled
 from agentloop.intervention_service import create_stored_intervention
 from agentloop.interventions import (
     InterventionConflictError,
@@ -36,12 +37,16 @@ from agentloop.tracer import AgentTrace
 from agentloop.value import build_value_report
 from agentloop.version import __version__
 
+_api_docs = api_docs_enabled()
 app = FastAPI(
     title="AgentLoop API",
     version=__version__,
     description="API v1 is served under /v1. The info version is the server package version. "
     "Unversioned application routes are deprecated aliases retained throughout 0.x; "
     "their earliest removal is 1.0 with release notice. Health/readiness aliases remain supported.",
+    docs_url="/docs" if _api_docs else None,
+    redoc_url="/redoc" if _api_docs else None,
+    openapi_url="/openapi.json" if _api_docs else None,
 )
 versioned = APIRouter(tags=["API v1"])
 legacy = APIRouter(deprecated=True, tags=["Deprecated aliases"])
@@ -59,6 +64,10 @@ if _cors_origins:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+# Added last so it is outermost: every response, including 413s and CORS
+# preflights, carries the headers.
+app.add_middleware(SecurityHeadersMiddleware)
 
 
 class TracePayload(BaseModel):
