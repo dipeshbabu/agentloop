@@ -59,7 +59,7 @@ all = [
 [dependency-groups]
 docs = [
   "mkdocs==1.6.1",
-  "mkdocs-material==9.8.1",
+  "mkdocs-material==9.8.2",
 ]
 standalone = [
   "pyinstaller>=6.21.0,<7",
