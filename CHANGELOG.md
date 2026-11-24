@@ -7,6 +7,8 @@ trace, study, receipt, API and database schema versions.
 
 ## [Unreleased]
 
+## [0.2.9] - 2026-11-24
+
 ### Fixed
 
 - The dashboard in the published container image failed on every page with
@@ -419,7 +421,8 @@ trace, study, receipt, API and database schema versions.
 - Optional live-provider validation, Harbor post-job plugins, active approval
   resolution and research trajectory export remain outside this release.
 
-[Unreleased]: https://github.com/dipeshbabu/agentloop/compare/v0.2.8...HEAD
+[Unreleased]: https://github.com/dipeshbabu/agentloop/compare/v0.2.9...HEAD
+[0.2.9]: https://github.com/dipeshbabu/agentloop/compare/v0.2.8...v0.2.9
 [0.2.8]: https://github.com/dipeshbabu/agentloop/compare/v0.2.7...v0.2.8
 [0.2.7]: https://github.com/dipeshbabu/agentloop/compare/v0.2.6...v0.2.7
 [0.2.6]: https://github.com/dipeshbabu/agentloop/compare/v0.2.5...v0.2.6

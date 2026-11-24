@@ -1,6 +1,6 @@
 {
   "name": "agentloop-profiler",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Local AgentLoop tracing and API v1 client for TypeScript",
   "type": "module",
   "main": "./dist/index.js",

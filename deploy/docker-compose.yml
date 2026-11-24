@@ -30,7 +30,7 @@ services:
       - postgres_password
 
   api:
-    image: ${AGENTLOOP_IMAGE:?Set AGENTLOOP_IMAGE in deploy/.env, for example ghcr.io/dipeshbabu/agentloop:0.2.8}
+    image: ${AGENTLOOP_IMAGE:?Set AGENTLOOP_IMAGE in deploy/.env, for example ghcr.io/dipeshbabu/agentloop:0.2.9}
     restart: unless-stopped
     environment:
       AGENTLOOP_STORE_BACKEND: postgres

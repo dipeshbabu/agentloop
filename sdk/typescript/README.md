@@ -33,7 +33,7 @@ cd ../..
 From your application directory, install the generated package:
 
 ```bash
-npm install /path/to/agentloop/sdk/typescript/agentloop-profiler-0.1.2.tgz
+npm install /path/to/agentloop/sdk/typescript/agentloop-profiler-0.1.3.tgz
 ```
 
 The package is ESM and includes TypeScript declarations. The SDK's package version
