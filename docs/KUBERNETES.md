@@ -11,6 +11,7 @@ container image as the [single-server stack](CLOUD_DEPLOY.md):
 | `agentloop-dashboard` Deployment and Service | The dashboard on port 8501, with project sign-in required |
 | `agentloop-retention` CronJob | Deletes traces older than `AGENTLOOP_RETENTION_DAYS` once a day |
 | `agentloop-postgres` StatefulSet and Service | A single Postgres for evaluation |
+| `agentloop-postgres` NetworkPolicy | Only the API, dashboard and retention pods may connect to Postgres |
 
 Every AgentLoop container runs as user 1000 with a read-only root filesystem,
 no privilege escalation, all capabilities dropped, the runtime default seccomp
@@ -41,7 +42,8 @@ example after `kubectl -n agentloop port-forward service/agentloop-api 8000`.
 
 The evaluation StatefulSet has one replica, no backups and no high
 availability. For production, use a managed Postgres: remove `postgres.yaml`
-from `kustomization.yaml`, set `PGHOST`, `PGPORT`, `PGDATABASE` and `PGUSER` in
+and `network-policy.yaml` from `kustomization.yaml` (restrict database access in
+your provider instead), set `PGHOST`, `PGPORT`, `PGDATABASE` and `PGUSER` in
 `config.env`, and the password in `secrets.env`. Schema migrations run
 automatically, and API replicas can start together safely.
 
@@ -63,6 +65,9 @@ from that commit, then checks that:
   `/docs` returns 404;
 - every dashboard page renders inside its pod;
 - the API runs as user 1000 and cannot write to its root filesystem;
-- the retention CronJob runs to completion with the configured period.
+- the retention CronJob runs to completion with the configured period;
+- a pod outside AgentLoop resolves Postgres but cannot connect to it.
 
-Ingress, cert-manager and managed databases are not exercised in CI.
+The NetworkPolicy needs a network plugin that enforces policies; CI's kind
+cluster does. Ingress, cert-manager and managed databases are not exercised in
+CI.

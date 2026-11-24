@@ -18,6 +18,7 @@ labels:
 
 resources:
   - postgres.yaml
+  - network-policy.yaml
   - api.yaml
   - dashboard.yaml
   - retention.yaml

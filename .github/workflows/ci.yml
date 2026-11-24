@@ -910,6 +910,31 @@ jobs:
             exit 1
           fi
 
+      - name: Verify only AgentLoop pods can reach Postgres
+        shell: bash
+        run: |
+          # Exit 0: connected. 1: blocked or refused. 3: the name did not resolve.
+          probe='import socket, sys
+          try:
+              socket.getaddrinfo("agentloop-postgres", 5432)
+          except socket.gaierror:
+              sys.exit(3)
+          try:
+              socket.create_connection(("agentloop-postgres", 5432), timeout=5).close()
+          except OSError:
+              sys.exit(1)'
+          # The API reaches Postgres; an unlabelled pod resolves the name but must be blocked.
+          kubectl -n agentloop exec deployment/agentloop-api -- python -c "$probe"
+          set +e
+          kubectl -n agentloop run network-probe --image=agentloop:ci --image-pull-policy=Never \
+            --restart=Never --rm --attach --quiet --command -- python -c "$probe"
+          status=$?
+          set -e
+          if [ "$status" -ne 1 ]; then
+            echo "Expected the outside pod to be blocked from Postgres (exit 1), got $status" >&2
+            exit 1
+          fi
+
       - name: Run the retention CronJob once
         run: |
           kubectl -n agentloop create job --from=cronjob/agentloop-retention retention-now

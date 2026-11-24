@@ -1,0 +1,29 @@
+# Only AgentLoop's own workloads may connect to the evaluation Postgres.
+# Requires a network plugin that enforces NetworkPolicy (Calico, Cilium,
+# kindnet, and most managed clusters). Remove it with postgres.yaml when you
+# use a managed database, and restrict access there instead.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: agentloop-postgres
+  labels:
+    app.kubernetes.io/name: agentloop-postgres
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: agentloop-postgres
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - agentloop-api
+                  - agentloop-dashboard
+                  - agentloop-retention
+      ports:
+        - protocol: TCP
+          port: 5432
