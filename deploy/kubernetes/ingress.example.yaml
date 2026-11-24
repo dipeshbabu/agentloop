@@ -1,0 +1,52 @@
+# Example Ingress for ingress-nginx with cert-manager. Not applied by default:
+# adjust the hostnames, issuer and dashboard authentication, then apply it
+# alongside the kustomization. The dashboard must sit behind authentication,
+# for example oauth2-proxy via the auth-url annotations shown below.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: agentloop-api
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+    nginx.ingress.kubernetes.io/proxy-body-size: 16m
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [agentloop-api.example.com]
+      secretName: agentloop-api-tls
+  rules:
+    - host: agentloop-api.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: agentloop-api
+                port:
+                  name: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: agentloop-dashboard
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+    nginx.ingress.kubernetes.io/auth-url: https://oauth2.example.com/oauth2/auth
+    nginx.ingress.kubernetes.io/auth-signin: https://oauth2.example.com/oauth2/start?rd=$scheme://$host$request_uri
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [agentloop.example.com]
+      secretName: agentloop-dashboard-tls
+  rules:
+    - host: agentloop.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: agentloop-dashboard
+                port:
+                  name: http

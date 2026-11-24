@@ -24,3 +24,7 @@ node_modules/
 htmlcov/
 .DS_Store
 Thumbs.db
+
+# Kubernetes settings and secrets copied from the examples
+deploy/kubernetes/config.env
+deploy/kubernetes/secrets.env

@@ -426,7 +426,8 @@ docker compose -f deploy/docker-compose.yml up --detach
 CI runs this exact stack over HTTPS on every change. The
 [cloud deployment guide](https://dipeshbabu.github.io/agentloop/CLOUD_DEPLOY/)
 covers server setup, API keys, upgrades, backups, and managed platforms such as
-Cloud Run, App Runner, ECS and Azure Container Apps.
+Cloud Run, App Runner, ECS and Azure Container Apps. Kubernetes manifests are in
+`deploy/kubernetes/`; see the [Kubernetes guide](https://dipeshbabu.github.io/agentloop/KUBERNETES/).
 
 ## Dashboard and persistence
 
