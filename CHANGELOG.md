@@ -28,8 +28,10 @@ trace, study, receipt, API and database schema versions.
   and an evaluation Postgres, with settings and secrets generated from local
   `config.env` and `secrets.env` files and an example HTTPS Ingress. Containers
   run as a non-root user with a read-only root filesystem and no capabilities.
-  CI deploys them to a kind cluster and checks the API, every dashboard page,
-  the hardening and the retention job. See `docs/KUBERNETES.md`.
+  A NetworkPolicy lets only AgentLoop's pods reach Postgres. CI deploys them to
+  a kind cluster and checks the API, every dashboard page, the hardening, the
+  retention job and that other pods cannot reach Postgres. See
+  `docs/KUBERNETES.md`.
 - CI runs can be compared in one step. A dashboard **CI Runs** page groups
   uploaded traces by their `workflow_run` label and compares a run's newest
   baseline and candidate with the Replay Proof gates and PR comment.
