@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import tempfile
 from pathlib import Path
 
 import pandas as pd
@@ -58,8 +60,27 @@ except ModuleNotFoundError:
 
 st.set_page_config(page_title="AgentLoop Dashboard", layout="wide")
 
-runs_dir = Path("runs")
-runs_dir.mkdir(parents=True, exist_ok=True)
+
+def _runs_directory() -> Path:
+    """Where demo generators write trace files.
+
+    AGENTLOOP_DASHBOARD_RUNS_DIR wins when set. Otherwise the dashboard uses
+    ./runs, falling back to a temporary directory when the working directory is
+    read-only, as it is for the non-root user in the container image.
+    """
+    configured = os.getenv("AGENTLOOP_DASHBOARD_RUNS_DIR")
+    directory = Path(configured) if configured else Path("runs")
+    try:
+        directory.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        if configured:
+            raise
+        directory = Path(tempfile.gettempdir()) / "agentloop-dashboard-runs"
+        directory.mkdir(parents=True, exist_ok=True)
+    return directory
+
+
+runs_dir = _runs_directory()
 
 
 @st.cache_resource

@@ -97,6 +97,11 @@ Create and revoke project keys with the API's admin key, or with
 `agentloop create-api-key` and `agentloop revoke-api-key`.
 Without the setting, the dashboard keeps its local, single-user behaviour.
 
+Demo generators on the `Ingest` page write trace files to
+`AGENTLOOP_DASHBOARD_RUNS_DIR`, or `./runs` when it is unset; when `./runs`
+cannot be created the dashboard uses a temporary directory. The container image
+sets it to `/data/runs`.
+
 ## Security boundaries
 
 Keep a local dashboard bound to a trusted interface. For shared or

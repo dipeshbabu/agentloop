@@ -7,6 +7,16 @@ trace, study, receipt, API and database schema versions.
 
 ## [Unreleased]
 
+### Fixed
+
+- The dashboard in the published container image failed on every page with
+  `PermissionError: 'runs'`: it created its demo-trace directory in the
+  read-only `/app` working directory. It now uses
+  `AGENTLOOP_DASHBOARD_RUNS_DIR` (set to `/data/runs` in the image) and falls
+  back to a temporary directory when `./runs` cannot be created. CI renders
+  every dashboard page inside the deployment container, since Streamlit's
+  health endpoint stays healthy when the app script fails.
+
 ### Added
 
 - CI runs can be compared in one step. A dashboard **CI Runs** page groups
