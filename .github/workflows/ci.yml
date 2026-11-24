@@ -585,6 +585,10 @@ jobs:
           docker compose exec -T dashboard python -c \
             "from agentloop.store import get_store; get_store().usage_summary(project_id='default')"
 
+      - name: Render every dashboard page inside the container
+        # /_stcore/health answers even when the app script fails, so run the script.
+        run: docker compose exec -T dashboard python scripts/smoke_dashboard_pages.py
+
       - name: Show container logs on failure
         if: failure()
         run: docker compose logs --no-color --tail=200
