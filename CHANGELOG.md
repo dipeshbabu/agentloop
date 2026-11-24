@@ -7,6 +7,14 @@ trace, study, receipt, API and database schema versions.
 
 ## [Unreleased]
 
+### Added
+
+- The API sends `Cache-Control: no-store`, `X-Content-Type-Options: nosniff`
+  and `Referrer-Policy: no-referrer` on every response, including 413 and CORS
+  preflight responses, without a proxy. `AGENTLOOP_API_DOCS=false` stops serving
+  `/docs`, `/redoc` and `/openapi.json`; the cloud stack sets it, CI checks both,
+  and `production-check` warns while the docs are public.
+
 ## [0.2.8] - 2026-11-23
 
 ### Changed

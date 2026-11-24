@@ -217,6 +217,7 @@ These deployments are not exercised in CI. The same image and settings apply:
    AGENTLOOP_REQUIRE_API_KEY=true
    AGENTLOOP_ADMIN_API_KEY=<long random secret>
    AGENTLOOP_CORS_ORIGINS=https://<dashboard hostname>
+   AGENTLOOP_API_DOCS=false
    ```
 
    Store the secrets in the platform's secret manager rather than plain

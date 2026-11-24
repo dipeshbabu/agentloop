@@ -674,6 +674,11 @@ jobs:
           status="$(curl --silent --output /dev/null --write-out '%{http_code}' --cacert caddy-root.crt \
             --header 'Content-Type: application/json' --data-binary @oversized.json https://api.localhost/v1/traces)"
           test "$status" = 413
+          status="$(curl --silent --output /dev/null --write-out '%{http_code}' --cacert caddy-root.crt https://api.localhost/docs)"
+          test "$status" = 404
+          headers="$(curl --silent --show-error --dump-header - --output /dev/null --cacert caddy-root.crt https://api.localhost/v1/health)"
+          grep -qi '^cache-control: no-store' <<< "$headers"
+          grep -qi '^referrer-policy: no-referrer' <<< "$headers"
 
       - name: Verify the dashboard requires a login
         shell: bash

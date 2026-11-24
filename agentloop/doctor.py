@@ -112,9 +112,25 @@ def _is_local_origin(origin: str) -> bool:
 
 def _hosting_policy_checks() -> list[DoctorCheck]:
     """Checks for settings added for shared deployments (0.2.7 and newer)."""
+    from agentloop.http_security import API_DOCS_VARIABLE, api_docs_enabled
     from agentloop.request_limits import ENVIRONMENT_VARIABLE, max_request_bytes
 
     checks: list[DoctorCheck] = []
+    try:
+        docs = api_docs_enabled()
+    except ValueError as exc:
+        checks.append(_fail("api_docs", str(exc), f"Set {API_DOCS_VARIABLE}=false."))
+    else:
+        if docs:
+            checks.append(
+                _warn(
+                    "api_docs",
+                    "/docs, /redoc and /openapi.json describe every route publicly",
+                    f"Set {API_DOCS_VARIABLE}=false on internet-facing API servers.",
+                )
+            )
+        else:
+            checks.append(_ok("api_docs", "interactive API docs disabled"))
     try:
         limit = max_request_bytes()
     except ValueError as exc:

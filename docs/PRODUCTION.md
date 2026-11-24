@@ -261,6 +261,12 @@ configured. From 0.2.7 it also publishes the container image to
   (16 MiB by default, `0` for no limit): larger bodies get `413` before they are
   read into memory, including chunked uploads without a declared length. An
   invalid value stops the server at startup.
+- From 0.2.9 every API response carries `Cache-Control: no-store`,
+  `X-Content-Type-Options: nosniff` and `Referrer-Policy: no-referrer`, since
+  responses can contain prompts and tool data. Set `AGENTLOOP_API_DOCS=false` on
+  internet-facing servers to stop serving the interactive `/docs`, `/redoc` and
+  `/openapi.json` pages; the cloud stack does. An invalid value stops the server
+  at startup.
 - Restrict database network access to the API and dashboard workloads, require
   encrypted database connections in hosted environments, and test backups and
   restores.
