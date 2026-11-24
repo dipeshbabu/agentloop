@@ -19,6 +19,10 @@ trace, study, receipt, API and database schema versions.
 
 ### Added
 
+- The TypeScript SDK client covers the newer API routes: `listTraces({ label })`,
+  `deleteTrace`, `listCiRuns`, `compareCiRun`, and with the admin key
+  `listApiKeys`, `revokeApiKey` and `listAuditEvents`. The SDK's interop check
+  exercises them against a real API server. They ship in the next npm release.
 - Kubernetes manifests in `deploy/kubernetes/` for `kubectl apply -k`: the API
   (two replicas), the dashboard with project sign-in, a daily retention CronJob
   and an evaluation Postgres, with settings and secrets generated from local
