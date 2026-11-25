@@ -19,6 +19,13 @@ trace, study, receipt, API and database schema versions.
   compares measured runs while keeping failed correctness and unknown costs.
   See [Request-local reuse](docs/REQUEST_REUSE.md)
   ([#399](https://github.com/dipeshbabu/agentloop/issues/399)).
+- `agentloop.pilot_records` validates first-use pilot records, which carry an
+  opaque participant ID and a consent reference and refuse personal fields,
+  and summarizes them with denominators. It also compares optimization methods
+  with a no-optimization baseline on held-out workloads, reporting quality
+  regressions, unknown costs and improved negative controls. This is part of
+  [#406](https://github.com/dipeshbabu/agentloop/issues/406). No participant data
+  is included.
 - `agentloop.transformations`, a registry of executable transformation passes.
   Each pass declares what it applies to, the evidence it needs, the effects it
   tolerates, its objective, validation and rollback. `propose` is a dry run that

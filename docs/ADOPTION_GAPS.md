@@ -44,6 +44,44 @@ The maintainer must arrange the participant's consent and permission to retain
 their application data. A sanitized private evidence bundle can use the existing
 trace/study artifacts. No external participant observations are currently recorded.
 
+### Recording pilot observations
+
+`agentloop.pilot_records` validates one JSON record per participant, using the
+fields above:
+- `participant`, an opaque ID, and `consent_ref`, where the consent is documented;
+- `application_category` and `agentloop_version`;
+- `started_at`, `first_valid_trace_at`, `first_useful_finding_at` and `outcome_at`;
+- `outcome`: `accepted`, `rejected`, `abandoned` or `in_progress`;
+- `failed_steps`, `assistance` and `effort_minutes`.
+
+Records with fields such as `name` or `email` are refused. Keep identities in
+the consent log, not in the evidence. Timestamps must be in order.
+`summarize_pilot(records)` reports median minutes to each milestone, with how
+many participants reached it out of the total, the acceptance rate among
+decided outcomes, and how many needed help. A rejected change counts as an
+outcome.
+
+### Comparing optimization methods
+
+A benchmark compares AgentLoop's passes with simpler methods on workloads whose
+quality checks someone else owns. Record one `agentloop.method_result/v1` row
+per method and workload:
+- `method_kind`: `no_optimization`, `heuristic_ranking`, `manual` or `agentloop_pass`;
+- `split`: `development` or `held_out`, and `negative_control`;
+- `quality`, with `quality_source` (`independent` or `self_reported`);
+- `runtime_ms` and `cost_usd`, which may be null.
+
+`compare_methods(rows)` uses only held-out rows with independent quality. It
+compares each method with `no_optimization` on the same workloads, and reports:
+- the median runtime gain and quality regressions;
+- how many rows had known runtime and cost;
+- how often the method "improved" a negative control. Nothing should improve
+  a negative control, so a method that does signals noise or leakage.
+
+No participant records or independently owned workloads are stored in this
+repository yet. Collecting them is the open part of
+[#406](https://github.com/dipeshbabu/agentloop/issues/406).
+
 ## Reproduce scoped overhead measurements
 
 From the source checkout, replace `YOUR_COMMIT` with its full commit hash.
