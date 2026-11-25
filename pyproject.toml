@@ -93,6 +93,9 @@ agentloop = "agentloop.integrations.hermes_recorder:register"
 include = ["agentloop*", "dashboard*"]
 exclude = ["runs*", "sdk*", "tests*", "build*", "dist*"]
 
+[tool.setuptools.package-data]
+dashboard = ["assets/*.svg"]
+
 [tool.ruff]
 line-length = 100
 

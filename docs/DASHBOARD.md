@@ -22,12 +22,22 @@ uv run streamlit run dashboard/app.py
 
 Open the URL printed by Streamlit and select project `demo` in the sidebar.
 
+### Theme
+
+The dashboard has light and dark palettes that follow your system setting; switch
+them from Streamlit's menu (top right, then **Settings**). Colours, fonts and
+corner radius live in `.streamlit/config.toml`, which Streamlit reads from the
+directory it is started in, so start it from the repository root as above. The
+container image copies the file to `/app`. Started from another directory, the
+dashboard keeps its layout, navigation and cards but uses Streamlit's default
+colours.
+
 ## Dashboard pages
 
 - `Overview`: run count, runtime, cost, token volume, model and tool calls,
-  retries, recent runs, and runtime charts.
+  retries, recent runs, runtime over time and runs by agent.
 - `Traces`: stored trace metadata and labels, a `KEY=VALUE` label filter
-  (such as `commit=abc123` from CI uploads), event timelines, trace JSON
+  (such as `commit=abc123` from CI uploads), an event waterfall and timeline, trace JSON
   downloads, and deleting a trace after confirmation.
 - `Optimization Queue`: recurring findings ranked across stored traces.
 - `Optimization`: bottlenecks, parallelizable groups, optimization findings,

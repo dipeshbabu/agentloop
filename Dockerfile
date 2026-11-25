@@ -21,6 +21,7 @@ RUN adduser --disabled-password --gecos "" agentloop
 COPY pyproject.toml uv.lock README.md LICENSE THIRD_PARTY_LICENSES.md ./
 COPY agentloop ./agentloop
 COPY dashboard ./dashboard
+COPY .streamlit ./.streamlit
 COPY scripts ./scripts
 
 RUN uv sync --frozen --no-dev --all-extras --no-editable

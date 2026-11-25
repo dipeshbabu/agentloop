@@ -9,6 +9,13 @@ trace, study, receipt, API and database schema versions.
 
 ### Added
 
+- A redesigned dashboard: light and dark themes in the AgentLoop brand colours
+  (`.streamlit/config.toml`, copied into the container image), the project
+  logo, sidebar navigation with icons, page headers with a one-line
+  description, metric cards, readable table columns, Overview charts of runtime
+  over time and runs by agent, an event waterfall for each trace, severity and
+  readiness badges in the Optimization Queue, aligned cards on the Ingest and
+  API Keys pages, and a centred sign-in screen for shared dashboards.
 - A reusable `application-performance-comment.yml` workflow posts the
   comparison report on the pull request and updates the same comment on later
   pushes. Callers opt in with a separate job that alone receives
