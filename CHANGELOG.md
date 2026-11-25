@@ -127,6 +127,13 @@ trace, study, receipt, API and database schema versions.
 
 ### Changed
 
+- `agentloop/cli.py` keeps the Typer app, shared helpers and sub-app wiring.
+  Its commands now live in `cli_onboarding`, `cli_analysis`, `cli_setup`,
+  `cli_store`, `cli_remote` and `cli_runtime`. Command names, order, options,
+  defaults and help are unchanged, and `tests/test_cli_surface.py` checks
+  them against a snapshot of all 89 commands. Helpers such as `console` and
+  `AgentLoopClient` are still looked up through `agentloop.cli`
+  ([#407](https://github.com/dipeshbabu/agentloop/issues/407)).
 - `agentloop/store.py` is split into `store_types` (constants, errors and the
   `TraceStore` protocol), `store_common` (shared helpers and the optimization
   queue), `store_sqlite` and `store_postgres`. `agentloop.store` re-exports every
