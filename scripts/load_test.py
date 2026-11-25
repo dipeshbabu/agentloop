@@ -76,11 +76,12 @@ def _uploader(port, key, stop, recorder, bodies) -> None:
     index = 0
     while not stop.is_set():
         body = bodies[index % len(bodies)]
-        # A fresh run_id per upload so each request is a real insert.
-        payload = json.loads(body)
-        payload["run_id"] = f"{payload['run_id']}-{threading.get_ident()}-{index}"
+        # A fresh run_id per upload (in the trace and its events) so each
+        # request is a real insert.
+        run_id = json.loads(body)["run_id"]
+        unique = body.replace(run_id, f"{run_id}-{threading.get_ident()}-{index}")
         started = time.perf_counter()
-        error = _request(conn, "POST", "/v1/traces", json.dumps(payload).encode(), headers)
+        error = _request(conn, "POST", "/v1/traces", unique.encode(), headers)
         recorder.record("upload", time.perf_counter() - started, error)
         index += 1
     conn.close()
@@ -111,7 +112,7 @@ def _reader(port, key, stop, recorder) -> None:
 def _purger(store, recorder, result: dict) -> None:
     started = time.perf_counter()
     try:
-        result.update(store.purge_traces(0, project_id=PURGED_PROJECT, actor="load-test"))
+        result.update(store.purge_traces(1 / 86400, project_id=PURGED_PROJECT, actor="load-test"))
         error = None
     except Exception as exc:  # report every failure, whatever its type
         error = f"{type(exc).__name__}: {exc}"
@@ -131,6 +132,24 @@ def _wait_for_server(port: int, server: subprocess.Popen, timeout: float = 60) -
         except OSError:
             time.sleep(0.2)
     raise RuntimeError("server did not become healthy")
+
+
+def _stop_server(server: subprocess.Popen) -> None:
+    """Stop uvicorn and its worker processes."""
+    if os.name == "nt":
+        # terminate() would end only the parent and orphan the workers.
+        subprocess.run(
+            ["taskkill", "/T", "/F", "/PID", str(server.pid)],
+            capture_output=True,
+            check=False,
+        )
+    else:
+        server.terminate()  # uvicorn stops its workers on SIGTERM
+    try:
+        server.wait(timeout=30)
+    except subprocess.TimeoutExpired:
+        server.kill()
+        server.wait()
 
 
 def _percentile(values: list[float], fraction: float) -> float:
@@ -209,11 +228,7 @@ def main() -> int:
             thread.join()
         elapsed = time.perf_counter() - started
     finally:
-        server.terminate()
-        try:
-            server.wait(timeout=30)
-        except subprocess.TimeoutExpired:
-            server.kill()
+        _stop_server(server)
 
     stored = len(store.list_traces(project_id=PROJECT))
     uploads = len(recorder.latencies.get("upload", []))

@@ -10,6 +10,8 @@ import os
 import re
 import secrets
 import sqlite3
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -635,14 +637,36 @@ class SQLiteTraceStore(InterventionStoreMixin):
     path: str = "runs/agentloop.db"
     _ready: bool = field(default=False, init=False, repr=False, compare=False)
 
-    def _connect(self) -> sqlite3.Connection:
+    @contextmanager
+    def _connect(self) -> Iterator[sqlite3.Connection]:
+        """A connection that commits on success, rolls back on error, and is closed.
+
+        ``with sqlite3.connect(...)`` alone only ends the transaction; the
+        connection, and on Windows its file handle, stayed open until garbage
+        collection.
+        """
         Path(self.path).parent.mkdir(parents=True, exist_ok=True)
         conn = sqlite3.connect(self.path, timeout=30)
         conn.row_factory = sqlite3.Row
-        return conn
+        try:
+            with conn:
+                yield conn
+        finally:
+            conn.close()
 
     def init(self) -> None:
         with self._connect() as conn:
+            # WAL lets reads proceed while another process writes. In the
+            # default rollback journal, each upload's commit blocked every
+            # reader, so concurrent API workers saw multi-second stalls. The
+            # mode is stored in the database file, so this runs once per file.
+            if conn.execute("PRAGMA journal_mode").fetchone()[0] != "wal":
+                try:
+                    conn.execute("PRAGMA journal_mode=WAL")
+                except sqlite3.OperationalError:
+                    # Switching needs exclusive access; a concurrent init that
+                    # holds the database is making the same switch.
+                    pass
             apply_sqlite_migrations(conn)
         self._ready = True
 
@@ -780,9 +804,12 @@ class SQLiteTraceStore(InterventionStoreMixin):
         return totals
 
     def _upsert_trace(
-        self, conn: sqlite3.Connection, trace: AgentTrace, project_id: str
-    ) -> dict[str, Any]:
-        report = trace.report()
+        self,
+        conn: sqlite3.Connection,
+        trace: AgentTrace,
+        project_id: str,
+        report: dict[str, Any],
+    ) -> None:
         cost_status, priced_calls, unavailable_calls = _report_cost_completeness(report)
         model_call_count, _ = _normalized_model_call_count(report)
         estimated_cost_usd = _normalized_estimated_cost(report)
@@ -829,7 +856,6 @@ class SQLiteTraceStore(InterventionStoreMixin):
             raise TraceProjectConflictError(
                 f"run_id {trace.run_id!r} already belongs to another project"
             )
-        return report
 
     def _upsert_usage(
         self, conn: sqlite3.Connection, project_id: str, run_id: str, report: dict[str, Any]
@@ -939,10 +965,14 @@ class SQLiteTraceStore(InterventionStoreMixin):
 
     def save_trace(self, trace: AgentTrace, project_id: str = "default") -> None:
         self._ensure_init()
+        # Analyse before opening the transaction so the write lock is held only
+        # for the inserts.
+        report = trace.report()
+        diagnosis = build_diagnosis(trace, report=report)
         with self._connect() as conn:
-            report = self._upsert_trace(conn, trace, project_id)
+            self._upsert_trace(conn, trace, project_id, report)
             self._upsert_usage(conn, project_id, trace.run_id, report)
-            self._upsert_findings(conn, build_diagnosis(trace, report=report), project_id)
+            self._upsert_findings(conn, diagnosis, project_id)
 
     def list_traces(self, project_id: str | None = None) -> list[dict[str, Any]]:
         self._ensure_init()
@@ -1383,8 +1413,9 @@ class PostgresTraceStore(InterventionStoreMixin):
                 )
         return totals
 
-    def _upsert_trace(self, conn, trace: AgentTrace, project_id: str) -> dict[str, Any]:
-        report = trace.report()
+    def _upsert_trace(
+        self, conn, trace: AgentTrace, project_id: str, report: dict[str, Any]
+    ) -> None:
         cost_status, priced_calls, unavailable_calls = _report_cost_completeness(report)
         model_call_count, _ = _normalized_model_call_count(report)
         estimated_cost_usd = _normalized_estimated_cost(report)
@@ -1424,7 +1455,6 @@ class PostgresTraceStore(InterventionStoreMixin):
             raise TraceProjectConflictError(
                 f"run_id {trace.run_id!r} already belongs to another project"
             )
-        return report
 
     def _upsert_usage(self, conn, project_id: str, run_id: str, report: dict[str, Any]) -> None:
         cost_status, priced_calls, unavailable_calls = _report_cost_completeness(report)
@@ -1515,10 +1545,14 @@ class PostgresTraceStore(InterventionStoreMixin):
 
     def save_trace(self, trace: AgentTrace, project_id: str = "default") -> None:
         self._ensure_init()
+        # Analyse before opening the transaction so the write lock is held only
+        # for the inserts.
+        report = trace.report()
+        diagnosis = build_diagnosis(trace, report=report)
         with self._connect() as conn:
-            report = self._upsert_trace(conn, trace, project_id)
+            self._upsert_trace(conn, trace, project_id, report)
             self._upsert_usage(conn, project_id, trace.run_id, report)
-            self._upsert_findings(conn, build_diagnosis(trace, report=report), project_id)
+            self._upsert_findings(conn, diagnosis, project_id)
 
     def list_traces(self, project_id: str | None = None) -> list[dict[str, Any]]:
         self._ensure_init()
