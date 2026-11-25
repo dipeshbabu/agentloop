@@ -116,6 +116,7 @@ PAGE_ICONS = {
     "SCHEDULE_COMPILER.md": "octicons/git-merge-queue-16",
     "RETRY_PASSES.md": "octicons/sync-16",
     "OPTIMIZATION_SEARCH.md": "octicons/goal-16",
+    "CONDITIONED_CALIBRATION.md": "octicons/sliders-16",
     "WORKFLOW_TRACING.md": "octicons/git-branch-16",
     "DASHBOARD.md": "octicons/project-roadmap-16",
     "PRODUCTION.md": "octicons/stack-16",

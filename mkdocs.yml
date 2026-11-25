@@ -129,6 +129,7 @@ nav:
       - Compiling a schedule: SCHEDULE_COMPILER.md
       - Retry and loop passes: RETRY_PASSES.md
       - Optimization search: OPTIMIZATION_SEARCH.md
+      - Conditioned calibration: CONDITIONED_CALIBRATION.md
       - Workflow tracing: WORKFLOW_TRACING.md
       - Dashboard: DASHBOARD.md
       - Server deployment: PRODUCTION.md
