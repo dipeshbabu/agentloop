@@ -9,6 +9,16 @@ trace, study, receipt, API and database schema versions.
 
 ### Added
 
+- `agentloop.request_reuse`: request-local reuse of tool results declared
+  `read` or `none`, inside a `request_scope`. A key covers the tool, its version,
+  the auth scope, an optional data version and the canonical input, and a hit
+  compares the stored input in full. Nothing crosses requests or tenants, and
+  inputs that aren't plain JSON bypass the cache. Results are deep copied, and
+  errors aren't cached. Model output reuse is a separate opt-in.
+  `deduplicate_context` never removes protected segments, and `compare_reuse`
+  compares measured runs while keeping failed correctness and unknown costs.
+  See [Request-local reuse](docs/REQUEST_REUSE.md)
+  ([#399](https://github.com/dipeshbabu/agentloop/issues/399)).
 - `agentloop.transformations`, a registry of executable transformation passes.
   Each pass declares what it applies to, the evidence it needs, the effects it
   tolerates, its objective, validation and rollback. `propose` is a dry run that
