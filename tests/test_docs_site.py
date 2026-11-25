@@ -59,3 +59,14 @@ def test_generated_content_reads_the_canonical_files():
     for uri, source in docs_hooks.SOURCE_PAGES.items():
         assert files.get_file_from_path(uri).content_string == source.read_text(encoding="utf-8")
     assert Path(config.docs_dir) == docs_hooks.DOCS
+
+
+def test_page_summary_uses_the_description_or_first_paragraph():
+    assert docs_hooks.page_summary("<h1>T</h1><p>Ignored.</p>", "Given.") == "Given."
+    html = "<p>Before the title.</p><h1>T</h1><p>Uses <code>x</code> &amp; y.</p>"
+    assert docs_hooks.page_summary(html) == "Uses x & y."
+    assert docs_hooks.page_summary("<h1>T</h1>") is None
+    long = "<h1>T</h1><p>" + "word " * 40 + "</p>"
+    summary = docs_hooks.page_summary(long)
+    assert summary.endswith("…") and len(summary) <= docs_hooks.SUMMARY_LENGTH + 1
+    assert " " not in summary[-2:]
