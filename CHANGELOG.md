@@ -127,6 +127,14 @@ trace, study, receipt, API and database schema versions.
 
 ### Changed
 
+- `dashboard/app.py` keeps page setup, sign-in and navigation. Shared data
+  access, caching and rendering helpers moved to `dashboard/common.py`, and
+  each of the 14 pages moved to its own `dashboard/views/` module with a
+  `render(ctx)` function. `recent_traces` and `select_trace` now take the store
+  and project explicitly instead of reading script globals, so concurrent
+  sessions can't share them. `tests/test_dashboard_surface.py` renders every
+  page and checks its structure against a snapshot recorded before the split
+  ([#407](https://github.com/dipeshbabu/agentloop/issues/407)).
 - `agentloop/cli.py` keeps the Typer app, shared helpers and sub-app wiring.
   Its commands now live in `cli_onboarding`, `cli_analysis`, `cli_setup`,
   `cli_store`, `cli_remote` and `cli_runtime`. Command names, order, options,
