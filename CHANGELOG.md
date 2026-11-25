@@ -9,6 +9,15 @@ trace, study, receipt, API and database schema versions.
 
 ### Added
 
+- `agentloop.conditioned_calibration` fits median measured-to-predicted ratios
+  with bootstrap intervals per pass and task cluster, falling back to coarser
+  strata. Only observed outcomes are fitted. Estimated, missing and stale rows
+  are counted, and negative results and confounders are kept. `evaluate`
+  compares calibrated and raw predictions on held-out task clusters, reporting
+  MAE, relative error, interval coverage and abstentions. Fitted models stay
+  inactive until `approve` records a review. See
+  [Conditioned calibration](docs/CONDITIONED_CALIBRATION.md)
+  ([#403](https://github.com/dipeshbabu/agentloop/issues/403)).
 - `agentloop.optimization_search` runs a bounded, seeded search over candidate
   interventions using a host-supplied `evaluate` callback. It measures the
   baseline, then each single intervention, then greedily combines compatible
