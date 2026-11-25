@@ -9,6 +9,10 @@ trace, study, receipt, API and database schema versions.
 
 ### Added
 
+- `release-npm.yml` creates a "TypeScript SDK X.Y.Z" GitHub release for each
+  published SDK version, with the exact tarball npm serves and its SHA-256.
+  Until now only 0.1.0 had a GitHub release; 0.1.1 to 0.1.3 were published to
+  npm and tagged, but not released on GitHub.
 - A redesigned dashboard: light and dark themes in the AgentLoop brand colours
   (`.streamlit/config.toml`, copied into the container image), the project
   logo, sidebar navigation with icons, page headers with a one-line
