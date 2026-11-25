@@ -107,3 +107,75 @@ jobs:
         run: |
           npm ci
           npm publish --provenance --access public
+
+  github-release:
+    name: Create GitHub release
+    needs: publish-npm
+    runs-on: ubuntu-latest
+    permissions:
+      # Creates the release and uploads the published tarball; nothing else.
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+
+      - name: Download the published package
+        # The release carries the exact tarball npm serves, not a rebuild, so
+        # its checksum matches what `npm install` downloads.
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#typescript-v}"
+          mkdir -p release-assets
+          for attempt in $(seq 1 20); do
+            if npm pack "agentloop-profiler@$version" --pack-destination release-assets; then
+              break
+            fi
+            if [ "$attempt" = 20 ]; then
+              echo "agentloop-profiler@$version is not available from npm" >&2
+              exit 1
+            fi
+            sleep 15
+          done
+          (cd release-assets && sha256sum ./*.tgz > SHA256SUMS)
+          cat release-assets/SHA256SUMS
+
+      - name: Write release notes
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#typescript-v}"
+          git fetch --no-tags --force origin "refs/tags/$GITHUB_REF_NAME:refs/tags/$GITHUB_REF_NAME"
+          {
+            git for-each-ref --format='%(contents)' "refs/tags/$GITHUB_REF_NAME"
+            echo
+            echo '```bash'
+            echo "npm install agentloop-profiler@$version"
+            echo '```'
+            echo
+            echo "- Package: https://www.npmjs.com/package/agentloop-profiler/v/$version"
+            echo "- Built from commit $(git rev-list -n 1 "$GITHUB_REF_NAME" | cut -c1-12) and published with npm provenance by \`release-npm.yml\`."
+            echo "- The attached tarball is the one npm serves; \`SHA256SUMS\` lists its checksum."
+          } > release-notes.md
+          cat release-notes.md
+
+      - name: Create or update the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#typescript-v}"
+          if ! gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            # --latest=false keeps the Python package release as the
+            # repository's latest release.
+            gh release create "$GITHUB_REF_NAME" \
+              --verify-tag \
+              --latest=false \
+              --title "TypeScript SDK $version" \
+              --notes-file release-notes.md
+          fi
+          gh release upload "$GITHUB_REF_NAME" release-assets/* --clobber
