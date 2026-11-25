@@ -1,10 +1,13 @@
 {% extends "base.html" %}
 
 {#
-  Previous and next pages as one card under the page content, instead of
-  Material's full-width footer links (navigation.footer is off in mkdocs.yml).
-  The next page shows its title and a one-line summary; scripts/docs_hooks.py
-  sets page.meta.al_summary from the page's description or first paragraph.
+  Previous and next pages under the page content, instead of Material's
+  full-width footer links (navigation.footer is off in mkdocs.yml).
+
+  A tinted tray holds a small "Previous" link and a white panel for the next
+  page: its title, a one-line summary, a short divider and "Next". The summary
+  comes from page.meta.al_summary, set by scripts/docs_hooks.py from the page's
+  description or first paragraph.
 #}
 {% block content %}
   {{ super() }}
@@ -12,24 +15,26 @@
     <nav class="al-pager" aria-label="Previous and next pages">
       {% if page.previous_page %}
         <a class="al-pager__prev" href="{{ page.previous_page.url | url }}" rel="prev"
-           title="{{ page.previous_page.title | e }}">
+           aria-label="Previous: {{ page.previous_page.title | e }}">
           <span class="al-pager__chevron" aria-hidden="true">{% include ".icons/octicons/chevron-left-16.svg" %}</span>
-          <span>Previous</span>
-          <span class="al-sr-only">: {{ page.previous_page.title | e }}</span>
+          <span class="al-pager__label">Previous</span>
         </a>
       {% endif %}
       {% if page.next_page %}
         <a class="al-pager__next" href="{{ page.next_page.url | url }}" rel="next">
-          <span class="al-pager__page">
-            <span class="al-pager__title">{{ page.next_page.title | e }}</span>
-            {% set summary = page.next_page.meta and page.next_page.meta.al_summary %}
-            {% if summary %}
-              <span class="al-pager__summary">{{ summary | e }}</span>
-            {% endif %}
-          </span>
-          <span class="al-pager__label">
-            <span>Next</span>
-            <span class="al-pager__chevron" aria-hidden="true">{% include ".icons/octicons/chevron-right-16.svg" %}</span>
+          <span class="al-pager__panel">
+            <span class="al-pager__page">
+              <span class="al-pager__title">{{ page.next_page.title | e }}</span>
+              {% set summary = page.next_page.meta and page.next_page.meta.al_summary %}
+              {% if summary %}
+                <span class="al-pager__summary">{{ summary | e }}</span>
+              {% endif %}
+            </span>
+            <span class="al-pager__divider" aria-hidden="true"></span>
+            <span class="al-pager__next-label">
+              <span class="al-pager__label">Next</span>
+              <span class="al-pager__chevron" aria-hidden="true">{% include ".icons/octicons/chevron-right-16.svg" %}</span>
+            </span>
           </span>
         </a>
       {% endif %}
