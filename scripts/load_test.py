@@ -20,7 +20,7 @@ import json
 import os
 import socket
 import statistics
-import subprocess
+import subprocess  # nosec B404 - starts and stops its own uvicorn server with fixed argv
 import sys
 import tempfile
 import threading
@@ -138,7 +138,7 @@ def _stop_server(server: subprocess.Popen) -> None:
     """Stop uvicorn and its worker processes."""
     if os.name == "nt":
         # terminate() would end only the parent and orphan the workers.
-        subprocess.run(
+        subprocess.run(  # noqa: S603, S607  # nosec B603 B607 - fixed taskkill argv, own child PID
             ["taskkill", "/T", "/F", "/PID", str(server.pid)],
             capture_output=True,
             check=False,
@@ -186,7 +186,7 @@ def main() -> int:
     bodies = [json.dumps(_trace(index).to_dict()) for index in range(20)]
 
     port = _free_port()
-    server = subprocess.Popen(
+    server = subprocess.Popen(  # noqa: S603  # nosec B603 - fixed uvicorn argv via sys.executable
         [
             sys.executable,
             "-m",
