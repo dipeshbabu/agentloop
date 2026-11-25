@@ -111,6 +111,7 @@ PAGE_ICONS = {
     "SOURCE_PROVENANCE.md": "octicons/code-square-16",
     "EXECUTION_IR.md": "octicons/workflow-16",
     "TIMING_SENSITIVITY.md": "octicons/stopwatch-16",
+    "TRANSFORMATIONS.md": "octicons/diff-16",
     "WORKFLOW_TRACING.md": "octicons/git-branch-16",
     "DASHBOARD.md": "octicons/project-roadmap-16",
     "PRODUCTION.md": "octicons/stack-16",
