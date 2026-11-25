@@ -215,6 +215,33 @@ def test_api_key_roundtrip(store):
     assert store.verify_api_key("al_wrong-key-entirely") is None
 
 
+def test_verified_api_keys_skip_scrypt_until_revoked(store, monkeypatch):
+    from agentloop import store as store_module
+
+    created = store.create_api_key(project_id="proj_a", name="ci")
+    calls: list[str] = []
+    real = store_module.verify_api_key_hash
+
+    def counting(api_key, encoded_hash):
+        calls.append(encoded_hash)
+        return real(api_key, encoded_hash)
+
+    monkeypatch.setattr(store_module, "verify_api_key_hash", counting)
+
+    assert store.verify_api_key(created["api_key"])["project_id"] == "proj_a"
+    assert len(calls) == 1
+    for _ in range(3):
+        assert store.verify_api_key(created["api_key"])["project_id"] == "proj_a"
+    assert len(calls) == 1
+
+    # A different key with the same prefix still goes through scrypt and fails.
+    assert store.verify_api_key(created["api_key"][:-1] + "x") is None
+    assert len(calls) == 2
+
+    assert store.revoke_api_key("proj_a", created["prefix"]) == 1
+    assert store.verify_api_key(created["api_key"]) is None
+
+
 def test_api_keys_are_listed_without_secrets_and_revoked_per_project(store):
     first = store.create_api_key(project_id="proj_a", name="ci")
     second = store.create_api_key(project_id="proj_a", name="laptop")

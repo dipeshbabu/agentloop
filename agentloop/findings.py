@@ -64,8 +64,11 @@ class OptimizationFinding:
         return result
 
 
-def build_diagnosis(trace: Any, *, sort_by="priority", ranking_inputs=None) -> dict[str, Any]:
-    plan = build_optimization_plan(trace)
+def build_diagnosis(
+    trace: Any, *, sort_by="priority", ranking_inputs=None, report=None
+) -> dict[str, Any]:
+    """Diagnose a trace; pass ``report`` when the caller already built ``trace.report()``."""
+    plan = build_optimization_plan(trace, report)
     node_lookup = {node["node_id"]: node for node in plan.get("graph", {}).get("nodes", [])}
     findings = [
         _finding_from_card(card, plan, node_lookup=node_lookup)

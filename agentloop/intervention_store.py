@@ -24,7 +24,7 @@ class InterventionStoreMixin:
     def get_finding_snapshot(
         self, run_id: str, finding_id: str, project_id: str = "default"
     ) -> dict[str, Any] | None:
-        self.init()
+        self._ensure_init()
         with self._connect() as conn:
             row = conn.execute(
                 self._intervention_sql(
@@ -39,7 +39,7 @@ class InterventionStoreMixin:
     def get_intervention(
         self, intervention_id: str, project_id: str = "default"
     ) -> dict[str, Any] | None:
-        self.init()
+        self._ensure_init()
         with self._connect() as conn:
             row = conn.execute(
                 self._intervention_sql(
@@ -57,7 +57,7 @@ class InterventionStoreMixin:
         )
         payload = validated.to_dict()
         serialized = canonical_json(payload)
-        self.init()
+        self._ensure_init()
         with self._connect() as conn:
             if not self._postgres_interventions:
                 conn.execute("BEGIN IMMEDIATE")

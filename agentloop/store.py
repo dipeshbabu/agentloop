@@ -10,7 +10,7 @@ import os
 import re
 import secrets
 import sqlite3
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Protocol
@@ -90,6 +90,10 @@ class FindingTransitionError(ValueError):
 
 class TraceStore(Protocol):
     def init(self) -> None: ...
+
+    def _ensure_init(self) -> None:
+        """Run init() unless this store has already done so."""
+        ...
 
     def get_finding_snapshot(
         self, run_id: str, finding_id: str, project_id: str = "default"
@@ -209,6 +213,30 @@ def verify_api_key_hash(api_key: str, encoded_hash: str) -> bool:
         dklen=_API_KEY_HASH_BYTES,
     )
     return hmac.compare_digest(actual, expected)
+
+
+# Fingerprints of API keys that passed scrypt verification in this process,
+# mapped to the stored hash they matched. scrypt costs tens of milliseconds by
+# design, and every authenticated request presents its key. A remembered key
+# still matches only while that hash row exists, so revocation is immediate.
+_VERIFIED_KEYS: dict[str, str] = {}
+_VERIFIED_KEYS_LIMIT = 1024
+
+
+def _find_api_key_row(api_key: str, rows: list[Any], key_hash_of: Any) -> Any | None:
+    fingerprint = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
+    known = _VERIFIED_KEYS.get(fingerprint)
+    if known is not None:
+        for row in rows:
+            if hmac.compare_digest(key_hash_of(row), known):
+                return row
+    for row in rows:
+        if verify_api_key_hash(api_key, key_hash_of(row)):
+            if len(_VERIFIED_KEYS) >= _VERIFIED_KEYS_LIMIT:
+                _VERIFIED_KEYS.clear()
+            _VERIFIED_KEYS[fingerprint] = key_hash_of(row)
+            return row
+    return None
 
 
 def _encode_hash_bytes(value: bytes) -> str:
@@ -603,6 +631,7 @@ def _build_optimization_queue(
 @dataclass
 class SQLiteTraceStore(InterventionStoreMixin):
     path: str = "runs/agentloop.db"
+    _ready: bool = field(default=False, init=False, repr=False, compare=False)
 
     def _connect(self) -> sqlite3.Connection:
         Path(self.path).parent.mkdir(parents=True, exist_ok=True)
@@ -613,9 +642,16 @@ class SQLiteTraceStore(InterventionStoreMixin):
     def init(self) -> None:
         with self._connect() as conn:
             apply_sqlite_migrations(conn)
+        self._ready = True
+
+    def _ensure_init(self) -> None:
+        # Every store method needs the schema, but checking migrations opens a
+        # connection each time; once per store is enough while the file exists.
+        if not (self._ready and Path(self.path).exists()):
+            self.init()
 
     def create_api_key(self, project_id: str, name: str, actor: str = "local") -> dict[str, Any]:
-        self.init()
+        self._ensure_init()
         api_key = new_api_key()
         prefix = api_key[:_API_KEY_PREFIX_LENGTH]
         with self._connect() as conn:
@@ -628,21 +664,14 @@ class SQLiteTraceStore(InterventionStoreMixin):
         return {"api_key": api_key, "project_id": project_id, "name": name, "prefix": prefix}
 
     def verify_api_key(self, api_key: str) -> dict[str, Any] | None:
-        self.init()
+        self._ensure_init()
         prefix = api_key[:_API_KEY_PREFIX_LENGTH]
         with self._connect() as conn:
             rows = conn.execute(
                 "SELECT key_hash, project_id, name, prefix FROM api_keys WHERE prefix = ?",
                 (prefix,),
             ).fetchall()
-            row = next(
-                (
-                    candidate
-                    for candidate in rows
-                    if verify_api_key_hash(api_key, candidate["key_hash"])
-                ),
-                None,
-            )
+            row = _find_api_key_row(api_key, rows, lambda candidate: candidate["key_hash"])
             if row is None:
                 return None
             conn.execute(
@@ -653,7 +682,7 @@ class SQLiteTraceStore(InterventionStoreMixin):
 
     def list_api_keys(self, project_id: str) -> list[dict[str, Any]]:
         """Key metadata for one project; key values and hashes are never returned."""
-        self.init()
+        self._ensure_init()
         with self._connect() as conn:
             rows = conn.execute(
                 "SELECT prefix, name, created_at, last_used_at FROM api_keys "
@@ -676,7 +705,7 @@ class SQLiteTraceStore(InterventionStoreMixin):
     ) -> list[dict[str, Any]]:
         """Newest audit events first, optionally for one project."""
         limit = _validate_page_limit(limit)
-        self.init()
+        self._ensure_init()
         with self._connect() as conn:
             rows = conn.execute(
                 "SELECT id, occurred_at, project_id, action, actor, target, details_json "
@@ -689,7 +718,7 @@ class SQLiteTraceStore(InterventionStoreMixin):
     def revoke_api_key(self, project_id: str, prefix: str, actor: str = "local") -> int:
         """Delete a project's keys with this prefix; returns how many were revoked."""
         _require_key_prefix(prefix)
-        self.init()
+        self._ensure_init()
         with self._connect() as conn:
             cursor = conn.execute(
                 "DELETE FROM api_keys WHERE project_id = ? AND prefix = ?",
@@ -706,7 +735,7 @@ class SQLiteTraceStore(InterventionStoreMixin):
         self, run_id: str, project_id: str, actor: str = "local"
     ) -> dict[str, int] | None:
         """Delete one trace of a project and its findings, usage and interventions."""
-        self.init()
+        self._ensure_init()
         with self._connect() as conn:
             exists = conn.execute(
                 "SELECT 1 FROM traces WHERE run_id = ? AND project_id = ?", (run_id, project_id)
@@ -722,7 +751,7 @@ class SQLiteTraceStore(InterventionStoreMixin):
     ) -> dict[str, int]:
         """Delete traces stored more than ``older_than_days`` ago, optionally in one project."""
         cutoff = _retention_cutoff(older_than_days).strftime("%Y-%m-%d %H:%M:%S")
-        self.init()
+        self._ensure_init()
         totals = {"traces": 0, "findings": 0, "usage_events": 0, "interventions": 0}
         with self._connect() as conn:
             query = "SELECT project_id, run_id FROM traces WHERE created_at < ?"
@@ -907,14 +936,14 @@ class SQLiteTraceStore(InterventionStoreMixin):
         )
 
     def save_trace(self, trace: AgentTrace, project_id: str = "default") -> None:
-        self.init()
+        self._ensure_init()
         with self._connect() as conn:
             report = self._upsert_trace(conn, trace, project_id)
             self._upsert_usage(conn, project_id, trace.run_id, report)
-            self._upsert_findings(conn, build_diagnosis(trace), project_id)
+            self._upsert_findings(conn, build_diagnosis(trace, report=report), project_id)
 
     def list_traces(self, project_id: str | None = None) -> list[dict[str, Any]]:
-        self.init()
+        self._ensure_init()
         with self._connect() as conn:
             if project_id:
                 rows = conn.execute(
@@ -944,7 +973,7 @@ class SQLiteTraceStore(InterventionStoreMixin):
         )
         limit = _validate_page_limit(limit)
         label_key, label_value = validate_label_filter(label) if label else (None, None)
-        self.init()
+        self._ensure_init()
         with self._connect() as conn:
             rows = conn.execute(
                 """
@@ -978,7 +1007,7 @@ class SQLiteTraceStore(InterventionStoreMixin):
         return {"items": items, "next_cursor": next_cursor}
 
     def get_trace(self, run_id: str, project_id: str | None = None) -> AgentTrace | None:
-        self.init()
+        self._ensure_init()
         with self._connect() as conn:
             if project_id:
                 row = conn.execute(
@@ -994,7 +1023,7 @@ class SQLiteTraceStore(InterventionStoreMixin):
         return AgentTrace.from_dict(json.loads(row["payload_json"]))
 
     def save_diagnosis(self, diagnosis: dict[str, Any], project_id: str = "default") -> None:
-        self.init()
+        self._ensure_init()
         with self._connect() as conn:
             self._upsert_findings(conn, diagnosis, project_id)
 
@@ -1006,7 +1035,7 @@ class SQLiteTraceStore(InterventionStoreMixin):
         type: str | None = None,
         title: str | None = None,
     ) -> list[dict[str, Any]]:
-        self.init()
+        self._ensure_init()
         with self._connect() as conn:
             rows = conn.execute(
                 """
@@ -1037,7 +1066,7 @@ class SQLiteTraceStore(InterventionStoreMixin):
 
     def finding_counts(self, project_id: str | None = None) -> dict[str, int]:
         """How many findings are stored and how many are patchable, without loading them."""
-        self.init()
+        self._ensure_init()
         with self._connect() as conn:
             row = conn.execute(
                 "SELECT COUNT(*), COALESCE(SUM(CASE WHEN patchable THEN 1 ELSE 0 END), 0) "
@@ -1064,7 +1093,7 @@ class SQLiteTraceStore(InterventionStoreMixin):
             decode_cursor(cursor, expected_parts=3) if cursor else (None, None, None)
         )
         limit = _validate_page_limit(limit)
-        self.init()
+        self._ensure_init()
         with self._connect() as conn:
             rows = conn.execute(
                 """
@@ -1100,7 +1129,7 @@ class SQLiteTraceStore(InterventionStoreMixin):
     ) -> dict[str, Any]:
         _validate_new_status(new_status)
         sources = _padded_sources(new_status)
-        self.init()
+        self._ensure_init()
         with self._connect() as conn:
             cursor = conn.execute(
                 """
@@ -1133,7 +1162,7 @@ class SQLiteTraceStore(InterventionStoreMixin):
         return _finding_row(dict(row))
 
     def optimization_queue(self, project_id: str | None = None) -> list[dict[str, Any]]:
-        self.init()
+        self._ensure_init()
         with self._connect() as conn:
             rows = conn.execute(
                 """
@@ -1156,7 +1185,7 @@ class SQLiteTraceStore(InterventionStoreMixin):
             self._upsert_usage(conn, project_id, run_id, report)
 
     def usage_summary(self, project_id: str | None = None) -> dict[str, Any]:
-        self.init()
+        self._ensure_init()
         with self._connect() as conn:
             row = conn.execute(
                 """
@@ -1196,6 +1225,7 @@ class PostgresTraceStore(InterventionStoreMixin):
     _postgres_interventions = True
     dsn: str | None = None
     password_file: str | None = None
+    _ready: bool = field(default=False, init=False, repr=False, compare=False)
 
     def _connect(self):
         try:
@@ -1214,9 +1244,16 @@ class PostgresTraceStore(InterventionStoreMixin):
     def init(self) -> None:
         with self._connect() as conn:
             apply_postgres_migrations(conn)
+        self._ready = True
+
+    def _ensure_init(self) -> None:
+        # Checking migrations costs a connection and several queries, so do it
+        # once per store rather than on every call.
+        if not self._ready:
+            self.init()
 
     def create_api_key(self, project_id: str, name: str, actor: str = "local") -> dict[str, Any]:
-        self.init()
+        self._ensure_init()
         api_key = new_api_key()
         prefix = api_key[:_API_KEY_PREFIX_LENGTH]
         with self._connect() as conn:
@@ -1231,17 +1268,14 @@ class PostgresTraceStore(InterventionStoreMixin):
         return {"api_key": api_key, "project_id": project_id, "name": name, "prefix": prefix}
 
     def verify_api_key(self, api_key: str) -> dict[str, Any] | None:
-        self.init()
+        self._ensure_init()
         prefix = api_key[:_API_KEY_PREFIX_LENGTH]
         with self._connect() as conn:
             rows = conn.execute(
                 "SELECT key_hash, project_id, name, prefix FROM api_keys WHERE prefix = %s",
                 (prefix,),
             ).fetchall()
-            row = next(
-                (candidate for candidate in rows if verify_api_key_hash(api_key, candidate[0])),
-                None,
-            )
+            row = _find_api_key_row(api_key, rows, lambda candidate: candidate[0])
             if row is None:
                 return None
             conn.execute(
@@ -1252,7 +1286,7 @@ class PostgresTraceStore(InterventionStoreMixin):
 
     def list_api_keys(self, project_id: str) -> list[dict[str, Any]]:
         """Key metadata for one project; key values and hashes are never returned."""
-        self.init()
+        self._ensure_init()
         with self._connect() as conn:
             rows = conn.execute(
                 "SELECT prefix, name, created_at, last_used_at FROM api_keys "
@@ -1275,7 +1309,7 @@ class PostgresTraceStore(InterventionStoreMixin):
     ) -> list[dict[str, Any]]:
         """Newest audit events first, optionally for one project."""
         limit = _validate_page_limit(limit)
-        self.init()
+        self._ensure_init()
         with self._connect() as conn:
             rows = conn.execute(
                 "SELECT id, occurred_at, project_id, action, actor, target, details_json "
@@ -1288,7 +1322,7 @@ class PostgresTraceStore(InterventionStoreMixin):
     def revoke_api_key(self, project_id: str, prefix: str, actor: str = "local") -> int:
         """Delete a project's keys with this prefix; returns how many were revoked."""
         _require_key_prefix(prefix)
-        self.init()
+        self._ensure_init()
         with self._connect() as conn:
             cursor = conn.execute(
                 "DELETE FROM api_keys WHERE project_id = %s AND prefix = %s",
@@ -1305,7 +1339,7 @@ class PostgresTraceStore(InterventionStoreMixin):
         self, run_id: str, project_id: str, actor: str = "local"
     ) -> dict[str, int] | None:
         """Delete one trace of a project and its findings, usage and interventions."""
-        self.init()
+        self._ensure_init()
         with self._connect() as conn:
             exists = conn.execute(
                 "SELECT 1 FROM traces WHERE run_id = %s AND project_id = %s", (run_id, project_id)
@@ -1321,7 +1355,7 @@ class PostgresTraceStore(InterventionStoreMixin):
     ) -> dict[str, int]:
         """Delete traces stored more than ``older_than_days`` ago, optionally in one project."""
         cutoff = _retention_cutoff(older_than_days)
-        self.init()
+        self._ensure_init()
         totals = {"traces": 0, "findings": 0, "usage_events": 0, "interventions": 0}
         with self._connect() as conn:
             query = "SELECT project_id, run_id FROM traces WHERE created_at < %s"
@@ -1478,14 +1512,14 @@ class PostgresTraceStore(InterventionStoreMixin):
         )
 
     def save_trace(self, trace: AgentTrace, project_id: str = "default") -> None:
-        self.init()
+        self._ensure_init()
         with self._connect() as conn:
             report = self._upsert_trace(conn, trace, project_id)
             self._upsert_usage(conn, project_id, trace.run_id, report)
-            self._upsert_findings(conn, build_diagnosis(trace), project_id)
+            self._upsert_findings(conn, build_diagnosis(trace, report=report), project_id)
 
     def list_traces(self, project_id: str | None = None) -> list[dict[str, Any]]:
-        self.init()
+        self._ensure_init()
         with self._connect() as conn:
             if project_id:
                 rows = conn.execute(
@@ -1536,7 +1570,7 @@ class PostgresTraceStore(InterventionStoreMixin):
             "labels",
         ]
         label_key, label_value = validate_label_filter(label) if label else (None, None)
-        self.init()
+        self._ensure_init()
         with self._connect() as conn:
             rows = conn.execute(
                 """
@@ -1570,7 +1604,7 @@ class PostgresTraceStore(InterventionStoreMixin):
         return {"items": items, "next_cursor": next_cursor}
 
     def get_trace(self, run_id: str, project_id: str | None = None) -> AgentTrace | None:
-        self.init()
+        self._ensure_init()
         with self._connect() as conn:
             if project_id:
                 row = conn.execute(
@@ -1589,7 +1623,7 @@ class PostgresTraceStore(InterventionStoreMixin):
         return AgentTrace.from_dict(payload)
 
     def save_diagnosis(self, diagnosis: dict[str, Any], project_id: str = "default") -> None:
-        self.init()
+        self._ensure_init()
         with self._connect() as conn:
             self._upsert_findings(conn, diagnosis, project_id)
 
@@ -1601,7 +1635,7 @@ class PostgresTraceStore(InterventionStoreMixin):
         type: str | None = None,
         title: str | None = None,
     ) -> list[dict[str, Any]]:
-        self.init()
+        self._ensure_init()
         with self._connect() as conn:
             rows = conn.execute(
                 """
@@ -1648,7 +1682,7 @@ class PostgresTraceStore(InterventionStoreMixin):
 
     def finding_counts(self, project_id: str | None = None) -> dict[str, int]:
         """How many findings are stored and how many are patchable, without loading them."""
-        self.init()
+        self._ensure_init()
         with self._connect() as conn:
             row = conn.execute(
                 "SELECT COUNT(*), COALESCE(SUM(CASE WHEN patchable THEN 1 ELSE 0 END), 0) "
@@ -1684,7 +1718,7 @@ class PostgresTraceStore(InterventionStoreMixin):
             "created_at",
             "updated_at",
         ]
-        self.init()
+        self._ensure_init()
         with self._connect() as conn:
             rows = conn.execute(
                 """
@@ -1736,7 +1770,7 @@ class PostgresTraceStore(InterventionStoreMixin):
             "created_at",
             "updated_at",
         ]
-        self.init()
+        self._ensure_init()
         with self._connect() as conn:
             cursor = conn.execute(
                 """
@@ -1769,7 +1803,7 @@ class PostgresTraceStore(InterventionStoreMixin):
         return _finding_row(dict(zip(keys, row, strict=True)))
 
     def optimization_queue(self, project_id: str | None = None) -> list[dict[str, Any]]:
-        self.init()
+        self._ensure_init()
         with self._connect() as conn:
             rows = conn.execute(
                 """
@@ -1808,7 +1842,7 @@ class PostgresTraceStore(InterventionStoreMixin):
             self._upsert_usage(conn, project_id, run_id, report)
 
     def usage_summary(self, project_id: str | None = None) -> dict[str, Any]:
-        self.init()
+        self._ensure_init()
         with self._connect() as conn:
             if project_id:
                 row = conn.execute(

@@ -128,10 +128,25 @@ class QualityReportPayload(BaseModel):
         return value
 
 
+_STORES: dict[tuple[Any, ...], TraceStore] = {}
+
+
 def store() -> TraceStore:
+    """The store for the current configuration, migrated once rather than per request."""
     db = get_store()
-    db.init()
-    return db
+    key = (
+        type(db).__name__,
+        getattr(db, "path", None),
+        getattr(db, "dsn", None),
+        getattr(db, "password_file", None),
+    )
+    if key not in _STORES:
+        if len(_STORES) >= 16:  # configuration only changes in tests
+            _STORES.clear()
+        _STORES[key] = db
+    cached = _STORES[key]
+    cached._ensure_init()
+    return cached
 
 
 def resolve_project(
