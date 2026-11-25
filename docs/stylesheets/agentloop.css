@@ -146,7 +146,10 @@ body {
   color: var(--md-default-fg-color--light);
 }
 
-.md-search__input {
+/* The suggestion layer sits behind the input and must match it exactly, or
+   the query appears twice. */
+.md-search__input,
+.md-search__suggest {
   font-size: .72rem;
 }
 
@@ -850,6 +853,18 @@ body {
   }
 }
 
+/* ---------- Not-found page (overrides/404.html) ---------- */
+
+.md-typeset .al-404__lead {
+  color: var(--md-default-fg-color--light);
+  font-size: 1.05em;
+  max-width: 34rem;
+}
+
+.md-typeset .al-404__links .md-button {
+  margin: .3rem .4rem .3rem 0;
+}
+
 /* ---------- Footer ---------- */
 
 .md-footer {
@@ -866,6 +881,14 @@ body {
 }
 
 /* ---------- Home page ---------- */
+
+/* The home page hides both sidebars. Centre it as one column instead of
+   letting it run the full width against the left edge. */
+.md-content__inner:has(.al-intro) {
+  margin-inline: auto;
+  max-width: 50rem;
+}
+
 
 .al-intro {
   max-width: 46rem;
@@ -933,9 +956,7 @@ body {
     padding-top: 2rem;
   }
 
-  .al-start {
-    max-width: 46rem;
-  }
+
 }
 
 @media (max-width: 44.9375em) {
@@ -951,6 +972,16 @@ body {
 /* On small screens Material turns the nav into a drawer with a primary-coloured
    title bar; keep it readable with the light header colours. */
 @media (max-width: 76.2344em) {
+  /* The drawer's pill-shaped links read better without Material's divider
+     lines between items. */
+  .md-nav--primary .md-nav__item {
+    border-top: 0;
+  }
+
+  .md-nav--primary .md-nav__list {
+    padding: .3rem .4rem;
+  }
+
   .md-nav--primary .md-nav__title[for="__drawer"] {
     background-color: var(--md-default-bg-color);
     border-bottom: 1px solid var(--al-rule);
