@@ -1,0 +1,219 @@
+{
+  "conflicts": [],
+  "dependency_mode": "none",
+  "edges": [
+    {
+      "basis": "declared",
+      "key": "cart",
+      "kind": "state",
+      "source": "write",
+      "target": "read"
+    }
+  ],
+  "input_schema": "native",
+  "operations": [
+    {
+      "authorization_scope": {
+        "basis": "unknown",
+        "value": null
+      },
+      "deterministic": {
+        "basis": "unknown",
+        "value": null
+      },
+      "effect": {
+        "basis": "declared",
+        "source": "agentloop.effects",
+        "value": "write"
+      },
+      "freshness_scope": {
+        "basis": "unknown",
+        "value": null
+      },
+      "id": "write",
+      "idempotent": {
+        "basis": "unknown",
+        "value": null
+      },
+      "instance": 1,
+      "kind": "tool",
+      "name": "save",
+      "parallel_safe": {
+        "basis": "unknown",
+        "value": null
+      },
+      "parent": null,
+      "reads": {
+        "basis": "unknown",
+        "value": null
+      },
+      "status": {
+        "basis": "observed",
+        "value": "ok"
+      },
+      "timing": {
+        "basis": "observed",
+        "value": {
+          "end_ms": 1000.0,
+          "start_ms": 0.0
+        }
+      },
+      "writes": {
+        "basis": "declared",
+        "source": "agentloop.effects",
+        "value": [
+          "cart"
+        ]
+      }
+    },
+    {
+      "authorization_scope": {
+        "basis": "unknown",
+        "value": null
+      },
+      "deterministic": {
+        "basis": "unknown",
+        "value": null
+      },
+      "effect": {
+        "basis": "declared",
+        "source": "agentloop.effects",
+        "value": "read"
+      },
+      "freshness_scope": {
+        "basis": "unknown",
+        "value": null
+      },
+      "id": "read",
+      "idempotent": {
+        "basis": "unknown",
+        "value": null
+      },
+      "instance": 1,
+      "kind": "tool",
+      "name": "load",
+      "parallel_safe": {
+        "basis": "unknown",
+        "value": null
+      },
+      "parent": null,
+      "reads": {
+        "basis": "declared",
+        "source": "agentloop.effects",
+        "value": [
+          "cart"
+        ]
+      },
+      "status": {
+        "basis": "observed",
+        "value": "ok"
+      },
+      "timing": {
+        "basis": "observed",
+        "value": {
+          "end_ms": 2000.0,
+          "start_ms": 1000.0
+        }
+      },
+      "writes": {
+        "basis": "unknown",
+        "value": null
+      }
+    },
+    {
+      "authorization_scope": {
+        "basis": "unknown",
+        "value": null
+      },
+      "deterministic": {
+        "basis": "unknown",
+        "value": null
+      },
+      "effect": {
+        "basis": "declared",
+        "source": "agentloop.effects",
+        "value": "read"
+      },
+      "freshness_scope": {
+        "basis": "unknown",
+        "value": null
+      },
+      "id": "other",
+      "idempotent": {
+        "basis": "unknown",
+        "value": null
+      },
+      "instance": 1,
+      "kind": "tool",
+      "name": "lookup",
+      "parallel_safe": {
+        "basis": "unknown",
+        "value": null
+      },
+      "parent": null,
+      "reads": {
+        "basis": "declared",
+        "source": "agentloop.effects",
+        "value": [
+          "catalog"
+        ]
+      },
+      "status": {
+        "basis": "observed",
+        "value": "ok"
+      },
+      "timing": {
+        "basis": "observed",
+        "value": {
+          "end_ms": 3000.0,
+          "start_ms": 2000.0
+        }
+      },
+      "writes": {
+        "basis": "unknown",
+        "value": null
+      }
+    }
+  ],
+  "run_id": "run",
+  "schema": "agentloop.ir/v1",
+  "summary": {
+    "edges": {
+      "state/declared": 1
+    },
+    "operations": 3,
+    "property_basis": {
+      "deterministic": {
+        "declared": 0,
+        "inferred": 0,
+        "observed": 0,
+        "unknown": 3
+      },
+      "effect": {
+        "declared": 3,
+        "inferred": 0,
+        "observed": 0,
+        "unknown": 0
+      },
+      "idempotent": {
+        "declared": 0,
+        "inferred": 0,
+        "observed": 0,
+        "unknown": 3
+      },
+      "reads": {
+        "declared": 2,
+        "inferred": 0,
+        "observed": 0,
+        "unknown": 1
+      },
+      "writes": {
+        "declared": 1,
+        "inferred": 0,
+        "observed": 0,
+        "unknown": 2
+      }
+    }
+  },
+  "unsupported": []
+}

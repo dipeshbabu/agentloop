@@ -1,0 +1,178 @@
+{
+  "conflicts": [
+    {
+      "key": "price",
+      "operations": [
+        "a",
+        "b"
+      ]
+    }
+  ],
+  "dependency_mode": "none",
+  "edges": [
+    {
+      "basis": "declared",
+      "key": "price",
+      "kind": "state",
+      "source": "a",
+      "target": "b"
+    }
+  ],
+  "input_schema": "native",
+  "operations": [
+    {
+      "authorization_scope": {
+        "basis": "unknown",
+        "value": null
+      },
+      "deterministic": {
+        "basis": "unknown",
+        "value": null
+      },
+      "effect": {
+        "basis": "declared",
+        "source": "agentloop.effects",
+        "value": "write"
+      },
+      "freshness_scope": {
+        "basis": "unknown",
+        "value": null
+      },
+      "id": "a",
+      "idempotent": {
+        "basis": "unknown",
+        "value": null
+      },
+      "instance": 1,
+      "kind": "tool",
+      "name": "set_price",
+      "parallel_safe": {
+        "basis": "unknown",
+        "value": null
+      },
+      "parent": null,
+      "reads": {
+        "basis": "unknown",
+        "value": null
+      },
+      "status": {
+        "basis": "observed",
+        "value": "ok"
+      },
+      "timing": {
+        "basis": "observed",
+        "value": {
+          "end_ms": 1000.0,
+          "start_ms": 0.0
+        }
+      },
+      "writes": {
+        "basis": "declared",
+        "source": "agentloop.effects",
+        "value": [
+          "price"
+        ]
+      }
+    },
+    {
+      "authorization_scope": {
+        "basis": "unknown",
+        "value": null
+      },
+      "deterministic": {
+        "basis": "unknown",
+        "value": null
+      },
+      "effect": {
+        "basis": "declared",
+        "source": "agentloop.effects",
+        "value": "write"
+      },
+      "freshness_scope": {
+        "basis": "unknown",
+        "value": null
+      },
+      "id": "b",
+      "idempotent": {
+        "basis": "unknown",
+        "value": null
+      },
+      "instance": 2,
+      "kind": "tool",
+      "name": "set_price",
+      "parallel_safe": {
+        "basis": "unknown",
+        "value": null
+      },
+      "parent": null,
+      "reads": {
+        "basis": "unknown",
+        "value": null
+      },
+      "status": {
+        "basis": "observed",
+        "value": "ok"
+      },
+      "timing": {
+        "basis": "observed",
+        "value": {
+          "end_ms": 1000.0,
+          "start_ms": 0.0
+        }
+      },
+      "writes": {
+        "basis": "declared",
+        "source": "agentloop.effects",
+        "value": [
+          "price"
+        ]
+      }
+    }
+  ],
+  "run_id": "run",
+  "schema": "agentloop.ir/v1",
+  "summary": {
+    "edges": {
+      "state/declared": 1
+    },
+    "operations": 2,
+    "property_basis": {
+      "deterministic": {
+        "declared": 0,
+        "inferred": 0,
+        "observed": 0,
+        "unknown": 2
+      },
+      "effect": {
+        "declared": 2,
+        "inferred": 0,
+        "observed": 0,
+        "unknown": 0
+      },
+      "idempotent": {
+        "declared": 0,
+        "inferred": 0,
+        "observed": 0,
+        "unknown": 2
+      },
+      "reads": {
+        "declared": 0,
+        "inferred": 0,
+        "observed": 0,
+        "unknown": 2
+      },
+      "writes": {
+        "declared": 2,
+        "inferred": 0,
+        "observed": 0,
+        "unknown": 0
+      }
+    }
+  },
+  "unsupported": [
+    {
+      "operation": "b",
+      "reason": "conflicting writes to 'price' with no declared order"
+    }
+  ]
+}

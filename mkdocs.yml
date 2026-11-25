@@ -122,6 +122,7 @@ nav:
       - HTTP API: API_VERSIONING.md
       - Trace schema: TRACE_SCHEMA.md
       - Source provenance: SOURCE_PROVENANCE.md
+      - Execution IR: EXECUTION_IR.md
       - Workflow tracing: WORKFLOW_TRACING.md
       - Dashboard: DASHBOARD.md
       - Server deployment: PRODUCTION.md
