@@ -78,6 +78,31 @@ own directory and installs its locked core dependencies. It does not install you
 application or SDKs. Use built-in quality scorers here; custom Python scorers that
 need application modules belong in your application's own job using `agentloop ci`.
 
+### Comment the result on the pull request
+
+To show the comparison on the pull request itself, add a job that calls
+`application-performance-comment.yml` after the comparison (AgentLoop 0.2.10
+and newer):
+
+```yaml
+  comment:
+    needs: compare
+    if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+    uses: dipeshbabu/agentloop/.github/workflows/application-performance-comment.yml@main
+    permissions:
+      contents: read
+      pull-requests: write
+    with:
+      report_artifact: agentloop-application-reports
+```
+
+It posts the comparison report, with its gates and measurements, as one comment
+and updates that comment on later pushes instead of adding new ones. A comment
+per `report_artifact` keeps several comparisons apart. `!cancelled()` posts the
+result even when the gates fail. Only this job receives `pull-requests: write`,
+so the comparison workflow keeps read-only permissions. Pull requests from forks
+and from Dependabot are skipped, because their workflow token cannot comment.
+
 ### Send the traces to your AgentLoop server
 
 To keep every compared trace on a shared [AgentLoop server](CLOUD_DEPLOY.md), add
