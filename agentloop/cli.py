@@ -1606,5 +1606,28 @@ def server(host: str = "127.0.0.1", port: int = 8000, reload: bool = False) -> N
     uvicorn.run("agentloop.server:app", host=host, port=port, reload=reload)
 
 
+@app.command("mcp")
+def mcp_command(
+    root: Path = typer.Option(Path("."), help="Workspace root; every path stays inside it."),
+    allow_execution: bool = typer.Option(
+        False, help="Expose execute_candidate, which validates changes in a temporary worktree."
+    ),
+    include_text: bool = typer.Option(
+        False, help="Include recorded model input and output text in tool results."
+    ),
+    timeout: float = typer.Option(60.0, help="Seconds allowed per tool call."),
+) -> None:
+    """Run a local MCP server over stdio for coding agents."""
+    from agentloop.mcp_server import Server
+
+    try:
+        server_instance = Server(
+            root, allow_execution=allow_execution, include_text=include_text, timeout_s=timeout
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    server_instance.serve()
+
+
 if __name__ == "__main__":
     app()
