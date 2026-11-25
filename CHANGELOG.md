@@ -9,6 +9,10 @@ trace, study, receipt, API and database schema versions.
 
 ### Added
 
+- `release-npm.yml` creates a "TypeScript SDK X.Y.Z" GitHub release for each
+  published SDK version, with the exact tarball npm serves and its SHA-256.
+  Until now only 0.1.0 had a GitHub release; 0.1.1 to 0.1.3 were published to
+  npm and tagged, but not released on GitHub.
 - A redesigned dashboard: light and dark themes in the AgentLoop brand colours
   (`.streamlit/config.toml`, copied into the container image), the project
   logo, sidebar navigation with icons, page headers with a one-line
@@ -31,6 +35,10 @@ trace, study, receipt, API and database schema versions.
 
 ### Changed
 
+- The dashboard's Optimization Queue reuses its queue for 30 seconds instead of
+  rebuilding it on every click, and rebuilds it after changes made from the
+  dashboard or with the new Refresh button. Re-sorting the queue at 2,000
+  traces went from 1.5 s to 0.6 s.
 - SQLite stores now use WAL mode, so reads no longer wait for each upload's
   commit. Under four API workers with concurrent uploads and reads, about 80%
   more reads completed in the same time. Store connections are now closed
