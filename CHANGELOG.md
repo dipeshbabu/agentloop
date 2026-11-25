@@ -7,6 +7,14 @@ trace, study, receipt, API and database schema versions.
 
 ## [Unreleased]
 
+### Added
+
+- A reusable `application-performance-comment.yml` workflow posts the
+  comparison report on the pull request and updates the same comment on later
+  pushes. Callers opt in with a separate job that alone receives
+  `pull-requests: write`; forked and Dependabot pull requests are skipped. This
+  repository's smoke workflow uses it on every pull request.
+
 ## [0.2.9] - 2026-11-24
 
 ### Fixed

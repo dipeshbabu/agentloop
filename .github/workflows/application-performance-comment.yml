@@ -1,0 +1,75 @@
+name: Application comparison pull request comment
+
+# Posts the report from application-performance.yml on the pull request and
+# keeps one comment per report up to date across pushes. Call it as its own job
+# so only that job receives pull-requests: write:
+#
+#   comment:
+#     needs: compare
+#     if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+#     uses: dipeshbabu/agentloop/.github/workflows/application-performance-comment.yml@main
+#     permissions:
+#       contents: read
+#       pull-requests: write
+#     with:
+#       report_artifact: agentloop-application-reports
+
+on:
+  workflow_call:
+    inputs:
+      report_artifact:
+        description: Report artifact uploaded by application-performance.yml in this run.
+        default: agentloop-application-reports
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  comment:
+    name: Comment the comparison on the pull request
+    # Forked pull requests and Dependabot runs get a read-only token.
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Download the comparison report
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ${{ inputs.report_artifact }}
+          path: reports
+
+      - name: Create or update the comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PULL_REQUEST: ${{ github.event.pull_request.number }}
+          REPORT_ARTIFACT: ${{ inputs.report_artifact }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: bash
+        run: |
+          test -s reports/agentloop_ci.md
+          marker="<!-- agentloop-comparison:${REPORT_ARTIFACT} -->"
+          body="$RUNNER_TEMP/agentloop-comment.md"
+          {
+            echo "$marker"
+            # GitHub limits comments to 65,536 characters.
+            head -c 60000 reports/agentloop_ci.md
+            echo
+            echo
+            echo "<sub>Updated by the AgentLoop comparison in [this workflow run]($RUN_URL).</sub>"
+          } > "$body"
+          existing="$(gh api --paginate "repos/$REPOSITORY/issues/$PULL_REQUEST/comments" \
+            --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | startswith(\"$marker\"))) | .id" \
+            | head -n 1)"
+          if [ -n "$existing" ]; then
+            gh api --method PATCH "repos/$REPOSITORY/issues/comments/$existing" -F "body=@$body" > /dev/null
+            echo "Updated comment $existing"
+          else
+            gh api --method POST "repos/$REPOSITORY/issues/$PULL_REQUEST/comments" -F "body=@$body" > /dev/null
+            echo "Created a comment on pull request $PULL_REQUEST"
+          fi

@@ -114,3 +114,32 @@ def test_reusable_workflow_uploads_only_when_asked_and_only_with_a_project_key()
     assert names.index(upload["name"]) > names.index(
         "Compare supplied artifacts without generating demo data"
     )
+
+
+def test_pull_request_comment_workflow_is_opt_in_and_least_privileged():
+    text = (ROOT / ".github/workflows/application-performance-comment.yml").read_text(
+        encoding="utf-8"
+    )
+    workflow = yaml.load(text, Loader=yaml.BaseLoader)
+    assert workflow["permissions"] == {"contents": "read"}
+    job = workflow["jobs"]["comment"]
+    assert job["permissions"] == {"pull-requests": "write"}
+    for guard in (
+        "github.event_name == 'pull_request'",
+        "github.event.pull_request.head.repo.full_name == github.repository",
+        "github.actor != 'dependabot[bot]'",
+    ):
+        assert guard in job["if"]
+    script = job["steps"][-1]["run"]
+    assert "agentloop-comparison:${REPORT_ARTIFACT}" in script
+    assert "--method PATCH" in script and "--method POST" in script
+    assert "head -c 60000" in script
+    assert "ADMIN" not in text and "secrets." not in text
+
+    # The comparison workflow itself stays read-only, so existing callers keep working.
+    comparison = yaml.load(
+        (ROOT / ".github/workflows/application-performance.yml").read_text(encoding="utf-8"),
+        Loader=yaml.BaseLoader,
+    )
+    assert comparison["permissions"] == {"contents": "read"}
+    assert "permissions" not in comparison["jobs"]["compare"]

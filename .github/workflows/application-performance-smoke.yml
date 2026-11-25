@@ -39,6 +39,15 @@ jobs:
       min_quality_score: "1.0"
       agentloop_ref: ${{ github.sha }}
       report_artifact: application-workflow-smoke-reports
+  comment:
+    needs: compare
+    if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+    uses: ./.github/workflows/application-performance-comment.yml
+    permissions:
+      contents: read
+      pull-requests: write
+    with:
+      report_artifact: application-workflow-smoke-reports
   verify:
     name: Verify trace provenance in reusable workflow output
     needs: compare
