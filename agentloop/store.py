@@ -215,26 +215,28 @@ def verify_api_key_hash(api_key: str, encoded_hash: str) -> bool:
     return hmac.compare_digest(actual, expected)
 
 
-# Fingerprints of API keys that passed scrypt verification in this process,
-# mapped to the stored hash they matched. scrypt costs tens of milliseconds by
-# design, and every authenticated request presents its key. A remembered key
-# still matches only while that hash row exists, so revocation is immediate.
+# Stored key hashes that a presented key has matched in this process, mapped to
+# that key. scrypt costs tens of milliseconds by design, and every
+# authenticated request presents its key. Entries are looked up from the hash
+# rows read for each request, so a revoked key, whose row is gone, no longer
+# matches. The process already receives each key in plain text per request.
 _VERIFIED_KEYS: dict[str, str] = {}
 _VERIFIED_KEYS_LIMIT = 1024
 
 
 def _find_api_key_row(api_key: str, rows: list[Any], key_hash_of: Any) -> Any | None:
-    fingerprint = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
-    known = _VERIFIED_KEYS.get(fingerprint)
-    if known is not None:
-        for row in rows:
-            if hmac.compare_digest(key_hash_of(row), known):
-                return row
+    for row in rows:
+        known = _VERIFIED_KEYS.get(key_hash_of(row))
+        # Compare bytes: compare_digest rejects non-ASCII str arguments.
+        if known is not None and hmac.compare_digest(
+            known.encode("utf-8"), api_key.encode("utf-8")
+        ):
+            return row
     for row in rows:
         if verify_api_key_hash(api_key, key_hash_of(row)):
             if len(_VERIFIED_KEYS) >= _VERIFIED_KEYS_LIMIT:
                 _VERIFIED_KEYS.clear()
-            _VERIFIED_KEYS[fingerprint] = key_hash_of(row)
+            _VERIFIED_KEYS[key_hash_of(row)] = api_key
             return row
     return None
 

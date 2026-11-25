@@ -237,6 +237,7 @@ def test_verified_api_keys_skip_scrypt_until_revoked(store, monkeypatch):
     # A different key with the same prefix still goes through scrypt and fails.
     assert store.verify_api_key(created["api_key"][:-1] + "x") is None
     assert len(calls) == 2
+    assert store.verify_api_key(created["api_key"][:-1] + "é") is None
 
     assert store.revoke_api_key("proj_a", created["prefix"]) == 1
     assert store.verify_api_key(created["api_key"]) is None
