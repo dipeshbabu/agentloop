@@ -142,7 +142,12 @@ class TraceStore(Protocol):
     def save_diagnosis(self, diagnosis: dict[str, Any], project_id: str = "default") -> None: ...
 
     def list_findings(
-        self, project_id: str | None = None, status: str | None = None
+        self,
+        project_id: str | None = None,
+        status: str | None = None,
+        *,
+        type: str | None = None,
+        title: str | None = None,
     ) -> list[dict[str, Any]]: ...
 
     def list_findings_page(
@@ -152,6 +157,8 @@ class TraceStore(Protocol):
         limit: int = DEFAULT_PAGE_SIZE,
         cursor: str | None = None,
     ) -> dict[str, Any]: ...
+
+    def finding_counts(self, project_id: str | None = None) -> dict[str, int]: ...
 
     def update_finding_status(
         self, project_id: str, run_id: str, finding_id: str, new_status: str
@@ -992,7 +999,12 @@ class SQLiteTraceStore(InterventionStoreMixin):
             self._upsert_findings(conn, diagnosis, project_id)
 
     def list_findings(
-        self, project_id: str | None = None, status: str | None = None
+        self,
+        project_id: str | None = None,
+        status: str | None = None,
+        *,
+        type: str | None = None,
+        title: str | None = None,
     ) -> list[dict[str, Any]]:
         self.init()
         with self._connect() as conn:
@@ -1004,6 +1016,8 @@ class SQLiteTraceStore(InterventionStoreMixin):
                 FROM trace_findings
                 WHERE project_id = COALESCE(?, project_id)
                   AND status = COALESCE(?, status)
+                  AND type = COALESCE(?, type)
+                  AND title = COALESCE(?, title)
                 ORDER BY
                     CASE severity WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,
                     COALESCE(estimated_cost_savings_usd, -1) DESC,
@@ -1011,9 +1025,26 @@ class SQLiteTraceStore(InterventionStoreMixin):
                     updated_at DESC
                 LIMIT ?
                 """,
-                (project_id or None, status or None, _LEGACY_LIST_SAFETY_LIMIT),
+                (
+                    project_id or None,
+                    status or None,
+                    type or None,
+                    title or None,
+                    _LEGACY_LIST_SAFETY_LIMIT,
+                ),
             ).fetchall()
         return [_finding_row(dict(row)) for row in rows]
+
+    def finding_counts(self, project_id: str | None = None) -> dict[str, int]:
+        """How many findings are stored and how many are patchable, without loading them."""
+        self.init()
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT COUNT(*), COALESCE(SUM(CASE WHEN patchable THEN 1 ELSE 0 END), 0) "
+                "FROM trace_findings WHERE project_id = COALESCE(?, project_id)",
+                (project_id or None,),
+            ).fetchone()
+        return {"total": int(row[0]), "patchable": int(row[1])}
 
     def list_findings_page(
         self,
@@ -1563,7 +1594,12 @@ class PostgresTraceStore(InterventionStoreMixin):
             self._upsert_findings(conn, diagnosis, project_id)
 
     def list_findings(
-        self, project_id: str | None = None, status: str | None = None
+        self,
+        project_id: str | None = None,
+        status: str | None = None,
+        *,
+        type: str | None = None,
+        title: str | None = None,
     ) -> list[dict[str, Any]]:
         self.init()
         with self._connect() as conn:
@@ -1575,6 +1611,8 @@ class PostgresTraceStore(InterventionStoreMixin):
                 FROM trace_findings
                 WHERE project_id = COALESCE(%s, project_id)
                   AND status = COALESCE(%s, status)
+                  AND type = COALESCE(%s, type)
+                  AND title = COALESCE(%s, title)
                 ORDER BY
                     CASE severity WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,
                     COALESCE(estimated_cost_savings_usd, -1) DESC,
@@ -1582,7 +1620,13 @@ class PostgresTraceStore(InterventionStoreMixin):
                     updated_at DESC
                 LIMIT %s
                 """,
-                (project_id or None, status or None, _LEGACY_LIST_SAFETY_LIMIT),
+                (
+                    project_id or None,
+                    status or None,
+                    type or None,
+                    title or None,
+                    _LEGACY_LIST_SAFETY_LIMIT,
+                ),
             ).fetchall()
         keys = [
             "project_id",
@@ -1601,6 +1645,17 @@ class PostgresTraceStore(InterventionStoreMixin):
             "updated_at",
         ]
         return [_finding_row(dict(zip(keys, row, strict=True))) for row in rows]
+
+    def finding_counts(self, project_id: str | None = None) -> dict[str, int]:
+        """How many findings are stored and how many are patchable, without loading them."""
+        self.init()
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT COUNT(*), COALESCE(SUM(CASE WHEN patchable THEN 1 ELSE 0 END), 0) "
+                "FROM trace_findings WHERE project_id = COALESCE(%s, project_id)",
+                (project_id or None,),
+            ).fetchone()
+        return {"total": int(row[0]), "patchable": int(row[1])}
 
     def list_findings_page(
         self,

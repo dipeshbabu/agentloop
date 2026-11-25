@@ -261,6 +261,27 @@ jobs:
         run: |
           uv run --frozen python scripts/benchmark_findings.py examples/finding_benchmark_corpus.json --split evaluation --source-revision "$GITHUB_SHA" --baseline examples/finding_benchmark_baseline.json --out runs/finding-benchmark
 
+      - name: Scale regression check
+        # 2,000 stored traces plus other projects. Fails if any store query,
+        # API route or dashboard page errors or is slow, or if an API response
+        # grows past 5 MB (the optimization queue was 13 MB before the fix).
+        if: matrix.python-version == '3.13'
+        run: |
+          mkdir -p runs/scale
+          uv run --frozen --all-extras python scripts/benchmark_scale.py --traces 2000 \
+            --max-seconds 15 --max-response-mb 5 --out runs/scale/sqlite.json
+          AGENTLOOP_STORE_BACKEND=postgres AGENTLOOP_DATABASE_URL="$AGENTLOOP_TEST_POSTGRES_DSN" \
+            uv run --frozen --all-extras python scripts/benchmark_scale.py --traces 2000 \
+            --skip-dashboard --max-seconds 15 --max-response-mb 5 --out runs/scale/postgres.json
+
+      - name: Upload scale results
+        if: always() && matrix.python-version == '3.13'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: scale-results
+          path: runs/scale/
+          if-no-files-found: ignore
+
       - name: Upload finding benchmark evidence
         if: always() && matrix.python-version == '3.13'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

@@ -50,6 +50,27 @@ Open the URL printed by Streamlit and select project `demo` in the sidebar.
 - `Ingest`: demo generation, trace upload, and project storage.
 - `Setup`: local, API, and Postgres command references.
 
+## Projects with many runs
+
+The Overview table and chart, and the trace pickers on the analysis pages,
+show the project's newest 200 runs. When a project has more, each picker adds an
+"older run ID" box: paste a run ID from the `Traces` page, which pages through
+every run, to open an older one. The Optimization Queue counts findings in the
+database instead of loading them, and loads finding instances only for the
+selected queue item.
+
+To measure a store of your own size, run the scale benchmark. It fills a fresh
+store and times each store query, API route and dashboard page:
+
+```bash
+uv run --all-extras python scripts/benchmark_scale.py --traces 5000
+```
+
+Set `AGENTLOOP_STORE_BACKEND=postgres` and `AGENTLOOP_DATABASE_URL` to measure
+Postgres instead (use an empty database; add `--skip-dashboard` to skip the
+pages). CI runs it with 2,000 traces against SQLite and Postgres and fails if any
+operation takes more than 15 seconds or an API response exceeds 5 MB.
+
 ## Use Postgres
 
 Set the shared store configuration before running commands or the dashboard:

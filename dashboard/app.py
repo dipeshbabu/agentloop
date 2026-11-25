@@ -27,6 +27,7 @@ from agentloop.ranking import SORT_FIELDS, sort_ranked
 from agentloop.replay import ReplayGates, build_replay_report
 from agentloop.store import (
     ALLOWED_FINDING_TRANSITIONS,
+    MAX_PAGE_SIZE,
     FindingNotFoundError,
     FindingTransitionError,
     get_store,
@@ -122,20 +123,42 @@ def load_trace_for_project(run_id: str, project_id: str) -> AgentTrace | None:
     return load_store().get_trace(run_id=run_id, project_id=project_id)
 
 
-def select_trace(traces: list[dict], label: str = "Choose trace") -> AgentTrace | None:
-    labels = {f"{t['name']} · {t['run_id']}": t["run_id"] for t in traces}
-    selected_label = st.selectbox(label, list(labels.keys()))
-    return load_trace_for_project(labels[selected_label], project_id)
+def recent_traces() -> list[dict]:
+    """The project's newest runs, newest first.
+
+    Tables, charts and trace pickers show only these, so a project with
+    thousands of runs does not send every one of them to the browser.
+    """
+    return store.list_traces_page(project_id=project_id, limit=RECENT_TRACE_LIMIT)["items"]
 
 
 def trace_options(traces: list[dict]) -> dict[str, str]:
     return {f"{t['name']} - {t['run_id']}": t["run_id"] for t in traces}
 
 
-def selected_trace_from_options(traces: list[dict], label: str) -> AgentTrace | None:
+def pick_trace(traces: list[dict], label: str, index: int = 0, key: str | None = None) -> str:
+    """Run ID chosen from the newest runs, or typed in to reach an older run."""
     options = trace_options(traces)
-    selected = st.selectbox(label, list(options.keys()))
-    return load_trace_for_project(options[selected], project_id)
+    labels = list(options)
+    chosen = options[st.selectbox(label, labels, index=min(index, len(labels) - 1), key=key)]
+    if len(traces) >= RECENT_TRACE_LIMIT:
+        typed = st.text_input(
+            f"{label}: older run ID",
+            key=f"{key or label}_older_run_id",
+            help=f"Only the newest {RECENT_TRACE_LIMIT} runs are listed. "
+            "Enter a run ID from the Traces page to open an older run.",
+        ).strip()
+        if typed:
+            chosen = typed
+    return chosen
+
+
+def select_trace(traces: list[dict], label: str = "Choose trace") -> AgentTrace | None:
+    run_id = pick_trace(traces, label)
+    trace = load_trace_for_project(run_id, project_id)
+    if trace is None:
+        st.warning(f"No run `{run_id}` is stored for this project.")
+    return trace
 
 
 def render_gate_table(results: list[dict]) -> None:
@@ -221,6 +244,7 @@ st.sidebar.title("AgentLoop")
 st.sidebar.caption("Execution profiling and evidence")
 
 store = load_store()
+RECENT_TRACE_LIMIT = MAX_PAGE_SIZE
 project_mode = require_project_key()
 
 if project_mode:
@@ -296,7 +320,7 @@ st.caption("Cost, latency, and execution-graph optimization for production AI ag
 
 if page == "Overview":
     summary = store.usage_summary(project_id=project_id)
-    traces = store.list_traces(project_id=project_id)
+    traces = recent_traces()
 
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Runs", int(summary.get("run_count", 0)))
@@ -315,7 +339,11 @@ if page == "Overview":
 
     st.subheader("Recent runs")
     if traces:
-        df = pd.DataFrame(traces)
+        if len(traces) >= RECENT_TRACE_LIMIT:
+            st.caption(
+                f"The newest {RECENT_TRACE_LIMIT} runs. Browse every run on the Traces page."
+            )
+        df = pd.DataFrame(traces).drop(columns=["labels"], errors="ignore")
         st.dataframe(df, width="stretch")
 
         chart_df = df[["name", "total_runtime_ms"]].copy()
@@ -486,12 +514,12 @@ elif page == "Optimization Queue":
         "Sort investigations by", SORT_FIELDS, format_func=lambda value: value.replace("_", " ")
     )
     queue = sort_ranked(store.optimization_queue(project_id=project_id), dimension)
-    findings = store.list_findings(project_id=project_id)
+    finding_counts = store.finding_counts(project_id=project_id)
 
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Open opportunities", len(queue))
-    c2.metric("Persisted findings", len(findings))
-    c3.metric("Patchable findings", sum(1 for finding in findings if finding["patchable"]))
+    c2.metric("Persisted findings", finding_counts["total"])
+    c3.metric("Patchable findings", finding_counts["patchable"])
     c4.metric(
         "Estimated latency savings",
         seconds(
@@ -547,11 +575,9 @@ elif page == "Optimization Queue":
         st.write("Affected runs")
         st.code("\n".join(item["affected_runs"]), language="text")
 
-        item_findings = [
-            finding
-            for finding in findings
-            if finding["type"] == item["type"] and finding["title"] == item["title"]
-        ]
+        item_findings = store.list_findings(
+            project_id=project_id, type=item["type"], title=item["title"]
+        )
         if item_findings:
             st.subheader("Finding instances")
             st.dataframe(pd.DataFrame(item_findings), width="stretch", hide_index=True)
@@ -614,7 +640,7 @@ elif page == "Optimization Queue":
             )
 
 elif page == "Optimization":
-    traces = store.list_traces(project_id=project_id)
+    traces = recent_traces()
     st.subheader("Optimization plans")
     if not traces:
         st.info("No traces stored for this project yet.")
@@ -694,12 +720,12 @@ elif page == "Optimization":
             )
 
 elif page == "Diagnosis":
-    traces = store.list_traces(project_id=project_id)
+    traces = recent_traces()
     st.subheader("Machine-actionable diagnosis")
     if not traces:
         st.info("No traces stored for this project yet.")
     else:
-        trace = selected_trace_from_options(traces, "Choose trace for diagnosis")
+        trace = select_trace(traces, "Choose trace for diagnosis")
         if trace is not None:
             dimension = st.selectbox(
                 "Sort findings by", SORT_FIELDS, format_func=lambda value: value.replace("_", " ")
@@ -750,12 +776,12 @@ elif page == "Diagnosis":
             )
 
 elif page == "Patch Plan":
-    traces = store.list_traces(project_id=project_id)
+    traces = recent_traces()
     st.subheader("Trace-to-patch planning")
     if not traces:
         st.info("No traces stored for this project yet.")
     else:
-        trace = selected_trace_from_options(traces, "Choose trace for patch planning")
+        trace = select_trace(traces, "Choose trace for patch planning")
         repo_path = st.text_input("Repository path", value=str(Path.cwd()))
         if trace is not None:
             try:
@@ -853,22 +879,20 @@ elif page == "CI Runs":
                 render_comparison(baseline, candidate, key="ci_run")
 
 elif page == "Replay Proof":
-    traces = store.list_traces(project_id=project_id)
+    traces = recent_traces()
     st.subheader("Before/after replay proof")
     if len(traces) < 2:
         st.info("Store at least two traces to compare a baseline and candidate.")
     else:
-        options = trace_options(traces)
-        labels = list(options.keys())
-        baseline_label = st.selectbox("Baseline trace", labels, index=0)
-        candidate_label = st.selectbox("Candidate trace", labels, index=1 if len(labels) > 1 else 0)
-        baseline = load_trace_for_project(options[baseline_label], project_id)
-        candidate = load_trace_for_project(options[candidate_label], project_id)
+        baseline = load_trace_for_project(pick_trace(traces, "Baseline trace"), project_id)
+        candidate = load_trace_for_project(
+            pick_trace(traces, "Candidate trace", index=1), project_id
+        )
 
         render_comparison(baseline, candidate, key="replay")
 
 elif page == "Quality Gates":
-    traces = store.list_traces(project_id=project_id)
+    traces = recent_traces()
     st.subheader("Quality gates")
     st.caption(
         "Compare caller-defined quality criteria alongside recorded cost and latency. "
@@ -877,8 +901,6 @@ elif page == "Quality Gates":
     if len(traces) < 2:
         st.info("Store at least two traces to score baseline and candidate quality.")
     else:
-        options = trace_options(traces)
-        labels = list(options.keys())
         default_fixture = [
             {
                 "id": "required_summary_fields",
@@ -895,12 +917,9 @@ elif page == "Quality Gates":
             }
         ]
         with st.form("quality_gate_form"):
-            baseline_label = st.selectbox("Baseline trace", labels, index=0, key="quality_baseline")
-            candidate_label = st.selectbox(
-                "Candidate trace",
-                labels,
-                index=1 if len(labels) > 1 else 0,
-                key="quality_candidate",
+            baseline_run_id = pick_trace(traces, "Baseline trace", key="quality_baseline")
+            candidate_run_id = pick_trace(
+                traces, "Candidate trace", index=1, key="quality_candidate"
             )
             min_score = st.number_input(
                 "Minimum candidate quality score", min_value=0.0, max_value=1.0, value=0.9
@@ -921,8 +940,8 @@ elif page == "Quality Gates":
                     uploaded.read().decode("utf-8") if uploaded is not None else fixtures_text
                 )
                 fixtures = parse_quality_fixtures(json.loads(raw_fixtures))
-                baseline = load_trace_for_project(options[baseline_label], project_id)
-                candidate = load_trace_for_project(options[candidate_label], project_id)
+                baseline = load_trace_for_project(baseline_run_id, project_id)
+                candidate = load_trace_for_project(candidate_run_id, project_id)
                 if baseline is None or candidate is None:
                     raise QualityValidationError(
                         "selected baseline or candidate trace is unavailable"
@@ -987,7 +1006,7 @@ elif page == "Quality Gates":
                 )
 
 elif page == "Value & Pricing":
-    traces = store.list_traces(project_id=project_id)
+    traces = recent_traces()
     st.subheader("Value report and pricing scenario")
     st.caption(
         "Turn an agent trace into operational value, reliability risk, and a configurable pricing scenario."
