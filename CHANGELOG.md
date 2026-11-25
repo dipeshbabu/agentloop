@@ -36,7 +36,8 @@ trace, study, receipt, API and database schema versions.
 ### Changed
 
 - The documentation site shows previous and next pages as one card under each
-  page's content, and the home page's workflow diagram is smaller.
+  page's content, code blocks have an always-visible copy button, and the home
+  page's workflow diagram is smaller.
 - The dashboard's Optimization Queue reuses its queue for 30 seconds instead of
   rebuilding it on every click, and rebuilds it after changes made from the
   dashboard or with the new Refresh button. Re-sorting the queue at 2,000

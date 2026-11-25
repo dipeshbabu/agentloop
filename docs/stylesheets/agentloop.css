@@ -348,8 +348,65 @@ body {
   margin: 1em 0;
 }
 
-.md-clipboard {
-  color: var(--md-default-fg-color--lighter);
+/* Copy button: always visible as a small outlined square in the code card's
+   top-right corner, highlighted in the accent colour on hover and focus.
+   Material renders it as .md-code__button inside .md-code__nav. */
+.md-typeset .md-code__nav,
+.md-typeset :hover > .md-code__nav {
+  background: none;
+  gap: .3rem;
+  padding: 0;
+  right: .6em;
+  top: .6em;
+}
+
+.md-typeset .md-code__button,
+.md-typeset .md-clipboard {
+  align-items: center;
+  background-color: var(--md-default-bg-color);
+  border: 1px solid var(--al-rule-strong);
+  border-radius: .4rem;
+  box-shadow: var(--al-shadow);
+  color: var(--md-default-fg-color--light);
+  display: inline-flex;
+  height: 2.1em;
+  justify-content: center;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+  width: 2.1em;
+}
+
+.md-typeset .md-code__button::after,
+.md-typeset .md-clipboard::after {
+  height: 1.05em;
+  width: 1.05em;
+}
+
+.md-typeset :hover > * > .md-code__button,
+.md-typeset :hover > .md-clipboard {
+  color: var(--md-default-fg-color);
+}
+
+.md-typeset .md-code__button:hover,
+.md-typeset .md-code__button.focus-visible,
+.md-typeset .md-code__button:focus-visible,
+.md-typeset .md-clipboard:hover,
+.md-typeset .md-clipboard:focus-visible {
+  background-color: var(--al-accent-soft);
+  border-color: var(--al-accent);
+  color: var(--al-accent);
+}
+
+/* Keep the first line of code clear of the button. */
+.md-typeset .highlight pre > code {
+  padding-right: 3.2em;
+}
+
+/* "Copied to clipboard" confirmation in the same card style. */
+.md-dialog {
+  background-color: var(--md-default-fg-color);
+  border-radius: .5rem;
+  box-shadow: 0 6px 20px rgba(37, 29, 52, .18);
+  color: var(--md-default-bg-color);
 }
 
 /* Tab groups: one card with a tinted tab bar on top. */
