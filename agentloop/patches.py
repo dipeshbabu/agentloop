@@ -13,6 +13,7 @@ from agentloop.markdown import (
     markdown_heading,
     markdown_text,
 )
+from agentloop.source_provenance import SourceIndex, receipt_from_metadata, resolve_source
 
 SUPPORTED_PATCH_TYPES = {
     "parallelize_tools",
@@ -59,15 +60,23 @@ class FileCandidate:
     confidence: str
     reason: str
     locations: list[dict[str, Any]] = field(default_factory=list)
+    # True only for a source receipt that resolved exactly against this checkout.
+    # Name and text matches are leads for a reviewer, never rewrite targets.
+    rewrite_eligible: bool = False
+    provenance: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        value = {
             "path": self.path,
             "symbols": self.symbols,
             "confidence": self.confidence,
             "reason": self.reason,
             "locations": self.locations,
+            "rewrite_eligible": self.rewrite_eligible,
         }
+        if self.provenance is not None:
+            value["provenance"] = self.provenance
+        return value
 
 
 @dataclass
@@ -86,6 +95,7 @@ class PatchPlan:
     validation_command: str
     acceptance_criteria: str
     notes: list[str] = field(default_factory=list)
+    source_locations: list[dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -103,6 +113,8 @@ class PatchPlan:
             "validation_command": self.validation_command,
             "acceptance_criteria": self.acceptance_criteria,
             "notes": self.notes,
+            "source_locations": self.source_locations,
+            "rewrite_eligible": any(candidate.rewrite_eligible for candidate in self.files),
         }
 
 
@@ -116,6 +128,8 @@ def build_patch_plan(
     diagnosis = build_diagnosis(trace)
     source_index = _index_source_files(repo)
     frameworks = _detect_frameworks(source_index)
+    receipts = _span_receipts(trace)
+    checkout = SourceIndex({item["path"]: item["text"] for item in source_index})
     plans: list[PatchPlan] = []
     unsupported: list[dict[str, Any]] = []
 
@@ -130,7 +144,10 @@ def build_patch_plan(
                 )
             )
             continue
-        plans.append(_plan_for_finding(finding, source_index, frameworks, len(plans) + 1))
+        locations = _source_locations(finding, receipts, checkout)
+        plans.append(
+            _plan_for_finding(finding, source_index, frameworks, len(plans) + 1, locations)
+        )
 
     return {
         "run_id": diagnosis["run_id"],
@@ -142,6 +159,7 @@ def build_patch_plan(
             "unsupported_finding_count": len(unsupported),
             "frameworks_detected": frameworks,
             "supported_patch_types": sorted(SUPPORTED_PATCH_TYPES),
+            "source_provenance": _provenance_counts(plans),
         },
         "patch_plans": [plan.to_dict() for plan in plans],
         "unsupported_findings": unsupported,
@@ -191,6 +209,8 @@ def patch_plan_to_markdown(plan: dict[str, Any]) -> str:
                 f"- Proposed rewrite: {markdown_text(item['proposed_rewrite'])}",
                 f"- Validation command: {markdown_code_span(item['validation_command'])}",
                 f"- Acceptance criteria: {markdown_text(item['acceptance_criteria'])}",
+                f"- Rewrite eligible: {'yes' if item.get('rewrite_eligible') else 'no'}",
+                *_format_source_locations(item.get("source_locations", [])),
                 "",
                 "Suggested diff shape:",
                 "",
@@ -205,9 +225,10 @@ def patch_plan_to_markdown(plan: dict[str, Any]) -> str:
         for candidate in item["files"]:
             symbols = markdown_text(", ".join(map(str, candidate["symbols"])) or "unknown")
             location = _format_locations(candidate.get("locations", []))
+            eligible = ", rewrite eligible" if candidate.get("rewrite_eligible") else ""
             lines.append(
                 f"- {markdown_code_span(candidate['path'])}{location} "
-                f"({markdown_text(candidate['confidence'])}): {symbols}. "
+                f"({markdown_text(candidate['confidence'])}{eligible}): {symbols}. "
                 f"{markdown_text(candidate['reason'])}"
             )
         if item["notes"]:
@@ -232,10 +253,14 @@ def _plan_for_finding(
     source_index: list[dict[str, Any]],
     frameworks: list[str],
     index: int,
+    source_locations: list[dict[str, Any]] | None = None,
 ) -> PatchPlan:
     finding_type = str(finding["type"])
     evidence_names = _evidence_names(finding)
-    files = _candidate_files(source_index, evidence_names)
+    source_locations = source_locations or []
+    files = _merge_candidates(
+        _receipt_candidates(source_locations), _candidate_files(source_index, evidence_names)
+    )
     framework = _select_framework(frameworks, files)
     action = (finding.get("observations") or {}).get("recommended_action")
     notes = _notes(finding_type, files)
@@ -270,7 +295,132 @@ def _plan_for_finding(
             or "before/after replay passes configured quality and budget gates"
         ),
         notes=notes,
+        source_locations=source_locations,
     )
+
+
+def _span_receipts(trace: Any) -> dict[str, dict[str, Any]]:
+    """Source receipts by span id; spans without one are simply absent."""
+    receipts: dict[str, dict[str, Any]] = {}
+    for event in getattr(trace, "events", None) or []:
+        event_id = getattr(event, "event_id", None)
+        receipt = receipt_from_metadata(getattr(event, "metadata", None))
+        if event_id and receipt is not None:
+            receipts[str(event_id)] = receipt
+    return receipts
+
+
+def _source_locations(
+    finding: dict[str, Any],
+    receipts: dict[str, dict[str, Any]],
+    checkout: SourceIndex,
+) -> list[dict[str, Any]]:
+    """Resolve each evidence span's receipt once; spans without one say so explicitly."""
+    spans: list[str] = []
+    for span_id in [
+        *(row.get("span_id") for row in finding.get("evidence", [])),
+        *finding.get("affected_spans", []),
+    ]:
+        if span_id and str(span_id) not in spans:
+            spans.append(str(span_id))
+    grouped: dict[tuple[Any, ...], dict[str, Any]] = {}
+    for span_id in spans:
+        location = resolve_source(receipts.get(span_id), checkout)
+        key = (
+            location["status"],
+            location.get("path") or location.get("recorded_path"),
+            location.get("qualname"),
+            location.get("line_start"),
+        )
+        if key in grouped:
+            grouped[key]["span_ids"].append(span_id)
+        else:
+            grouped[key] = {"span_ids": [span_id], **location}
+    return list(grouped.values())
+
+
+_RECEIPT_CONFIDENCE = {
+    "resolved": "exact",
+    "moved": "high",
+    "stale": "low",
+    "unverified": "low",
+    "ambiguous": "low",
+}
+_CONFIDENCE_ORDER = {"exact": 0, "high": 1, "low": 2}
+
+
+def _receipt_reason(location: dict[str, Any]) -> str:
+    reason = location.get("reason")
+    return (
+        f"source receipt {location['status']}: {reason}"
+        if reason
+        else (f"source receipt {location['status']}")
+    )
+
+
+def _receipt_candidates(locations: list[dict[str, Any]]) -> list[FileCandidate]:
+    candidates: dict[str, FileCandidate] = {}
+    for location in locations:
+        status = location["status"]
+        path = location.get("path")
+        if status not in _RECEIPT_CONFIDENCE or not path:
+            continue
+        symbol = location.get("qualname") or "unknown"
+        entry: dict[str, Any] = {
+            "symbol": symbol,
+            "line": location.get("line_start", "?"),
+            "kind": "source_receipt",
+        }
+        if "line_end" in location:
+            entry["line_end"] = location["line_end"]
+        eligible = status == "resolved"
+        existing = candidates.get(path)
+        if existing is None:
+            candidates[path] = FileCandidate(
+                path=path,
+                symbols=[symbol],
+                confidence=_RECEIPT_CONFIDENCE[status],
+                reason=_receipt_reason(location),
+                locations=[entry],
+                rewrite_eligible=eligible,
+                provenance=status,
+            )
+            continue
+        if symbol not in existing.symbols:
+            existing.symbols = sorted({*existing.symbols, symbol})
+        if entry not in existing.locations:
+            existing.locations.append(entry)
+        # One unresolved receipt makes the whole file a lead, not a target.
+        weaker = (
+            _CONFIDENCE_ORDER[_RECEIPT_CONFIDENCE[status]] > _CONFIDENCE_ORDER[existing.confidence]
+        )
+        if not eligible and (existing.rewrite_eligible or weaker):
+            existing.rewrite_eligible = False
+            existing.confidence = _RECEIPT_CONFIDENCE[status]
+            existing.provenance = status
+            existing.reason = _receipt_reason(location)
+    return sorted(
+        candidates.values(), key=lambda item: (_CONFIDENCE_ORDER[item.confidence], item.path)
+    )
+
+
+def _merge_candidates(
+    from_receipts: list[FileCandidate], from_names: list[FileCandidate]
+) -> list[FileCandidate]:
+    """Receipt-backed files first; name matches for other files follow as leads."""
+    seen = {candidate.path for candidate in from_receipts}
+    merged = [*from_receipts, *(item for item in from_names if item.path not in seen)]
+    return merged[:8]
+
+
+def _provenance_counts(plans: list[PatchPlan]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for plan in plans:
+        for location in plan.source_locations:
+            counts[location["status"]] = counts.get(location["status"], 0) + len(
+                location["span_ids"]
+            )
+    return dict(sorted(counts.items()))
 
 
 def _resolve_repository_path(
@@ -571,6 +721,24 @@ def _oscillation_template(framework: str) -> dict[str, str]:
         "proposed_rewrite": rewrite,
         "suggested_diff": suggested,
     }
+
+
+def _format_source_locations(locations: list[dict[str, Any]]) -> list[str]:
+    if not locations:
+        return []
+    lines = ["- Source locations:"]
+    for location in locations:
+        where = location.get("path") or location.get("recorded_path")
+        parts = [f"  - {markdown_text(location['status'])}:"]
+        parts.append(markdown_code_span(where) if where else "no path")
+        if location.get("qualname"):
+            parts.append(markdown_code_span(location["qualname"]))
+        if "line_start" in location and "line_end" in location:
+            parts.append(f"lines {location['line_start']}-{location['line_end']}")
+        if location.get("reason"):
+            parts.append(f"({markdown_text(location['reason'])})")
+        lines.append(" ".join(parts))
+    return lines
 
 
 def _format_locations(locations: list[dict[str, Any]]) -> str:

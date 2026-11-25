@@ -8,6 +8,8 @@ from functools import wraps
 from typing import Any, TypeVar, overload
 
 from agentloop.events import format_exception_detail, new_event_id, utc_now_iso
+from agentloop.source_provenance import SOURCE_KEY, capture_enabled
+from agentloop.source_provenance import capture_source as _source_receipt
 from agentloop.tracer import (
     AgentTrace,
     bind_trace_context,
@@ -23,8 +25,15 @@ from agentloop.tracer import (
 F = TypeVar("F", bound=Callable[..., Any])
 
 
-def _call_metadata(args: tuple[Any, ...], kwargs: dict[str, Any]) -> dict[str, Any]:
+def _call_metadata(
+    args: tuple[Any, ...],
+    kwargs: dict[str, Any],
+    source: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     metadata: dict[str, Any] = {"integration": "agentloop.decorator"}
+    if source is not None:
+        # A fresh copy per span, so editing one event's metadata never edits another's.
+        metadata[SOURCE_KEY] = dict(source)
     if args:
         metadata["arg_count"] = len(args)
     if kwargs:
@@ -277,6 +286,7 @@ def traceable(
     model: str | None = None,
     root: bool = False,
     agent_name: str | None = None,
+    capture_source: bool | None = None,
 ) -> Callable[[F], F]: ...
 
 
@@ -288,6 +298,7 @@ def traceable(
     model: str | None = None,
     root: bool = False,
     agent_name: str | None = None,
+    capture_source: bool | None = None,
 ) -> F | Callable[[F], F]:
     """Trace a normal Python function without changing its implementation.
 
@@ -315,6 +326,11 @@ def traceable(
     `root=True` starts an AgentLoop run when no active run exists. Nested calls are
     recorded as spans inside that run. This gives teams a low-friction migration
     path when they do not use LangGraph, CrewAI, or another supported framework.
+
+    `capture_source=True` (or `AGENTLOOP_CAPTURE_SOURCE=1` when it is left as None)
+    records where the function is defined in each span's `agentloop.source`
+    metadata: a relative path, qualified name, line range and file digest, never
+    the source text or an absolute path. See `agentloop.source_provenance`.
     """
 
     normalized_kind = kind.lower().replace("-", "_")
@@ -326,6 +342,8 @@ def traceable(
             func, "__name__", getattr(func, "__qualname__", "agentloop.call")
         )
         run_name = agent_name or span_name
+        # Computed once per decorated function, so calls only copy a small dict.
+        source = _source_receipt(func) if capture_enabled(capture_source) else None
 
         if inspect.isasyncgenfunction(func):
 
@@ -337,7 +355,7 @@ def traceable(
                     kind=normalized_kind,
                     model=model,
                     root=root,
-                    metadata=_call_metadata(args, kwargs),
+                    metadata=_call_metadata(args, kwargs, source),
                 )
                 return _delegate_async_generator(func(*args, **kwargs), span)
 
@@ -350,9 +368,11 @@ def traceable(
                 if root and current_trace() is None:
                     with trace_agent(run_name, metadata={"entrypoint": span_name}):
                         return await _run_async_span(
-                            func, span_name, normalized_kind, model, args, kwargs
+                            func, span_name, normalized_kind, model, args, kwargs, source
                         )
-                return await _run_async_span(func, span_name, normalized_kind, model, args, kwargs)
+                return await _run_async_span(
+                    func, span_name, normalized_kind, model, args, kwargs, source
+                )
 
             return async_wrapper  # type: ignore[return-value]
 
@@ -366,7 +386,7 @@ def traceable(
                     kind=normalized_kind,
                     model=model,
                     root=root,
-                    metadata=_call_metadata(args, kwargs),
+                    metadata=_call_metadata(args, kwargs, source),
                 )
                 return _delegate_generator(func(*args, **kwargs), span)
 
@@ -376,8 +396,10 @@ def traceable(
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             if root and current_trace() is None:
                 with trace_agent(run_name, metadata={"entrypoint": span_name}):
-                    return _run_sync_span(func, span_name, normalized_kind, model, args, kwargs)
-            return _run_sync_span(func, span_name, normalized_kind, model, args, kwargs)
+                    return _run_sync_span(
+                        func, span_name, normalized_kind, model, args, kwargs, source
+                    )
+            return _run_sync_span(func, span_name, normalized_kind, model, args, kwargs, source)
 
         return wrapper  # type: ignore[return-value]
 
@@ -392,10 +414,11 @@ def _span_cm(
     model: str | None,
     args: tuple[Any, ...],
     kwargs: dict[str, Any],
+    source: dict[str, Any] | None = None,
 ) -> Any:
     """Return the span context manager for a regular model or tool call."""
 
-    metadata = _call_metadata(args, kwargs)
+    metadata = _call_metadata(args, kwargs, source)
     if kind == "model":
         return trace_model_call(span_name, model=model, metadata=metadata)
     return trace_tool_call(span_name, metadata=metadata)
@@ -408,8 +431,9 @@ async def _run_async_span(
     model: str | None,
     args: tuple[Any, ...],
     kwargs: dict[str, Any],
+    source: dict[str, Any] | None = None,
 ) -> Any:
-    with _span_cm(span_name, kind, model, args, kwargs):
+    with _span_cm(span_name, kind, model, args, kwargs, source):
         return await func(*args, **kwargs)
 
 
@@ -420,8 +444,9 @@ def _run_sync_span(
     model: str | None,
     args: tuple[Any, ...],
     kwargs: dict[str, Any],
+    source: dict[str, Any] | None = None,
 ) -> Any:
-    with _span_cm(span_name, kind, model, args, kwargs):
+    with _span_cm(span_name, kind, model, args, kwargs, source):
         return func(*args, **kwargs)
 
 
@@ -431,15 +456,29 @@ def trace_model(
     model: str | None = None,
     root: bool = False,
     agent_name: str | None = None,
+    capture_source: bool | None = None,
 ) -> Callable[[F], F]:
     """Convenience decorator for model-call-like functions."""
 
-    return traceable(name=name, kind="model", model=model, root=root, agent_name=agent_name)
+    return traceable(
+        name=name,
+        kind="model",
+        model=model,
+        root=root,
+        agent_name=agent_name,
+        capture_source=capture_source,
+    )
 
 
 def trace_tool(
-    *, name: str | None = None, root: bool = False, agent_name: str | None = None
+    *,
+    name: str | None = None,
+    root: bool = False,
+    agent_name: str | None = None,
+    capture_source: bool | None = None,
 ) -> Callable[[F], F]:
     """Convenience decorator for tool-call-like functions."""
 
-    return traceable(name=name, kind="tool", root=root, agent_name=agent_name)
+    return traceable(
+        name=name, kind="tool", root=root, agent_name=agent_name, capture_source=capture_source
+    )

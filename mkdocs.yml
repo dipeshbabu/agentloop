@@ -121,6 +121,7 @@ nav:
       - TypeScript SDK: reference/typescript.md
       - HTTP API: API_VERSIONING.md
       - Trace schema: TRACE_SCHEMA.md
+      - Source provenance: SOURCE_PROVENANCE.md
       - Workflow tracing: WORKFLOW_TRACING.md
       - Dashboard: DASHBOARD.md
       - Server deployment: PRODUCTION.md

@@ -7,6 +7,18 @@ trace, study, receipt, API and database schema versions.
 
 ## [Unreleased]
 
+### Added
+
+- Opt-in source provenance for traced functions. `traceable(capture_source=True)`,
+  or `AGENTLOOP_CAPTURE_SOURCE=1`, records each span's relative path, qualified
+  name, line range and file digest under `agentloop.source`. It records no source
+  text and no absolute paths. Patch plans resolve these receipts against the
+  checkout: only an exact match is `rewrite_eligible`, and moved, stale,
+  ambiguous, missing or unverified locations are reported explicitly. Name
+  matches remain as leads, and traces without receipts plan as before. See
+  [Source provenance](docs/SOURCE_PROVENANCE.md)
+  ([#395](https://github.com/dipeshbabu/agentloop/issues/395)).
+
 ## [0.2.10] - 2026-11-25
 
 ### Added
