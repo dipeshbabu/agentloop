@@ -9,6 +9,13 @@ trace, study, receipt, API and database schema versions.
 
 ### Added
 
+- `agentloop.pilot_records` validates first-use pilot records, which carry an
+  opaque participant ID and a consent reference and refuse personal fields,
+  and summarizes them with denominators. It also compares optimization methods
+  with a no-optimization baseline on held-out workloads, reporting quality
+  regressions, unknown costs and improved negative controls. This is part of
+  [#406](https://github.com/dipeshbabu/agentloop/issues/406). No participant data
+  is included.
 - `agentloop.timing_sensitivity` simulates, on a recorded run, how much sooner
   it would have finished if one operation were removed or made faster. It
   reports critical-path slack, the simulated gain for each leaf operation, and
