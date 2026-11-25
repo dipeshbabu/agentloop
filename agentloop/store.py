@@ -1,14 +1,11 @@
 from __future__ import annotations
 
-import base64
-import binascii
 import hashlib
 import hmac
 import json
 import math
 import os
 import re
-import secrets
 import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -30,14 +27,14 @@ from agentloop.interventions import InterventionRecord
 from agentloop.migrations import apply_postgres_migrations, apply_sqlite_migrations
 from agentloop.ranking import cluster_ranking, finalize_ranking
 from agentloop.savings import SavingsItem, select_compatible
+from agentloop.store_keys import (
+    _API_KEY_PREFIX_LENGTH,
+    _require_key_prefix,
+    hash_api_key,
+    new_api_key,
+    verify_api_key_hash,
+)
 from agentloop.tracer import AgentTrace
-
-_API_KEY_PREFIX_LENGTH = 10
-_API_KEY_SALT_BYTES = 16
-_API_KEY_HASH_BYTES = 32
-_API_KEY_SCRYPT_N = 2**14
-_API_KEY_SCRYPT_R = 8
-_API_KEY_SCRYPT_P = 1
 
 # Finding lifecycle. `detected` is the initial state for every newly diagnosed
 # finding. `superseded` is not reachable through update_finding_status(); it is
@@ -177,46 +174,6 @@ class TraceStore(Protocol):
     def usage_summary(self, project_id: str | None = None) -> dict[str, Any]: ...
 
 
-def hash_api_key(api_key: str) -> str:
-    salt = secrets.token_bytes(_API_KEY_SALT_BYTES)
-    digest = hashlib.scrypt(
-        api_key.encode("utf-8"),
-        salt=salt,
-        n=_API_KEY_SCRYPT_N,
-        r=_API_KEY_SCRYPT_R,
-        p=_API_KEY_SCRYPT_P,
-        dklen=_API_KEY_HASH_BYTES,
-    )
-    return "scrypt$v1${salt}${digest}".format(
-        salt=_encode_hash_bytes(salt),
-        digest=_encode_hash_bytes(digest),
-    )
-
-
-def verify_api_key_hash(api_key: str, encoded_hash: str) -> bool:
-    if not api_key.startswith("al_") or len(api_key) > 512:
-        return False
-    parts = encoded_hash.split("$")
-    if len(parts) != 4 or parts[:2] != ["scrypt", "v1"]:
-        return False
-    try:
-        salt = _decode_hash_bytes(parts[2])
-        expected = _decode_hash_bytes(parts[3])
-    except (binascii.Error, UnicodeEncodeError, ValueError):
-        return False
-    if len(salt) != _API_KEY_SALT_BYTES or len(expected) != _API_KEY_HASH_BYTES:
-        return False
-    actual = hashlib.scrypt(
-        api_key.encode("utf-8"),
-        salt=salt,
-        n=_API_KEY_SCRYPT_N,
-        r=_API_KEY_SCRYPT_R,
-        p=_API_KEY_SCRYPT_P,
-        dklen=_API_KEY_HASH_BYTES,
-    )
-    return hmac.compare_digest(actual, expected)
-
-
 # Stored key hashes that a presented key has matched in this process, mapped to
 # that key. scrypt costs tens of milliseconds by design, and every
 # authenticated request presents its key. Entries are looked up from the hash
@@ -241,15 +198,6 @@ def _find_api_key_row(api_key: str, rows: list[Any], key_hash_of: Any) -> Any | 
             _VERIFIED_KEYS[key_hash_of(row)] = api_key
             return row
     return None
-
-
-def _encode_hash_bytes(value: bytes) -> str:
-    return base64.urlsafe_b64encode(value).decode("ascii").rstrip("=")
-
-
-def _decode_hash_bytes(value: str) -> bytes:
-    padded = value + "=" * (-len(value) % 4)
-    return base64.b64decode(padded.encode("ascii"), altchars=b"-_", validate=True)
 
 
 _DELETE_CHUNK = 500
@@ -386,17 +334,6 @@ def _timestamp_text(value: Any) -> str | None:
     if value is None:
         return None
     return value.isoformat() if hasattr(value, "isoformat") else str(value)
-
-
-def _require_key_prefix(prefix: Any) -> None:
-    if not isinstance(prefix, str) or len(prefix) != _API_KEY_PREFIX_LENGTH:
-        raise ValueError(
-            f"API key prefix must be the first {_API_KEY_PREFIX_LENGTH} characters of the key"
-        )
-
-
-def new_api_key() -> str:
-    return "al_" + secrets.token_urlsafe(32)
 
 
 def _validate_page_limit(limit: int) -> int:
