@@ -110,6 +110,7 @@ PAGE_ICONS = {
     "TRACE_SCHEMA.md": "octicons/file-16",
     "SOURCE_PROVENANCE.md": "octicons/code-square-16",
     "EXECUTION_IR.md": "octicons/workflow-16",
+    "TIMING_SENSITIVITY.md": "octicons/stopwatch-16",
     "WORKFLOW_TRACING.md": "octicons/git-branch-16",
     "DASHBOARD.md": "octicons/project-roadmap-16",
     "PRODUCTION.md": "octicons/stack-16",
