@@ -9,6 +9,16 @@ trace, study, receipt, API and database schema versions.
 
 ### Added
 
+- `agentloop.optimization_search` runs a bounded, seeded search over candidate
+  interventions using a host-supplied `evaluate` callback. It measures the
+  baseline, then each single intervention, then greedily combines compatible
+  ones while reporting their interaction. It finishes with one held-out
+  evaluation. Budgets cover attempts, elapsed time and measured cost, and it
+  stops rather than guess at unknown cost. Cancellation and interruption stop
+  it too. Every attempt is retained; the report includes the Pareto set, net
+  gain and search overhead, and a decision for review. Nothing is deployed. See
+  [Optimization search](docs/OPTIMIZATION_SEARCH.md)
+  ([#402](https://github.com/dipeshbabu/agentloop/issues/402)).
 - `agentloop.retry_passes` labels each retry group's cause (transport, schema,
   semantic, tool or unknown) and keeps transport and semantic retries as
   legitimate. It flags retries of tools not declared idempotent as
