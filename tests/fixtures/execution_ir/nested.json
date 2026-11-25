@@ -22,6 +22,10 @@
         "basis": "unknown",
         "value": null
       },
+      "depends_on": {
+        "basis": "unknown",
+        "value": null
+      },
       "deterministic": {
         "basis": "unknown",
         "value": null
@@ -72,6 +76,10 @@
         "basis": "unknown",
         "value": null
       },
+      "depends_on": {
+        "basis": "unknown",
+        "value": null
+      },
       "deterministic": {
         "basis": "unknown",
         "value": null
@@ -119,6 +127,10 @@
     },
     {
       "authorization_scope": {
+        "basis": "unknown",
+        "value": null
+      },
+      "depends_on": {
         "basis": "unknown",
         "value": null
       },

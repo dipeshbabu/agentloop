@@ -34,6 +34,11 @@
         "basis": "unknown",
         "value": null
       },
+      "depends_on": {
+        "basis": "declared",
+        "source": "depends_on",
+        "value": []
+      },
       "deterministic": {
         "basis": "unknown",
         "value": null
@@ -83,6 +88,13 @@
       "authorization_scope": {
         "basis": "unknown",
         "value": null
+      },
+      "depends_on": {
+        "basis": "declared",
+        "source": "depends_on",
+        "value": [
+          "plan"
+        ]
       },
       "deterministic": {
         "basis": "unknown",
@@ -135,6 +147,13 @@
         "basis": "unknown",
         "value": null
       },
+      "depends_on": {
+        "basis": "declared",
+        "source": "depends_on",
+        "value": [
+          "plan"
+        ]
+      },
       "deterministic": {
         "basis": "unknown",
         "value": null
@@ -185,6 +204,14 @@
       "authorization_scope": {
         "basis": "unknown",
         "value": null
+      },
+      "depends_on": {
+        "basis": "declared",
+        "source": "depends_on",
+        "value": [
+          "left",
+          "right"
+        ]
       },
       "deterministic": {
         "basis": "unknown",

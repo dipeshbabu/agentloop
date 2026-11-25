@@ -331,6 +331,12 @@ def _from_nodes(
         operations.append(operation)
 
     declared_targets, declared_edges = _declared_dependencies(nodes, known, unsupported)
+    for operation in operations:
+        # An empty list is a declaration ("no dependencies"), unlike no list at all.
+        listed = declared_targets.get(operation["id"])
+        operation["depends_on"] = (
+            _known(listed, "declared", "depends_on") if listed is not None else _unknown()
+        )
     out_edges: list[dict[str, Any]] = []
     for edge in [*edges, *declared_edges]:
         if edge.get("kind", "sequence") == "sequence" and edge["target"] in declared_targets:
@@ -392,9 +398,9 @@ def _from_nodes(
 
 def _declared_dependencies(
     nodes: list[dict[str, Any]], known: set[str], unsupported: list[dict[str, Any]]
-) -> tuple[set[str], list[dict[str, Any]]]:
-    """Plain ``depends_on`` metadata and ``agentloop.stage`` declarations as data edges."""
-    targets: set[str] = set()
+) -> tuple[dict[str, list[str]], list[dict[str, Any]]]:
+    """Each declaring span's sorted dependency list, and those declarations as data edges."""
+    targets: dict[str, list[str]] = {}
     edges: list[dict[str, Any]] = []
     for node in nodes:
         metadata = node["metadata"] if isinstance(node["metadata"], Mapping) else {}
@@ -423,7 +429,7 @@ def _declared_dependencies(
             declared = sorted({*(declared or []), *stage_deps})
         if declared is None:
             continue
-        targets.add(node["node_id"])
+        targets[node["node_id"]] = sorted(set(declared))
         for source in declared:
             if source not in known:
                 unsupported.append(

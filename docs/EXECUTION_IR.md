@@ -39,6 +39,7 @@ An operation has:
 | `kind` | The operation taxonomy: `model`, `tool`, `retriever`, `memory` and so on, or `unknown` |
 | `status`, `timing` | Observed. `timing` is milliseconds from the earliest observed start in the trace. |
 | `instance` | The nth call with this name under the same parent. Loop iterations and retries are separate observed instances. |
+| `depends_on` | The span IDs it declared it depends on. An empty list is a declaration ("none"), unlike `unknown`. |
 | `effect` | `none`, `read`, `write` or `external` |
 | `idempotent`, `deterministic` | `true` or `false` |
 | `reads`, `writes` | Sorted lists of state keys |

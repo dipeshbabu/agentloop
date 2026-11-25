@@ -265,3 +265,14 @@ def test_independence_edge_cases():
     document = build_execution_ir(FIXTURES["branches"]())
     assert independence(document, "left", "left")["reasons"] == ["same operation"]
     assert independence(document, "left", "nope")["abstained"] is True
+
+
+def test_dependency_declarations_distinguish_empty_from_missing():
+    document = build_execution_ir(FIXTURES["branches"]())
+    ops = {op["id"]: op for op in document["operations"]}
+    assert ops["plan"]["depends_on"] == {"value": [], "basis": "declared", "source": "depends_on"}
+    assert ops["join"]["depends_on"]["value"] == ["left", "right"]
+    loops = build_execution_ir(FIXTURES["loops"]())
+    assert all(
+        op["depends_on"] == {"value": None, "basis": "unknown"} for op in loops["operations"]
+    )
