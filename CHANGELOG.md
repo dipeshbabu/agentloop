@@ -64,6 +64,11 @@ trace, study, receipt, API and database schema versions.
 
 ### Changed
 
+- API key generation, hashing and verification moved from `agentloop/store.py`
+  to `agentloop/store_keys.py`, the first step in splitting the store
+  ([#407](https://github.com/dipeshbabu/agentloop/issues/407)).
+  `agentloop.store` still exports every public name, as the same objects, and
+  `tests/test_store_public_surface.py` pins that contract.
 - The finding benchmark guide now reports the archived baseline (source revision
   `41e0cc5`, precision 8 / 10) and the current rules (8 / 8) separately, with
   their counts and denominators. Before, the guide described the corrected rules
