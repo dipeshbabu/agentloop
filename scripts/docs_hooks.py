@@ -117,6 +117,7 @@ PAGE_ICONS = {
     "RETRY_PASSES.md": "octicons/sync-16",
     "OPTIMIZATION_SEARCH.md": "octicons/goal-16",
     "CONDITIONED_CALIBRATION.md": "octicons/sliders-16",
+    "MCP.md": "octicons/plug-16",
     "WORKFLOW_TRACING.md": "octicons/git-branch-16",
     "DASHBOARD.md": "octicons/project-roadmap-16",
     "PRODUCTION.md": "octicons/stack-16",

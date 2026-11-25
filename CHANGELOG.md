@@ -9,6 +9,15 @@ trace, study, receipt, API and database schema versions.
 
 ### Added
 
+- `agentloop mcp` runs a local, dependency-free MCP server over stdio for
+  coding agents. Read-only tools list traces, summarize them, rank findings,
+  build patch plans, the execution IR, and timing sensitivity, and propose
+  transformations. `execute_candidate` exists only with `--allow-execution` and
+  needs `confirm: true`. Paths are confined to `--root`, recorded model text is
+  redacted by default, results are marked as untrusted content, and every call
+  has a time limit and can be cancelled. An example agent skill is in
+  `examples/agent_skills/agentloop`. See [Coding agents (MCP)](docs/MCP.md)
+  ([#404](https://github.com/dipeshbabu/agentloop/issues/404)).
 - `agentloop.conditioned_calibration` fits median measured-to-predicted ratios
   with bootstrap intervals per pass and task cluster, falling back to coarser
   strata. Only observed outcomes are fitted. Estimated, missing and stale rows
