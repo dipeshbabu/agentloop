@@ -9,6 +9,15 @@ trace, study, receipt, API and database schema versions.
 
 ### Added
 
+- `agentloop.retry_passes` labels each retry group's cause (transport, schema,
+  semantic, tool or unknown) and keeps transport and semantic retries as
+  legitimate. It flags retries of tools not declared idempotent as
+  `unsafe_retry`, and finds repeated identical calls and oscillation.
+  `propose_limits` proposes bounded `LoopLimits` only where there is evidence of
+  waste, and never tighter than a completed run needed. `shadow_policy` returns
+  a shadow-mode harness config, and `compare_runs` rejects a faster candidate
+  that completes less often. See [Retry and loop passes](docs/RETRY_PASSES.md)
+  ([#401](https://github.com/dipeshbabu/agentloop/issues/401)).
 - `agentloop.schedule_compiler` compiles groups of sibling tool calls from a
   recorded run into the existing tool scheduler's plan. It uses only declared
   dependencies, effects and state reads and writes. Groups with unknown or
