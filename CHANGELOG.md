@@ -127,6 +127,13 @@ trace, study, receipt, API and database schema versions.
 
 ### Changed
 
+- `agentloop/store.py` is split into `store_types` (constants, errors and the
+  `TraceStore` protocol), `store_common` (shared helpers and the optimization
+  queue), `store_sqlite` and `store_postgres`. `agentloop.store` re-exports every
+  public name as the same object, so imports don't change. Code that
+  monkeypatched implementation details on `agentloop.store`, such as
+  `apply_sqlite_migrations`, must patch the implementing module instead
+  ([#407](https://github.com/dipeshbabu/agentloop/issues/407)).
 - API key generation, hashing and verification moved from `agentloop/store.py`
   to `agentloop/store_keys.py`, the first step in splitting the store
   ([#407](https://github.com/dipeshbabu/agentloop/issues/407)).

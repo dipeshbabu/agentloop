@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
-from agentloop import store as store_module
+# The SQLite store looks migrations and sqlite3 up in its own module (#407).
+from agentloop import store_sqlite as store_module
 from agentloop.findings import build_diagnosis
 from agentloop.store import SQLiteTraceStore
 from agentloop.tracer import trace_agent, trace_model_call, trace_tool_call
