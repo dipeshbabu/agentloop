@@ -5,11 +5,17 @@ For existing OTLP/OpenInference telemetry or a client already used by your
 application, the [onboarding path](ONBOARDING.md) adds capture validation
 and an explicit SDK startup helper before these analysis steps.
 
-For classifiers, rules and decision pipelines, see the
-[AI execution profiling guide](AI_EXECUTION_PROFILING.md). Its workflow APIs are
-included in version 0.1.0; run the reference examples from a source checkout.
+!!! tip "Classifiers, rules and decision pipelines"
 
-## 1. Verify the install without an account or API key
+    See the [AI execution profiling guide](AI_EXECUTION_PROFILING.md). Its
+    workflow APIs are included in version 0.1.0; run the reference examples from
+    a source checkout.
+
+## From install to proof
+
+<div class="al-steps" markdown>
+
+### Verify the install without an account or API key
 
 ```bash
 agentloop quickstart
@@ -46,7 +52,7 @@ The trace is marked with:
 
 so it cannot be confused with production evidence.
 
-## 2. Analyze one real trace
+### Analyze one real trace
 
 After instrumenting an agent and exporting a trace:
 
@@ -78,7 +84,7 @@ The JSON contains four sections:
 - `diagnosis`: evidence-backed findings;
 - `optimization`: rewrite opportunities and savings-selection metadata.
 
-## 3. Move to proof
+### Move to proof
 
 `analyze` is for finding a problem. Once you change the agent, compare the before and after runs:
 
@@ -108,6 +114,8 @@ be regenerated at its own output path.
 `analyze` reports comparison failures for inspection and does not enforce gates.
 Use `replay`, `quality-report`, or `ci` when failure must produce exit code `1`.
 Invalid arguments, including conflicting paths, produce exit code `2`.
+
+</div>
 
 ## Advanced commands remain available
 
