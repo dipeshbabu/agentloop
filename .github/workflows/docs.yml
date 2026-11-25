@@ -6,6 +6,7 @@ on:
     paths:
       - "docs/**"
       - "mkdocs.yml"
+      - "overrides/**"
       - "scripts/docs_hooks.py"
       - "tests/test_docs_site.py"
       - "sdk/typescript/README.md"
@@ -20,6 +21,7 @@ on:
     paths:
       - "docs/**"
       - "mkdocs.yml"
+      - "overrides/**"
       - "scripts/docs_hooks.py"
       - "tests/test_docs_site.py"
       - "sdk/typescript/README.md"

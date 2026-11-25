@@ -631,6 +631,116 @@ body {
   outline-offset: .2rem;
 }
 
+/* ---------- Previous / next ----------
+   Rendered by overrides/main.html under the page content: one card with the
+   previous page on the left and the next page on the right. */
+
+.al-pager {
+  border: 1px solid var(--al-rule);
+  border-radius: .6rem;
+  box-shadow: var(--al-shadow);
+  display: flex;
+  margin: 3rem 0 1rem;
+  overflow: hidden;
+}
+
+.al-pager__link,
+.md-typeset a.al-pager__link {
+  align-items: center;
+  color: var(--md-default-fg-color--light);
+  display: flex;
+  gap: .6rem;
+  min-width: 0;
+  padding: .85rem 1.1rem;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.al-pager__link:hover,
+.al-pager__link:focus-visible,
+.md-typeset a.al-pager__link:hover,
+.md-typeset a.al-pager__link:focus-visible {
+  background-color: var(--al-subtle);
+  color: var(--md-default-fg-color);
+}
+
+.al-pager__link--prev {
+  flex: 0 1 auto;
+}
+
+.al-pager__link--next {
+  flex: 1 1 auto;
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.al-pager__link--prev + .al-pager__link--next {
+  border-left: 1px solid var(--al-rule);
+}
+
+.al-pager__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.al-pager__direction {
+  white-space: nowrap;
+  font-size: .64rem;
+  font-weight: 600;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+}
+
+.al-pager__title {
+  color: var(--md-default-fg-color);
+  font-size: .78rem;
+  font-weight: 650;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.al-pager__link:hover .al-pager__title {
+  color: var(--al-accent);
+}
+
+.al-pager__section {
+  font-size: .68rem;
+}
+
+.al-pager__icon {
+  color: var(--md-default-fg-color--lighter);
+  display: inline-flex;
+  flex: none;
+}
+
+.al-pager__icon svg {
+  fill: currentColor;
+  height: .9rem;
+  width: .9rem;
+}
+
+.al-pager__link:hover .al-pager__icon {
+  color: var(--al-accent);
+}
+
+/* With only the previous page left, it fills the card. */
+.al-pager__link--prev:only-child {
+  flex: 1 1 auto;
+}
+
+@media (max-width: 44.9375em) {
+  .al-pager__link {
+    padding: .75rem .85rem;
+  }
+
+  .al-pager__section,
+  .al-pager__link--prev:not(:only-child) .al-pager__title {
+    display: none;
+  }
+}
+
 /* ---------- Footer ---------- */
 
 .md-footer {
@@ -702,8 +812,8 @@ body {
 @media (min-width: 60em) {
   .md-typeset .al-workflow {
     margin-inline: auto;
-    max-width: 55rem;
-    width: 90%;
+    max-width: 40rem;
+    width: 80%;
   }
 
   .md-typeset .grid.cards {
