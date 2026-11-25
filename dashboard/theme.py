@@ -122,7 +122,7 @@ def _palette() -> dict[str, str]:
             "muted": "#c2b8ce",
             "nav_hover": "rgba(199, 161, 255, 0.10)",
             "nav_active": "rgba(199, 161, 255, 0.18)",
-            "nav_active_text": "#e4d2ff",
+            "nav_active_text": "#c7a1ff",
             "accent": "#c7a1ff",
             "shadow": "none",
         }
@@ -130,10 +130,10 @@ def _palette() -> dict[str, str]:
         "card": "#ffffff",
         "card_border": "#e6e0ed",
         "muted": "#61576e",
-        "nav_hover": "rgba(112, 71, 186, 0.06)",
-        "nav_active": "rgba(112, 71, 186, 0.11)",
-        "nav_active_text": "#5a3699",
-        "accent": "#7047ba",
+        "nav_hover": "rgba(112, 56, 201, 0.06)",
+        "nav_active": "rgba(112, 56, 201, 0.11)",
+        "nav_active_text": "#7038c9",
+        "accent": "#7038c9",
         "shadow": "0 1px 2px rgba(37, 29, 52, 0.05)",
     }
 

@@ -8,12 +8,12 @@
   --md-primary-fg-color: #ffffff;
   --md-primary-fg-color--light: #ffffff;
   --md-primary-fg-color--dark: #ffffff;
-  --md-primary-bg-color: #292333;
+  --md-primary-bg-color: #30263d;
   --md-primary-bg-color--light: #61576e;
-  --md-accent-fg-color: #7047ba;
-  --md-accent-fg-color--transparent: #7047ba14;
-  --md-typeset-a-color: #6842af;
-  --md-default-fg-color: #292333;
+  --md-accent-fg-color: #7038c9;
+  --md-accent-fg-color--transparent: #7038c914;
+  --md-typeset-a-color: #7038c9;
+  --md-default-fg-color: #30263d;
   --md-default-fg-color--light: #61576e;
   --md-default-fg-color--lighter: #8e849b;
   --md-default-bg-color: #ffffff;
@@ -21,18 +21,18 @@
   --md-code-fg-color: #2f2740;
   --md-footer-bg-color: #faf8fd;
   --md-footer-bg-color--dark: #f3eff8;
-  --md-footer-fg-color: #292333;
+  --md-footer-fg-color: #30263d;
   --md-footer-fg-color--light: #61576e;
   --md-footer-fg-color--lighter: #8e849b;
   --al-rule: #ece6f3;
   --al-rule-strong: #ddd3ea;
   --al-subtle: #faf8fd;
   --al-tint: #f4effb;
-  --al-accent: #7047ba;
-  --al-accent-soft: #7047ba14;
+  --al-accent: #7038c9;
+  --al-accent-soft: #7038c914;
   --al-coral: #d96559;
   --al-shadow: 0 1px 2px rgba(37, 29, 52, .05);
-  --al-pager-tray: #f8f3fe;
+  --al-pager-tray: rgba(112, 56, 201, .05);
   --al-pager-chevron: #cdc4d8;
 }
 
@@ -41,10 +41,10 @@
   --md-primary-fg-color: #17141e;
   --md-primary-fg-color--light: #17141e;
   --md-primary-fg-color--dark: #17141e;
-  --md-primary-bg-color: #eee9f5;
+  --md-primary-bg-color: #f5efff;
   --md-primary-bg-color--light: #c2b8ce;
   --md-default-bg-color: #17141e;
-  --md-default-fg-color: #eee9f5;
+  --md-default-fg-color: #f5efff;
   --md-default-fg-color--light: #c2b8ce;
   --md-default-fg-color--lighter: #8f849d;
   --md-typeset-a-color: #c7a1ff;
@@ -54,7 +54,7 @@
   --md-code-fg-color: #e9e2f3;
   --md-footer-bg-color: #17141e;
   --md-footer-bg-color--dark: #1f1a29;
-  --md-footer-fg-color: #eee9f5;
+  --md-footer-fg-color: #f5efff;
   --md-footer-fg-color--light: #c2b8ce;
   --md-footer-fg-color--lighter: #8f849d;
   --al-rule: #2c2537;
@@ -124,7 +124,7 @@ body {
 }
 
 .md-tabs__item--active .md-tabs__link {
-  box-shadow: inset 0 -.12rem 0 var(--al-accent);
+  box-shadow: inset 0 -.12rem 0 var(--al-coral);
   font-weight: 600;
 }
 
@@ -664,15 +664,15 @@ body {
 }
 
 .md-typeset .md-button--primary {
-  background: #7047ba;
-  border-color: #7047ba;
+  background: #7038c9;
+  border-color: #7038c9;
   color: #fff;
 }
 
 .md-typeset .md-button:hover,
 .md-typeset .md-button:focus {
-  background: #7047ba;
-  border-color: #7047ba;
+  background: #7038c9;
+  border-color: #7038c9;
   color: #fff;
 }
 
