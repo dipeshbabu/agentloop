@@ -9,6 +9,18 @@ trace, study, receipt, API and database schema versions.
 
 ### Added
 
+- `agentloop.transformations`, a registry of executable transformation passes.
+  Each pass declares what it applies to, the evidence it needs, the effects it
+  tolerates, its objective, validation and rollback. `propose` is a dry run that
+  returns a unified diff and a deterministic receipt, or abstains with reasons.
+  `execute_candidate(..., allow_execution=True)` applies a candidate in a
+  temporary git worktree of `HEAD`, runs a host-supplied validation command
+  without a shell, removes the worktree, and checks that the original checkout
+  is unchanged. Two passes ship: `config.json_set` and
+  `ast.memoize_pure_function`, which needs an exactly resolved source receipt
+  and a declared pure, deterministic operation. See
+  [Transformation registry](docs/TRANSFORMATIONS.md)
+  ([#398](https://github.com/dipeshbabu/agentloop/issues/398)).
 - `agentloop.timing_sensitivity` simulates, on a recorded run, how much sooner
   it would have finished if one operation were removed or made faster. It
   reports critical-path slack, the simulated gain for each leaf operation, and
