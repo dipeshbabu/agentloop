@@ -9,6 +9,16 @@ trace, study, receipt, API and database schema versions.
 
 ### Added
 
+- `agentloop.system_telemetry`, optional and dependency-free:
+  - `resource_span` records process CPU, resident memory and I/O per span,
+    where the platform exposes them, with deterministic sampling.
+  - `run_subprocess` records a command's lifecycle without its arguments.
+  - `StreamTimer` measures time to first token.
+  - `cached_input_tokens` reads provider-reported cached tokens.
+
+  Unavailable values are `None` with a reason. Default spans are unchanged.
+  See [System telemetry](docs/SYSTEM_TELEMETRY.md)
+  ([#405](https://github.com/dipeshbabu/agentloop/issues/405)).
 - `agentloop mcp` runs a local, dependency-free MCP server over stdio for
   coding agents. Read-only tools list traces, summarize them, rank findings,
   build patch plans, the execution IR, and timing sensitivity, and propose

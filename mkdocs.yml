@@ -131,6 +131,7 @@ nav:
       - Optimization search: OPTIMIZATION_SEARCH.md
       - Conditioned calibration: CONDITIONED_CALIBRATION.md
       - Coding agents (MCP): MCP.md
+      - System telemetry: SYSTEM_TELEMETRY.md
       - Workflow tracing: WORKFLOW_TRACING.md
       - Dashboard: DASHBOARD.md
       - Server deployment: PRODUCTION.md
