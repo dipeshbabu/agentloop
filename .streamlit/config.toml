@@ -21,14 +21,14 @@ metricValueFontSize = "1.75rem"
 metricValueFontWeight = 650
 
 [theme.light]
-primaryColor = "#7047ba"
+primaryColor = "#7038c9"
 backgroundColor = "#f9f7fc"
 secondaryBackgroundColor = "#f1edf6"
-textColor = "#292333"
+textColor = "#30263d"
 borderColor = "#e6e0ed"
 dataframeBorderColor = "#e6e0ed"
 dataframeHeaderBackgroundColor = "#f3eff8"
-linkColor = "#6842af"
+linkColor = "#7038c9"
 codeBackgroundColor = "#f3f4f7"
 chartCategoricalColors = ["#7038c9", "#d96559", "#2f8f83", "#c98a1d", "#3f6fd1", "#a3478f", "#5f8f2f", "#61576e"]
 
@@ -41,7 +41,7 @@ borderColor = "#e6e0ed"
 primaryColor = "#c7a1ff"
 backgroundColor = "#1b1823"
 secondaryBackgroundColor = "#25202f"
-textColor = "#eee9f5"
+textColor = "#f5efff"
 borderColor = "#3c3449"
 dataframeBorderColor = "#3c3449"
 dataframeHeaderBackgroundColor = "#221d2b"

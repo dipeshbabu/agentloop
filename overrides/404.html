@@ -1,0 +1,19 @@
+{% extends "main.html" %}
+
+{#
+  The not-found page in the same style as other pages: a section label, a
+  title, one line of explanation and links to the usual starting points.
+#}
+{% block content %}
+  <p class="al-eyebrow">Page not found</p>
+  <h1>This page doesn't exist</h1>
+  <p class="al-404__lead">
+    It may have moved or been renamed. Search the documentation above, or
+    start from one of these pages.
+  </p>
+  <p class="al-404__links">
+    <a class="md-button md-button--primary" href="{{ base_url.rstrip('/') }}/">Documentation home</a>
+    <a class="md-button" href="{{ base_url.rstrip('/') }}/installation/">Installation</a>
+    <a class="md-button" href="{{ base_url.rstrip('/') }}/FIRST_USE/">First useful trace</a>
+  </p>
+{% endblock %}

@@ -35,6 +35,15 @@ trace, study, receipt, API and database schema versions.
 
 ### Changed
 
+- Documentation fixes from a full pass over every page: the home page is one
+  centred column instead of running against the left edge, the search field
+  no longer shows the query twice, code copy buttons are centred on the first
+  line, the mobile menu drops its divider lines, and the not-found page has a
+  title, an explanation and links to the usual starting points.
+- The documentation site and the dashboard use the exact colours of the
+  AgentLoop logo: violet `#7038c9` / `#c7a1ff` for accents and links, coral
+  `#d96559` / `#ff9c8f` for the active tab and second chart series, and the
+  logo's ink `#30263d` / `#f5efff` for text. A test pins them to the logo files.
 - The documentation site shows previous and next pages under each page's
   content: a tinted tray with "Previous" on the left and a white panel holding
   the next page's title, a one-line summary and "Next". Code blocks have an
