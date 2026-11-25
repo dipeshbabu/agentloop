@@ -9,6 +9,15 @@ trace, study, receipt, API and database schema versions.
 
 ### Added
 
+- `agentloop.schedule_compiler` compiles groups of sibling tool calls from a
+  recorded run into the existing tool scheduler's plan. It uses only declared
+  dependencies, effects and state reads and writes. Groups with unknown or
+  unsupported evidence abstain, and timing alone never implies independence.
+  Candidate groups report the scheduler's effective dependencies, resource
+  conflicts, and a simulated makespan under `max_concurrency`. `tool_calls`
+  binds a group to callables for `ToolScheduler.execute`. See
+  [Compiling a schedule](docs/SCHEDULE_COMPILER.md)
+  ([#400](https://github.com/dipeshbabu/agentloop/issues/400)).
 - `agentloop.request_reuse`: request-local reuse of tool results declared
   `read` or `none`, inside a `request_scope`. A key covers the tool, its version,
   the auth scope, an optional data version and the canonical input, and a hit

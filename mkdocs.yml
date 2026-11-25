@@ -126,6 +126,7 @@ nav:
       - Timing sensitivity: TIMING_SENSITIVITY.md
       - Transformation registry: TRANSFORMATIONS.md
       - Request-local reuse: REQUEST_REUSE.md
+      - Compiling a schedule: SCHEDULE_COMPILER.md
       - Workflow tracing: WORKFLOW_TRACING.md
       - Dashboard: DASHBOARD.md
       - Server deployment: PRODUCTION.md
