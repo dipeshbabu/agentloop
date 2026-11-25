@@ -19,6 +19,16 @@ trace, study, receipt, API and database schema versions.
   [Source provenance](docs/SOURCE_PROVENANCE.md)
   ([#395](https://github.com/dipeshbabu/agentloop/issues/395)).
 
+### Changed
+
+- The finding benchmark guide now reports the archived baseline (source revision
+  `41e0cc5`, precision 8 / 10) and the current rules (8 / 8) separately, with
+  their counts and denominators. Before, the guide described the corrected rules
+  but used the present tense for the baseline's 0.5 per-rule precision.
+  `tests/test_finding_benchmark_docs.py` regenerates both tables from the
+  checked-in baseline and a fresh evaluation, and fails if the guide drifts
+  ([#408](https://github.com/dipeshbabu/agentloop/issues/408)).
+
 ## [0.2.10] - 2026-11-25
 
 ### Added
