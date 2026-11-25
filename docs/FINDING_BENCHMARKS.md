@@ -74,13 +74,15 @@ for the trace groups labeled for each rule, not as isolated per-rule latency.
 It excludes model inference: semantic receipts are frozen fixtures. Timing is
 descriptive and is not a noisy microbenchmark release threshold.
 
-## Small CI corpus and honest baseline
+## Small CI corpus
 
 The [corpus](../examples/finding_benchmark_corpus.json) has 30 synthetic cases:
-two development cases and 28 evaluation cases across three deterministic rules
+2 development cases and 28 evaluation cases across three deterministic rules
 and all five semantic families. It includes valid opportunities, explicit
 dependencies, shared-state traps, incomplete timing, a workload shift, different
 retry causes, required verification, unavailable evidence and judge disagreement.
+Of the 28 evaluation cases, 8 are labeled opportunities, 9 are known negatives,
+6 are unknown and 5 are ambiguous.
 
 Labels in [the fixture builder](../scripts/build_finding_corpus.py) were specified
 without reading detector outputs. It uses local fake judges only to construct
@@ -88,25 +90,67 @@ saved evidence. The builder never overwrites an existing artifact; regeneration
 changes receipt timing and corpus hashes and requires a new reviewed baseline.
 The fixtures contain no private data or third-party dataset content.
 
-The initial baseline deliberately retains two known false positives:
+## Results: archived baseline and current rules
 
-- `add_schema_validation` recommends schema repair for a transport timeout.
-- `batch_model_calls` recommends batching a same-role sequence with dependencies.
+Both rows use the same evaluation split of the same corpus snapshot
+(corpus hash `0dd18272b0c34a794f6e1c149f097ca313c5e0b53bb7ca9f6d13e416c0da79da`).
+Every rate is shown with its count and denominator.
 
-Current rules exclude both cases. Batching version 1.2 respects causal
-dependencies, and schema repair version 1.2 requires a declared structured-output
-failure. The archived initial baseline stays available for regression comparisons.
-After these corrections, the current 28-case fixture evaluation retains eight
-correct findings and zero false findings on its known labels. Its unknown and
-ambiguous cases remain unscored, and its public labels have informed development.
-Independent application-owned labels are still needed to estimate field accuracy.
+- **Archived baseline.** This is [`finding_benchmark_baseline.json`](../examples/finding_benchmark_baseline.json),
+  recorded at source revision `41e0cc58274b9a257892fae29b697110cc3283f9` under
+  frozen policy "canonical finding rules" 1.0. It is historical evidence and is
+  kept unchanged as the release gate's reference.
+- **Current rules.** These are today's rules on the same cases, recomputed by CI
+  on every run and by the command above. They are not stored as a separate artifact.
+  Run the command with `--source-revision` set to the commit you are checking
+  to get a dated copy.
 
-Each rule has one correct and one false finding in its two-case evaluation
-subset. That 0.5 precision is a diagnostic of these fixtures, not a population
-estimate. The missing-timing parallelization case is unscored and remains
-visible. Supported semantic fixtures are artificial evidence-contract cases,
-not evidence that real judges are accurate. Rules absent from this small corpus
-have no claimed precision or release coverage.
+<!-- finding-benchmark-overall:start -->
+| Snapshot | Rule versions | Planned cases | Precision (correct / scored findings) | Known negatives with any finding | Cases with a finding | Unscored findings | Missed opportunities |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Archived baseline (`41e0cc5`) | 1.0, 1.1 | 28 | 8 / 10 (0.80) | 2 / 9 (0.22) | 11 / 28 (0.39) | 1 | 0 |
+| Current rules | 1.0, 1.2 | 28 | 8 / 8 (1.00) | 0 / 9 (0.00) | 9 / 28 (0.32) | 1 | 0 |
+<!-- finding-benchmark-overall:end -->
+
+<!-- finding-benchmark-per-rule:start -->
+| Rule | Cases | Archived version: correct / false | Current version: correct / false |
+| --- | --- | --- | --- |
+| `add_schema_validation` | 2 | 1.1: 1 / 1 | 1.2: 1 / 0 |
+| `batch_model_calls` | 2 | 1.1: 1 / 1 | 1.2: 1 / 0 |
+| `context_relevance` | 4 | 1.0: 1 / 0 | 1.0: 1 / 0 |
+| `low_contribution` | 4 | 1.0: 1 / 0 | 1.0: 1 / 0 |
+| `parallelize_tools` | 4 | 1.1: 1 / 0 | 1.2: 1 / 0 |
+| `retry_usefulness` | 4 | 1.0: 1 / 0 | 1.0: 1 / 0 |
+| `semantic_no_progress` | 4 | 1.0: 1 / 0 | 1.0: 1 / 0 |
+| `semantic_redundancy` | 4 | 1.0: 1 / 0 | 1.0: 1 / 0 |
+<!-- finding-benchmark-per-rule:end -->
+
+`tests/test_finding_benchmark_docs.py` regenerates both tables from the baseline
+file and a fresh evaluation, and fails when this page disagrees with them.
+
+The archived baseline deliberately retains two known false positives:
+
+- `add_schema_validation` 1.1 recommended schema repair for a transport timeout.
+- `batch_model_calls` 1.1 recommended batching a same-role sequence with dependencies.
+
+In that baseline, each of those two rules had one correct and one false finding
+in its two-case evaluation subset, a precision of 1 / 2. That was a diagnostic of
+these fixtures at that revision, not a population estimate, and it describes
+no other rule.
+
+The current rules exclude both cases. Batching 1.2 respects causal dependencies,
+and schema repair 1.2 requires a declared structured-output failure. These
+corrections were developed with these public labels in view, so the current row
+measures regression against known cases, not held-out accuracy.
+
+Limits that apply to both rows:
+
+- The unknown and ambiguous cases are unscored and stay in the planned denominators.
+- The missing-timing parallelization case emits one unscored finding in both snapshots.
+- Supported semantic fixtures are artificial evidence-contract cases, not evidence
+  that real judges are accurate.
+- Rules absent from this small corpus have no claimed precision or release coverage.
+- Independent application-owned labels are still needed to estimate field accuracy.
 
 ## Release gate and explicit review
 

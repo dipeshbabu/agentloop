@@ -34,7 +34,7 @@ generation and a successful report do not authorize deployment.
 
 | Roadmap principle | Review finding |
 | --- | --- |
-| Prefer abstention to weak findings | Unknown/ambiguous labels and incomplete evidence remain visible. The cross-workload corpus exposes six repository-agent batching false positives; the review does not claim universal recommendation precision. |
+| Prefer abstention to weak findings | Unknown/ambiguous labels and incomplete evidence remain visible. The [September 2026 cross-workload results](../research/cross-workload-2026-09/results.json) (analyzer revision `8af65da`, `batch_model_calls` 1.1) recorded 6 false batching findings on 6 known-negative repository-agent cases. That historical result is retained unchanged. The review does not claim universal recommendation precision. |
 | Keep quality ahead of savings | Cheaper real-model candidates retain quality losses. Non-agent batching preserves predictions, yet bean cases below the absolute quality floor remain rejected. |
 | Separate evidence kinds | Synthetic reference accounting, actual CPU/local-model observations, original predictions, judged evidence, calculated costs and unknown operating costs are identified separately. |
 | Preserve original evidence | Prediction/selection journals precede new candidates. Historical predictions are not regenerated to claim old effects. Both studies restore and reconstruct from checksum-checked archives. |

@@ -115,8 +115,10 @@ were squash-merged after their final CI checks passed. The
 [measurement and recommendation follow-up #316](https://github.com/dipeshbabu/agentloop/pull/316)
 retains both instrumentation runs, every timing sample
 and both detector evaluations. Schema repair now requires a declared cause.
-The public 28-case finding evaluation retains eight correct findings and zero
-false findings on known labels. Unknown and ambiguous labels remain unscored.
+At that revision the public 28-case finding evaluation had 8 correct and 0 false
+findings on known labels (precision 8 / 8). The archived baseline it replaced had
+8 / 10; see [the benchmark results](FINDING_BENCHMARKS.md#results-archived-baseline-and-current-rules).
+Unknown and ambiguous labels remain unscored.
 
 The release keeps the earlier successful Hermes case and the rejected three-workload
 local-model case. A consenting developer's first-use protocol is documented, and
