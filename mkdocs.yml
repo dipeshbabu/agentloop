@@ -10,6 +10,7 @@ site_dir: runs/docs-site
 
 theme:
   name: material
+  custom_dir: overrides
   language: en
   logo: assets/agentloop-mark.svg
   favicon: assets/agentloop-mark.svg
@@ -38,7 +39,6 @@ theme:
     - navigation.tabs.sticky
     - navigation.sections
     - navigation.top
-    - navigation.footer
     - toc.follow
     - search.suggest
     - search.highlight

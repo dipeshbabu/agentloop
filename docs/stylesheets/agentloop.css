@@ -348,8 +348,65 @@ body {
   margin: 1em 0;
 }
 
-.md-clipboard {
-  color: var(--md-default-fg-color--lighter);
+/* Copy button: always visible as a small outlined square in the code card's
+   top-right corner, highlighted in the accent colour on hover and focus.
+   Material renders it as .md-code__button inside .md-code__nav. */
+.md-typeset .md-code__nav,
+.md-typeset :hover > .md-code__nav {
+  background: none;
+  gap: .3rem;
+  padding: 0;
+  right: .6em;
+  top: .6em;
+}
+
+.md-typeset .md-code__button,
+.md-typeset .md-clipboard {
+  align-items: center;
+  background-color: var(--md-default-bg-color);
+  border: 1px solid var(--al-rule-strong);
+  border-radius: .4rem;
+  box-shadow: var(--al-shadow);
+  color: var(--md-default-fg-color--light);
+  display: inline-flex;
+  height: 2.1em;
+  justify-content: center;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+  width: 2.1em;
+}
+
+.md-typeset .md-code__button::after,
+.md-typeset .md-clipboard::after {
+  height: 1.05em;
+  width: 1.05em;
+}
+
+.md-typeset :hover > * > .md-code__button,
+.md-typeset :hover > .md-clipboard {
+  color: var(--md-default-fg-color);
+}
+
+.md-typeset .md-code__button:hover,
+.md-typeset .md-code__button.focus-visible,
+.md-typeset .md-code__button:focus-visible,
+.md-typeset .md-clipboard:hover,
+.md-typeset .md-clipboard:focus-visible {
+  background-color: var(--al-accent-soft);
+  border-color: var(--al-accent);
+  color: var(--al-accent);
+}
+
+/* Keep the first line of code clear of the button. */
+.md-typeset .highlight pre > code {
+  padding-right: 3.2em;
+}
+
+/* "Copied to clipboard" confirmation in the same card style. */
+.md-dialog {
+  background-color: var(--md-default-fg-color);
+  border-radius: .5rem;
+  box-shadow: 0 6px 20px rgba(37, 29, 52, .18);
+  color: var(--md-default-bg-color);
 }
 
 /* Tab groups: one card with a tinted tab bar on top. */
@@ -631,6 +688,116 @@ body {
   outline-offset: .2rem;
 }
 
+/* ---------- Previous / next ----------
+   Rendered by overrides/main.html under the page content: one card with the
+   previous page on the left and the next page on the right. */
+
+.al-pager {
+  border: 1px solid var(--al-rule);
+  border-radius: .6rem;
+  box-shadow: var(--al-shadow);
+  display: flex;
+  margin: 3rem 0 1rem;
+  overflow: hidden;
+}
+
+.al-pager__link,
+.md-typeset a.al-pager__link {
+  align-items: center;
+  color: var(--md-default-fg-color--light);
+  display: flex;
+  gap: .6rem;
+  min-width: 0;
+  padding: .85rem 1.1rem;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.al-pager__link:hover,
+.al-pager__link:focus-visible,
+.md-typeset a.al-pager__link:hover,
+.md-typeset a.al-pager__link:focus-visible {
+  background-color: var(--al-subtle);
+  color: var(--md-default-fg-color);
+}
+
+.al-pager__link--prev {
+  flex: 0 1 auto;
+}
+
+.al-pager__link--next {
+  flex: 1 1 auto;
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.al-pager__link--prev + .al-pager__link--next {
+  border-left: 1px solid var(--al-rule);
+}
+
+.al-pager__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.al-pager__direction {
+  white-space: nowrap;
+  font-size: .64rem;
+  font-weight: 600;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+}
+
+.al-pager__title {
+  color: var(--md-default-fg-color);
+  font-size: .78rem;
+  font-weight: 650;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.al-pager__link:hover .al-pager__title {
+  color: var(--al-accent);
+}
+
+.al-pager__section {
+  font-size: .68rem;
+}
+
+.al-pager__icon {
+  color: var(--md-default-fg-color--lighter);
+  display: inline-flex;
+  flex: none;
+}
+
+.al-pager__icon svg {
+  fill: currentColor;
+  height: .9rem;
+  width: .9rem;
+}
+
+.al-pager__link:hover .al-pager__icon {
+  color: var(--al-accent);
+}
+
+/* With only the previous page left, it fills the card. */
+.al-pager__link--prev:only-child {
+  flex: 1 1 auto;
+}
+
+@media (max-width: 44.9375em) {
+  .al-pager__link {
+    padding: .75rem .85rem;
+  }
+
+  .al-pager__section,
+  .al-pager__link--prev:not(:only-child) .al-pager__title {
+    display: none;
+  }
+}
+
 /* ---------- Footer ---------- */
 
 .md-footer {
@@ -702,8 +869,8 @@ body {
 @media (min-width: 60em) {
   .md-typeset .al-workflow {
     margin-inline: auto;
-    max-width: 55rem;
-    width: 90%;
+    max-width: 40rem;
+    width: 80%;
   }
 
   .md-typeset .grid.cards {

@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{#
+  Previous and next pages as one card under the page content, instead of
+  Material's full-width footer links (navigation.footer is off in mkdocs.yml).
+#}
+{% block content %}
+  {{ super() }}
+  {% if page.previous_page or page.next_page %}
+    <nav class="al-pager" aria-label="Previous and next pages">
+      {% if page.previous_page %}
+        <a class="al-pager__link al-pager__link--prev" href="{{ page.previous_page.url | url }}" rel="prev">
+          <span class="al-pager__icon" aria-hidden="true">{% include ".icons/octicons/chevron-left-16.svg" %}</span>
+          <span class="al-pager__text">
+            <span class="al-pager__direction">Previous</span>
+            <span class="al-pager__title">{{ page.previous_page.title }}</span>
+          </span>
+        </a>
+      {% endif %}
+      {% if page.next_page %}
+        <a class="al-pager__link al-pager__link--next" href="{{ page.next_page.url | url }}" rel="next">
+          <span class="al-pager__text">
+            <span class="al-pager__direction">Next</span>
+            <span class="al-pager__title">{{ page.next_page.title }}</span>
+            {% if page.next_page.parent and page.next_page.parent.title %}
+              <span class="al-pager__section">{{ page.next_page.parent.title }}</span>
+            {% endif %}
+          </span>
+          <span class="al-pager__icon" aria-hidden="true">{% include ".icons/octicons/chevron-right-16.svg" %}</span>
+        </a>
+      {% endif %}
+    </nav>
+  {% endif %}
+{% endblock %}
