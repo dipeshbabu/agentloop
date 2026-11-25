@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePath
 
 import typer.main
 
@@ -23,13 +23,20 @@ def _param(param) -> dict:
     default = param.default
     if callable(default):
         default = "<callable>"
+    elif isinstance(default, PurePath):
+        # WindowsPath and PosixPath repr differently; record the path itself.
+        return _row(param, f"Path({default.as_posix()!r})")
+    return _row(param, repr(default))
+
+
+def _row(param, default: str) -> dict:
     return {
         "name": param.name,
         "kind": type(param).__name__,
         "opts": list(param.opts),
         "secondary_opts": list(getattr(param, "secondary_opts", [])),
         "required": param.required,
-        "default": repr(default),
+        "default": default,
         "multiple": param.multiple,
         "is_flag": bool(getattr(param, "is_flag", False)),
         "hidden": bool(getattr(param, "hidden", False)),
