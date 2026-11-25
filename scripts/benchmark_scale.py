@@ -108,6 +108,10 @@ def measure_api(store, results: list[dict]) -> None:
         "GET /v1/ci-runs": "/v1/ci-runs",
         "GET /v1/ci-runs/1001/comparison": "/v1/ci-runs/1001/comparison",
     }
+    uploads = [_trace(index).to_dict() for index in range(200)]
+    with _timer(results, "api", "POST /v1/traces x200") as detail:
+        statuses = {client.post("/v1/traces", json=body).status_code for body in uploads}
+        detail["status"] = max(statuses)
     for name, route in routes.items():
         with _timer(results, "api", name) as detail:
             response = client.get(route)

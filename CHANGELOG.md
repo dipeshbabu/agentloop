@@ -14,6 +14,27 @@ trace, study, receipt, API and database schema versions.
   pushes. Callers opt in with a separate job that alone receives
   `pull-requests: write`; forked and Dependabot pull requests are skipped. This
   repository's smoke workflow uses it on every pull request.
+- `scripts/benchmark_scale.py` fills a fresh store and times every store query,
+  API route, upload and dashboard page. CI runs it with 2,000 traces against
+  SQLite and Postgres and fails on errors, operations over 15 seconds, or API
+  responses over 5 MB.
+
+### Changed
+
+- Optimization queue groups list only their 25 newest members in full
+  (`ranking.members`, `ranking.estimate_provenance`), with new
+  `ranking.member_count` and `ranking.members_truncated` fields. Savings, impact
+  and readiness still use every member. At 2,000 traces the queue response fell
+  from 13 MB to 476 KB.
+- The dashboard Overview and trace pickers show the newest 200 runs, with an
+  "older run ID" box for the rest, and the Optimization Queue page no longer
+  loads every finding.
+- Trace uploads through the API are about 4.7 times faster (82 ms to 17 ms each
+  locally). The API reuses one store per configuration and checks migrations
+  once rather than on every call, a trace's report is built once per save, and
+  an API key that has passed scrypt verification is not re-hashed on later
+  requests while its stored hash exists, so revoking a key still takes effect
+  immediately.
 
 ## [0.2.9] - 2026-11-24
 
