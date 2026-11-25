@@ -5,6 +5,7 @@ import os
 import tempfile
 from pathlib import Path
 
+import altair as alt
 import pandas as pd
 import streamlit as st
 
@@ -45,6 +46,7 @@ try:
         sign_out,
         visible_pages,
     )
+    from dashboard.theme import PAGE_NAMES, apply_styles, nav_label, page_header
     from dashboard.trace_upload import TraceUploadError, parse_uploaded_trace
     from dashboard.value_view import assumption_inputs, percentage, render_value_report
 except ModuleNotFoundError:
@@ -56,10 +58,16 @@ except ModuleNotFoundError:
         sign_out,
         visible_pages,
     )
+    from theme import PAGE_NAMES, apply_styles, nav_label, page_header
     from trace_upload import TraceUploadError, parse_uploaded_trace
     from value_view import assumption_inputs, percentage, render_value_report
 
-st.set_page_config(page_title="AgentLoop Dashboard", layout="wide")
+st.set_page_config(
+    page_title="AgentLoop",
+    page_icon=str(Path(__file__).with_name("assets") / "agentloop-mark.svg"),
+    layout="wide",
+)
+apply_styles()
 
 
 def _runs_directory() -> Path:
@@ -89,6 +97,9 @@ def load_store():
     db = get_store()
     db.init()
     return db
+
+
+SEVERITY_COLORS = {"high": "red", "medium": "orange", "low": "gray"}
 
 
 def money(value: float | None) -> str:
@@ -132,6 +143,102 @@ def recent_traces() -> list[dict]:
     return store.list_traces_page(project_id=project_id, limit=RECENT_TRACE_LIMIT)["items"]
 
 
+def runs_frame(traces: list[dict]) -> pd.DataFrame:
+    """Trace rows with a parsed start time and runtime in seconds."""
+    df = pd.DataFrame(traces)
+    df["started"] = pd.to_datetime(df["started_at"], errors="coerce", utc=True)
+    df["runtime_s"] = df["total_runtime_ms"] / 1000
+    if "labels" in df:
+        df["labels"] = [
+            ", ".join(f"{key}={value}" for key, value in sorted(labels.items()))
+            if isinstance(labels, dict)
+            else (labels or "")
+            for labels in df["labels"]
+        ]
+    return df
+
+
+def render_runs_table(df: pd.DataFrame, *, max_height: int = 390) -> None:
+    """A compact runs table: start time, agent, runtime bar, cost, labels and run ID."""
+    columns = [
+        column
+        for column in (
+            "started",
+            "name",
+            "runtime_s",
+            "estimated_cost_usd",
+            "cost_status",
+            "labels",
+            "run_id",
+        )
+        if column in df and (column != "labels" or df["labels"].astype(bool).any())
+    ]
+    st.dataframe(
+        df[columns],
+        width="stretch",
+        hide_index=True,
+        height=min(38 + 35 * len(df), max_height),
+        column_config={
+            "started": st.column_config.DatetimeColumn("Started", format="MMM D, HH:mm:ss"),
+            "name": st.column_config.TextColumn("Agent"),
+            "runtime_s": st.column_config.ProgressColumn(
+                "Runtime",
+                format="%.2f s",
+                min_value=0.0,
+                max_value=max(float(df["runtime_s"].max() or 0), 0.001),
+            ),
+            "estimated_cost_usd": st.column_config.NumberColumn("Cost", format="$%.4f"),
+            "cost_status": st.column_config.TextColumn("Cost status"),
+            "labels": st.column_config.TextColumn("Labels"),
+            "run_id": st.column_config.TextColumn("Run ID"),
+        },
+    )
+
+
+def render_waterfall(events: pd.DataFrame) -> None:
+    """When each event ran, relative to the trace's first event."""
+    if events.empty or "started_at" not in events or "duration_ms" not in events:
+        return
+    started = pd.to_datetime(events["started_at"], errors="coerce", utc=True)
+    if started.isna().all():
+        return
+    origin = started.min()
+    chart_df = pd.DataFrame(
+        {
+            "step": [f"{index + 1}. {name}" for index, name in enumerate(events["name"])],
+            "type": events["event_type"].astype(str).str.replace("_", " "),
+            "start_ms": (started - origin).dt.total_seconds() * 1000,
+            "duration_ms": pd.to_numeric(events["duration_ms"], errors="coerce").fillna(0),
+            "status": events.get("status", pd.Series([None] * len(events))),
+        }
+    ).dropna(subset=["start_ms"])
+    chart_df["end_ms"] = chart_df["start_ms"] + chart_df["duration_ms"]
+    st.altair_chart(
+        alt.Chart(chart_df)
+        .mark_bar(cornerRadius=3, height=14)
+        .encode(
+            x=alt.X("start_ms:Q", title="Milliseconds from start"),
+            x2="end_ms:Q",
+            y=alt.Y(
+                "step:N",
+                title=None,
+                sort=list(chart_df["step"]),
+                axis=alt.Axis(labelLimit=220),
+            ),
+            color=alt.Color("type:N", title="Event", legend=alt.Legend(orient="bottom")),
+            tooltip=[
+                alt.Tooltip("step:N", title="Step"),
+                alt.Tooltip("type:N", title="Event"),
+                alt.Tooltip("start_ms:Q", title="Starts at (ms)", format=",.1f"),
+                alt.Tooltip("duration_ms:Q", title="Duration (ms)", format=",.1f"),
+                alt.Tooltip("status:N", title="Status"),
+            ],
+        )
+        .properties(height=min(60 + 26 * len(chart_df), 520)),
+        width="stretch",
+    )
+
+
 def trace_options(traces: list[dict]) -> dict[str, str]:
     return {f"{t['name']} - {t['run_id']}": t["run_id"] for t in traces}
 
@@ -170,13 +277,22 @@ def render_gate_table(results: list[dict]) -> None:
         }
         for item in results
     ]
-    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+    st.dataframe(
+        pd.DataFrame(rows),
+        width="stretch",
+        hide_index=True,
+        column_config={
+            "gate": st.column_config.TextColumn("Gate"),
+            "status": st.column_config.TextColumn("Status", width="small"),
+            "detail": st.column_config.TextColumn("Detail", width="large"),
+        },
+    )
 
 
 def render_comparison(baseline: AgentTrace | None, candidate: AgentTrace | None, key: str) -> None:
     """Gate inputs, replay proof and PR comment for one baseline/candidate pair."""
     st.markdown("#### Gates")
-    g1, g2, g3, g4 = st.columns(4)
+    g1, g2, g3, g4 = st.columns(4, vertical_alignment="bottom")
     min_latency = g1.number_input(
         "Min latency improvement %", min_value=0.0, value=20.0, key=f"{key}_latency"
     )
@@ -240,9 +356,6 @@ def render_comparison(baseline: AgentTrace | None, candidate: AgentTrace | None,
         )
 
 
-st.sidebar.title("AgentLoop")
-st.sidebar.caption("Execution profiling and evidence")
-
 store = load_store()
 RECENT_TRACE_LIMIT = MAX_PAGE_SIZE
 project_mode = require_project_key()
@@ -254,25 +367,30 @@ if project_mode:
             "Your project API key was revoked or is no longer valid. Sign in again."
         )
     if "signed_in_project" not in st.session_state:
-        st.title("AgentLoop Dashboard")
-        if notice := st.session_state.pop("signin_notice", None):
-            st.warning(notice)
-        st.subheader("Sign in to your project")
-        st.caption(
-            "Enter a project API key. The dashboard shows only the traces and findings "
-            "of the project that key belongs to."
-        )
-        with st.form("project_sign_in"):
-            entered_key = st.text_input("Project API key", type="password")
-            submitted = st.form_submit_button("Sign in")
-        if submitted:
-            if sign_in(store, entered_key, st.session_state) is not None:
-                st.rerun()
-            remaining = lockout_remaining(st.session_state)
-            if remaining > 0:
-                st.error(f"Too many failed attempts. Try again in {int(remaining) + 1} seconds.")
-            else:
-                st.error("That API key is not valid for any project.")
+        _, center, _ = st.columns([1, 2, 1])
+        with center:
+            page_header(
+                "Sign in",
+                description="Enter a project API key. The dashboard shows only the traces "
+                "and findings of the project that key belongs to.",
+            )
+            if notice := st.session_state.pop("signin_notice", None):
+                st.warning(notice)
+            with st.form("project_sign_in"):
+                entered_key = st.text_input("Project API key", type="password")
+                submitted = st.form_submit_button(
+                    "Sign in", type="primary", icon=":material/login:", width="stretch"
+                )
+            if submitted:
+                if sign_in(store, entered_key, st.session_state) is not None:
+                    st.rerun()
+                remaining = lockout_remaining(st.session_state)
+                if remaining > 0:
+                    st.error(
+                        f"Too many failed attempts. Try again in {int(remaining) + 1} seconds."
+                    )
+                else:
+                    st.error("That API key is not valid for any project.")
         st.stop()
     project_id = st.session_state["signed_in_project"]
     st.sidebar.markdown(f"**Project:** `{project_id}`")
@@ -294,62 +412,100 @@ dashboard_actor = (
 
 page = st.sidebar.radio(
     "Navigate",
-    visible_pages(
-        [
-            "Overview",
-            "Traces",
-            "Optimization Queue",
-            "Optimization",
-            "Diagnosis",
-            "Patch Plan",
-            "Replay Proof",
-            "CI Runs",
-            "Quality Gates",
-            "Value & Pricing",
-            "Audit Log",
-            "API Keys",
-            "Ingest",
-            "Setup",
-        ],
-        project_mode=project_mode,
-    ),
+    visible_pages(PAGE_NAMES, project_mode=project_mode),
+    format_func=nav_label,
+    label_visibility="collapsed",
 )
 
-st.title("AgentLoop Dashboard")
-st.caption("Cost, latency, and execution-graph optimization for production AI agents")
+page_header(page, project_id)
 
 if page == "Overview":
     summary = store.usage_summary(project_id=project_id)
     traces = recent_traces()
 
+    run_count = int(summary.get("run_count", 0))
+    total_runtime_ms = summary.get("total_runtime_ms", 0) or 0
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Runs", int(summary.get("run_count", 0)))
-    c2.metric("Total runtime", seconds(summary.get("total_runtime_ms", 0)))
+    c1.metric("Runs", f"{run_count:,}")
+    c2.metric(
+        "Total runtime",
+        seconds(total_runtime_ms),
+        help=f"Average {seconds(total_runtime_ms / run_count)} per run" if run_count else None,
+    )
     c3.metric(
         "Estimated LLM cost",
         format_cost_usd(summary.get("estimated_cost_usd"), summary.get("cost_status", "complete")),
     )
-    c4.metric("Retries", int(summary.get("retry_count", 0)))
+    c4.metric("Retries", f"{int(summary.get('retry_count', 0)):,}")
 
     c5, c6, c7, c8 = st.columns(4)
-    c5.metric("Input tokens", int(summary.get("input_tokens", 0)))
-    c6.metric("Output tokens", int(summary.get("output_tokens", 0)))
-    c7.metric("Model calls", int(summary.get("model_call_count", 0)))
-    c8.metric("Tool calls", int(summary.get("tool_call_count", 0)))
+    c5.metric("Input tokens", f"{int(summary.get('input_tokens', 0)):,}")
+    c6.metric("Output tokens", f"{int(summary.get('output_tokens', 0)):,}")
+    c7.metric("Model calls", f"{int(summary.get('model_call_count', 0)):,}")
+    c8.metric("Tool calls", f"{int(summary.get('tool_call_count', 0)):,}")
 
-    st.subheader("Recent runs")
     if traces:
+        runs_df = runs_frame(traces)
+
+        st.subheader("Recent runs")
         if len(traces) >= RECENT_TRACE_LIMIT:
             st.caption(
                 f"The newest {RECENT_TRACE_LIMIT} runs. Browse every run on the Traces page."
             )
-        df = pd.DataFrame(traces).drop(columns=["labels"], errors="ignore")
-        st.dataframe(df, width="stretch")
+        render_runs_table(runs_df)
 
-        chart_df = df[["name", "total_runtime_ms"]].copy()
-        chart_df["runtime_s"] = chart_df["total_runtime_ms"] / 1000
-        st.subheader("Runtime by run")
-        st.bar_chart(chart_df, x="name", y="runtime_s")
+        timeline, by_agent = st.columns([3, 2], gap="large")
+        with timeline:
+            st.subheader("Runtime over time")
+            st.altair_chart(
+                alt.Chart(runs_df.dropna(subset=["started"]))
+                .mark_line(point=alt.OverlayMarkDef(size=45), strokeWidth=2)
+                .encode(
+                    x=alt.X("started:T", title=None),
+                    y=alt.Y("runtime_s:Q", title="Runtime (s)"),
+                    color=alt.Color(
+                        "name:N",
+                        title="Agent",
+                        legend=alt.Legend(orient="bottom", columns=2, labelLimit=260),
+                    ),
+                    tooltip=[
+                        alt.Tooltip("name:N", title="Agent"),
+                        alt.Tooltip("started:T", title="Started", format="%b %d, %H:%M:%S"),
+                        alt.Tooltip("runtime_s:Q", title="Runtime (s)", format=".2f"),
+                        alt.Tooltip("run_id:N", title="Run ID"),
+                    ],
+                )
+                .properties(height=300),
+                width="stretch",
+            )
+        with by_agent:
+            st.subheader("Runs by agent")
+            agents = (
+                runs_df.groupby("name", as_index=False)
+                .agg(
+                    runs=("run_id", "count"),
+                    average_s=("runtime_s", "mean"),
+                    cost=("estimated_cost_usd", "sum"),
+                )
+                .sort_values("runs", ascending=False)
+            )
+            st.altair_chart(
+                alt.Chart(agents)
+                .mark_bar(cornerRadiusEnd=4, height=18)
+                .encode(
+                    x=alt.X("runs:Q", title="Runs"),
+                    y=alt.Y("name:N", title=None, sort="-x", axis=alt.Axis(labelLimit=220)),
+                    color=alt.Color("name:N", legend=None),
+                    tooltip=[
+                        alt.Tooltip("name:N", title="Agent"),
+                        alt.Tooltip("runs:Q", title="Runs"),
+                        alt.Tooltip("average_s:Q", title="Average runtime (s)", format=".2f"),
+                        alt.Tooltip("cost:Q", title="Cost (USD)", format="$.4f"),
+                    ],
+                )
+                .properties(height=300),
+                width="stretch",
+            )
     else:
         st.info(
             "No stored traces yet. Use the Ingest page or run "
@@ -357,11 +513,11 @@ if page == "Overview":
         )
 
 elif page == "Traces":
-    st.subheader("Stored traces")
     if notice := st.session_state.pop("trace_deleted_notice", None):
         st.success(notice)
 
-    label_text = st.text_input(
+    filter_col, size_col = st.columns([4, 1])
+    label_text = filter_col.text_input(
         "Filter by label",
         placeholder="KEY=VALUE, for example commit=abc123 or condition=candidate",
     ).strip()
@@ -377,31 +533,14 @@ elif page == "Traces":
         st.session_state[cursor_key] = [None]  # cursor to fetch the *current* page
 
     page_index = len(st.session_state[cursor_key]) - 1
-    page_size = st.number_input("Page size", min_value=5, max_value=200, value=25, step=5)
+    page_size = size_col.number_input("Page size", min_value=5, max_value=200, value=25, step=5)
     page = store.list_traces_page(
         project_id=project_id,
         limit=int(page_size),
         cursor=st.session_state[cursor_key][-1],
         label=label_filter,
     )
-    traces = [
-        {
-            **item,
-            "labels": ", ".join(
-                f"{key}={value}" for key, value in sorted((item.get("labels") or {}).items())
-            ),
-        }
-        for item in page["items"]
-    ]
-
-    nav_cols = st.columns([1, 1, 6])
-    if nav_cols[0].button("◀ Previous", disabled=page_index == 0):
-        st.session_state[cursor_key].pop()
-        st.rerun()
-    if nav_cols[1].button("Next ▶", disabled=page["next_cursor"] is None):
-        st.session_state[cursor_key].append(page["next_cursor"])
-        st.rerun()
-    st.caption(f"Page {page_index + 1}")
+    traces = page["items"]
 
     if not traces:
         st.info(
@@ -410,13 +549,35 @@ elif page == "Traces":
             else "No traces stored for this project yet."
         )
     else:
-        df = pd.DataFrame(traces)
-        st.dataframe(df, width="stretch")
-        selected_run = st.selectbox("Open run", df["run_id"].tolist())
+        df = runs_frame(traces)
+        render_runs_table(df, max_height=420)
+        nav_cols = st.columns([1, 1, 1, 5], vertical_alignment="center")
+        if nav_cols[0].button(
+            "Previous", icon=":material/chevron_left:", disabled=page_index == 0, width="stretch"
+        ):
+            st.session_state[cursor_key].pop()
+            st.rerun()
+        if nav_cols[1].button(
+            "Next",
+            icon=":material/chevron_right:",
+            disabled=page["next_cursor"] is None,
+            width="stretch",
+        ):
+            st.session_state[cursor_key].append(page["next_cursor"])
+            st.rerun()
+        nav_cols[2].caption(f"Page {page_index + 1}")
+
+        st.divider()
+        run_names = dict(zip(df["run_id"], df["name"]))
+        selected_run = st.selectbox(
+            "Open run",
+            df["run_id"].tolist(),
+            format_func=lambda run_id: f"{run_names[run_id]} · {run_id}",
+        )
         trace = load_trace_for_project(selected_run, project_id)
         if trace is not None:
             report = trace.report()
-            st.markdown(f"### {trace.name}")
+            st.subheader(trace.name)
             if report.get("execution") is not None:
                 execution = report["execution"]
                 st.caption(
@@ -435,6 +596,7 @@ elif page == "Traces":
 
             events = pd.DataFrame(report["events"])
             st.subheader("Event timeline")
+            render_waterfall(events)
             if not events.empty:
                 cols = [
                     "event_type",
@@ -480,7 +642,22 @@ elif page == "Traces":
                 for col in cols:
                     if col not in events.columns:
                         events[col] = None
-                st.dataframe(events[cols], width="stretch")
+                st.dataframe(
+                    events[cols],
+                    width="stretch",
+                    hide_index=True,
+                    column_config={
+                        "event_type": st.column_config.TextColumn("Type"),
+                        "name": st.column_config.TextColumn("Name"),
+                        "duration_ms": st.column_config.NumberColumn("Duration", format="%.1f ms"),
+                        "model": st.column_config.TextColumn("Model"),
+                        "input_tokens": st.column_config.NumberColumn("Input tokens"),
+                        "output_tokens": st.column_config.NumberColumn("Output tokens"),
+                        "status": st.column_config.TextColumn("Status"),
+                        "operation_kind": st.column_config.TextColumn("Operation"),
+                        "parent_id": st.column_config.TextColumn("Parent"),
+                    },
+                )
 
             st.download_button(
                 "Download trace JSON",
@@ -509,7 +686,6 @@ elif page == "Traces":
                     st.rerun()
 
 elif page == "Optimization Queue":
-    st.subheader("Optimization queue")
     dimension = st.selectbox(
         "Sort investigations by", SORT_FIELDS, format_func=lambda value: value.replace("_", " ")
     )
@@ -551,29 +727,71 @@ elif page == "Optimization Queue":
             "estimated_latency_savings_ms",
             "estimated_cost_savings_usd",
         ]
-        st.dataframe(queue_df[visible_cols], width="stretch", hide_index=True)
+        st.dataframe(
+            queue_df[visible_cols],
+            width="stretch",
+            hide_index=True,
+            column_config={
+                "priority_score": st.column_config.NumberColumn("Priority", width="small"),
+                "readiness": st.column_config.TextColumn("Readiness"),
+                "severity": st.column_config.TextColumn("Severity", width="small"),
+                "type": st.column_config.TextColumn("Type"),
+                "title": st.column_config.TextColumn("Finding", width="large"),
+                "occurrence_count": st.column_config.NumberColumn("Occurrences"),
+                "run_count": st.column_config.NumberColumn("Runs"),
+                "patchable_count": st.column_config.NumberColumn("Patchable"),
+                "quality_risk": st.column_config.TextColumn("Quality risk"),
+                "requires_scorer": st.column_config.CheckboxColumn("Needs scorer"),
+                "safe_to_auto_patch": st.column_config.CheckboxColumn("Auto-patch safe"),
+                "estimated_latency_savings_ms": st.column_config.NumberColumn(
+                    "Latency savings", format="%.0f ms"
+                ),
+                "estimated_cost_savings_usd": st.column_config.NumberColumn(
+                    "Cost savings", format="$%.4f"
+                ),
+            },
+        )
 
+        st.divider()
         selected_title = st.selectbox("Open queue item", queue_df["title"].tolist())
         item = next(row for row in queue if row["title"] == selected_title)
-        st.markdown(f"### {item['title']}")
+        st.subheader(item["title"])
+        readiness = item["ranking"]["status"].replace("_", " ")
+        with st.container(horizontal=True, gap="small"):
+            st.badge(
+                f"{item['severity']} severity",
+                color=SEVERITY_COLORS.get(item["severity"], "gray"),
+            )
+            st.badge(
+                readiness,
+                icon=":material/check_circle:" if readiness == "ready to test" else None,
+                color="green" if readiness == "ready to test" else "orange",
+            )
+            st.badge(item["type"], color="gray")
         c5, c6, c7, c8 = st.columns(4)
         c5.metric("Investigation rank", item["ranking"]["priority_rank"])
-        c6.metric("Severity", item["severity"])
-        c7.metric("Affected runs", item["run_count"])
-        c8.metric("Patchable", item["patchable_count"])
-        st.write(f"Type: `{item['type']}`")
-        st.write(f"Status: `{item['status']}`")
-        st.write(f"Quality risk: `{item['quality_risk']}`")
-        st.write("Test readiness: " + item["ranking"]["status"].replace("_", " "))
+        c6.metric("Affected runs", item["run_count"])
+        c7.metric("Latency savings", seconds(item["estimated_latency_savings_ms"]))
+        c8.metric("Cost savings", money(item["estimated_cost_savings_usd"]))
+        st.dataframe(
+            pd.DataFrame(
+                [
+                    ("Status", item["status"]),
+                    ("Test readiness", readiness),
+                    ("Quality risk", item["quality_risk"]),
+                    ("Patchable occurrences", str(item["patchable_count"])),
+                    ("Requires scorer", "yes" if item["requires_scorer"] else "no"),
+                    ("Safe to auto-patch", "yes" if item["safe_to_auto_patch"] else "no"),
+                ],
+                columns=["Field", "Value"],
+            ),
+            hide_index=True,
+            width="stretch",
+        )
+        with st.expander(f"Affected runs ({len(item['affected_runs'])})"):
+            st.code("\n".join(item["affected_runs"]), language="text")
         with st.expander("Ranking inputs and provenance"):
             st.json(item["ranking"])
-        st.write(f"Requires scorer: `{item['requires_scorer']}`")
-        st.write(f"Safe to auto-patch: `{item['safe_to_auto_patch']}`")
-        st.write(
-            f"Estimated savings: {seconds(item['estimated_latency_savings_ms'])} / {money(item['estimated_cost_savings_usd'])}"
-        )
-        st.write("Affected runs")
-        st.code("\n".join(item["affected_runs"]), language="text")
 
         item_findings = store.list_findings(
             project_id=project_id, type=item["type"], title=item["title"]
@@ -641,7 +859,6 @@ elif page == "Optimization Queue":
 
 elif page == "Optimization":
     traces = recent_traces()
-    st.subheader("Optimization plans")
     if not traces:
         st.info("No traces stored for this project yet.")
     else:
@@ -701,16 +918,18 @@ elif page == "Optimization":
             if graph.get("dependency_evidence") is not None:
                 st.json(graph["dependency_evidence"])
             st.write("Bottlenecks")
-            st.dataframe(pd.DataFrame(graph["bottlenecks"]), width="stretch")
+            st.dataframe(pd.DataFrame(graph["bottlenecks"]), width="stretch", hide_index=True)
             st.write("Parallelization candidates")
             if graph["parallelizable_groups"]:
-                st.dataframe(pd.DataFrame(graph["parallelizable_groups"]), width="stretch")
+                st.dataframe(
+                    pd.DataFrame(graph["parallelizable_groups"]), width="stretch", hide_index=True
+                )
             else:
                 st.info(
                     "No repeated tool-call groups currently qualify as parallelization candidates."
                 )
             st.write("Edges")
-            st.dataframe(pd.DataFrame(graph["edges"]), width="stretch")
+            st.dataframe(pd.DataFrame(graph["edges"]), width="stretch", hide_index=True)
 
             st.download_button(
                 "Download optimization plan JSON",
@@ -721,7 +940,6 @@ elif page == "Optimization":
 
 elif page == "Diagnosis":
     traces = recent_traces()
-    st.subheader("Machine-actionable diagnosis")
     if not traces:
         st.info("No traces stored for this project yet.")
     else:
@@ -777,7 +995,6 @@ elif page == "Diagnosis":
 
 elif page == "Patch Plan":
     traces = recent_traces()
-    st.subheader("Trace-to-patch planning")
     if not traces:
         st.info("No traces stored for this project yet.")
     else:
@@ -797,7 +1014,12 @@ elif page == "Patch Plan":
             c1, c2, c3 = st.columns(3)
             c1.metric("Patch plans", summary["patch_count"])
             c2.metric("Unsupported", summary["unsupported_finding_count"])
-            c3.metric("Frameworks", ", ".join(summary["frameworks_detected"]) or "none")
+            frameworks = summary["frameworks_detected"]
+            c3.metric("Frameworks detected", len(frameworks))
+            if frameworks:
+                with st.container(horizontal=True, gap="small"):
+                    for framework in frameworks:
+                        st.badge(framework, icon=":material/extension:", color="violet")
 
             for item in plan.get("patch_plans", []):
                 with st.expander(f"{item['patch_id']} - {item['title']}", expanded=True):
@@ -830,7 +1052,6 @@ elif page == "Patch Plan":
             )
 
 elif page == "CI Runs":
-    st.subheader("CI runs")
     st.caption(
         "Baseline and candidate traces uploaded by the reusable comparison workflow, grouped "
         "by their workflow_run label. Choose a run to see its comparison."
@@ -880,7 +1101,6 @@ elif page == "CI Runs":
 
 elif page == "Replay Proof":
     traces = recent_traces()
-    st.subheader("Before/after replay proof")
     if len(traces) < 2:
         st.info("Store at least two traces to compare a baseline and candidate.")
     else:
@@ -893,7 +1113,6 @@ elif page == "Replay Proof":
 
 elif page == "Quality Gates":
     traces = recent_traces()
-    st.subheader("Quality gates")
     st.caption(
         "Compare caller-defined quality criteria alongside recorded cost and latency. "
         "Legacy scorers and versioned structured decision, multilabel, numeric, extraction and matching scorers are supported. Custom Python scorers are trusted local code."
@@ -1007,10 +1226,6 @@ elif page == "Quality Gates":
 
 elif page == "Value & Pricing":
     traces = recent_traces()
-    st.subheader("Value report and pricing scenario")
-    st.caption(
-        "Turn an agent trace into operational value, reliability risk, and a configurable pricing scenario."
-    )
     if not traces:
         st.info(
             "No traces stored for this project yet. Generate demo traces from the Ingest page first."
@@ -1038,12 +1253,11 @@ elif page == "Value & Pricing":
             )
 
 elif page == "Audit Log":
-    st.subheader("Audit log")
-    st.caption(
-        "Key creation and revocation, trace deletions and retention purges in this "
-        "project, newest first. Key values are never recorded."
+    limit_col, note_col = st.columns([1, 3], vertical_alignment="bottom")
+    limit = limit_col.number_input(
+        "Events to show", min_value=10, max_value=500, value=100, step=10
     )
-    limit = st.number_input("Events to show", min_value=10, max_value=500, value=100, step=10)
+    note_col.caption("Key values are never recorded.")
     events = store.list_audit_events(project_id, limit=int(limit))
     if not events:
         st.info("No audit events for this project yet.")
@@ -1066,13 +1280,23 @@ elif page == "Audit Log":
         )
 
 elif page == "API Keys":
-    st.subheader("Create project API key")
-    st.warning("API keys are only shown once. Copy the generated key before leaving this page.")
-    key_name = st.text_input("Key name", value="local-dev")
-    if st.button("Create API key"):
-        created = store.create_api_key(project_id=project_id, name=key_name, actor=dashboard_actor)
-        st.success(f"Created key for project `{project_id}`")
-        st.code(created["api_key"])
+    with st.container(border=True):
+        st.markdown("#### Create a project API key")
+        st.caption(
+            f"The key can upload and read traces in project `{project_id}`. It is shown "
+            "only once, so copy it before leaving this page."
+        )
+        name_col, button_col = st.columns([3, 1], vertical_alignment="bottom")
+        key_name = name_col.text_input("Key name", value="local-dev")
+        create = button_col.button(
+            "Create API key", type="primary", icon=":material/key:", width="stretch"
+        )
+        if create:
+            created = store.create_api_key(
+                project_id=project_id, name=key_name, actor=dashboard_actor
+            )
+            st.success(f"Created key for project `{project_id}`", icon=":material/check_circle:")
+            st.code(created["api_key"])
 
     st.subheader("Use this key")
     st.code(
@@ -1084,49 +1308,64 @@ elif page == "API Keys":
 elif page == "Ingest":
     # Demo generators write files into the dashboard host's shared runs directory,
     # so a shared dashboard offers only uploads into the signed-in project.
-    st.subheader("Upload traces" if project_mode else "Generate or upload traces")
-    generated_path: Path | None = None
-    if not project_mode:
-        col_a, col_b, col_c, col_d = st.columns(4)
-    if not project_mode and col_a.button("Generate baseline"):
-        generated_path = run_baseline(runs_dir)
-    if not project_mode and col_b.button("Generate optimized"):
-        generated_path = run_optimized(runs_dir)
-    if not project_mode and col_c.button("Generate LangGraph-style"):
-        generated_path = run_langgraph_style(runs_dir)
-    if not project_mode and col_d.button("Generate all"):
-        proof_baseline, proof_candidate = run_proof_pair(runs_dir)
-        for path in [
-            run_baseline(runs_dir),
-            run_optimized(runs_dir),
-            run_langgraph_style(runs_dir),
-            proof_baseline,
-            proof_candidate,
-        ]:
-            store.save_trace(AgentTrace.from_json(path), project_id=project_id)
-        st.success(f"Generated and stored all demo traces under project `{project_id}`")
-
-    if not project_mode and st.button("Generate proof demo pair"):
-        proof_baseline, proof_candidate = run_proof_pair(runs_dir)
-        for path in [proof_baseline, proof_candidate]:
-            store.save_trace(AgentTrace.from_json(path), project_id=project_id)
-        st.success(f"Generated and stored proof demo traces under project `{project_id}`")
-
-    if generated_path is not None:
-        trace = AgentTrace.from_json(generated_path)
-        store.save_trace(trace, project_id=project_id)
-        st.success(f"Generated and stored `{trace.name}` as `{trace.run_id}`")
-
-    uploaded = st.file_uploader("Upload AgentLoop trace JSON", type=["json"])
-    if uploaded is not None:
-        try:
-            trace = parse_uploaded_trace(uploaded.read())
-        except TraceUploadError as exc:
-            st.error(f"Fix the uploaded trace: {exc}.")
-        else:
-            if st.button("Store uploaded trace"):
+    notice = None
+    if project_mode:
+        upload_card = st.container(border=True)
+    else:
+        generate_card, upload_card = st.columns(2, gap="medium", border=True)
+        with generate_card:
+            st.markdown("#### Generate demo traces")
+            st.caption(f"Runs a demo agent and stores its trace in project `{project_id}`.")
+            generated: list[Path] = []
+            first_row = st.columns(2, gap="small")
+            if first_row[0].button("Generate baseline", width="stretch"):
+                generated = [run_baseline(runs_dir)]
+            if first_row[1].button("Generate optimized", width="stretch"):
+                generated = [run_optimized(runs_dir)]
+            second_row = st.columns(2, gap="small")
+            if second_row[0].button("Generate LangGraph-style", width="stretch"):
+                generated = [run_langgraph_style(runs_dir)]
+            if second_row[1].button("Generate proof demo pair", width="stretch"):
+                generated = list(run_proof_pair(runs_dir))
+            if st.button("Generate all", type="primary", icon=":material/bolt:", width="stretch"):
+                generated = [
+                    run_baseline(runs_dir),
+                    run_optimized(runs_dir),
+                    run_langgraph_style(runs_dir),
+                    *run_proof_pair(runs_dir),
+                ]
+            stored = []
+            for path in generated:
+                trace = AgentTrace.from_json(path)
                 store.save_trace(trace, project_id=project_id)
-                st.success(f"Stored uploaded trace `{trace.run_id}` under project `{project_id}`")
+                stored.append(trace)
+            if len(stored) == 1:
+                notice = f"Generated and stored `{stored[0].name}` as `{stored[0].run_id}`."
+            elif stored:
+                notice = f"Generated and stored {len(stored)} demo traces in `{project_id}`."
+
+    with upload_card:
+        # Demo generators write files into the dashboard host's shared runs
+        # directory, so a shared dashboard offers only uploads into the
+        # signed-in project.
+        st.markdown("#### Upload a trace")
+        st.caption(f"Store an AgentLoop trace JSON file in project `{project_id}`.")
+        uploaded = st.file_uploader(
+            "Upload AgentLoop trace JSON", type=["json"], label_visibility="collapsed"
+        )
+        if uploaded is not None:
+            try:
+                trace = parse_uploaded_trace(uploaded.read())
+            except TraceUploadError as exc:
+                st.error(f"Fix the uploaded trace: {exc}.")
+            else:
+                st.caption(f"`{trace.name}` · `{trace.run_id}` · {len(trace.events)} events")
+                if st.button("Store uploaded trace", type="primary", width="stretch"):
+                    store.save_trace(trace, project_id=project_id)
+                    notice = f"Stored uploaded trace `{trace.run_id}` in `{project_id}`."
+
+    if notice:
+        st.success(notice, icon=":material/check_circle:")
 
     st.subheader("CLI ingest")
     st.code(

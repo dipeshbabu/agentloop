@@ -23,6 +23,7 @@ from dashboard.access import (  # noqa: E402
     sign_out,
     visible_pages,
 )
+from dashboard.theme import NAV_SEPARATOR  # noqa: E402
 
 APP = str(Path(__file__).resolve().parents[1] / "dashboard" / "app.py")
 PAGES = ["Overview", "Patch Plan", "API Keys", "Ingest"]
@@ -108,6 +109,11 @@ def _sign_in(app, key):
     return app.run()
 
 
+def _page_names(app):
+    """Page names in the navigation; displayed labels start with an icon."""
+    return {option.split(NAV_SEPARATOR)[-1] for option in app.sidebar.radio[0].options}
+
+
 def _shown_names(app):
     return {
         str(value)
@@ -132,7 +138,8 @@ def test_hosted_dashboard_shows_only_the_signed_in_project(tmp_path, monkeypatch
     assert not app.exception
     assert any("`alpha`" in md.value for md in app.sidebar.markdown)
     assert "Project" not in [w.label for w in app.sidebar.text_input]
-    options = app.sidebar.radio[0].options
+    options = _page_names(app)
+    assert "Overview" in options
     assert "API Keys" not in options and "Patch Plan" not in options
     names = _shown_names(app)
     assert "alpha-agent" in names
@@ -147,7 +154,7 @@ def test_local_dashboard_keeps_the_free_project_field(tmp_path, monkeypatch):
     app, _ = _app(tmp_path, monkeypatch, require_key=False)
     assert not app.exception
     assert [w.label for w in app.sidebar.text_input] == ["Project"]
-    assert "API Keys" in app.sidebar.radio[0].options
+    assert "API Keys" in _page_names(app)
 
 
 def test_open_sessions_lose_access_after_their_key_is_revoked(tmp_path):

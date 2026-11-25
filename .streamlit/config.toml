@@ -1,0 +1,55 @@
+# Dashboard theme, using the brand colours of the AgentLoop logo and the
+# documentation site (docs/stylesheets/agentloop.css). Streamlit reads this
+# file from the directory it is started in, so run `streamlit run
+# dashboard/app.py` from the repository root (the container image copies it to
+# /app).
+
+[server]
+runOnSave = false
+
+[browser]
+gatherUsageStats = false
+
+[theme]
+baseRadius = "0.6rem"
+buttonRadius = "0.5rem"
+showWidgetBorder = true
+showSidebarBorder = true
+headingFontWeights = [700, 650, 600, 600, 600, 600]
+headingFontSizes = ["2rem", "1.35rem", "1.1rem", "1rem", "0.95rem", "0.9rem"]
+metricValueFontSize = "1.75rem"
+metricValueFontWeight = 650
+
+[theme.light]
+primaryColor = "#7047ba"
+backgroundColor = "#f9f7fc"
+secondaryBackgroundColor = "#f1edf6"
+textColor = "#292333"
+borderColor = "#e6e0ed"
+dataframeBorderColor = "#e6e0ed"
+dataframeHeaderBackgroundColor = "#f3eff8"
+linkColor = "#6842af"
+codeBackgroundColor = "#f3f4f7"
+chartCategoricalColors = ["#7038c9", "#d96559", "#2f8f83", "#c98a1d", "#3f6fd1", "#a3478f", "#5f8f2f", "#61576e"]
+
+[theme.light.sidebar]
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f3eff8"
+borderColor = "#e6e0ed"
+
+[theme.dark]
+primaryColor = "#c7a1ff"
+backgroundColor = "#1b1823"
+secondaryBackgroundColor = "#25202f"
+textColor = "#eee9f5"
+borderColor = "#3c3449"
+dataframeBorderColor = "#3c3449"
+dataframeHeaderBackgroundColor = "#221d2b"
+linkColor = "#c7a1ff"
+codeBackgroundColor = "#25202f"
+chartCategoricalColors = ["#c7a1ff", "#ff9c8f", "#5fd0c0", "#f2c45a", "#8fb2ff", "#e59ad3", "#a9d67a", "#c2b8ce"]
+
+[theme.dark.sidebar]
+backgroundColor = "#221b2e"
+secondaryBackgroundColor = "#25202f"
+borderColor = "#3c3449"
