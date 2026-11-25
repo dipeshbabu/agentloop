@@ -53,6 +53,10 @@ _EVIDENCE = {
     "semantic_judgment": 1,
 }
 _KEY = re.compile(r"[A-Za-z0-9_.:-]{1,96}\Z")
+# A cluster's aggregate uses every member, but only the newest members are
+# returned in full: each one carries its own ranking, so listing all of them
+# made the queue grow by about 1.4 KB per stored finding.
+MAX_LISTED_MEMBERS = 25
 ORDER = (
     "ready_to_test",
     "confidence",
@@ -506,6 +510,16 @@ def cluster_ranking(members, *, selection_cache=None):
     if not all(selection.optimal for selection in totals):
         reasons.add("opportunity_selection_approximate")
     _units(components)
+    # Members are already in (project, run, finding) order, and the sort is
+    # stable, so the listed sample does not depend on the input order.
+    newest = sorted(
+        range(len(members)),
+        key=lambda index: str(
+            members[index].get("updated_at") or members[index].get("created_at") or ""
+        ),
+        reverse=True,
+    )[:MAX_LISTED_MEMBERS]
+    listed = [(members[index], ranks[index]) for index in sorted(newest)]
     result.update(
         status="ready_to_test" if not reasons else "needs_evidence_or_review",
         reasons=sorted(reasons),
@@ -517,9 +531,11 @@ def cluster_ranking(members, *, selection_cache=None):
                 "finding_id": member.get("finding_id"),
                 "ranking": rank,
             }
-            for member, rank in zip(members, ranks)
+            for member, rank in listed
         ],
-        estimate_provenance=[rank["estimate_provenance"] for rank in ranks],
+        member_count=len(members),
+        members_truncated=len(members) > len(listed),
+        estimate_provenance=[rank["estimate_provenance"] for _, rank in listed],
         source_inputs={},
         selection={
             "optimal": all(selection.optimal for selection in totals),

@@ -93,6 +93,11 @@ selection when its inputs match, recomputing only for different declared estimat
 Approximate selection is reported explicitly. The most cautious member confidence,
 evidence and risk determine group readiness; a well-supported member cannot hide
 another member's missing inputs. Member records preserve differing declarations.
+Every member counts toward a group's readiness, savings, impact and frequency, but
+`ranking.members` and `ranking.estimate_provenance` list only the 25 most recently
+updated members in full. `ranking.member_count` gives the total, and
+`ranking.members_truncated` is true when some were left out. Before this limit,
+each stored occurrence added about 1.4 KB to the queue response.
 
 Observed impact is cumulative duration of distinct recorded spans, which may be
 inclusive or concurrent. It is **not elapsed runtime saved**. Frequency counts

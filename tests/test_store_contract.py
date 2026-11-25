@@ -441,6 +441,59 @@ def test_findings_filter_by_project_and_status(store):
     assert len(store.list_findings(project_id="proj_a", status="detected")) == 1
 
 
+def test_finding_counts_and_type_title_filters(store):
+    run_id = _seed_trace(store, "proj_a")
+    other = _diagnosis_finding("f2", ["n9"])
+    other.update(type="cache_prompt", title="Cache the prompt", rewrite={"patchable": False})
+    store.save_diagnosis(
+        {"run_id": run_id, "findings": [_diagnosis_finding("f1", ["n1"]), other]},
+        project_id="proj_a",
+    )
+    store.save_diagnosis(
+        {"run_id": _seed_trace(store, "proj_b"), "findings": [_diagnosis_finding("f1", ["n1"])]},
+        project_id="proj_b",
+    )
+
+    findings = store.list_findings(project_id="proj_a")
+    assert store.finding_counts(project_id="proj_a") == {
+        "total": len(findings),
+        "patchable": sum(1 for finding in findings if finding["patchable"]),
+    }
+    assert store.finding_counts(project_id="empty") == {"total": 0, "patchable": 0}
+    assert store.finding_counts()["total"] == len(store.list_findings())
+
+    cached = store.list_findings(project_id="proj_a", type="cache_prompt", title="Cache the prompt")
+    assert [item["finding_id"] for item in cached] == ["f2"]
+    assert store.list_findings(project_id="proj_a", type="cache_prompt", title="other") == []
+    assert {item["finding_id"] for item in store.list_findings(project_id="proj_a")} >= {"f1", "f2"}
+
+
+def test_optimization_queue_lists_only_the_newest_members_in_full(store):
+    from agentloop.ranking import MAX_LISTED_MEMBERS
+
+    runs = MAX_LISTED_MEMBERS + 5
+    for index in range(runs):
+        store.save_diagnosis(
+            {
+                "run_id": _seed_trace(store, "proj_a", name=f"run-{index}"),
+                "findings": [_diagnosis_finding("f1", ["n1"])],
+            },
+            project_id="proj_a",
+        )
+
+    [item] = store.optimization_queue(project_id="proj_a")
+
+    # Every member still counts toward the cluster; only the listing is capped.
+    assert item["occurrence_count"] == runs
+    assert item["run_count"] == runs
+    assert item["estimated_latency_savings_ms"] == 100.0 * runs
+    ranking = item["ranking"]
+    assert ranking["member_count"] == runs
+    assert ranking["members_truncated"] is True
+    assert len(ranking["members"]) == MAX_LISTED_MEMBERS
+    assert len(ranking["estimate_provenance"]) == MAX_LISTED_MEMBERS
+
+
 # --- finding lifecycle (#31) ---------------------------------------------
 
 
