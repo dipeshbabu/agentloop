@@ -319,7 +319,7 @@ def compare_prediction(
             "reasons": ["need at least two valid runs in each group"],
         }
     measured = statistics.median(baseline) - statistics.median(candidate)
-    rng = random.Random(seed)
+    rng = random.Random(seed)  # nosec B311 - reproducible statistical resampling
     draws = sorted(
         statistics.median(rng.choices(baseline, k=len(baseline)))
         - statistics.median(rng.choices(candidate, k=len(candidate)))
