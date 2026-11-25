@@ -731,7 +731,7 @@ body {
 
 .al-pager__prev {
   border-right: 1px solid var(--al-rule);
-  padding: 0 1.1rem 0 .9rem;
+  padding: 0 1.35rem 0 1.2rem;
 }
 
 .al-pager__next {
@@ -740,14 +740,14 @@ body {
   flex: 1 1 auto;
   justify-content: flex-end;
   min-width: 0;
-  padding: .75rem 0 .75rem 1.2rem;
+  padding: .75rem 0 .75rem 1.5rem;
 }
 
 .al-pager__page {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  padding-right: 1.2rem;
+  padding-right: 1.5rem;
   text-align: right;
 }
 
@@ -771,7 +771,7 @@ body {
   align-self: stretch;
   border-left: 1px solid var(--al-rule);
   color: var(--md-default-fg-color);
-  padding: 0 .9rem 0 1.1rem;
+  padding: 0 1.2rem 0 1.35rem;
 }
 
 /* Text for screen readers only. */
