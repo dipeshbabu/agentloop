@@ -16,6 +16,18 @@ trace, study, receipt, API and database schema versions.
   regressions, unknown costs and improved negative controls. This is part of
   [#406](https://github.com/dipeshbabu/agentloop/issues/406). No participant data
   is included.
+- `agentloop.transformations`, a registry of executable transformation passes.
+  Each pass declares what it applies to, the evidence it needs, the effects it
+  tolerates, its objective, validation and rollback. `propose` is a dry run that
+  returns a unified diff and a deterministic receipt, or abstains with reasons.
+  `execute_candidate(..., allow_execution=True)` applies a candidate in a
+  temporary git worktree of `HEAD`, runs a host-supplied validation command
+  without a shell, removes the worktree, and checks that the original checkout
+  is unchanged. Two passes ship: `config.json_set` and
+  `ast.memoize_pure_function`, which needs an exactly resolved source receipt
+  and a declared pure, deterministic operation. See
+  [Transformation registry](docs/TRANSFORMATIONS.md)
+  ([#398](https://github.com/dipeshbabu/agentloop/issues/398)).
 - `agentloop.timing_sensitivity` simulates, on a recorded run, how much sooner
   it would have finished if one operation were removed or made faster. It
   reports critical-path slack, the simulated gain for each leaf operation, and
@@ -49,6 +61,11 @@ trace, study, receipt, API and database schema versions.
 
 ### Changed
 
+- API key generation, hashing and verification moved from `agentloop/store.py`
+  to `agentloop/store_keys.py`, the first step in splitting the store
+  ([#407](https://github.com/dipeshbabu/agentloop/issues/407)).
+  `agentloop.store` still exports every public name, as the same objects, and
+  `tests/test_store_public_surface.py` pins that contract.
 - The finding benchmark guide now reports the archived baseline (source revision
   `41e0cc5`, precision 8 / 10) and the current rules (8 / 8) separately, with
   their counts and denominators. Before, the guide described the corrected rules

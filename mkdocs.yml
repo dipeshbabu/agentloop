@@ -124,6 +124,7 @@ nav:
       - Source provenance: SOURCE_PROVENANCE.md
       - Execution IR: EXECUTION_IR.md
       - Timing sensitivity: TIMING_SENSITIVITY.md
+      - Transformation registry: TRANSFORMATIONS.md
       - Workflow tracing: WORKFLOW_TRACING.md
       - Dashboard: DASHBOARD.md
       - Server deployment: PRODUCTION.md
