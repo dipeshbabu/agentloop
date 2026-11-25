@@ -9,6 +9,17 @@ trace, study, receipt, API and database schema versions.
 
 ### Added
 
+- A versioned execution IR (`agentloop.ir/v1`, `agentloop.execution_ir`) over
+  the execution graph. It covers typed operations with effect, idempotency,
+  determinism, state reads and writes, and authorization and freshness scopes.
+  Each property records whether it was declared, observed, inferred or unknown.
+  Edges record their kind: containment, data, state or sequence. Write
+  conflicts, cycles and malformed declarations are reported under
+  `unsupported`. `independence()` never treats inferred ordering or unknown
+  effects as proof that work can be reordered. Serialization is canonical, and
+  legacy report graphs migrate on load. See
+  [Execution IR](docs/EXECUTION_IR.md)
+  ([#396](https://github.com/dipeshbabu/agentloop/issues/396)).
 - Opt-in source provenance for traced functions. `traceable(capture_source=True)`,
   or `AGENTLOOP_CAPTURE_SOURCE=1`, records each span's relative path, qualified
   name, line range and file digest under `agentloop.source`. It records no source
