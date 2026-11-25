@@ -216,7 +216,8 @@ def test_api_key_roundtrip(store):
 
 
 def test_verified_api_keys_skip_scrypt_until_revoked(store, monkeypatch):
-    from agentloop import store as store_module
+    # Both stores verify keys through agentloop.store_common (#407).
+    from agentloop import store_common as store_module
 
     created = store.create_api_key(project_id="proj_a", name="ci")
     calls: list[str] = []
