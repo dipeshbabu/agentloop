@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import gc
-
 from fastapi.testclient import TestClient
 
 from agentloop import store as store_module
@@ -55,7 +53,7 @@ def test_a_deleted_sqlite_file_is_recreated(tmp_path, monkeypatch):
     store = SQLiteTraceStore(str(path))
     store.save_trace(_trace(), project_id="p")
 
-    gc.collect()  # sqlite3 connections close when collected; Windows locks open files
+    # Connections are closed after each call, so Windows can delete the file.
     path.unlink()
 
     store.save_trace(_trace(), project_id="p")
@@ -84,3 +82,50 @@ def test_the_api_reuses_one_store_per_configuration(tmp_path, monkeypatch):
 def test_diagnosis_from_a_prebuilt_report_matches(tmp_path):
     trace = _trace()
     assert build_diagnosis(trace, report=trace.report()) == build_diagnosis(trace)
+
+
+def test_sqlite_uses_wal_and_closes_every_connection(tmp_path, monkeypatch):
+    import sqlite3
+
+    opened: list[sqlite3.Connection] = []
+    real_connect = store_module.sqlite3.connect
+
+    def tracking(*args, **kwargs):
+        conn = real_connect(*args, **kwargs)
+        opened.append(conn)
+        return conn
+
+    monkeypatch.setattr(store_module.sqlite3, "connect", tracking)
+    store = SQLiteTraceStore(str(tmp_path / "agentloop.db"))
+    store.save_trace(_trace(), project_id="p")
+    store.list_traces(project_id="p")
+    store.purge_traces(1, project_id="p")
+
+    assert opened
+    for conn in opened:
+        try:
+            conn.execute("SELECT 1")
+        except sqlite3.ProgrammingError:
+            continue
+        raise AssertionError("a store connection was left open")
+
+    monkeypatch.undo()
+    check = sqlite3.connect(tmp_path / "agentloop.db")
+    try:
+        assert check.execute("PRAGMA journal_mode").fetchone()[0] == "wal"
+    finally:
+        check.close()
+
+
+def test_a_failed_write_rolls_back_and_closes(tmp_path):
+    import pytest
+
+    store = SQLiteTraceStore(str(tmp_path / "agentloop.db"))
+    store.init()
+    with pytest.raises(RuntimeError):
+        with store._connect() as conn:
+            conn.execute("INSERT INTO projects(project_id) VALUES ('rolled-back')")
+            raise RuntimeError("boom")
+    with store._connect() as conn:
+        rows = conn.execute("SELECT 1 FROM projects WHERE project_id = 'rolled-back'")
+        assert rows.fetchall() == []

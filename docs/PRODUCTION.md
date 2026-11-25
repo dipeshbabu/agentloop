@@ -189,16 +189,18 @@ initializes and queries the configured store, so use it for readiness checks.
 ## Database Schema Migrations
 
 `agentloop/migrations.py` holds a small, ordered list of migrations applied by both
-`SQLiteTraceStore` and `PostgresTraceStore` on every `init()` call (which every store
-method calls before touching data). Applied versions are tracked in a
+`SQLiteTraceStore` and `PostgresTraceStore` on every `init()` call. Each store
+calls `init()` before its first use and again if a SQLite database file has been
+removed, and the API reuses one store per configuration, so migrations are checked
+once per process rather than on every request. Applied versions are tracked in a
 `schema_migrations` table. Migrations are idempotent (`IF NOT EXISTS` / `ON CONFLICT
 DO NOTHING`), so concurrent `init()` calls from multiple API/dashboard replicas
 starting at once are safe without extra locking, and re-running `init()` never
 re-applies or duplicates a migration.
 
 **Upgrade.** Deploy the new package version and restart the API/dashboard; the next
-`init()` call — which happens automatically on startup and on every request through
-the `store()` dependency — applies any pending migrations before serving traffic. A
+`init()` call, which happens automatically on each process's first request through
+the `store()` dependency, applies any pending migrations before serving traffic. A
 database that predates the migration system (no `schema_migrations` table) is
 recognized as already at the pre-#22 baseline schema (migration `0001`) because that
 migration's `CREATE TABLE IF NOT EXISTS` statements reproduce the exact schema `init()`
@@ -210,8 +212,10 @@ used to create inline; only the migrations after it run.
 pg_dump --format=custom --file=agentloop-backup.dump "$AGENTLOOP_DATABASE_URL"
 ```
 
-For SQLite, copy the database file while no process holds it open, or use
-`sqlite3 runs/agentloop.db ".backup agentloop-backup.db"`.
+For SQLite, use `sqlite3 runs/agentloop.db ".backup agentloop-backup.db"`. The
+store runs SQLite in WAL mode, so recent writes can sit in `agentloop.db-wal`
+until a checkpoint; copying only the `.db` file can miss them. WAL needs the
+database on a local disk, not a network file system.
 
 **Rollback.** Migrations in this system are forward-only; there is no automated "down"
 migration. To roll back, restore the pre-upgrade backup and redeploy the previous
@@ -227,6 +231,26 @@ that predate the per-run uniqueness constraint, keeping the most recent row per
 `(project_id, run_id)`, before adding the constraint — so upgrading a store that
 already has duplicate usage rows from retried saves is safe and does not fail.
 Migration `0003` (issue #19) only adds indexes and has no data impact.
+
+## Load Testing
+
+`scripts/load_test.py` starts a real uvicorn server with several workers on a
+fresh store. For a set time it sends concurrent uploads and reads while a
+retention purge deletes a separately seeded project. It reports throughput and
+latency percentiles per route, and exits 1 on any failed request, a lost
+upload, a failed purge, or throughput below `--min-uploads-per-second`:
+
+```bash
+uv run --all-extras python scripts/load_test.py --workers 4 --uploaders 8 --readers 4 --seconds 30
+```
+
+Set `AGENTLOOP_STORE_BACKEND=postgres` and `AGENTLOOP_DATABASE_URL` to load an
+empty Postgres database instead. CI runs it against SQLite and Postgres with two
+workers.
+
+Reads such as the optimization queue and CI-run listing are CPU-heavy and share
+worker processes with uploads. If upload latency matters under dashboard load,
+run more API workers than you have heavy concurrent readers.
 
 ## Package Release
 

@@ -18,9 +18,17 @@ trace, study, receipt, API and database schema versions.
   API route, upload and dashboard page. CI runs it with 2,000 traces against
   SQLite and Postgres and fails on errors, operations over 15 seconds, or API
   responses over 5 MB.
+- `scripts/load_test.py` runs a real multi-worker server under concurrent
+  uploads, reads and a retention purge, and fails on any failed request, lost
+  upload or failed purge. CI runs it against SQLite and Postgres.
 
 ### Changed
 
+- SQLite stores now use WAL mode, so reads no longer wait for each upload's
+  commit. Under four API workers with concurrent uploads and reads, about 80%
+  more reads completed in the same time. Store connections are now closed
+  after each operation instead of when garbage collected, and a trace's report
+  and diagnosis are built before the write transaction opens.
 - Optimization queue groups list only their 25 newest members in full
   (`ranking.members`, `ranking.estimate_provenance`), with new
   `ranking.member_count` and `ranking.members_truncated` fields. Savings, impact
