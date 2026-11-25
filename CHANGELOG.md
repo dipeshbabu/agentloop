@@ -9,6 +9,16 @@ trace, study, receipt, API and database schema versions.
 
 ### Added
 
+- `agentloop.timing_sensitivity` simulates, on a recorded run, how much sooner
+  it would have finished if one operation were removed or made faster. It
+  reports critical-path slack, the simulated gain for each leaf operation, and
+  where the bottleneck moves. It abstains on missing or inconsistent timing,
+  unsupported IR evidence, or a model that can't reproduce the observed
+  runtime. `compare_prediction` sets a simulated gain against measured baseline
+  and candidate runtimes, with a reproducible bootstrap interval, and labels the
+  two kinds of evidence separately. See
+  [Timing sensitivity](docs/TIMING_SENSITIVITY.md)
+  ([#397](https://github.com/dipeshbabu/agentloop/issues/397)).
 - A versioned execution IR (`agentloop.ir/v1`, `agentloop.execution_ir`) over
   the execution graph. It covers typed operations with effect, idempotency,
   determinism, state reads and writes, and authorization and freshness scopes.
