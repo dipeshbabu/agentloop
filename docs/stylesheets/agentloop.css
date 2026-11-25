@@ -32,6 +32,7 @@
   --al-accent-soft: #7047ba14;
   --al-coral: #d96559;
   --al-shadow: 0 1px 2px rgba(37, 29, 52, .05);
+  --al-pager-border: #f1eafb;
 }
 
 [data-md-color-scheme="slate"] {
@@ -63,6 +64,7 @@
   --al-accent-soft: #c7a1ff1c;
   --al-coral: #ff9c8f;
   --al-shadow: none;
+  --al-pager-border: #2a2338;
 }
 
 body {
@@ -689,112 +691,138 @@ body {
 }
 
 /* ---------- Previous / next ----------
-   Rendered by overrides/main.html under the page content: one card with the
-   previous page on the left and the next page on the right. */
+   Rendered by overrides/main.html under the page content: one soft, rounded
+   card. "Previous" is a small cell on the left; the next page's title and
+   summary sit right-aligned, followed by a divider and a "Next" cell. */
 
 .al-pager {
-  border: 1px solid var(--al-rule);
-  border-radius: .6rem;
-  box-shadow: var(--al-shadow);
+  align-items: stretch;
+  border: 2px solid var(--al-pager-border);
+  border-radius: 1rem;
   display: flex;
-  margin: 3rem 0 1rem;
+  margin: 3rem 0 1.5rem;
+  min-height: 3.6rem;
   overflow: hidden;
 }
 
-.al-pager__link,
-.md-typeset a.al-pager__link {
-  align-items: center;
+.al-pager a,
+.md-typeset .al-pager a {
   color: var(--md-default-fg-color--light);
-  display: flex;
-  gap: .6rem;
-  min-width: 0;
-  padding: .85rem 1.1rem;
   transition: background-color 120ms ease, color 120ms ease;
 }
 
-.al-pager__link:hover,
-.al-pager__link:focus-visible,
-.md-typeset a.al-pager__link:hover,
-.md-typeset a.al-pager__link:focus-visible {
+.al-pager a:hover,
+.al-pager a:focus-visible,
+.md-typeset .al-pager a:hover,
+.md-typeset .al-pager a:focus-visible {
   background-color: var(--al-subtle);
   color: var(--md-default-fg-color);
 }
 
-.al-pager__link--prev {
-  flex: 0 1 auto;
+.al-pager__prev,
+.al-pager__label {
+  align-items: center;
+  display: flex;
+  flex: none;
+  font-size: .76rem;
+  gap: .3rem;
+  white-space: nowrap;
 }
 
-.al-pager__link--next {
+.al-pager__prev {
+  border-right: 1px solid var(--al-rule);
+  padding: 0 1.1rem 0 .9rem;
+}
+
+.al-pager__next {
+  align-items: center;
+  display: flex;
   flex: 1 1 auto;
   justify-content: flex-end;
-  text-align: right;
+  min-width: 0;
+  padding: .75rem 0 .75rem 1.2rem;
 }
 
-.al-pager__link--prev + .al-pager__link--next {
-  border-left: 1px solid var(--al-rule);
-}
-
-.al-pager__text {
+.al-pager__page {
   display: flex;
   flex-direction: column;
   min-width: 0;
-}
-
-.al-pager__direction {
-  white-space: nowrap;
-  font-size: .64rem;
-  font-weight: 600;
-  letter-spacing: .02em;
-  text-transform: uppercase;
+  padding-right: 1.2rem;
+  text-align: right;
 }
 
 .al-pager__title {
   color: var(--md-default-fg-color);
   font-size: .78rem;
   font-weight: 650;
-  line-height: 1.4;
+  line-height: 1.45;
+}
+
+.al-pager__summary {
+  color: var(--md-default-fg-color--light);
+  font-size: .72rem;
+  line-height: 1.45;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.al-pager__link:hover .al-pager__title {
-  color: var(--al-accent);
+.al-pager__label {
+  align-self: stretch;
+  border-left: 1px solid var(--al-rule);
+  color: var(--md-default-fg-color);
+  padding: 0 .9rem 0 1.1rem;
 }
 
-.al-pager__section {
-  font-size: .68rem;
+/* Text for screen readers only. */
+.al-sr-only {
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
 }
 
-.al-pager__icon {
+.al-pager__chevron {
   color: var(--md-default-fg-color--lighter);
   display: inline-flex;
-  flex: none;
 }
 
-.al-pager__icon svg {
+.al-pager__chevron svg {
   fill: currentColor;
-  height: .9rem;
-  width: .9rem;
+  height: .8rem;
+  width: .8rem;
 }
 
-.al-pager__link:hover .al-pager__icon {
+.al-pager a:hover .al-pager__title,
+.al-pager a:hover .al-pager__chevron {
   color: var(--al-accent);
-}
-
-/* With only the previous page left, it fills the card. */
-.al-pager__link--prev:only-child {
-  flex: 1 1 auto;
 }
 
 @media (max-width: 44.9375em) {
-  .al-pager__link {
-    padding: .75rem .85rem;
+  .al-pager__next {
+    padding-left: .9rem;
   }
 
-  .al-pager__section,
-  .al-pager__link--prev:not(:only-child) .al-pager__title {
+  .al-pager__page {
+    padding-right: .9rem;
+  }
+
+  .al-pager__prev {
+    padding: 0 .8rem 0 .7rem;
+  }
+
+  /* Phones keep the next page's title; the summary and the word "Previous"
+     give way. */
+  .al-pager__summary,
+  .al-pager__prev > span:not(.al-pager__chevron):not(.al-sr-only) {
     display: none;
+  }
+
+  .al-pager__label {
+    padding: 0 .7rem 0 .8rem;
   }
 }
 

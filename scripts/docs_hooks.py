@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 import re
-from html import escape
+from html import escape, unescape
 from pathlib import Path
 from urllib.parse import quote, unquote, urlsplit, urlunsplit
 
@@ -157,7 +157,36 @@ def section_label(page) -> str | None:
     return str(title) if title else None
 
 
+FIRST_PARAGRAPH = re.compile(r"<p\b[^>]*>(.*?)</p>", re.DOTALL)
+TAG = re.compile(r"<[^>]+>")
+SUMMARY_LENGTH = 90
+
+
+def page_summary(html: str, description: str | None = None) -> str | None:
+    """One line describing a page: its description, else its first paragraph.
+
+    Plain text, cut at a word boundary; templates escape it when rendering.
+    """
+    text = description
+    if not text:
+        heading = html.find("</h1>")
+        match = FIRST_PARAGRAPH.search(html, heading if heading >= 0 else 0)
+        text = unescape(TAG.sub("", match.group(1))) if match else None
+    if not text:
+        return None
+    text = " ".join(text.split())
+    if len(text) <= SUMMARY_LENGTH:
+        return text
+    cut = text[: SUMMARY_LENGTH + 1].rsplit(" ", 1)[0].rstrip(" ,;:.")
+    return cut + "…"
+
+
 def on_page_content(html, page, config, files):
+    # Read by overrides/main.html for the "Next" card. Every page's content is
+    # built before any template renders, so neighbours' summaries are ready.
+    summary = page_summary(html, page.meta.get("description"))
+    if summary:
+        page.meta["al_summary"] = summary
     label = section_label(page)
     heading = html.find("<h1")
     if label is None or heading < 0:
