@@ -7,6 +7,8 @@ trace, study, receipt, API and database schema versions.
 
 ## [Unreleased]
 
+## [0.2.10] - 2026-11-25
+
 ### Added
 
 - `release-npm.yml` creates a "TypeScript SDK X.Y.Z" GitHub release for each
@@ -486,7 +488,8 @@ trace, study, receipt, API and database schema versions.
 - Optional live-provider validation, Harbor post-job plugins, active approval
   resolution and research trajectory export remain outside this release.
 
-[Unreleased]: https://github.com/dipeshbabu/agentloop/compare/v0.2.9...HEAD
+[Unreleased]: https://github.com/dipeshbabu/agentloop/compare/v0.2.10...HEAD
+[0.2.10]: https://github.com/dipeshbabu/agentloop/compare/v0.2.9...v0.2.10
 [0.2.9]: https://github.com/dipeshbabu/agentloop/compare/v0.2.8...v0.2.9
 [0.2.8]: https://github.com/dipeshbabu/agentloop/compare/v0.2.7...v0.2.8
 [0.2.7]: https://github.com/dipeshbabu/agentloop/compare/v0.2.6...v0.2.7
