@@ -125,6 +125,7 @@ nav:
       - Execution IR: EXECUTION_IR.md
       - Timing sensitivity: TIMING_SENSITIVITY.md
       - Transformation registry: TRANSFORMATIONS.md
+      - Request-local reuse: REQUEST_REUSE.md
       - Workflow tracing: WORKFLOW_TRACING.md
       - Dashboard: DASHBOARD.md
       - Server deployment: PRODUCTION.md
