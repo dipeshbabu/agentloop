@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import re
+from html import escape
 from pathlib import Path
 from urllib.parse import quote, unquote, urlsplit, urlunsplit
 
@@ -76,9 +77,93 @@ def rewrite_links(markdown: str, source: Path, destination: str) -> str:
     return "".join(lines)
 
 
+PAGE_ICONS = {
+    "index.md": "octicons/home-16",
+    "installation.md": "octicons/download-16",
+    "FIRST_USE.md": "octicons/zap-16",
+    "ONBOARDING.md": "octicons/plug-16",
+    "GUIDED_OPTIMIZATION.md": "octicons/sparkles-fill-16",
+    "DOCTOR.md": "octicons/pulse-16",
+    "FINDING_RULES.md": "octicons/search-16",
+    "FINDING_RANKING.md": "octicons/list-ordered-16",
+    "STRUCTURED_QUALITY.md": "octicons/verified-16",
+    "CI.md": "octicons/git-pull-request-16",
+    "HTML_REPORTS.md": "octicons/graph-16",
+    "PRICING.md": "octicons/number-16",
+    "TRACE_RETENTION.md": "octicons/archive-16",
+    "STUDIES.md": "octicons/beaker-16",
+    "INTERVENTIONS.md": "octicons/tasklist-16",
+    "INTEGRATIONS.md": "octicons/apps-16",
+    "HERMES.md": "octicons/hubot-16",
+    "CODEX.md": "octicons/terminal-16",
+    "CLAUDE_CODE.md": "octicons/terminal-16",
+    "LANGGRAPH_HARNESS.md": "octicons/workflow-16",
+    "HARBOR_TRIALS.md": "octicons/milestone-16",
+    "HARBOR_ATIF.md": "octicons/file-binary-16",
+    "CROSS_HARNESS_STUDIES.md": "octicons/git-compare-16",
+    "OMNIGENT_OTEL.md": "octicons/broadcast-16",
+    "OTLP_JSONL.md": "octicons/file-code-16",
+    "INTEGRATION_CONFORMANCE.md": "octicons/shield-check-16",
+    "python-sdk.md": "octicons/code-16",
+    "reference/typescript.md": "octicons/file-code-16",
+    "API_VERSIONING.md": "octicons/server-16",
+    "TRACE_SCHEMA.md": "octicons/file-16",
+    "WORKFLOW_TRACING.md": "octicons/git-branch-16",
+    "DASHBOARD.md": "octicons/project-roadmap-16",
+    "PRODUCTION.md": "octicons/stack-16",
+    "CLOUD_DEPLOY.md": "octicons/cloud-16",
+    "KUBERNETES.md": "octicons/container-16",
+    "OPERATIONS.md": "octicons/pulse-16",
+    "HARNESS.md": "octicons/shield-16",
+    "HARNESS_CAPABILITIES.md": "octicons/key-16",
+    "BUDGETS.md": "octicons/meter-16",
+    "COMPLETION.md": "octicons/check-circle-16",
+    "CHECKPOINT_RECOVERY.md": "octicons/history-16",
+    "CONTEXT_CONTROLS.md": "octicons/stack-16",
+    "TOOL_SCHEDULING.md": "octicons/clock-16",
+    "MODEL_ROUTING.md": "octicons/repo-forked-16",
+    "GUIDED_VALIDATION.md": "octicons/checklist-16",
+    "HERMES_OPTIMIZATION_CASE.md": "octicons/graph-16",
+    "GUIDED_LOCAL_MODEL_CASE.md": "octicons/x-circle-16",
+    "HERMES_RUNTIME_PILOT.md": "octicons/cpu-16",
+    "ESTIMATORS.md": "octicons/number-16",
+    "CALIBRATION.md": "octicons/sliders-16",
+    "REAL_AGENT_STUDY.md": "octicons/telescope-16",
+    "RESEARCH.md": "octicons/book-16",
+    "ADOPTION_GAPS.md": "octicons/circle-16",
+    "development/contributing.md": "octicons/git-merge-16",
+    "documentation.md": "octicons/book-16",
+    "development/changelog.md": "octicons/log-16",
+    "development/security.md": "octicons/lock-16",
+    "ROADMAP.md": "octicons/milestone-16",
+    "UPGRADING.md": "octicons/arrow-up-16",
+    "RELEASING.md": "octicons/rocket-16",
+}
+
+
 def on_page_markdown(markdown, page, config, files):
+    # Sidebar icons come from here so the Markdown files stay plain for GitHub.
+    icon = PAGE_ICONS.get(page.file.src_uri)
+    if icon and "icon" not in page.meta:
+        page.meta["icon"] = icon
     source = SOURCE_PAGES.get(page.file.src_uri, DOCS / page.file.src_uri)
     return rewrite_links(markdown, source, page.file.src_uri)
+
+
+def section_label(page) -> str | None:
+    """The navigation section a page sits in, shown above its title."""
+    parent = getattr(page, "parent", None)
+    title = getattr(parent, "title", None)
+    return str(title) if title else None
+
+
+def on_page_content(html, page, config, files):
+    label = section_label(page)
+    heading = html.find("<h1")
+    if label is None or heading < 0:
+        return html
+    eyebrow = f'<p class="al-eyebrow">{escape(label)}</p>'
+    return html[:heading] + eyebrow + html[heading:]
 
 
 def on_config(config):
