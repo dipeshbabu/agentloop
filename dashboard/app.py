@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import os
 import tempfile
+import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 import altair as alt
@@ -97,6 +99,30 @@ def load_store():
     db = get_store()
     db.init()
     return db
+
+
+# Streamlit reruns the page on every interaction, and building the queue reads
+# and ranks up to 5,000 findings (about a second at 2,000 traces). Results are
+# reused for this long, and every write made from the dashboard clears them.
+QUEUE_CACHE_SECONDS = 30
+
+
+@st.cache_resource
+def _store_cache_token() -> str:
+    """Changes whenever load_store()'s store is replaced, so cached results never cross stores."""
+    return uuid.uuid4().hex
+
+
+@st.cache_data(ttl=QUEUE_CACHE_SECONDS, max_entries=64, show_spinner=False)
+def cached_optimization_queue(store_token: str, project_id: str) -> tuple[list[dict], str]:
+    """The project's optimization queue and the UTC time it was computed."""
+    queue = load_store().optimization_queue(project_id=project_id)
+    return queue, datetime.now(timezone.utc).strftime("%H:%M:%S UTC")
+
+
+def invalidate_cached_results() -> None:
+    """Drop cached results after the dashboard changes traces or findings."""
+    cached_optimization_queue.clear()
 
 
 SEVERITY_COLORS = {"high": "red", "medium": "orange", "low": "gray"}
@@ -676,6 +702,7 @@ elif page == "Traces":
                 )
                 if st.button("Delete trace", disabled=not confirmed, type="primary"):
                     deleted = store.delete_trace(trace.run_id, project_id, actor=dashboard_actor)
+                    invalidate_cached_results()
                     st.session_state[cursor_key] = [None]
                     st.session_state["trace_deleted_notice"] = (
                         f"Deleted {trace.run_id} and {deleted['findings']} findings, "
@@ -689,8 +716,17 @@ elif page == "Optimization Queue":
     dimension = st.selectbox(
         "Sort investigations by", SORT_FIELDS, format_func=lambda value: value.replace("_", " ")
     )
-    queue = sort_ranked(store.optimization_queue(project_id=project_id), dimension)
+    cached_queue, computed_at = cached_optimization_queue(_store_cache_token(), project_id)
+    queue = sort_ranked(cached_queue, dimension)
     finding_counts = store.finding_counts(project_id=project_id)
+    refresh_note, refresh_button = st.columns([5, 1], vertical_alignment="center")
+    refresh_note.caption(
+        f"Queue computed at {computed_at}; it refreshes every {QUEUE_CACHE_SECONDS} seconds "
+        "and after changes made here."
+    )
+    if refresh_button.button("Refresh", icon=":material/refresh:", width="stretch"):
+        invalidate_cached_results()
+        st.rerun()
 
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Open opportunities", len(queue))
@@ -827,6 +863,7 @@ elif page == "Optimization Queue":
                     except (FindingNotFoundError, FindingTransitionError) as exc:
                         st.error(str(exc))
                     else:
+                        invalidate_cached_results()
                         st.success(f"{selected_finding['finding_id']} is now {new_status}")
                         st.rerun()
             else:
@@ -1339,6 +1376,8 @@ elif page == "Ingest":
                 trace = AgentTrace.from_json(path)
                 store.save_trace(trace, project_id=project_id)
                 stored.append(trace)
+            if stored:
+                invalidate_cached_results()
             if len(stored) == 1:
                 notice = f"Generated and stored `{stored[0].name}` as `{stored[0].run_id}`."
             elif stored:
@@ -1362,6 +1401,7 @@ elif page == "Ingest":
                 st.caption(f"`{trace.name}` · `{trace.run_id}` · {len(trace.events)} events")
                 if st.button("Store uploaded trace", type="primary", width="stretch"):
                     store.save_trace(trace, project_id=project_id)
+                    invalidate_cached_results()
                     notice = f"Stored uploaded trace `{trace.run_id}` in `{project_id}`."
 
     if notice:
