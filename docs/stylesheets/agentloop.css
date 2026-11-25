@@ -355,6 +355,10 @@ body {
 /* Copy button: always visible as a small outlined square in the code card's
    top-right corner, highlighted in the accent colour on hover and focus.
    Material renders it as .md-code__button inside .md-code__nav. */
+/* The button is centred on the first line of code: the code's top padding
+   (.9em of the .86em code font) plus half its line height is about 1.4em of
+   the block's font, so a 1.6em button starts at .6em. A one-line block is
+   then centred, and longer blocks keep the button beside their first line. */
 .md-typeset .md-code__nav,
 .md-typeset :hover > .md-code__nav {
   background: none;
@@ -373,16 +377,16 @@ body {
   box-shadow: var(--al-shadow);
   color: var(--md-default-fg-color--light);
   display: inline-flex;
-  height: 2.1em;
+  height: 1.6em;
   justify-content: center;
   transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
-  width: 2.1em;
+  width: 1.6em;
 }
 
 .md-typeset .md-code__button::after,
 .md-typeset .md-clipboard::after {
-  height: 1.05em;
-  width: 1.05em;
+  height: .9em;
+  width: .9em;
 }
 
 .md-typeset :hover > * > .md-code__button,
