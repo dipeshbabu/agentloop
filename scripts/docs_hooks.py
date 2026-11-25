@@ -114,6 +114,7 @@ PAGE_ICONS = {
     "TRANSFORMATIONS.md": "octicons/diff-16",
     "REQUEST_REUSE.md": "octicons/cache-16",
     "SCHEDULE_COMPILER.md": "octicons/git-merge-queue-16",
+    "RETRY_PASSES.md": "octicons/sync-16",
     "WORKFLOW_TRACING.md": "octicons/git-branch-16",
     "DASHBOARD.md": "octicons/project-roadmap-16",
     "PRODUCTION.md": "octicons/stack-16",

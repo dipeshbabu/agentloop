@@ -127,6 +127,7 @@ nav:
       - Transformation registry: TRANSFORMATIONS.md
       - Request-local reuse: REQUEST_REUSE.md
       - Compiling a schedule: SCHEDULE_COMPILER.md
+      - Retry and loop passes: RETRY_PASSES.md
       - Workflow tracing: WORKFLOW_TRACING.md
       - Dashboard: DASHBOARD.md
       - Server deployment: PRODUCTION.md
