@@ -40,6 +40,8 @@ from agentloop.execution_ir import build_execution_ir
 
 SCHEMA = "agentloop.timing_sensitivity/v1"
 CLOCK_TOLERANCE_MS = 1.0
+# Slack below this is treated as zero: the operation is on a longest path.
+_SLACK_EPSILON_MS = 1e-6
 REPRODUCTION_TOLERANCE = 0.01  # of the observed runtime, plus CLOCK_TOLERANCE_MS
 ASSUMPTIONS = (
     "Simulated on this run's recorded structure; not a measured effect.",
@@ -60,11 +62,21 @@ def _abstain(reasons: list[str]) -> dict[str, Any]:
     }
 
 
-def timing_sensitivity(source: Any, *, scale: float = 0.5) -> dict[str, Any]:
+def timing_sensitivity(
+    source: Any, *, scale: float = 0.5, max_simulations: int = 64
+) -> dict[str, Any]:
     """Simulate removing, or scaling by ``scale``, each leaf operation's duration.
 
     ``source`` is a trace or an execution IR document. ``scale`` must be in [0, 1).
+
+    A leaf with slack cannot shorten the run, so its gains are exactly zero and
+    it needs no simulation. Leaves without slack are simulated, longest first,
+    up to ``max_simulations``; any beyond that are reported with
+    ``simulated: false`` rather than an estimate. Each simulation costs one
+    pass over the trace, so this bounds the work on very large traces.
     """
+    if type(max_simulations) is not int or max_simulations < 0:
+        raise ValueError("max_simulations must be a non-negative integer")
     if not isinstance(scale, int | float) or isinstance(scale, bool):
         raise ValueError("scale must be a number")
     if not 0 <= scale < 1 or not math.isfinite(scale):
@@ -139,6 +151,11 @@ def timing_sensitivity(source: Any, *, scale: float = 0.5) -> dict[str, Any]:
         )
 
     critical = set(baseline.critical_path)
+    tight = sorted(
+        (op_id for op_id in leaves if baseline.slack[op_id] <= _SLACK_EPSILON_MS),
+        key=lambda op_id: (-durations[op_id], op_id),
+    )
+    simulate = set(tight[:max_simulations])
     results = []
     for op_id in [operation["id"] for operation in operations]:
         entry: dict[str, Any] = {
@@ -151,18 +168,38 @@ def timing_sensitivity(source: Any, *, scale: float = 0.5) -> dict[str, Any]:
             entry["composite"] = True
             results.append(entry)
             continue
-        removed = model.run({**durations, op_id: 0.0})
-        scaled = model.run({**durations, op_id: durations[op_id] * scale})
-        entry.update(
-            {
-                "composite": False,
-                "duration_ms": round(durations[op_id], 3),
-                "gain_if_removed_ms": round(baseline.makespan - removed.makespan, 3),
-                "gain_if_scaled_ms": round(baseline.makespan - scaled.makespan, 3),
-                "critical_path_after_removal": removed.critical_path,
-                "bottleneck_after_removal": _bottleneck(removed, durations, op_id),
-            }
-        )
+        entry.update({"composite": False, "duration_ms": round(durations[op_id], 3)})
+        if baseline.slack[op_id] > _SLACK_EPSILON_MS:
+            # Off every longest path: changing it cannot move the end of the run.
+            entry.update(
+                {
+                    "simulated": True,
+                    "gain_if_removed_ms": 0.0,
+                    "gain_if_scaled_ms": 0.0,
+                    "critical_path_after_removal": baseline.critical_path,
+                    "bottleneck_after_removal": _bottleneck(baseline, durations, op_id),
+                }
+            )
+        elif op_id in simulate:
+            removed = model.run({**durations, op_id: 0.0})
+            scaled = model.run({**durations, op_id: durations[op_id] * scale})
+            entry.update(
+                {
+                    "simulated": True,
+                    "gain_if_removed_ms": round(baseline.makespan - removed.makespan, 3),
+                    "gain_if_scaled_ms": round(baseline.makespan - scaled.makespan, 3),
+                    "critical_path_after_removal": removed.critical_path,
+                    "bottleneck_after_removal": _bottleneck(removed, durations, op_id),
+                }
+            )
+        else:
+            entry.update(
+                {
+                    "simulated": False,
+                    "reason": f"only the {max_simulations} longest operations without slack "
+                    "are simulated; raise max_simulations to include this one",
+                }
+            )
         results.append(entry)
     results.sort(key=lambda item: (-item.get("gain_if_removed_ms", -1.0), item["id"]))
     return {
@@ -173,6 +210,12 @@ def timing_sensitivity(source: Any, *, scale: float = 0.5) -> dict[str, Any]:
         "observed_runtime_ms": round(observed, 3),
         "modelled_runtime_ms": round(baseline.makespan, 3),
         "critical_path": baseline.critical_path,
+        "simulations": {
+            "without_slack": len(tight),
+            "simulated": len(simulate),
+            "skipped": max(0, len(tight) - len(simulate)),
+            "max_simulations": max_simulations,
+        },
         "operations": results,
         "assumptions": list(ASSUMPTIONS),
     }
