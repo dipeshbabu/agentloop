@@ -87,6 +87,19 @@ negative controls while running exactly the baseline. **A runtime difference
 under about 50% is not evidence at this sample size.** The quality numbers are
 reliable: identical settings gave identical quality on all 100 held-out tasks.
 
+### Follow-up: safer default ranking
+
+Since this benchmark, the default ranking no longer puts "route to a smaller
+model" first. Until a quality check for the smaller model is declared `passed`,
+the finding ranks after every other finding, and its title and rewrite hint say
+that a quality check is required first. See
+[quality prerequisites](FINDING_RANKING.md#quality-prerequisites). The change was
+not evaluated on these held-out tasks, because they informed it. On at least 7
+of each agent's 10 development traces it was the only finding
+([`derivation.json`](../research/optimization-benchmark-2026-11/derivation.json)),
+so a method that takes the top finding would still reach it, now titled as
+needing a quality check.
+
 ## Prediction, overhead and recall
 
 - **Prediction error.** For "route to a smaller model", AgentLoop predicted a

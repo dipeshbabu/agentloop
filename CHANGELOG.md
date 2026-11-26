@@ -139,6 +139,18 @@ trace, study, receipt, API and database schema versions.
 
 ### Changed
 
+- "Route to a smaller model" no longer ranks above other findings without
+  quality evidence. In the [optimization benchmark](docs/OPTIMIZATION_BENCHMARK.md)
+  it ranked first on every agent and cut answer quality on 31 of 75 held-out
+  tasks. Rule `route_to_smaller_model` 1.3 keeps the finding and its ID, but it
+  is now titled "Check quality before routing `step` to a smaller model", and its
+  rewrite hint says a quality check is required first. It declares the new
+  quality prerequisite `smaller_model_quality_check`: until that is declared
+  `passed` with a source reference, the finding ranks after every other finding
+  and needs evidence or review. Ranking schema 1.1 adds
+  `quality_prerequisites`; stored 1.0 rankings sort as before. Not evaluated on
+  the benchmark's held-out tasks, which informed it. See
+  [quality prerequisites](docs/FINDING_RANKING.md#quality-prerequisites).
 - The roadmap records the outcome of the quality-constrained optimization
   roadmap ([#394](https://github.com/dipeshbabu/agentloop/issues/394)). It maps
   each workstream to its guide and checks each exit criterion against the

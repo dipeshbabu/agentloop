@@ -266,6 +266,13 @@ def _finding_from_card(
     ):
         # The wording change preserves existing reviewed finding IDs.
         identity_title = f"Parallelize repeated `{observations['tool_name']}` tool calls"
+    elif (
+        finding_type == "route_to_smaller_model"
+        and len(affected_spans) == 1
+        and affected_spans[0] in node_lookup
+    ):
+        # Rule 1.3 retitled the finding; its ID keeps the rule 1.2 title.
+        identity_title = f"Route `{node_lookup[affected_spans[0]]['name']}` to a cheaper model"
     if semantic:
         severity = "medium" if card.get("confidence") == "medium" else "low"
         evidence.extend(
@@ -419,7 +426,7 @@ def _acceptance_criteria(finding_type: str) -> str:
         "cache_context": "input tokens and cost decrease without output quality regression",
         "add_schema_validation": "retry count decreases and output schema validity stays at 100%",
         "batch_model_calls": "runtime decreases and item-level outputs remain equivalent",
-        "route_to_smaller_model": "cost decreases while configured quality scorer passes",
+        "route_to_smaller_model": "an independent quality check shows no task gets worse, then cost or runtime decreases",
         "split_large_step": "context size decreases while final answer quality scorer passes",
         "runaway_loop": "iteration count is bounded and replay passes quality and budget gates",
         "tool_oscillation": "tool-call count decreases without losing required state transitions",

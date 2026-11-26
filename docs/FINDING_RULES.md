@@ -58,6 +58,26 @@ hypotheses; verify output independence, shared-state safety, and task quality
 before applying them. This rule does not infer hidden dependencies from prompts
 or tool outputs, and it does not rewrite historical findings or study evidence.
 
+## Model routing needs a quality check first
+
+`route_to_smaller_model` version `1.3` still flags small model steps, with the
+same thresholds and estimate. Its title now reads "Check quality before routing
+`step` to a smaller model", and its rewrite hint says a quality check is required
+before switching. The rule also declares the ranking requirement
+`smaller_model_quality_check`, which is a quality prerequisite: until it is
+declared `passed`, the finding ranks after every other finding
+(see [quality prerequisites](FINDING_RANKING.md#quality-prerequisites)).
+
+The reason is the [November 2026 optimization benchmark](OPTIMIZATION_BENCHMARK.md).
+This finding ranked first on all three agents, and applying it cut answer quality
+on 31 of 75 held-out tasks. Its uncalibrated estimate of a 25% time saving was
+also too low: 50-73% was measured. Token counts and model size say nothing about
+whether a smaller model gets the task right.
+
+The finding is kept, and its ID still uses the version `1.2` title, so reviewed
+lifecycle decisions stay attached. The change was not evaluated on the
+benchmark's held-out tasks, because they informed it.
+
 ## Failures and completeness
 
 Each detector failure is isolated. Other rules still return their findings, and
@@ -80,7 +100,8 @@ normal lifecycle rules.
 `agentloop.optimizer.OptimizationCard` and `RecommendationType` remain available
 as compatibility imports. Finding IDs keep the existing type/title/span fingerprint;
 adding rule IDs or versions does not itself replace historical identities. Built-in
-detector titles, thresholds, savings calculations, and ordering are retained;
+detector thresholds, savings calculations, and ordering are retained, as are
+titles apart from the `route_to_smaller_model` 1.3 wording above;
 report recommendation wording now follows the canonical detector rather than the
 old separate report-only summaries. Rule metadata is additive in JSON and persists
 with findings; no database migration is required.
