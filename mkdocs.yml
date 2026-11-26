@@ -154,6 +154,7 @@ nav:
       - Hermes runtime conformance: HERMES_RUNTIME_PILOT.md
       - Estimator provenance: ESTIMATORS.md
       - Calibration: CALIBRATION.md
+      - Optimization benchmark: OPTIMIZATION_BENCHMARK.md
       - Real-agent study: REAL_AGENT_STUDY.md
       - Research guide: RESEARCH.md
       - Adoption and measurement gaps: ADOPTION_GAPS.md

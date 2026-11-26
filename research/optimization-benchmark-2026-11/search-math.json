@@ -1,0 +1,356 @@
+{
+  "attempts": [
+    {
+      "case": "gsm8k-1164",
+      "evaluation_s": 5.307482,
+      "index": 0,
+      "interventions": [],
+      "metrics": {
+        "quality": 1.0,
+        "runtime_ms": 5203.466
+      },
+      "phase": "baseline",
+      "status": "ok"
+    },
+    {
+      "case": "gsm8k-644",
+      "evaluation_s": 4.147344,
+      "index": 1,
+      "interventions": [],
+      "metrics": {
+        "quality": 0.0,
+        "runtime_ms": 4145.079
+      },
+      "phase": "baseline",
+      "status": "ok"
+    },
+    {
+      "case": "gsm8k-234",
+      "evaluation_s": 6.02714,
+      "index": 2,
+      "interventions": [],
+      "metrics": {
+        "quality": 0.0,
+        "runtime_ms": 5643.543
+      },
+      "phase": "baseline",
+      "status": "ok"
+    },
+    {
+      "case": "gsm8k-1208",
+      "evaluation_s": 4.267527,
+      "index": 3,
+      "interventions": [],
+      "metrics": {
+        "quality": 1.0,
+        "runtime_ms": 3925.502
+      },
+      "phase": "baseline",
+      "status": "ok"
+    },
+    {
+      "case": "gsm8k-723",
+      "evaluation_s": 4.929508,
+      "index": 4,
+      "interventions": [],
+      "metrics": {
+        "quality": 0.0,
+        "runtime_ms": 4827.051
+      },
+      "phase": "baseline",
+      "status": "ok"
+    },
+    {
+      "case": "gsm8k-496",
+      "evaluation_s": 7.806185,
+      "index": 5,
+      "interventions": [],
+      "metrics": {
+        "quality": 1.0,
+        "runtime_ms": 7804.675
+      },
+      "phase": "baseline",
+      "status": "ok"
+    },
+    {
+      "case": "gsm8k-1164",
+      "evaluation_s": 1.652719,
+      "index": 6,
+      "interventions": [
+        "change0"
+      ],
+      "metrics": {
+        "quality": 0.0,
+        "runtime_ms": 739.581
+      },
+      "phase": "single",
+      "status": "ok"
+    },
+    {
+      "case": "gsm8k-644",
+      "evaluation_s": 6.312099,
+      "index": 7,
+      "interventions": [
+        "change0"
+      ],
+      "metrics": {
+        "quality": 0.0,
+        "runtime_ms": 5669.831
+      },
+      "phase": "single",
+      "status": "ok"
+    },
+    {
+      "case": "gsm8k-234",
+      "evaluation_s": 2.552321,
+      "index": 8,
+      "interventions": [
+        "change0"
+      ],
+      "metrics": {
+        "quality": 0.0,
+        "runtime_ms": 2550.705
+      },
+      "phase": "single",
+      "status": "ok"
+    },
+    {
+      "case": "gsm8k-1208",
+      "evaluation_s": 2.162567,
+      "index": 9,
+      "interventions": [
+        "change0"
+      ],
+      "metrics": {
+        "quality": 0.0,
+        "runtime_ms": 2161.217
+      },
+      "phase": "single",
+      "status": "ok"
+    },
+    {
+      "case": "gsm8k-723",
+      "evaluation_s": 3.027341,
+      "index": 10,
+      "interventions": [
+        "change0"
+      ],
+      "metrics": {
+        "quality": 0.0,
+        "runtime_ms": 2177.82
+      },
+      "phase": "single",
+      "status": "ok"
+    },
+    {
+      "case": "gsm8k-496",
+      "evaluation_s": 3.851839,
+      "index": 11,
+      "interventions": [
+        "change0"
+      ],
+      "metrics": {
+        "quality": 0.0,
+        "runtime_ms": 3850.922
+      },
+      "phase": "single",
+      "status": "ok"
+    },
+    {
+      "case": "gsm8k-1164",
+      "evaluation_s": 5.430104,
+      "index": 12,
+      "interventions": [
+        "change1"
+      ],
+      "metrics": {
+        "quality": 1.0,
+        "runtime_ms": 5427.61
+      },
+      "phase": "single",
+      "status": "ok"
+    },
+    {
+      "case": "gsm8k-644",
+      "evaluation_s": 4.401472,
+      "index": 13,
+      "interventions": [
+        "change1"
+      ],
+      "metrics": {
+        "quality": 0.0,
+        "runtime_ms": 4399.407
+      },
+      "phase": "single",
+      "status": "ok"
+    },
+    {
+      "case": "gsm8k-234",
+      "evaluation_s": 6.129884,
+      "index": 14,
+      "interventions": [
+        "change1"
+      ],
+      "metrics": {
+        "quality": 0.0,
+        "runtime_ms": 5862.861
+      },
+      "phase": "single",
+      "status": "ok"
+    },
+    {
+      "case": "gsm8k-1208",
+      "evaluation_s": 4.184859,
+      "index": 15,
+      "interventions": [
+        "change1"
+      ],
+      "metrics": {
+        "quality": 1.0,
+        "runtime_ms": 4183.683
+      },
+      "phase": "single",
+      "status": "ok"
+    },
+    {
+      "case": "gsm8k-723",
+      "evaluation_s": 4.470273,
+      "index": 16,
+      "interventions": [
+        "change1"
+      ],
+      "metrics": {
+        "quality": 0.0,
+        "runtime_ms": 4448.333
+      },
+      "phase": "single",
+      "status": "ok"
+    },
+    {
+      "case": "gsm8k-496",
+      "evaluation_s": 7.270322,
+      "index": 17,
+      "interventions": [
+        "change1"
+      ],
+      "metrics": {
+        "quality": 1.0,
+        "runtime_ms": 7269.496
+      },
+      "phase": "single",
+      "status": "ok"
+    }
+  ],
+  "candidates": [
+    {
+      "complete": true,
+      "failed_cases": [],
+      "interventions": [],
+      "means": {
+        "quality": 0.5,
+        "runtime_ms": 5258.219333
+      },
+      "quality_ok": true,
+      "quality_regressions": []
+    },
+    {
+      "complete": true,
+      "failed_cases": [],
+      "interventions": [
+        "change0"
+      ],
+      "means": {
+        "quality": 0.0,
+        "runtime_ms": 2858.346
+      },
+      "quality_ok": false,
+      "quality_regressions": [
+        {
+          "case": "gsm8k-1164",
+          "quality_drop": 1.0
+        },
+        {
+          "case": "gsm8k-1208",
+          "quality_drop": 1.0
+        },
+        {
+          "case": "gsm8k-496",
+          "quality_drop": 1.0
+        }
+      ]
+    },
+    {
+      "complete": true,
+      "failed_cases": [],
+      "interventions": [
+        "change1"
+      ],
+      "means": {
+        "quality": 0.5,
+        "runtime_ms": 5265.231667
+      },
+      "quality_ok": true,
+      "quality_regressions": []
+    }
+  ],
+  "decision": {
+    "reason": "no intervention improved the primary objective without a quality regression",
+    "recommendation": null,
+    "status": "no_improvement"
+  },
+  "deployed": false,
+  "held_out": null,
+  "overhead": {
+    "attempts": 18,
+    "elapsed_s": 83.932143,
+    "evaluation_s": 83.930986,
+    "measured_cost_usd": null
+  },
+  "pareto": [
+    []
+  ],
+  "report_sha256": "87336cced05c7e0a46093320861af72ae59d1072d90c599aa5ac0248c9f17e13",
+  "schema": "agentloop.optimization_search/v1",
+  "selected": [],
+  "specification": {
+    "budget": {
+      "max_attempts": 120,
+      "max_cost_usd": null,
+      "max_elapsed_s": 21600
+    },
+    "held_out_cases": [
+      "gsm8k-120",
+      "gsm8k-548",
+      "gsm8k-907",
+      "gsm8k-715"
+    ],
+    "interventions": [
+      {
+        "conflicts_with": [],
+        "name": "change0"
+      },
+      {
+        "conflicts_with": [],
+        "name": "change1"
+      }
+    ],
+    "max_combination_size": 3,
+    "objectives": [
+      {
+        "direction": "min",
+        "metric": "runtime_ms"
+      }
+    ],
+    "quality_floor": 0.0,
+    "seed": 406,
+    "tuning_cases": [
+      "gsm8k-1164",
+      "gsm8k-644",
+      "gsm8k-234",
+      "gsm8k-1208",
+      "gsm8k-723",
+      "gsm8k-496"
+    ]
+  },
+  "stop_reason": null
+}

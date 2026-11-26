@@ -42,7 +42,8 @@ observation with a negative result.
 
 The maintainer must arrange the participant's consent and permission to retain
 their application data. A sanitized private evidence bundle can use the existing
-trace/study artifacts. No external participant observations are currently recorded.
+trace/study artifacts. No independent human participant observations are recorded yet;
+the one pilot so far was run by an AI coding agent.
 
 ### Recording pilot observations
 
@@ -78,9 +79,12 @@ compares each method with `no_optimization` on the same workloads, and reports:
 - how often the method "improved" a negative control. Nothing should improve
   a negative control, so a method that does signals noise or leakage.
 
-No participant records or independently owned workloads are stored in this
-repository yet. Collecting them is the open part of
-[#406](https://github.com/dipeshbabu/agentloop/issues/406).
+The [November 2026 optimization benchmark](OPTIMIZATION_BENCHMARK.md) applies
+both formats. It ran three agents against independently labelled public datasets
+(GSM8K, HumanEval and SQuAD v2), with a negative control, and recorded one
+first-use pilot. That pilot's participant is an AI coding agent, so independent
+human developer adoption is still unmeasured. Add those records with the same
+format as consenting developers take part.
 
 ## Reproduce scoped overhead measurements
 

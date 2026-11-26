@@ -140,6 +140,7 @@ PAGE_ICONS = {
     "ESTIMATORS.md": "octicons/number-16",
     "CALIBRATION.md": "octicons/sliders-16",
     "REAL_AGENT_STUDY.md": "octicons/telescope-16",
+    "OPTIMIZATION_BENCHMARK.md": "octicons/beaker-16",
     "RESEARCH.md": "octicons/book-16",
     "ADOPTION_GAPS.md": "octicons/circle-16",
     "development/contributing.md": "octicons/git-merge-16",
