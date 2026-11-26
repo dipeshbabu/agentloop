@@ -7,6 +7,15 @@ trace, study, receipt, API and database schema versions.
 
 ## [Unreleased]
 
+### Fixed
+
+- `agentloop mcp` now honours `notifications/cancelled` for a running tool call.
+  The stdio loop used to run each call to completion before reading the next
+  message, so a cancellation arrived only after the call had finished. Tool
+  calls now run alongside the reader, other requests such as `ping` are
+  answered meanwhile, and a cancelled request gets no response, as the MCP
+  specification asks.
+
 ## [0.3.0] - 2026-11-26
 
 ### Added

@@ -98,6 +98,7 @@ class Server:
         self.timeout_s = timeout_s
         self.initialized = False
         self._cancelled: set[Any] = set()
+        self._inflight: set[Any] = set()
         self._lock = threading.Lock()
         self._pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="agentloop-mcp")
         self.tools: dict[str, dict[str, Any]] = {}
@@ -325,7 +326,10 @@ class Server:
             return None if is_notification else _error(identity, -32602, "params must be an object")
         if method == "notifications/cancelled":
             with self._lock:
-                self._cancelled.add(params.get("requestId"))
+                # Only calls still running can be cancelled; others are ignored,
+                # so the set cannot grow from stray notifications.
+                if params.get("requestId") in self._inflight:
+                    self._cancelled.add(params.get("requestId"))
             return None
         if method == "notifications/initialized":
             return None
@@ -348,10 +352,17 @@ class Server:
         if method == "tools/list":
             return _result(identity, {"tools": [t["definition"] for t in self.tools.values()]})
         if method == "tools/call":
-            return self._call(identity, params)
+            with self._lock:
+                self._inflight.add(identity)
+            try:
+                return self._call(identity, params)
+            finally:
+                with self._lock:
+                    self._inflight.discard(identity)
+                    self._cancelled.discard(identity)
         return _error(identity, -32601, f"unknown method {method}")
 
-    def _call(self, identity: Any, params: Mapping[str, Any]) -> dict[str, Any]:
+    def _call(self, identity: Any, params: Mapping[str, Any]) -> dict[str, Any] | None:
         name = params.get("name")
         args = params.get("arguments") or {}
         tool = self.tools.get(name) if isinstance(name, str) else None
@@ -379,15 +390,31 @@ class Server:
             return _result(identity, _tool_error(f"{type(error).__name__} while running {name}"))
         with self._lock:
             if identity in self._cancelled:
-                self._cancelled.discard(identity)
-                return _result(identity, _tool_error("cancelled by the client"))
+                # The MCP specification: no response for a cancelled request.
+                return None
         payload = {"untrusted_content": UNTRUSTED, "result": value}
         text = json.dumps(payload, default=str, ensure_ascii=False)
         return _result(identity, {"content": [{"type": "text", "text": text}],
                                   "structuredContent": payload, "isError": False})  # fmt: skip
 
     def serve(self, reader: IO[str] = sys.stdin, writer: IO[str] = sys.stdout) -> None:
-        """Read one JSON-RPC message per line until EOF."""
+        """Read one JSON-RPC message per line until EOF.
+
+        Tool calls run on their own threads so the reader keeps going: a
+        ``notifications/cancelled`` for a running call is seen while it runs.
+        Responses are written whole, one per line, under a lock. At EOF the
+        server waits for running calls (each bounded by the timeout) to answer.
+        """
+        write_lock = threading.Lock()
+        workers: list[threading.Thread] = []
+
+        def write(response: dict[str, Any] | None) -> None:
+            if response is None:
+                return
+            with write_lock:
+                writer.write(json.dumps(response, default=str) + "\n")
+                writer.flush()
+
         try:
             for line in reader:
                 if not line.strip():
@@ -395,14 +422,33 @@ class Server:
                 try:
                     message = json.loads(line)
                 except ValueError:
-                    response = _error(None, -32700, "parse error")
+                    write(_error(None, -32700, "parse error"))
+                    continue
+                if self._is_tool_call(message):
+                    # Registered before the worker starts, so an immediate
+                    # cancellation is never missed.
+                    with self._lock:
+                        self._inflight.add(message.get("id"))
+                    worker = threading.Thread(
+                        target=lambda m=message: write(self.handle(m)), daemon=True
+                    )
+                    worker.start()
+                    workers = [w for w in workers if w.is_alive()] + [worker]
                 else:
-                    response = self.handle(message)
-                if response is not None:
-                    writer.write(json.dumps(response, default=str) + "\n")
-                    writer.flush()
+                    write(self.handle(message))
         finally:
+            for worker in workers:
+                worker.join(timeout=self.timeout_s + 5)
             self._pool.shutdown(wait=False, cancel_futures=True)
+
+    def _is_tool_call(self, message: Any) -> bool:
+        return (
+            isinstance(message, Mapping)
+            and message.get("jsonrpc") == "2.0"
+            and message.get("method") == "tools/call"
+            and "id" in message
+            and self.initialized
+        )
 
 
 def _result(identity: Any, value: Any) -> dict[str, Any]:
