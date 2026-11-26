@@ -225,7 +225,7 @@ def find_loops(trace: Any) -> dict[str, Any]:
 
 
 def _longest_oscillation(names: list[str]) -> dict[str, Any] | None:
-    best = None
+    best: dict[str, Any] | None = None
     for period in range(2, 5):
         for start in range(len(names)):
             pattern = names[start : start + period]

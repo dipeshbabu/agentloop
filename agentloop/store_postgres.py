@@ -67,7 +67,7 @@ class PostgresTraceStore(InterventionStoreMixin):
             ) from exc
         if self.dsn:
             return psycopg.connect(self.dsn)
-        connect_kwargs: dict[str, str] = {}
+        connect_kwargs: dict[str, Any] = {}
         if self.password_file:
             connect_kwargs["password"] = _read_postgres_password(self.password_file)
         return psycopg.connect("", **connect_kwargs)

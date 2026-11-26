@@ -15,7 +15,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from agentloop.ranking import cluster_ranking, finalize_ranking
-from agentloop.savings import SavingsItem, select_compatible
+from agentloop.savings import SavingsItem, Selection, select_compatible
 from agentloop.store_keys import (
     verify_api_key_hash,
 )
@@ -328,9 +328,11 @@ def _build_optimization_queue(
     and ranking retains the same compatible-span accounting.
     """
     clusters: dict[tuple[str, str], dict[str, Any]] = {}
-    cluster_items: dict[tuple[str, str], dict[str, list[SavingsItem]]] = {}
-    members = {}
-    run_scopes, run_ids = {}, {}
+    # A scope is (project_id, run_id); project_id may be None.
+    cluster_items: dict[tuple[str, str], dict[tuple[Any, Any], list[SavingsItem]]] = {}
+    members: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    run_scopes: dict[tuple[str, str], set[tuple[Any, Any]]] = {}
+    run_ids: dict[tuple[str, str], set[Any]] = {}
     for finding in findings:
         key = (finding["type"], finding["title"])
         members.setdefault(key, []).append(finding)
@@ -391,7 +393,9 @@ def _build_optimization_queue(
             )
         )
 
-    selection_cache = {}
+    selection_cache: dict[
+        tuple[str, str], dict[tuple[Any, Any], tuple[list[SavingsItem], Selection]]
+    ] = {}
     for key, cluster in clusters.items():
         cluster["affected_runs"].sort()
         cluster["affected_run_refs"].sort(

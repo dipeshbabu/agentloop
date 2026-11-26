@@ -312,12 +312,12 @@ class _Model:
         }
         last = max(end_nodes, key=lambda node: (earliest[node], node))
         path: list[str] = []
-        node: str | None = last
-        while node is not None and node != "origin":
-            op_id = node[2:]
+        step: str | None = last
+        while step is not None and step != "origin":
+            op_id = step[2:]
             if op_id not in path:
                 path.append(op_id)
-            node = best_parent[node]
+            step = best_parent[step]
         path.reverse()
         return _Result(makespan, path, slack)
 

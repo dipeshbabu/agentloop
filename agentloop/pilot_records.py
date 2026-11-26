@@ -28,7 +28,7 @@ import re
 import statistics
 from collections.abc import Mapping, Sequence
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Literal, overload
 
 PILOT_SCHEMA = "agentloop.pilot_record/v1"
 METHOD_SCHEMA = "agentloop.method_result/v1"
@@ -42,6 +42,10 @@ class RecordError(ValueError):
     """A record is malformed or contains fields it must not."""
 
 
+@overload
+def _time(value: Any, label: str, *, optional: Literal[False] = False) -> datetime: ...
+@overload
+def _time(value: Any, label: str, *, optional: bool) -> datetime | None: ...
 def _time(value: Any, label: str, *, optional: bool = False) -> datetime | None:
     if value is None and optional:
         return None
@@ -77,14 +81,15 @@ def validate_pilot_record(record: Mapping[str, Any]) -> dict[str, Any]:
     if not isinstance(record.get("agentloop_version"), str):
         raise RecordError("agentloop_version is required")
     started = _time(record.get("started_at"), "started_at")
-    milestones = {}
+    milestones: dict[str, datetime | None] = {}
     for key in ("first_valid_trace_at", "first_useful_finding_at", "outcome_at"):
         moment = _time(record.get(key), key, optional=True)
         if moment is not None and moment < started:
             raise RecordError(f"{key} is before started_at")
         milestones[key] = moment
-    ordered = [milestones["first_valid_trace_at"], milestones["first_useful_finding_at"]]
-    if all(ordered) and ordered[1] < ordered[0]:
+    first_trace = milestones["first_valid_trace_at"]
+    first_finding = milestones["first_useful_finding_at"]
+    if first_trace is not None and first_finding is not None and first_finding < first_trace:
         raise RecordError("first_useful_finding_at is before first_valid_trace_at")
     outcome = record.get("outcome")
     if outcome not in OUTCOMES:
@@ -101,7 +106,7 @@ def validate_pilot_record(record: Mapping[str, Any]) -> dict[str, Any]:
     ):
         raise RecordError("effort_minutes must be a non-negative number")
 
-    def minutes(key):
+    def minutes(key: str) -> float | None:
         moment = milestones[key]
         return None if moment is None else round((moment - started).total_seconds() / 60, 2)
 
