@@ -139,6 +139,11 @@ trace, study, receipt, API and database schema versions.
 
 ### Changed
 
+- The roadmap records the outcome of the quality-constrained optimization
+  roadmap ([#394](https://github.com/dipeshbabu/agentloop/issues/394)). It maps
+  each workstream to its guide and checks each exit criterion against the
+  evidence. It also states that AgentLoop is neither a runtime enforcement layer,
+  a sandbox, nor an agent framework.
 - `agentloop/improvement.py` is split by stage into `improvement_capture`,
   `improvement_planning`, `improvement_decision` (`finish`) and
   `improvement_compare`. `agentloop.improvement` re-exports every name as the
