@@ -11,7 +11,7 @@ from enum import Enum
 from agentloop.savings import SavingsItem, select_compatible
 
 RANKING_KEY = "agentloop.ranking_inputs"
-RANKING_VERSION = "1.0"
+RANKING_VERSION = "1.1"
 SORT_FIELDS = (
     "priority",
     "impact",
@@ -57,7 +57,14 @@ _KEY = re.compile(r"[A-Za-z0-9_.:-]{1,96}\Z")
 # returned in full: each one carries its own ranking, so listing all of them
 # made the queue grow by about 1.4 KB per stored finding.
 MAX_LISTED_MEMBERS = 25
+# Requirements that are a quality prerequisite, not just a scalar input: the
+# finding's change is known to be able to cut answer quality, so only an
+# independent check that passed lets it rank among the other findings. In the
+# November 2026 optimization benchmark "route to a smaller model" ranked first
+# on every agent and cut answer quality on 31 of 75 held-out tasks.
+QUALITY_PREREQUISITES = {"smaller_model_quality_check": "passed"}
 ORDER = (
+    "quality_prerequisites_met",
     "ready_to_test",
     "confidence",
     "evidence",
@@ -298,6 +305,16 @@ def finding_ranking(finding, *, inputs=None, frequency=1):
         if component is None or component["value"] is None:
             missing.append(name)
     reasons = ["missing_input:" + name for name in sorted(missing)]
+    unmet = []
+    for name in needed:
+        if name not in QUALITY_PREREQUISITES:
+            continue
+        value = components[name]["value"]
+        if value != QUALITY_PREREQUISITES[name]:
+            unmet.append(name)
+            reasons.append(
+                ("quality_check_required:" if value is None else "quality_check_not_passed:") + name
+            )
     reasons.extend("invalid_input:" + name for name in sorted(invalid))
     if cost is None and components["cost"]["value"] is None:
         reasons.append("cost_opportunity_unavailable")
@@ -329,8 +346,22 @@ def finding_ranking(finding, *, inputs=None, frequency=1):
         "estimate_provenance": deepcopy(estimate) or None,
         "source_inputs": retained,
         "invalid_inputs": sorted(invalid),
+        "quality_prerequisites": _prerequisites(needed, unmet),
         "automatic_application_allowed": False,
     }
+
+
+def _prerequisites(needed, unmet):
+    return {
+        "required": sorted(name for name in set(needed) if name in QUALITY_PREREQUISITES),
+        "unmet": sorted(set(unmet)),
+    }
+
+
+def _unmet_prerequisites(rank):
+    # Rankings stored before version 1.1 carry no prerequisites.
+    unmet = _mapping(rank.get("quality_prerequisites")).get("unmet")
+    return bool(unmet) if isinstance(unmet, (list, tuple)) else False
 
 
 def _identity(item):
@@ -341,6 +372,7 @@ def _priority(item):
     rank = item["ranking"]
     value = {key: part["value"] for key, part in rank["components"].items()}
     return (
+        _unmet_prerequisites(rank),
         rank["status"] != "ready_to_test",
         -_CONFIDENCE.get(value["confidence"], 0),
         -_EVIDENCE.get(value["evidence"], 0),
@@ -537,6 +569,18 @@ def cluster_ranking(members, *, selection_cache=None):
         members_truncated=len(members) > len(listed),
         estimate_provenance=[rank["estimate_provenance"] for _, rank in listed],
         source_inputs={},
+        quality_prerequisites=_prerequisites(
+            [
+                name
+                for rank in ranks
+                for name in _mapping(rank.get("quality_prerequisites")).get("required", ())
+            ],
+            [
+                name
+                for rank in ranks
+                for name in _mapping(rank.get("quality_prerequisites")).get("unmet", ())
+            ],
+        ),
         selection={
             "optimal": all(selection.optimal for selection in totals),
             "algorithms": sorted({selection.algorithm for selection in totals}),

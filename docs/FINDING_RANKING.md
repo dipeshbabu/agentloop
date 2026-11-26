@@ -7,7 +7,8 @@ remain intact. Severity is a separate diagnostic field.
 
 Every diagnosis and stored queue item includes a versioned `ranking` object with
 components, units, input references, missing/invalid reasons and ordering rules.
-Default ordering compares, in sequence: test readiness, declared confidence,
+Default ordering compares, in sequence: unmet
+[quality prerequisites](#quality-prerequisites), test readiness, declared confidence,
 evidence strength, lower quality risk, observed run frequency, cumulative recorded
 span work, lower validation effort/cost, estimated latency/cost/token opportunity,
 then stable identity. Confidence/evidence tiers are ordinal categories, not
@@ -58,6 +59,54 @@ The core checks presence and provenance of these scalar inputs without knowing
 domain semantics. For example, a rule can require `validation_dataset`; its value
 and reference must then be provided before that finding is ready to test. The
 standard requirements cannot be removed by a rule.
+
+## Quality prerequisites
+
+Some changes can make an agent faster while giving worse answers. A rule marks
+these with a quality-prerequisite requirement. Today there is one:
+`smaller_model_quality_check`, declared by `route_to_smaller_model`. In the
+[November 2026 optimization benchmark](OPTIMIZATION_BENCHMARK.md) that finding
+ranked first on every agent, and applying it cut answer quality on 31 of 75
+held-out tasks.
+
+Until its value is the string `passed`, with a nonempty `source_ref`, such a
+finding:
+
+- ranks after every finding without an unmet prerequisite, whatever its
+  confidence, evidence or estimate (default `priority` order only);
+- is `needs_evidence_or_review`, with the reason
+  `quality_check_required:smaller_model_quality_check`, or
+  `quality_check_not_passed:...` for any other value such as `failed`;
+- lists the requirement in `ranking.quality_prerequisites.unmet`.
+
+Declare the result of an independent check, run on your own labeled tasks, that
+found no task worse with the smaller model. Point `source_ref` at that evidence:
+a [routing study](ROUTING_STUDY.md) result, a
+[structured quality report](STRUCTURED_QUALITY.md) hash, or a
+[guarded search](OPTIMIZATION_SEARCH.md) decision.
+
+```python
+trace.metadata["agentloop.ranking_inputs"] = {
+    "route_to_smaller_model": {
+        "smaller_model_quality_check": {
+            "value": "passed",
+            "kind": "declared",
+            "source_ref": "routing-study:answer-step:v3",
+        },
+    }
+}
+```
+
+A finding-ID entry opens the gate for that finding only. Routing receipts at
+`agentloop.model_routing` are not quality evidence: they check capabilities and
+context fit, not answers, so they never satisfy this requirement. A declaration is
+a trusted host statement for review, not proof. Opening the gate only lets the
+finding rank normally; it is still not applied automatically.
+
+A cluster in the optimization queue is gated while any member's prerequisite is
+unmet. Rankings stored under schema `1.0`, before this field existed, are sorted
+as before. Ranking schema `1.1` adds `quality_prerequisites` and puts
+`quality_prerequisites_met` first in `order`.
 
 ## Individual dimensions and surfaces
 
