@@ -6,6 +6,7 @@ from agentloop.autoinstrument import (
     instrument,
 )
 from agentloop.client import AgentLoopClient, AgentLoopClientError
+from agentloop.content_fingerprints import content_metadata, record_content
 from agentloop.decorators import trace_model, trace_tool, traceable
 from agentloop.doctor import run_doctor
 from agentloop.findings import build_diagnosis
@@ -111,6 +112,7 @@ __all__ = [
     "detect_integrations",
     "instrument",
     "build_value_report",
+    "content_metadata",
     "build_diagnosis",
     "build_patch_plan",
     "build_replay_report",
@@ -118,6 +120,7 @@ __all__ = [
     "get_last_error",
     "get_runtime_config",
     "init",
+    "record_content",
     "record_model_call",
     "record_tool_call",
     "reset_runtime",

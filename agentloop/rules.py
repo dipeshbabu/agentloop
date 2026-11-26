@@ -46,6 +46,8 @@ class RecommendationType(str, Enum):
     SEMANTIC_NO_PROGRESS = "semantic_no_progress"
     RETRY_USEFULNESS = "retry_usefulness"
     CONTEXT_RELEVANCE = "context_relevance"
+    UNCHANGED_OUTPUT = "unchanged_output"
+    REPEATED_RESULT = "repeated_result"
 
 
 @dataclass
@@ -388,6 +390,14 @@ def _semantic_cards(context, family):
     return semantic_candidates(context, family)
 
 
+def _content_cards(context, family):
+    from agentloop import content_rules
+
+    if family == "unchanged_output":
+        return content_rules.unchanged_output_cards(context.graph)
+    return content_rules.repeated_result_cards(context.graph)
+
+
 BUILTIN_RULES = (
     FindingRule("parallelize_tools", "1.2", lambda ctx: _parallelization_cards(ctx.graph)),
     FindingRule("cache_context", "1.1", lambda ctx: _context_cache_cards(ctx.report, ctx.graph)),
@@ -406,4 +416,6 @@ BUILTIN_RULES = (
     ),
     FindingRule("retry_usefulness", "1.0", lambda ctx: _semantic_cards(ctx, "retry_usefulness")),
     FindingRule("context_relevance", "1.0", lambda ctx: _semantic_cards(ctx, "context_relevance")),
+    FindingRule("unchanged_output", "1.0", lambda ctx: _content_cards(ctx, "unchanged_output")),
+    FindingRule("repeated_result", "1.0", lambda ctx: _content_cards(ctx, "repeated_result")),
 )

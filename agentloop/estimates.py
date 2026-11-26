@@ -84,6 +84,22 @@ ESTIMATORS = {
         ),
         (("latency_fraction", 0.40),),
     ),
+    "unchanged_output": Estimator(
+        "sum_duration_ms * latency_fraction",
+        (
+            "The step can be skipped or gated without lowering task quality.",
+            "Only calls that returned their input unchanged are counted as removable.",
+        ),
+        (("latency_fraction", 1.0),),
+    ),
+    "repeated_result": Estimator(
+        "sum_duration_ms * latency_fraction",
+        (
+            "The redundant calls and the calls that only prepared their inputs can be removed.",
+            "The removed calls ran serially, so their time comes off the runtime.",
+        ),
+        (("latency_fraction", 1.0),),
+    ),
 }
 
 
