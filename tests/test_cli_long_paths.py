@@ -13,11 +13,13 @@ from typer.testing import CliRunner
 
 from agentloop.entrypoint import app
 
-_BOX = re.compile(r"[─-╿│|]")
+_BOX = re.compile(r"[─-╿|]")
+_ANSI = re.compile(r"\x1b\[[0-9;]*m")
 
 
 def _clean(text: str) -> str:
-    return " ".join(_BOX.sub(" ", text).split())
+    # CI colours the output; a wrapped phrase then has colour codes between words.
+    return " ".join(_BOX.sub(" ", _ANSI.sub("", text)).split())
 
 
 @pytest.fixture
@@ -53,3 +55,23 @@ def test_missing_file_names_the_fix_before_the_path(deep):
     result = CliRunner().invoke(app, ["report", str(deep / "missing.json")], terminal_width=80)
     assert result.exit_code == 2
     assert "agentloop demo-all" in _clean(result.output)
+
+
+def test_os_errors_name_the_cause_once(deep, monkeypatch):
+    from pathlib import Path
+
+    path = deep / "input.json"
+    path.write_text("{}", encoding="utf-8")
+    original = Path.read_text
+
+    def deny(self, *args, **kwargs):
+        if self == path:
+            raise PermissionError(13, "Permission denied", str(path))
+        return original(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", deny)
+    result = CliRunner().invoke(app, ["report", str(path)], terminal_width=80)
+    clean = _clean(result.output)
+    assert "not readable as UTF-8 (Permission denied)" in clean
+    # The path appears once, after the reason, not repeated inside it.
+    assert clean.count("input.json") == 1

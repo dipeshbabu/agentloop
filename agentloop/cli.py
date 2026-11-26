@@ -83,6 +83,13 @@ def _remote_admin_client(api_url: str, admin_api_key: str | None) -> AgentLoopCl
     return AgentLoopClient(base_url=api_url, admin_api_key=resolved_admin_key)
 
 
+def _os_reason(exc: BaseException) -> str:
+    """An OS error's description without the file name it repeats."""
+    if isinstance(exc, OSError) and exc.strerror:
+        return exc.strerror
+    return str(exc)
+
+
 def _read_json_input(path: Path, *, param_hint: str) -> object:
     # Each message states the problem before the path: Rich's error box cannot
     # wrap a long path, so anything after it can be cut off with an ellipsis.
@@ -91,7 +98,7 @@ def _read_json_input(path: Path, *, param_hint: str) -> object:
         is_file = path.is_file() if exists else False
     except OSError as exc:
         raise typer.BadParameter(
-            f"Input file is not readable ({exc}): {path}", param_hint=param_hint
+            f"Input file is not readable ({_os_reason(exc)}): {path}", param_hint=param_hint
         ) from exc
 
     if not exists:
@@ -107,7 +114,8 @@ def _read_json_input(path: Path, *, param_hint: str) -> object:
         raw = path.read_text(encoding="utf-8")
     except (OSError, UnicodeError) as exc:
         raise typer.BadParameter(
-            f"Input file is not readable as UTF-8 ({exc}): {path}", param_hint=param_hint
+            f"Input file is not readable as UTF-8 ({_os_reason(exc)}): {path}",
+            param_hint=param_hint,
         ) from exc
     try:
         return json.loads(raw)
