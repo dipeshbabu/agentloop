@@ -9,6 +9,18 @@ trace, study, receipt, API and database schema versions.
 
 ### Added
 
+- An optimization benchmark and first-use pilot
+  ([#406](https://github.com/dipeshbabu/agentloop/issues/406)). It ran three
+  agents (math, extraction and coding) on local Qwen models against
+  independently labelled GSM8K, SQuAD v2 and HumanEval tasks, plus a negative
+  control. It compares no optimization, the existing top-ranked finding, a
+  manual switch to the smaller model, and the guarded optimization search, on 25
+  held-out tasks each. The top-ranked finding, a smaller model, cut quality on
+  31 of 75 tasks. The search rejected that change and recommended none, and no
+  finding caught the agents' redundant verification steps. One first-use pilot,
+  run by an AI coding agent at the maintainer's request, reached an accepted
+  change in 8.8 minutes. See [Optimization benchmark](docs/OPTIMIZATION_BENCHMARK.md)
+  and `research/optimization-benchmark-2026-11`.
 - `agentloop.system_telemetry`, optional and dependency-free:
   - `resource_span` records process CPU, resident memory and I/O per span,
     where the platform exposes them, with deterministic sampling.

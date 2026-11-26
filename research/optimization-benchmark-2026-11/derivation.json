@@ -1,0 +1,183 @@
+{
+  "families": {
+    "coding": {
+      "agentloop": {
+        "config": {},
+        "decision": {
+          "reason": "no intervention improved the primary objective without a quality regression",
+          "recommendation": null,
+          "status": "no_improvement"
+        },
+        "from_findings": {
+          "change0": [
+            "route_to_smaller_model"
+          ]
+        },
+        "interventions": {
+          "change0": {
+            "model": "small"
+          }
+        },
+        "overhead": {
+          "attempts": 12,
+          "elapsed_s": 220.870627,
+          "evaluation_s": 220.865655,
+          "measured_cost_usd": null
+        }
+      },
+      "diagnosis_and_baseline_s": 358.975,
+      "estimated_latency_savings_ms": {
+        "parallelize_tools": 0.0,
+        "route_to_smaller_model": 0.0
+      },
+      "heuristic": {
+        "config": {
+          "model": "small"
+        },
+        "finding": "route_to_smaller_model"
+      },
+      "seen_findings": {
+        "parallelize_tools": 1,
+        "route_to_smaller_model": 21
+      },
+      "top_findings": {
+        "parallelize_tools": 1,
+        "route_to_smaller_model": 9
+      }
+    },
+    "extraction": {
+      "agentloop": {
+        "config": {},
+        "decision": {
+          "reason": "no intervention improved the primary objective without a quality regression",
+          "recommendation": null,
+          "status": "no_improvement"
+        },
+        "from_findings": {
+          "change0": [
+            "route_to_smaller_model"
+          ]
+        },
+        "interventions": {
+          "change0": {
+            "model": "small"
+          }
+        },
+        "overhead": {
+          "attempts": 12,
+          "elapsed_s": 49.515564,
+          "evaluation_s": 49.514851,
+          "measured_cost_usd": null
+        }
+      },
+      "diagnosis_and_baseline_s": 79.52,
+      "estimated_latency_savings_ms": {
+        "route_to_smaller_model": 0.0
+      },
+      "heuristic": {
+        "config": {
+          "model": "small"
+        },
+        "finding": "route_to_smaller_model"
+      },
+      "seen_findings": {
+        "route_to_smaller_model": 30
+      },
+      "top_findings": {
+        "route_to_smaller_model": 10
+      }
+    },
+    "math": {
+      "agentloop": {
+        "config": {},
+        "decision": {
+          "reason": "no intervention improved the primary objective without a quality regression",
+          "recommendation": null,
+          "status": "no_improvement"
+        },
+        "from_findings": {
+          "change0": [
+            "route_to_smaller_model"
+          ],
+          "change1": [
+            "parallelize_tools"
+          ]
+        },
+        "interventions": {
+          "change0": {
+            "model": "small"
+          },
+          "change1": {
+            "reuse_calculations": true
+          }
+        },
+        "overhead": {
+          "attempts": 18,
+          "elapsed_s": 83.932143,
+          "evaluation_s": 83.930986,
+          "measured_cost_usd": null
+        }
+      },
+      "diagnosis_and_baseline_s": 80.312,
+      "estimated_latency_savings_ms": {
+        "batch_model_calls": 0.0,
+        "route_to_smaller_model": 0.0
+      },
+      "heuristic": {
+        "config": {
+          "model": "small"
+        },
+        "finding": "route_to_smaller_model"
+      },
+      "seen_findings": {
+        "batch_model_calls": 2,
+        "parallelize_tools": 1,
+        "route_to_smaller_model": 30
+      },
+      "top_findings": {
+        "batch_model_calls": 2,
+        "route_to_smaller_model": 8
+      }
+    }
+  },
+  "methods": {
+    "coding": {
+      "agentloop": {},
+      "heuristic": {
+        "model": "small"
+      },
+      "manual": {
+        "model": "small"
+      },
+      "none": {}
+    },
+    "extraction": {
+      "agentloop": {},
+      "heuristic": {
+        "model": "small"
+      },
+      "manual": {
+        "model": "small"
+      },
+      "none": {}
+    },
+    "extraction_single": {
+      "agentloop": {},
+      "heuristic": {},
+      "manual": {
+        "model": "small"
+      },
+      "none": {}
+    },
+    "math": {
+      "agentloop": {},
+      "heuristic": {
+        "model": "small"
+      },
+      "manual": {
+        "model": "small"
+      },
+      "none": {}
+    }
+  }
+}

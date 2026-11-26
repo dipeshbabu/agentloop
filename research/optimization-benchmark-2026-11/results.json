@@ -1,0 +1,384 @@
+{
+  "comparison": {
+    "development_rows_excluded": 0,
+    "held_out_workloads": 100,
+    "methods": [
+      {
+        "cost_known": 0,
+        "median_runtime_gain_ms": 1220.391,
+        "method": "agentloop",
+        "method_kind": "agentloop_pass",
+        "negative_controls": 25,
+        "negative_controls_improved": 13,
+        "quality_regressions": 0,
+        "runtime_known": 75,
+        "without_baseline": 0,
+        "workloads": 75
+      },
+      {
+        "cost_known": 0,
+        "median_runtime_gain_ms": 5410.972,
+        "method": "heuristic",
+        "method_kind": "heuristic_ranking",
+        "negative_controls": 25,
+        "negative_controls_improved": 15,
+        "quality_regressions": 31,
+        "runtime_known": 75,
+        "without_baseline": 0,
+        "workloads": 75
+      },
+      {
+        "cost_known": 0,
+        "median_runtime_gain_ms": 7711.438,
+        "method": "manual",
+        "method_kind": "manual",
+        "negative_controls": 25,
+        "negative_controls_improved": 10,
+        "quality_regressions": 31,
+        "runtime_known": 75,
+        "without_baseline": 0,
+        "workloads": 75
+      }
+    ],
+    "schema": "agentloop.method_result/v1",
+    "self_reported_rows_excluded": 0
+  },
+  "derivation": {
+    "families": {
+      "coding": {
+        "agentloop": {
+          "config": {},
+          "decision": {
+            "reason": "no intervention improved the primary objective without a quality regression",
+            "recommendation": null,
+            "status": "no_improvement"
+          },
+          "from_findings": {
+            "change0": [
+              "route_to_smaller_model"
+            ]
+          },
+          "interventions": {
+            "change0": {
+              "model": "small"
+            }
+          },
+          "overhead": {
+            "attempts": 12,
+            "elapsed_s": 220.870627,
+            "evaluation_s": 220.865655,
+            "measured_cost_usd": null
+          }
+        },
+        "diagnosis_and_baseline_s": 358.975,
+        "estimated_latency_savings_ms": {
+          "parallelize_tools": 0.0,
+          "route_to_smaller_model": 0.0
+        },
+        "heuristic": {
+          "config": {
+            "model": "small"
+          },
+          "finding": "route_to_smaller_model"
+        },
+        "seen_findings": {
+          "parallelize_tools": 1,
+          "route_to_smaller_model": 21
+        },
+        "top_findings": {
+          "parallelize_tools": 1,
+          "route_to_smaller_model": 9
+        }
+      },
+      "extraction": {
+        "agentloop": {
+          "config": {},
+          "decision": {
+            "reason": "no intervention improved the primary objective without a quality regression",
+            "recommendation": null,
+            "status": "no_improvement"
+          },
+          "from_findings": {
+            "change0": [
+              "route_to_smaller_model"
+            ]
+          },
+          "interventions": {
+            "change0": {
+              "model": "small"
+            }
+          },
+          "overhead": {
+            "attempts": 12,
+            "elapsed_s": 49.515564,
+            "evaluation_s": 49.514851,
+            "measured_cost_usd": null
+          }
+        },
+        "diagnosis_and_baseline_s": 79.52,
+        "estimated_latency_savings_ms": {
+          "route_to_smaller_model": 0.0
+        },
+        "heuristic": {
+          "config": {
+            "model": "small"
+          },
+          "finding": "route_to_smaller_model"
+        },
+        "seen_findings": {
+          "route_to_smaller_model": 30
+        },
+        "top_findings": {
+          "route_to_smaller_model": 10
+        }
+      },
+      "math": {
+        "agentloop": {
+          "config": {},
+          "decision": {
+            "reason": "no intervention improved the primary objective without a quality regression",
+            "recommendation": null,
+            "status": "no_improvement"
+          },
+          "from_findings": {
+            "change0": [
+              "route_to_smaller_model"
+            ],
+            "change1": [
+              "parallelize_tools"
+            ]
+          },
+          "interventions": {
+            "change0": {
+              "model": "small"
+            },
+            "change1": {
+              "reuse_calculations": true
+            }
+          },
+          "overhead": {
+            "attempts": 18,
+            "elapsed_s": 83.932143,
+            "evaluation_s": 83.930986,
+            "measured_cost_usd": null
+          }
+        },
+        "diagnosis_and_baseline_s": 80.312,
+        "estimated_latency_savings_ms": {
+          "batch_model_calls": 0.0,
+          "route_to_smaller_model": 0.0
+        },
+        "heuristic": {
+          "config": {
+            "model": "small"
+          },
+          "finding": "route_to_smaller_model"
+        },
+        "seen_findings": {
+          "batch_model_calls": 2,
+          "parallelize_tools": 1,
+          "route_to_smaller_model": 30
+        },
+        "top_findings": {
+          "batch_model_calls": 2,
+          "route_to_smaller_model": 8
+        }
+      }
+    },
+    "methods": {
+      "coding": {
+        "agentloop": {},
+        "heuristic": {
+          "model": "small"
+        },
+        "manual": {
+          "model": "small"
+        },
+        "none": {}
+      },
+      "extraction": {
+        "agentloop": {},
+        "heuristic": {
+          "model": "small"
+        },
+        "manual": {
+          "model": "small"
+        },
+        "none": {}
+      },
+      "extraction_single": {
+        "agentloop": {},
+        "heuristic": {},
+        "manual": {
+          "model": "small"
+        },
+        "none": {}
+      },
+      "math": {
+        "agentloop": {},
+        "heuristic": {
+          "model": "small"
+        },
+        "manual": {
+          "model": "small"
+        },
+        "none": {}
+      }
+    }
+  },
+  "schema": "agentloop.optimization_benchmark/v1",
+  "summary": {
+    "coding": {
+      "agentloop": {
+        "errors": 0,
+        "median_runtime_ms": 22938.1,
+        "model_calls": 68,
+        "quality_mean": 0.88,
+        "tasks": 25,
+        "tokens": 32024,
+        "total_runtime_s": 809.3
+      },
+      "heuristic": {
+        "errors": 0,
+        "median_runtime_ms": 5999.4,
+        "model_calls": 74,
+        "quality_mean": 0.52,
+        "tasks": 25,
+        "tokens": 29984,
+        "total_runtime_s": 240.1
+      },
+      "manual": {
+        "errors": 0,
+        "median_runtime_ms": 5572.9,
+        "model_calls": 74,
+        "quality_mean": 0.52,
+        "tasks": 25,
+        "tokens": 29984,
+        "total_runtime_s": 236.1
+      },
+      "none": {
+        "errors": 0,
+        "median_runtime_ms": 26629.6,
+        "model_calls": 68,
+        "quality_mean": 0.88,
+        "tasks": 25,
+        "tokens": 32024,
+        "total_runtime_s": 879.9
+      }
+    },
+    "extraction": {
+      "agentloop": {
+        "errors": 0,
+        "median_runtime_ms": 3487.2,
+        "model_calls": 75,
+        "quality_mean": 0.605,
+        "tasks": 25,
+        "tokens": 11950,
+        "total_runtime_s": 229.4
+      },
+      "heuristic": {
+        "errors": 0,
+        "median_runtime_ms": 2524.3,
+        "model_calls": 75,
+        "quality_mean": 0.441,
+        "tasks": 25,
+        "tokens": 12524,
+        "total_runtime_s": 174.6
+      },
+      "manual": {
+        "errors": 0,
+        "median_runtime_ms": 1313.1,
+        "model_calls": 75,
+        "quality_mean": 0.441,
+        "tasks": 25,
+        "tokens": 12524,
+        "total_runtime_s": 50.8
+      },
+      "none": {
+        "errors": 0,
+        "median_runtime_ms": 5242.3,
+        "model_calls": 75,
+        "quality_mean": 0.605,
+        "tasks": 25,
+        "tokens": 11950,
+        "total_runtime_s": 182.1
+      }
+    },
+    "extraction_single": {
+      "agentloop": {
+        "errors": 0,
+        "median_runtime_ms": 1272.6,
+        "model_calls": 25,
+        "quality_mean": 0.64,
+        "tasks": 25,
+        "tokens": 6196,
+        "total_runtime_s": 59.6
+      },
+      "heuristic": {
+        "errors": 0,
+        "median_runtime_ms": 1292.9,
+        "model_calls": 25,
+        "quality_mean": 0.64,
+        "tasks": 25,
+        "tokens": 6196,
+        "total_runtime_s": 79.9
+      },
+      "manual": {
+        "errors": 0,
+        "median_runtime_ms": 3454.7,
+        "model_calls": 25,
+        "quality_mean": 0.4558,
+        "tasks": 25,
+        "tokens": 6136,
+        "total_runtime_s": 123.0
+      },
+      "none": {
+        "errors": 0,
+        "median_runtime_ms": 2064.9,
+        "model_calls": 25,
+        "quality_mean": 0.64,
+        "tasks": 25,
+        "tokens": 6196,
+        "total_runtime_s": 90.1
+      }
+    },
+    "math": {
+      "agentloop": {
+        "errors": 0,
+        "median_runtime_ms": 4329.0,
+        "model_calls": 75,
+        "quality_mean": 0.64,
+        "tasks": 25,
+        "tokens": 11755,
+        "total_runtime_s": 197.5
+      },
+      "heuristic": {
+        "errors": 0,
+        "median_runtime_ms": 4149.5,
+        "model_calls": 55,
+        "quality_mean": 0.2,
+        "tasks": 25,
+        "tokens": 7406,
+        "total_runtime_s": 157.2
+      },
+      "manual": {
+        "errors": 0,
+        "median_runtime_ms": 934.0,
+        "model_calls": 55,
+        "quality_mean": 0.2,
+        "tasks": 25,
+        "tokens": 7406,
+        "total_runtime_s": 55.9
+      },
+      "none": {
+        "errors": 0,
+        "median_runtime_ms": 8390.4,
+        "model_calls": 75,
+        "quality_mean": 0.64,
+        "tasks": 25,
+        "tokens": 11755,
+        "total_runtime_s": 230.9
+      }
+    }
+  }
+}

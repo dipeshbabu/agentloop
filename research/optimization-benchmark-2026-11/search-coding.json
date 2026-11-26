@@ -1,0 +1,255 @@
+{
+  "attempts": [
+    {
+      "case": "HumanEval/99",
+      "evaluation_s": 50.001686,
+      "index": 0,
+      "interventions": [],
+      "metrics": {
+        "quality": 1.0,
+        "runtime_ms": 49198.344
+      },
+      "phase": "baseline",
+      "status": "ok"
+    },
+    {
+      "case": "HumanEval/101",
+      "evaluation_s": 24.468254,
+      "index": 1,
+      "interventions": [],
+      "metrics": {
+        "quality": 1.0,
+        "runtime_ms": 23883.418
+      },
+      "phase": "baseline",
+      "status": "ok"
+    },
+    {
+      "case": "HumanEval/30",
+      "evaluation_s": 20.617777,
+      "index": 2,
+      "interventions": [],
+      "metrics": {
+        "quality": 1.0,
+        "runtime_ms": 19926.068
+      },
+      "phase": "baseline",
+      "status": "ok"
+    },
+    {
+      "case": "HumanEval/123",
+      "evaluation_s": 46.555065,
+      "index": 3,
+      "interventions": [],
+      "metrics": {
+        "quality": 1.0,
+        "runtime_ms": 45340.536
+      },
+      "phase": "baseline",
+      "status": "ok"
+    },
+    {
+      "case": "HumanEval/66",
+      "evaluation_s": 20.293493,
+      "index": 4,
+      "interventions": [],
+      "metrics": {
+        "quality": 1.0,
+        "runtime_ms": 19839.554
+      },
+      "phase": "baseline",
+      "status": "ok"
+    },
+    {
+      "case": "HumanEval/92",
+      "evaluation_s": 13.279869,
+      "index": 5,
+      "interventions": [],
+      "metrics": {
+        "quality": 1.0,
+        "runtime_ms": 12677.102
+      },
+      "phase": "baseline",
+      "status": "ok"
+    },
+    {
+      "case": "HumanEval/99",
+      "evaluation_s": 8.241103,
+      "index": 6,
+      "interventions": [
+        "change0"
+      ],
+      "metrics": {
+        "quality": 0.0,
+        "runtime_ms": 7659.478
+      },
+      "phase": "single",
+      "status": "ok"
+    },
+    {
+      "case": "HumanEval/101",
+      "evaluation_s": 2.421355,
+      "index": 7,
+      "interventions": [
+        "change0"
+      ],
+      "metrics": {
+        "quality": 0.0,
+        "runtime_ms": 2118.553
+      },
+      "phase": "single",
+      "status": "ok"
+    },
+    {
+      "case": "HumanEval/30",
+      "evaluation_s": 5.800624,
+      "index": 8,
+      "interventions": [
+        "change0"
+      ],
+      "metrics": {
+        "quality": 1.0,
+        "runtime_ms": 5363.315
+      },
+      "phase": "single",
+      "status": "ok"
+    },
+    {
+      "case": "HumanEval/123",
+      "evaluation_s": 19.482535,
+      "index": 9,
+      "interventions": [
+        "change0"
+      ],
+      "metrics": {
+        "quality": 0.0,
+        "runtime_ms": 18783.179
+      },
+      "phase": "single",
+      "status": "ok"
+    },
+    {
+      "case": "HumanEval/66",
+      "evaluation_s": 4.674486,
+      "index": 10,
+      "interventions": [
+        "change0"
+      ],
+      "metrics": {
+        "quality": 1.0,
+        "runtime_ms": 4174.79
+      },
+      "phase": "single",
+      "status": "ok"
+    },
+    {
+      "case": "HumanEval/92",
+      "evaluation_s": 5.029408,
+      "index": 11,
+      "interventions": [
+        "change0"
+      ],
+      "metrics": {
+        "quality": 1.0,
+        "runtime_ms": 4297.043
+      },
+      "phase": "single",
+      "status": "ok"
+    }
+  ],
+  "candidates": [
+    {
+      "complete": true,
+      "failed_cases": [],
+      "interventions": [],
+      "means": {
+        "quality": 1.0,
+        "runtime_ms": 28477.503667
+      },
+      "quality_ok": true,
+      "quality_regressions": []
+    },
+    {
+      "complete": true,
+      "failed_cases": [],
+      "interventions": [
+        "change0"
+      ],
+      "means": {
+        "quality": 0.5,
+        "runtime_ms": 7066.059667
+      },
+      "quality_ok": false,
+      "quality_regressions": [
+        {
+          "case": "HumanEval/99",
+          "quality_drop": 1.0
+        },
+        {
+          "case": "HumanEval/101",
+          "quality_drop": 1.0
+        },
+        {
+          "case": "HumanEval/123",
+          "quality_drop": 1.0
+        }
+      ]
+    }
+  ],
+  "decision": {
+    "reason": "no intervention improved the primary objective without a quality regression",
+    "recommendation": null,
+    "status": "no_improvement"
+  },
+  "deployed": false,
+  "held_out": null,
+  "overhead": {
+    "attempts": 12,
+    "elapsed_s": 220.870627,
+    "evaluation_s": 220.865655,
+    "measured_cost_usd": null
+  },
+  "pareto": [
+    []
+  ],
+  "report_sha256": "94aa5a8d45d5ef26d8e36b208de611259b448855439d64ea85a0222dbedbfff6",
+  "schema": "agentloop.optimization_search/v1",
+  "selected": [],
+  "specification": {
+    "budget": {
+      "max_attempts": 120,
+      "max_cost_usd": null,
+      "max_elapsed_s": 21600
+    },
+    "held_out_cases": [
+      "HumanEval/57",
+      "HumanEval/56",
+      "HumanEval/39",
+      "HumanEval/162"
+    ],
+    "interventions": [
+      {
+        "conflicts_with": [],
+        "name": "change0"
+      }
+    ],
+    "max_combination_size": 3,
+    "objectives": [
+      {
+        "direction": "min",
+        "metric": "runtime_ms"
+      }
+    ],
+    "quality_floor": 0.0,
+    "seed": 406,
+    "tuning_cases": [
+      "HumanEval/99",
+      "HumanEval/101",
+      "HumanEval/30",
+      "HumanEval/123",
+      "HumanEval/66",
+      "HumanEval/92"
+    ]
+  },
+  "stop_reason": null
+}

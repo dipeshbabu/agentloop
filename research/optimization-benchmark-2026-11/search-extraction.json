@@ -1,0 +1,255 @@
+{
+  "attempts": [
+    {
+      "case": "squad-5ad14573645df0001a2d14b3",
+      "evaluation_s": 2.758769,
+      "index": 0,
+      "interventions": [],
+      "metrics": {
+        "quality": 1.0,
+        "runtime_ms": 2727.748
+      },
+      "phase": "baseline",
+      "status": "ok"
+    },
+    {
+      "case": "squad-5a638a2468151a001a92234c",
+      "evaluation_s": 2.763685,
+      "index": 1,
+      "interventions": [],
+      "metrics": {
+        "quality": 1.0,
+        "runtime_ms": 2762.409
+      },
+      "phase": "baseline",
+      "status": "ok"
+    },
+    {
+      "case": "squad-5acff69e77cf76001a686665",
+      "evaluation_s": 2.87467,
+      "index": 2,
+      "interventions": [],
+      "metrics": {
+        "quality": 1.0,
+        "runtime_ms": 2873.215
+      },
+      "phase": "baseline",
+      "status": "ok"
+    },
+    {
+      "case": "squad-5ad3bf63604f3c001a3fef5c",
+      "evaluation_s": 2.79206,
+      "index": 3,
+      "interventions": [],
+      "metrics": {
+        "quality": 1.0,
+        "runtime_ms": 2790.784
+      },
+      "phase": "baseline",
+      "status": "ok"
+    },
+    {
+      "case": "squad-5a551d87134fea001a0e1946",
+      "evaluation_s": 7.258786,
+      "index": 4,
+      "interventions": [],
+      "metrics": {
+        "quality": 0.0,
+        "runtime_ms": 6280.715
+      },
+      "phase": "baseline",
+      "status": "ok"
+    },
+    {
+      "case": "squad-57281c594b864d19001644a5",
+      "evaluation_s": 3.684368,
+      "index": 5,
+      "interventions": [],
+      "metrics": {
+        "quality": 1.0,
+        "runtime_ms": 3681.917
+      },
+      "phase": "baseline",
+      "status": "ok"
+    },
+    {
+      "case": "squad-5ad14573645df0001a2d14b3",
+      "evaluation_s": 3.339063,
+      "index": 6,
+      "interventions": [
+        "change0"
+      ],
+      "metrics": {
+        "quality": 0.0,
+        "runtime_ms": 3337.626
+      },
+      "phase": "single",
+      "status": "ok"
+    },
+    {
+      "case": "squad-5a638a2468151a001a92234c",
+      "evaluation_s": 7.109941,
+      "index": 7,
+      "interventions": [
+        "change0"
+      ],
+      "metrics": {
+        "quality": 1.0,
+        "runtime_ms": 6926.106
+      },
+      "phase": "single",
+      "status": "ok"
+    },
+    {
+      "case": "squad-5acff69e77cf76001a686665",
+      "evaluation_s": 5.878857,
+      "index": 8,
+      "interventions": [
+        "change0"
+      ],
+      "metrics": {
+        "quality": 0.0,
+        "runtime_ms": 5876.621
+      },
+      "phase": "single",
+      "status": "ok"
+    },
+    {
+      "case": "squad-5ad3bf63604f3c001a3fef5c",
+      "evaluation_s": 3.077388,
+      "index": 9,
+      "interventions": [
+        "change0"
+      ],
+      "metrics": {
+        "quality": 1.0,
+        "runtime_ms": 3075.952
+      },
+      "phase": "single",
+      "status": "ok"
+    },
+    {
+      "case": "squad-5a551d87134fea001a0e1946",
+      "evaluation_s": 2.064765,
+      "index": 10,
+      "interventions": [
+        "change0"
+      ],
+      "metrics": {
+        "quality": 0.0,
+        "runtime_ms": 2031.636
+      },
+      "phase": "single",
+      "status": "ok"
+    },
+    {
+      "case": "squad-57281c594b864d19001644a5",
+      "evaluation_s": 5.912499,
+      "index": 11,
+      "interventions": [
+        "change0"
+      ],
+      "metrics": {
+        "quality": 0.0,
+        "runtime_ms": 4126.532
+      },
+      "phase": "single",
+      "status": "ok"
+    }
+  ],
+  "candidates": [
+    {
+      "complete": true,
+      "failed_cases": [],
+      "interventions": [],
+      "means": {
+        "quality": 0.833333,
+        "runtime_ms": 3519.464667
+      },
+      "quality_ok": true,
+      "quality_regressions": []
+    },
+    {
+      "complete": true,
+      "failed_cases": [],
+      "interventions": [
+        "change0"
+      ],
+      "means": {
+        "quality": 0.333333,
+        "runtime_ms": 4229.078833
+      },
+      "quality_ok": false,
+      "quality_regressions": [
+        {
+          "case": "squad-5ad14573645df0001a2d14b3",
+          "quality_drop": 1.0
+        },
+        {
+          "case": "squad-5acff69e77cf76001a686665",
+          "quality_drop": 1.0
+        },
+        {
+          "case": "squad-57281c594b864d19001644a5",
+          "quality_drop": 1.0
+        }
+      ]
+    }
+  ],
+  "decision": {
+    "reason": "no intervention improved the primary objective without a quality regression",
+    "recommendation": null,
+    "status": "no_improvement"
+  },
+  "deployed": false,
+  "held_out": null,
+  "overhead": {
+    "attempts": 12,
+    "elapsed_s": 49.515564,
+    "evaluation_s": 49.514851,
+    "measured_cost_usd": null
+  },
+  "pareto": [
+    []
+  ],
+  "report_sha256": "015bcbfb2784ed4641550b7c70d776d9aec8a02ce6e0c190596ecf06b2ae4ffa",
+  "schema": "agentloop.optimization_search/v1",
+  "selected": [],
+  "specification": {
+    "budget": {
+      "max_attempts": 120,
+      "max_cost_usd": null,
+      "max_elapsed_s": 21600
+    },
+    "held_out_cases": [
+      "squad-5ad3bce5604f3c001a3feefd",
+      "squad-572655e5f1498d1400e8dc5e",
+      "squad-5a3e2a95378766001a0024b1",
+      "squad-5a638d2768151a001a922372"
+    ],
+    "interventions": [
+      {
+        "conflicts_with": [],
+        "name": "change0"
+      }
+    ],
+    "max_combination_size": 3,
+    "objectives": [
+      {
+        "direction": "min",
+        "metric": "runtime_ms"
+      }
+    ],
+    "quality_floor": 0.0,
+    "seed": 406,
+    "tuning_cases": [
+      "squad-5ad14573645df0001a2d14b3",
+      "squad-5a638a2468151a001a92234c",
+      "squad-5acff69e77cf76001a686665",
+      "squad-5ad3bf63604f3c001a3fef5c",
+      "squad-5a551d87134fea001a0e1946",
+      "squad-57281c594b864d19001644a5"
+    ]
+  },
+  "stop_reason": null
+}

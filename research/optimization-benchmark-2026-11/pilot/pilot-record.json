@@ -1,0 +1,43 @@
+{
+  "schema": "agentloop.pilot_record/v1",
+  "participant": "ai-agent-01",
+  "participant_kind": "ai_coding_agent",
+  "consent_ref": "maintainer-instruction-2026-11-26 (run the pilot as an AI participant)",
+  "application_category": "retrieval_qa",
+  "agentloop_version": "0.2.10",
+  "started_at": "2026-11-26T10:50:40+00:00",
+  "first_valid_trace_at": "2026-11-26T10:53:19+00:00",
+  "first_useful_finding_at": "2026-11-26T10:53:40+00:00",
+  "outcome": "accepted",
+  "outcome_at": "2026-11-26T10:59:30+00:00",
+  "failed_steps": [
+    "Recording eight questions in one trace made each question's calls look like a runaway loop: two high-confidence loop-guardrail findings were false positives.",
+    "Batch repeated chat calls was a false positive: the three calls per question depend on each other.",
+    "The plain traceable decorator recorded no token counts (input tokens 0) for local llama.cpp calls."
+  ],
+  "assistance": [],
+  "effort_minutes": 9,
+  "limits": "The participant is the AI agent that built AgentLoop and knows its documentation; this is not independent developer adoption evidence. Eight held-out questions; one baseline run was a 180 s cold-start outlier.",
+  "evidence": {
+    "useful_finding": "Investigate repeated `lookup` tool calls (low confidence) pointed at a second lookup with a model-rephrased query.",
+    "change": "Removed the rephrase model call and the second lookup.",
+    "held_out": {
+      "questions": 8,
+      "baseline_f1": 0.583,
+      "candidate_f1": 0.708,
+      "baseline_runtime_ms": [
+        179690,
+        21814
+      ],
+      "candidate_runtime_ms": [
+        13050,
+        13238
+      ],
+      "model_calls_per_run": {
+        "baseline": 24,
+        "candidate": 16
+      }
+    },
+    "quality_source": "SQuAD v2 dev answers (CC BY-SA 4.0), held back from the agent"
+  }
+}

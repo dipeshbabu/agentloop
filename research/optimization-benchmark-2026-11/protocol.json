@@ -1,0 +1,307 @@
+{
+  "code": {
+    "__init__.py": "d8fb0be6784e0f41598b4931899d6eb8e5c0d66c991aeedec0e05568124fae31",
+    "agents.py": "e916e1810a1e6dd72b1a4239ed803aa7a055f3fcdee04952b4d389cc621df961",
+    "model.py": "0cc57dedabc977c94e8ad898ae7fd61348df9003149757a41dd64487b1ab6922",
+    "run.py": "510f0ad880d3338f2c185b39403d2cc75236d357b235b6347868aaf25a3314b1",
+    "scoring.py": "879ab1064dd3a614efd95bde6b1681800a7877621c11f33bffd58aa63e8cf19c"
+  },
+  "defaults": {
+    "coding": {
+      "max_repairs": 3,
+      "self_test": true,
+      "verify_answer": true
+    },
+    "extraction": {
+      "parallel_retrieval": false,
+      "rephrase_retrieval": true,
+      "verify_answer": true
+    },
+    "extraction_single": {},
+    "math": {
+      "history": "full",
+      "max_parse_retries": 2,
+      "max_steps": 6,
+      "reuse_calculations": false,
+      "verify_answer": true
+    }
+  },
+  "frozen_at": "2026-11-26T09:25:12Z",
+  "manual": {
+    "model": "small"
+  },
+  "mapping": {
+    "cache_context": {
+      "math": {
+        "history": "recent"
+      }
+    },
+    "context_relevance": {
+      "math": {
+        "history": "recent"
+      }
+    },
+    "low_contribution": {
+      "coding": {
+        "verify_answer": false
+      },
+      "extraction": {
+        "rephrase_retrieval": false,
+        "verify_answer": false
+      },
+      "math": {
+        "verify_answer": false
+      }
+    },
+    "parallelize_tools": {
+      "extraction": {
+        "parallel_retrieval": true
+      },
+      "math": {
+        "reuse_calculations": true
+      }
+    },
+    "remove_retry_loop": {
+      "coding": {
+        "max_repairs": 1
+      },
+      "math": {
+        "max_parse_retries": 0
+      }
+    },
+    "retry_usefulness": {
+      "coding": {
+        "max_repairs": 1
+      },
+      "math": {
+        "max_parse_retries": 0
+      }
+    },
+    "route_to_smaller_model": {
+      "*": {
+        "model": "small"
+      }
+    },
+    "runaway_loop": {
+      "coding": {
+        "max_repairs": 1
+      },
+      "math": {
+        "max_steps": 4
+      }
+    },
+    "semantic_no_progress": {
+      "coding": {
+        "max_repairs": 1
+      },
+      "math": {
+        "max_steps": 4
+      }
+    },
+    "semantic_redundancy": {
+      "coding": {
+        "verify_answer": false
+      },
+      "extraction": {
+        "rephrase_retrieval": false,
+        "verify_answer": false
+      },
+      "math": {
+        "verify_answer": false
+      }
+    },
+    "tool_oscillation": {
+      "math": {
+        "max_steps": 4
+      }
+    }
+  },
+  "models": {
+    "large": {
+      "file": "Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
+      "sha256": "3605803b982cb64aead44f6c1b2ae36e3acdb41d8e46c8a94c6533bc4c67e597",
+      "url": "http://127.0.0.1:8766"
+    },
+    "small": {
+      "file": "qwen2.5-1.5b-instruct-q4_k_m.gguf",
+      "sha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+      "url": "http://127.0.0.1:8767"
+    }
+  },
+  "schema": "agentloop.optimization_benchmark/v1",
+  "seed": 406,
+  "sizes": {
+    "held_out": 25,
+    "tuning": 6,
+    "validation": 4
+  },
+  "sources": {
+    "HumanEval.jsonl.gz": "b796127e635a67f93fb35c04f4cb03cf06f38c8072ee7cee8833d7bee06979ef",
+    "gsm8k-LICENSE.txt": "86bbb73e855821d7c401912fd4bf82e34313e6e3b6fd6f909f2b6cc9e209a53b",
+    "gsm8k-test.jsonl": "3730d312f6e3440559ace48831e51066acaca737f6eabec99bccb9e4b3c39d14",
+    "human-eval-LICENSE.txt": "bcba3de214851cce46ed5af42d6698044616eeace887c3231bc7a20474ab639e",
+    "squad-dev-v2.0.json": "80a5225e94905956a6446d296ca1093975c4d3b3260f1d6c8f68bc2ab77182d8"
+  },
+  "splits": {
+    "coding": {
+      "held_out": [
+        "HumanEval/71",
+        "HumanEval/110",
+        "HumanEval/97",
+        "HumanEval/119",
+        "HumanEval/60",
+        "HumanEval/152",
+        "HumanEval/32",
+        "HumanEval/46",
+        "HumanEval/106",
+        "HumanEval/137",
+        "HumanEval/143",
+        "HumanEval/23",
+        "HumanEval/161",
+        "HumanEval/52",
+        "HumanEval/29",
+        "HumanEval/48",
+        "HumanEval/21",
+        "HumanEval/93",
+        "HumanEval/68",
+        "HumanEval/129",
+        "HumanEval/11",
+        "HumanEval/134",
+        "HumanEval/104",
+        "HumanEval/33",
+        "HumanEval/95"
+      ],
+      "tuning": [
+        "HumanEval/99",
+        "HumanEval/101",
+        "HumanEval/30",
+        "HumanEval/123",
+        "HumanEval/66",
+        "HumanEval/92"
+      ],
+      "validation": [
+        "HumanEval/57",
+        "HumanEval/56",
+        "HumanEval/39",
+        "HumanEval/162"
+      ]
+    },
+    "extraction": {
+      "held_out": [
+        "squad-5a57fb62770dc0001aeeff10",
+        "squad-5ad26367d7d075001a4290ff",
+        "squad-572881704b864d1900164a52",
+        "squad-5727d0f73acd2414000ded13",
+        "squad-5733f309d058e614000b664a",
+        "squad-5a38bd58a4b263001a8c18ed",
+        "squad-572856beff5b5019007da194",
+        "squad-5a8937553b2508001a72a52a",
+        "squad-57287fec4b864d1900164a3d",
+        "squad-57269cc3dd62a815002e8b12",
+        "squad-572fca7eb2c2fd1400568476",
+        "squad-5ad271c2d7d075001a429473",
+        "squad-56de3f784396321400ee26fc",
+        "squad-5ad41733604f3c001a400381",
+        "squad-5acfe89777cf76001a686411",
+        "squad-57111380a58dae1900cd6bda",
+        "squad-5ad3a733604f3c001a3feaca",
+        "squad-5a6ce6b54eec6b001a80a6a8",
+        "squad-572ffbaa947a6a140053cee8",
+        "squad-5ad3cb62604f3c001a3ff114",
+        "squad-57287ccb2ca10214002da3db",
+        "squad-572758e0f1498d1400e8f6b0",
+        "squad-571163172419e314009555eb",
+        "squad-5a55242b134fea001a0e1981",
+        "squad-5ad2b3bcd7d075001a429fa7"
+      ],
+      "tuning": [
+        "squad-5ad14573645df0001a2d14b3",
+        "squad-5a638a2468151a001a92234c",
+        "squad-5acff69e77cf76001a686665",
+        "squad-5ad3bf63604f3c001a3fef5c",
+        "squad-5a551d87134fea001a0e1946",
+        "squad-57281c594b864d19001644a5"
+      ],
+      "validation": [
+        "squad-5ad3bce5604f3c001a3feefd",
+        "squad-572655e5f1498d1400e8dc5e",
+        "squad-5a3e2a95378766001a0024b1",
+        "squad-5a638d2768151a001a922372"
+      ]
+    },
+    "extraction_single": {
+      "held_out": [
+        "squad-5a56496b6349e2001acdcd07",
+        "squad-5a67b94bf038b7001ab0c447",
+        "squad-5725cf3238643c19005acd65",
+        "squad-572ffd75b2c2fd14005686e5",
+        "squad-57111b95a58dae1900cd6c50",
+        "squad-5a82458131013a001a33538b",
+        "squad-5ad27f33d7d075001a429752",
+        "squad-5705e63175f01819005e7723",
+        "squad-5ad27f33d7d075001a429753",
+        "squad-5ad3a1cd604f3c001a3fe9f5",
+        "squad-5725edfe38643c19005acea0",
+        "squad-5ad28253d7d075001a429836",
+        "squad-5ad139b2645df0001a2d1295",
+        "squad-5ad04f7977cf76001a686fb8",
+        "squad-571ccfbadd7acb1400e4c165",
+        "squad-572a18a4af94a219006aa7e0",
+        "squad-5729a3716aef05140015506c",
+        "squad-5728809f2ca10214002da40c",
+        "squad-5a669a2cf038b7001ab0c046",
+        "squad-5a2c30dabfd06b001a5aea29",
+        "squad-5ad257e2d7d075001a428d98",
+        "squad-572699db5951b619008f7799",
+        "squad-5729f799af94a219006aa709",
+        "squad-5a58cfd63e1742001a15ce36",
+        "squad-5a58feb63e1742001a15cf32"
+      ]
+    },
+    "math": {
+      "held_out": [
+        "gsm8k-1162",
+        "gsm8k-244",
+        "gsm8k-848",
+        "gsm8k-482",
+        "gsm8k-43",
+        "gsm8k-407",
+        "gsm8k-1304",
+        "gsm8k-139",
+        "gsm8k-773",
+        "gsm8k-631",
+        "gsm8k-653",
+        "gsm8k-747",
+        "gsm8k-779",
+        "gsm8k-988",
+        "gsm8k-1059",
+        "gsm8k-40",
+        "gsm8k-1276",
+        "gsm8k-925",
+        "gsm8k-251",
+        "gsm8k-965",
+        "gsm8k-270",
+        "gsm8k-47",
+        "gsm8k-891",
+        "gsm8k-470",
+        "gsm8k-202"
+      ],
+      "tuning": [
+        "gsm8k-1164",
+        "gsm8k-644",
+        "gsm8k-234",
+        "gsm8k-1208",
+        "gsm8k-723",
+        "gsm8k-496"
+      ],
+      "validation": [
+        "gsm8k-120",
+        "gsm8k-548",
+        "gsm8k-907",
+        "gsm8k-715"
+      ]
+    }
+  },
+  "tasks_sha256": "d49e09550adb1dc5bbd9b9d3a9e41de3b7fca25a940e68677ee05611a0324554",
+  "unseen_application": "coding"
+}
