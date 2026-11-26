@@ -9,6 +9,12 @@ trace, study, receipt, API and database schema versions.
 
 ### Fixed
 
+- `agentloop mcp` now honours `notifications/cancelled` for a running tool call.
+  The stdio loop used to run each call to completion before reading the next
+  message, so a cancellation arrived only after the call had finished. Tool
+  calls now run alongside the reader, other requests such as `ping` are
+  answered meanwhile, and a cancelled request gets no response, as the MCP
+  specification asks.
 - CLI input errors now state the problem before the file path. Rich's error box
   can't wrap a long path, so with a deep path the reason, such as "must contain
   at least one case" or the JSON error position, was cut off with an ellipsis.

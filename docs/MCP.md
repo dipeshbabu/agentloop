@@ -71,8 +71,11 @@ and reports accepted or rejected. Your checkout itself is never edited.
   written to manipulate an agent. The server never acts on trace content, and
   no trace content can enable execution.
 - **Time limits.** Each tool call stops after `--timeout` seconds (default 60).
-  A client can cancel a request with `notifications/cancelled`. Tool failures
-  are reported as tool errors without internal detail.
+  A client can cancel a running request with `notifications/cancelled`. Tool
+  calls run alongside the message reader, so the cancellation is seen while the
+  call is still running. A cancelled request gets no response, as the MCP
+  specification asks. Tool failures are reported as tool errors without
+  internal detail.
 
 ## Protocol
 
