@@ -84,18 +84,20 @@ def _remote_admin_client(api_url: str, admin_api_key: str | None) -> AgentLoopCl
 
 
 def _read_json_input(path: Path, *, param_hint: str) -> object:
+    # Each message states the problem before the path: Rich's error box cannot
+    # wrap a long path, so anything after it can be cut off with an ellipsis.
     try:
         exists = path.exists()
         is_file = path.is_file() if exists else False
     except OSError as exc:
         raise typer.BadParameter(
-            f"Input file is not readable: {path} ({exc})", param_hint=param_hint
+            f"Input file is not readable ({exc}): {path}", param_hint=param_hint
         ) from exc
 
     if not exists:
         raise typer.BadParameter(
-            f"Input file does not exist: {path}. "
-            "Generate synthetic traces explicitly with `agentloop demo` or `agentloop demo-all`.",
+            "Input file does not exist. Generate synthetic traces explicitly with "
+            f"`agentloop demo` or `agentloop demo-all`. Path: {path}",
             param_hint=param_hint,
         )
     if not is_file:
@@ -105,14 +107,14 @@ def _read_json_input(path: Path, *, param_hint: str) -> object:
         raw = path.read_text(encoding="utf-8")
     except (OSError, UnicodeError) as exc:
         raise typer.BadParameter(
-            f"Input file is not readable as UTF-8: {path} ({exc})", param_hint=param_hint
+            f"Input file is not readable as UTF-8 ({exc}): {path}", param_hint=param_hint
         ) from exc
     try:
         return json.loads(raw)
     except json.JSONDecodeError as exc:
         raise typer.BadParameter(
-            f"Input file is not valid JSON: {path} ({exc.msg} at line {exc.lineno}, "
-            f"column {exc.colno})",
+            f"Input file is not valid JSON ({exc.msg} at line {exc.lineno}, "
+            f"column {exc.colno}): {path}",
             param_hint=param_hint,
         ) from exc
 
@@ -141,7 +143,7 @@ def _load_trace(
         return AgentTrace.from_dict(payload)
     except (AttributeError, KeyError, TypeError, ValueError) as exc:
         raise typer.BadParameter(
-            f"Input file is not a valid {format_name} trace: {path} ({exc})",
+            f"Input file is not a valid {format_name} trace ({exc}): {path}",
             param_hint=param_hint,
         ) from exc
 
@@ -164,7 +166,7 @@ def _build_quality_report_from_file(
         )
     except (OSError, UnicodeError, QualityValidationError) as exc:
         raise typer.BadParameter(
-            f"Invalid quality fixture file: {path} ({exc})",
+            f"Invalid quality fixture file ({exc}): {path}",
             param_hint=param_hint,
         ) from exc
 

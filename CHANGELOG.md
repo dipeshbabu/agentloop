@@ -7,6 +7,12 @@ trace, study, receipt, API and database schema versions.
 
 ## [Unreleased]
 
+### Fixed
+
+- CLI input errors now state the problem before the file path. Rich's error box
+  can't wrap a long path, so with a deep path the reason, such as "must contain
+  at least one case" or the JSON error position, was cut off with an ellipsis.
+
 ## [0.3.0] - 2026-11-26
 
 ### Added
