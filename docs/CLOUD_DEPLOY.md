@@ -19,7 +19,7 @@ From AgentLoop 0.2.7, every release publishes an image to GitHub Container
 Registry, built from the validated release tag:
 
 ```bash
-docker pull ghcr.io/dipeshbabu/agentloop:0.2.10
+docker pull ghcr.io/dipeshbabu/agentloop:0.3.0
 ```
 
 The image runs as a non-root user. Its default command starts the API on port
@@ -62,7 +62,7 @@ reachable only through Caddy or the private Compose network.
 ### Configure and start
 
 ```bash
-git clone --depth 1 --branch v0.2.10 https://github.com/dipeshbabu/agentloop.git
+git clone --depth 1 --branch v0.3.0 https://github.com/dipeshbabu/agentloop.git
 cd agentloop
 cp deploy/.env.example deploy/.env
 ```
@@ -204,9 +204,9 @@ These deployments are not exercised in CI. The same image and settings apply:
    Artifact Registry and App Runner from Amazon ECR. Copy the image there:
 
    ```bash
-   docker pull ghcr.io/dipeshbabu/agentloop:0.2.10
-   docker tag ghcr.io/dipeshbabu/agentloop:0.2.10 REGISTRY/agentloop:0.2.10
-   docker push REGISTRY/agentloop:0.2.10
+   docker pull ghcr.io/dipeshbabu/agentloop:0.3.0
+   docker tag ghcr.io/dipeshbabu/agentloop:0.3.0 REGISTRY/agentloop:0.3.0
+   docker push REGISTRY/agentloop:0.3.0
    ```
 
 2. Run the API with container port 8000 and its default command, and set:

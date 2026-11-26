@@ -5,6 +5,42 @@ separately from the Python package. Upgrade it in your application with
 `npm install agentloop-profiler@latest`. Native trace schema 1.1 and API v1,
 not package versions, determine compatibility with the Python CLI and server.
 
+Version `0.3.0` adds the quality-constrained optimization toolkit. Everything
+in it is opt-in, and existing traces, API v1, native trace schema 1.1 and the
+database migration IDs are unchanged. No stored-data rewrite is needed. What can
+change for existing users:
+
+- **Ranking.** `route_to_smaller_model` (rule 1.3) now ranks after every other
+  finding until the ranking inputs declare `smaller_model_quality_check:
+  passed`. Its title now reads "Check quality before routing ...". Finding IDs
+  keep their previous values. The ranking version is 1.1.
+- **New rules on opt-in data.** `unchanged_output` and `repeated_result`
+  report only on traces that carry content fingerprints from `record_content`.
+  Other traces see no new findings.
+- **Module layout.** `agentloop.store`, `agentloop.cli`, `agentloop.improvement`
+  and `dashboard/app.py` were split into smaller modules. Every public import
+  still works. Code that monkeypatched implementation details must patch the
+  module that now holds them:
+  - `agentloop.store.apply_sqlite_migrations` and `sqlite3.connect` are in
+    `agentloop.store_sqlite`;
+  - `verify_api_key_hash` lookups for both stores are in `agentloop.store_common`;
+  - `agentloop.improvement._invoke` is `agentloop.improvement_capture._invoke`.
+- **New, opt-in modules:**
+  - [source provenance](SOURCE_PROVENANCE.md);
+  - the [execution IR](EXECUTION_IR.md);
+  - [timing sensitivity](TIMING_SENSITIVITY.md);
+  - the [transformation registry](TRANSFORMATIONS.md);
+  - [request-local reuse](REQUEST_REUSE.md);
+  - [schedule compilation](SCHEDULE_COMPILER.md);
+  - [retry and loop passes](RETRY_PASSES.md);
+  - the [optimization search](OPTIMIZATION_SEARCH.md);
+  - [conditioned calibration](CONDITIONED_CALIBRATION.md);
+  - the `agentloop mcp` [server](MCP.md);
+  - [system telemetry](SYSTEM_TELEMETRY.md);
+  - [content fingerprints](CONTENT_FINGERPRINTS.md).
+
+  None of them changes what existing code records or executes.
+
 Version `0.2.0` adds the guided `improve init`, `capture`, `start` and `finish`
 workflow. Python 3.11 remains the minimum. Existing explicit `--tasks FILE`
 commands and runner argv remain valid; `agentloop.toml` is optional data-only
