@@ -26,7 +26,7 @@ resources:
 images:
   - name: agentloop
     newName: ghcr.io/dipeshbabu/agentloop
-    newTag: "0.2.10"
+    newTag: "0.3.0"
 
 configMapGenerator:
   - name: agentloop-config

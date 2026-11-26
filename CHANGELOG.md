@@ -7,6 +7,8 @@ trace, study, receipt, API and database schema versions.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-26
+
 ### Added
 
 - Opt-in content fingerprints and two deterministic finding rules that use them.
@@ -695,7 +697,8 @@ trace, study, receipt, API and database schema versions.
 - Optional live-provider validation, Harbor post-job plugins, active approval
   resolution and research trajectory export remain outside this release.
 
-[Unreleased]: https://github.com/dipeshbabu/agentloop/compare/v0.2.10...HEAD
+[Unreleased]: https://github.com/dipeshbabu/agentloop/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/dipeshbabu/agentloop/compare/v0.2.10...v0.3.0
 [0.2.10]: https://github.com/dipeshbabu/agentloop/compare/v0.2.9...v0.2.10
 [0.2.9]: https://github.com/dipeshbabu/agentloop/compare/v0.2.8...v0.2.9
 [0.2.8]: https://github.com/dipeshbabu/agentloop/compare/v0.2.7...v0.2.8
