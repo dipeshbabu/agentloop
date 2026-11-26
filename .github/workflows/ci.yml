@@ -261,6 +261,11 @@ jobs:
         run: |
           uv run --frozen python scripts/benchmark_findings.py examples/finding_benchmark_corpus.json --split evaluation --source-revision "$GITHUB_SHA" --baseline examples/finding_benchmark_baseline.json --out runs/finding-benchmark
 
+      - name: Content fingerprint finding regression gate
+        if: matrix.python-version == '3.13'
+        run: |
+          uv run --frozen python scripts/benchmark_findings.py examples/finding_benchmark_content_corpus.json --split evaluation --source-revision "$GITHUB_SHA" --baseline examples/finding_benchmark_content_baseline.json --out runs/finding-benchmark-content
+
       - name: Scale regression check
         # 2,000 stored traces plus other projects. Fails if any store query,
         # API route or dashboard page errors or is slow, or if an API response

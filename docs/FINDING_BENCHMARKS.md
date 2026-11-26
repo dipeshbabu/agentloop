@@ -152,6 +152,58 @@ Limits that apply to both rows:
 - Rules absent from this small corpus have no claimed precision or release coverage.
 - Independent application-owned labels are still needed to estimate field accuracy.
 
+## Content fingerprint corpus
+
+The [content fingerprint rules](CONTENT_FINGERPRINTS.md), `unchanged_output` and
+`repeated_result`, have a separate corpus,
+[`finding_benchmark_content_corpus.json`](../examples/finding_benchmark_content_corpus.json).
+It has its own frozen policy, "content fingerprint rules" 1.0, so the main
+corpus and its archived baseline above are unchanged. CI gates it the same way,
+against [`finding_benchmark_content_baseline.json`](../examples/finding_benchmark_content_baseline.json).
+
+It has 15 synthetic cases: 2 development cases and 13 evaluation cases, built by
+`scripts/build_finding_corpus.py --corpus content`. Of the 13 evaluation cases,
+4 are labeled opportunities, 5 are known negatives, 2 are unknown and 2 are
+ambiguous. They cover:
+
+- A trailing check that returned its draft unchanged, once and across four tasks.
+- Checks that changed the draft, that changed most drafts, or that the caller
+  marks as required.
+- A rephrased retrieval that found nothing new, including one whose rephrased
+  query another step also used.
+- A second retrieval that found a new passage, and passages that repeat only
+  across separate tasks.
+- Traces with no fingerprints (unknown), a check that changed only letter case,
+  and a retrieval that returned the same passages in a different order (ambiguous).
+
+How it was made, in order:
+
+1. The rule thresholds were fixed while writing the unit tests, before any
+   corpus case existed.
+2. The labels were written from each fixture's step list, without running the rules.
+3. The development split was run once. Both cases matched their labels, and
+   nothing was changed.
+4. The evaluation split was run once, at source revision
+   `3658d5ecd461c0bacad5f7fb5527dc91a5a5b09d`. That result is the baseline.
+
+The same author wrote the rules and the labels, so this is a regression suite for
+the rules' contract, not an estimate of their accuracy on real agents. No task
+from the [optimization benchmark](OPTIMIZATION_BENCHMARK.md) was used, and its
+held-out tasks were neither run nor read. Its saved traces have no fingerprints,
+so these rules abstain on them.
+
+<!-- content-finding-benchmark-overall:start -->
+| Snapshot | Rule versions | Planned cases | Precision (correct / scored findings) | Known negatives with any finding | Cases with a finding | Unscored findings | Missed opportunities |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Recorded baseline (`3658d5e`) | 1.0 | 13 | 4 / 4 (1.00) | 0 / 5 (0.00) | 5 / 13 (0.38) | 1 | 0 |
+| Current rules | 1.0 | 13 | 4 / 4 (1.00) | 0 / 5 (0.00) | 5 / 13 (0.38) | 1 | 0 |
+<!-- content-finding-benchmark-overall:end -->
+
+Corpus hash: `ab7f2530fa31085745ffe9aea710d13fde992934bae8e315d2d8227eb3ca050a`.
+
+The unscored finding is the reordered retrieval. The rule treats it as
+redundant, and the label leaves open whether the order mattered.
+
 ## Release gate and explicit review
 
 CI runs the deterministic suite and compares against the

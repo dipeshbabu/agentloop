@@ -103,6 +103,9 @@ reliable: identical settings gave identical quality on all 100 held-out tasks.
 - **Recall.** No finding pointed at the verification calls or the rephrase
   retrieval. The rules that can see redundant or low-contribution steps need
   saved semantic judgments, and this benchmark had none.
+  Since then, [content fingerprints](CONTENT_FINGERPRINTS.md) give two
+  deterministic rules for these patterns when the application records them.
+  They weren't part of this benchmark and weren't evaluated on its tasks.
 
 ## First-use pilot
 

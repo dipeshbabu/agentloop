@@ -311,3 +311,17 @@ def test_results_are_only_compared_within_one_parent_span():
     (finding,) = _content_findings(trace)
     assert finding["confidence"] == "medium"
     assert len(finding["affected_nodes"]) == 6
+
+
+def test_decorated_model_steps_can_record_their_own_content():
+    from agentloop import trace_model
+
+    @trace_model(name="verify", model="m")
+    def verify(draft):
+        record_content(input=draft, output=draft)
+        return draft
+
+    with trace_agent("decorated") as trace:
+        verify("draft")
+    assert read_content(trace.events[0].metadata) is not None
+    assert [item["rule_id"] for item in _content_findings(trace)] == ["unchanged_output"]
