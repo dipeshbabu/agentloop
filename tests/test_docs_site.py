@@ -70,3 +70,16 @@ def test_page_summary_uses_the_description_or_first_paragraph():
     summary = docs_hooks.page_summary(long)
     assert summary.endswith("…") and len(summary) <= docs_hooks.SUMMARY_LENGTH + 1
     assert " " not in summary[-2:]
+
+
+def test_every_top_tab_has_an_icon_that_exists():
+    import material
+    import yaml
+
+    config = yaml.safe_load((docs_hooks.ROOT / "mkdocs.yml").read_text(encoding="utf-8"))
+    tabs = [next(iter(item)) for item in config["nav"]]
+    icons = config["extra"]["tab_icons"]
+    assert set(icons) == set(tabs)
+    icon_root = Path(material.__file__).parent / "templates" / ".icons"
+    for name in icons.values():
+        assert (icon_root / f"{name}.svg").is_file(), name
