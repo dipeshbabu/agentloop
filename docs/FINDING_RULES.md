@@ -15,7 +15,10 @@ graph). It returns `FindingCandidate` objects containing wording, confidence,
 affected spans, estimates, and available evidence/assumptions.
 
 The registry has a fixed order: parallelization, context caching, schema/retry
-validation, batching, routing, large steps, runaway loops, and tool oscillation.
+validation, batching, routing, large steps, runaway loops, tool oscillation, the
+five semantic families, and the two [content fingerprint](CONTENT_FINGERPRINTS.md)
+rules, `unchanged_output` and `repeated_result`. The content rules read only
+fingerprints the application chose to record, and emit nothing without them.
 Rule versions are `1.0` for the initial registry. Change a version when changing
 a rule's interpretation or detection semantics. There is no remote rule loading,
 plugin discovery, or executable rule configuration in the HTTP API.

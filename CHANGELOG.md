@@ -9,6 +9,22 @@ trace, study, receipt, API and database schema versions.
 
 ### Added
 
+- Opt-in content fingerprints and two deterministic finding rules that use them.
+  `record_content(input=..., output=...)` attaches keyed digests of a step's
+  input and output to its span, with no text. The key is random per trace and
+  never saved, so digests can't be reversed by hashing guesses. They only show
+  which values in one trace were equal.
+  - `unchanged_output` 1.0 flags a model call, such as a final "verify the
+    answer" call, that returned its input unchanged.
+  - `repeated_result` 1.0 flags a retrieval or other tool call that found
+    nothing new for a different input, plus a rephrase step that only fed it.
+
+  Confidence depends on how often the pattern held in the trace and is at most
+  `medium`. Traces without fingerprints get the same findings as before. A new
+  labelled corpus of 15 synthetic cases, with its own CI gate, covers both rules
+  without changing the existing corpus or its baseline. The benchmark protocol
+  accepts a `content` evidence requirement. See
+  [Content fingerprints](docs/CONTENT_FINGERPRINTS.md).
 - An optimization benchmark and first-use pilot
   ([#406](https://github.com/dipeshbabu/agentloop/issues/406)). It ran three
   agents (math, extraction and coding) on local Qwen models against

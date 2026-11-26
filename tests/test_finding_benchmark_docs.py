@@ -22,6 +22,8 @@ ROOT = Path(__file__).resolve().parents[1]
 GUIDE = ROOT / "docs/FINDING_BENCHMARKS.md"
 BASELINE = ROOT / "examples/finding_benchmark_baseline.json"
 CORPUS = ROOT / "examples/finding_benchmark_corpus.json"
+CONTENT_BASELINE = ROOT / "examples/finding_benchmark_content_baseline.json"
+CONTENT_CORPUS = ROOT / "examples/finding_benchmark_content_corpus.json"
 
 
 @pytest.fixture(scope="module")
@@ -147,3 +149,28 @@ def test_corpus_description_matches_checked_in_cases(corpus):
 )
 def test_ratio_keeps_denominators_and_never_divides_by_zero(numerator, denominator, text):
     assert ratio(numerator, denominator) == text
+
+
+def test_content_corpus_table_matches_its_baseline_and_current_rules():
+    corpus = FindingBenchmark(json.loads(CONTENT_CORPUS.read_text(encoding="utf-8")))
+    baseline = json.loads(CONTENT_BASELINE.read_text(encoding="utf-8"))
+    archived = summarize_finding_benchmark(corpus, baseline)
+    current = summarize_finding_benchmark(
+        corpus,
+        run_finding_benchmark(corpus, split="evaluation", source_revision="docs:current"),
+    )
+    revision = baseline["source_revision"]
+    expected = expected_overall(archived, current, revision).replace(
+        f"Archived baseline (`{revision[:7]}`)", f"Recorded baseline (`{revision[:7]}`)"
+    )
+    assert marked("content-finding-benchmark-overall") == expected, (
+        "Update the content corpus table in docs/FINDING_BENCHMARKS.md to:\n" + expected
+    )
+    text = GUIDE.read_text(encoding="utf-8")
+    assert revision in text and baseline["corpus_hash"] in text
+    cases = corpus.to_dict()["cases"]
+    development = [case["split"] for case in cases].count("development")
+    assert f"It has {len(cases)} synthetic cases" in text
+    assert (
+        f"{development} development cases and {len(cases) - development} evaluation cases" in text
+    )

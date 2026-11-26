@@ -8,6 +8,7 @@ from collections import Counter, defaultdict
 from time import perf_counter_ns
 
 from agentloop import rules
+from agentloop.content_fingerprints import read_content
 from agentloop.finding_benchmark_types import FINDING_BENCHMARK_VERSION, FindingBenchmark
 from agentloop.judgment_types import canonical, fingerprint, finite, text
 from agentloop.markdown import markdown_table_cell
@@ -48,6 +49,12 @@ def _evidence(case, trace):
         ),
         "semantic": bool(selected)
         and all(row["status"] in {"supported", "not_supported", "retained"} for row in selected),
+        "content": any(
+            (record := read_content(event.metadata)) is not None
+            and "input" in record
+            and "output" in record
+            for event in trace.events
+        ),
     }
     backends = {}
     for row in selected:

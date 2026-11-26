@@ -120,6 +120,8 @@ def test_registry_ids_and_order_are_stable():
         "semantic_no_progress",
         "retry_usefulness",
         "context_relevance",
+        "unchanged_output",
+        "repeated_result",
     ]
 
 

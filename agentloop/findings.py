@@ -416,6 +416,8 @@ def _savings_formula(finding_type: str) -> str:
         "split_large_step": "large step duration * 20%",
         "runaway_loop": "repeated loop duration * 30%",
         "tool_oscillation": "alternating tool duration * 40%",
+        "unchanged_output": "duration of calls that returned their input unchanged",
+        "repeated_result": "duration of redundant calls and the calls preparing their inputs",
     }
     return formulas.get(finding_type, "optimizer estimate")
 
@@ -430,6 +432,8 @@ def _acceptance_criteria(finding_type: str) -> str:
         "split_large_step": "context size decreases while final answer quality scorer passes",
         "runaway_loop": "iteration count is bounded and replay passes quality and budget gates",
         "tool_oscillation": "tool-call count decreases without losing required state transitions",
+        "unchanged_output": "independent task quality does not drop with the step skipped or gated",
+        "repeated_result": "independent task quality does not drop without the redundant calls",
     }
     return criteria.get(
         finding_type, "before/after replay passes configured quality and budget gates"

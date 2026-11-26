@@ -1,0 +1,716 @@
+{
+  "schema_version": "1.0",
+  "corpus_hash": "ab7f2530fa31085745ffe9aea710d13fde992934bae8e315d2d8227eb3ca050a",
+  "split": "evaluation",
+  "policy": {
+    "id": "content fingerprint rules",
+    "ref": "unchanged_output 1.0 and repeated_result 1.0; thresholds fixed before these labels were written",
+    "version": "1.0"
+  },
+  "source_revision": "3658d5ecd461c0bacad5f7fb5527dc91a5a5b09d",
+  "python": "3.13.12",
+  "rules": {
+    "repeated_result": "1.0",
+    "unchanged_output": "1.0"
+  },
+  "rows": [
+    {
+      "case_id": "unchanged-verify-single",
+      "rule_id": "unchanged_output",
+      "rule_version": "1.0",
+      "trace_hash": "13a5e1614fb51703c91eb3392990d6f93df2f0a367975d497c021603f498f6b6",
+      "status": "emitted",
+      "findings": [
+        {
+          "affected_nodes": [
+            "verify"
+          ],
+          "assumptions": [
+            "The recorded input is the value the step was asked to check or revise.",
+            "Calls whose output matched their input would have produced the same final result without the step."
+          ],
+          "confidence": "low",
+          "estimate": {
+            "assumptions": [
+              "The recorded input is the value the step was asked to check or revise.",
+              "Calls whose output matched their input would have produced the same final result without the step.",
+              "The step can be skipped or gated without lowering task quality.",
+              "Only calls that returned their input unchanged are counted as removable."
+            ],
+            "calibrated": false,
+            "confidence": "low",
+            "estimator_id": "unchanged_output",
+            "estimator_version": "1.0",
+            "formula": "sum_duration_ms * latency_fraction",
+            "inputs": {
+              "cost_status": "complete",
+              "current_cost_usd": 0.002,
+              "max_duration_ms": 10.0,
+              "repeated_context_ratio": 0.0,
+              "span_count": 1,
+              "sum_duration_ms": 10.0,
+              "token_status": "exact"
+            },
+            "method": "heuristic",
+            "parameters": {
+              "latency_fraction": 1.0
+            },
+            "unmodeled_metrics": [
+              "cost"
+            ]
+          },
+          "estimate_formula": "sum(unchanged call durations) * latency_fraction",
+          "estimated_cost_savings_usd": 0.0,
+          "estimated_latency_savings_ms": 10.0,
+          "evidence_level": "deterministic_inference",
+          "observations": {
+            "basis": "content_fingerprint",
+            "changed_spans": [],
+            "fingerprinted_calls": 1,
+            "span_name": "solve.verify",
+            "unchanged_calls": 1,
+            "validation_criteria": "Run a paired replay without the step (or with it gated) and keep the change only if an independent task-quality scorer shows no regression on held-out tasks."
+          },
+          "ranking_requirements": [
+            "quality_risk",
+            "reversible",
+            "validation_cost_usd",
+            "validation_effort_minutes"
+          ],
+          "rewrite_hint": "Skip this step, or run it only when a cheap check says the draft needs it. An unchanged output can still be a check that passed, so measure task quality without the step before removing it.",
+          "rule_id": "unchanged_output",
+          "rule_version": "1.0",
+          "title": "Gate or remove `solve.verify`: it returned its input unchanged",
+          "type": "unchanged_output",
+          "why": "1 of 1 fingerprinted `solve.verify` calls returned exactly the value they were given (by keyed content fingerprint)."
+        }
+      ],
+      "analysis_ms": 35.3266,
+      "evidence": {
+        "required": [
+          "content"
+        ],
+        "missing": [],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [],
+        "backends": []
+      }
+    },
+    {
+      "case_id": "unchanged-verify-batch",
+      "rule_id": "unchanged_output",
+      "rule_version": "1.0",
+      "trace_hash": "2a0f717751b88db4e7b3b9d84fe3ddfd28ff619c76cc779aec8e5c9a43701dad",
+      "status": "emitted",
+      "findings": [
+        {
+          "affected_nodes": [
+            "t0-verify",
+            "t1-verify",
+            "t2-verify",
+            "t3-verify"
+          ],
+          "assumptions": [
+            "The recorded input is the value the step was asked to check or revise.",
+            "Calls whose output matched their input would have produced the same final result without the step."
+          ],
+          "confidence": "medium",
+          "estimate": {
+            "assumptions": [
+              "The recorded input is the value the step was asked to check or revise.",
+              "Calls whose output matched their input would have produced the same final result without the step.",
+              "The step can be skipped or gated without lowering task quality.",
+              "Only calls that returned their input unchanged are counted as removable."
+            ],
+            "calibrated": false,
+            "confidence": "medium",
+            "estimator_id": "unchanged_output",
+            "estimator_version": "1.0",
+            "formula": "sum_duration_ms * latency_fraction",
+            "inputs": {
+              "cost_status": "complete",
+              "current_cost_usd": 0.008,
+              "max_duration_ms": 10.0,
+              "repeated_context_ratio": 0.0,
+              "span_count": 4,
+              "sum_duration_ms": 40.0,
+              "token_status": "exact"
+            },
+            "method": "heuristic",
+            "parameters": {
+              "latency_fraction": 1.0
+            },
+            "unmodeled_metrics": [
+              "cost"
+            ]
+          },
+          "estimate_formula": "sum(unchanged call durations) * latency_fraction",
+          "estimated_cost_savings_usd": 0.0,
+          "estimated_latency_savings_ms": 40.0,
+          "evidence_level": "deterministic_inference",
+          "observations": {
+            "basis": "content_fingerprint",
+            "changed_spans": [],
+            "fingerprinted_calls": 4,
+            "span_name": "solve.verify",
+            "unchanged_calls": 4,
+            "validation_criteria": "Run a paired replay without the step (or with it gated) and keep the change only if an independent task-quality scorer shows no regression on held-out tasks."
+          },
+          "ranking_requirements": [
+            "quality_risk",
+            "reversible",
+            "validation_cost_usd",
+            "validation_effort_minutes"
+          ],
+          "rewrite_hint": "Skip this step, or run it only when a cheap check says the draft needs it. An unchanged output can still be a check that passed, so measure task quality without the step before removing it.",
+          "rule_id": "unchanged_output",
+          "rule_version": "1.0",
+          "title": "Gate or remove `solve.verify`: it returned its input unchanged",
+          "type": "unchanged_output",
+          "why": "4 of 4 fingerprinted `solve.verify` calls returned exactly the value they were given (by keyed content fingerprint)."
+        }
+      ],
+      "analysis_ms": 2.4682,
+      "evidence": {
+        "required": [
+          "content"
+        ],
+        "missing": [],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [],
+        "backends": []
+      }
+    },
+    {
+      "case_id": "unchanged-verify-fixes",
+      "rule_id": "unchanged_output",
+      "rule_version": "1.0",
+      "trace_hash": "92898d5302f83fb6ec8eca09867eb4400c8d3f12cf8233d551342dbae6792da7",
+      "status": "abstained",
+      "findings": [],
+      "analysis_ms": 0.8091,
+      "evidence": {
+        "required": [
+          "content"
+        ],
+        "missing": [],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [],
+        "backends": []
+      }
+    },
+    {
+      "case_id": "unchanged-verify-required",
+      "rule_id": "unchanged_output",
+      "rule_version": "1.0",
+      "trace_hash": "5b78d39d0653ce4f1c85b58b212800fb0b247d063ab72d9f1f1c216c674e468d",
+      "status": "abstained",
+      "findings": [],
+      "analysis_ms": 0.7873,
+      "evidence": {
+        "required": [
+          "content"
+        ],
+        "missing": [],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [],
+        "backends": []
+      }
+    },
+    {
+      "case_id": "unchanged-verify-mostly-fixes",
+      "rule_id": "unchanged_output",
+      "rule_version": "1.0",
+      "trace_hash": "1c8e571987979ed811d422c6a1247413a007f52519744753677804f1e0e3c78d",
+      "status": "abstained",
+      "findings": [],
+      "analysis_ms": 2.6343,
+      "evidence": {
+        "required": [
+          "content"
+        ],
+        "missing": [],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [],
+        "backends": []
+      }
+    },
+    {
+      "case_id": "unchanged-verify-case-only",
+      "rule_id": "unchanged_output",
+      "rule_version": "1.0",
+      "trace_hash": "a980bc468815d724ecab77eea826a38b7a73c27c97582c89c6c375875238c92c",
+      "status": "abstained",
+      "findings": [],
+      "analysis_ms": 0.8009,
+      "evidence": {
+        "required": [
+          "content"
+        ],
+        "missing": [],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [],
+        "backends": []
+      }
+    },
+    {
+      "case_id": "unchanged-verify-no-fingerprints",
+      "rule_id": "unchanged_output",
+      "rule_version": "1.0",
+      "trace_hash": "f6ddbf9f6bcd25270c8efcdbfe4bc127af782957c6e17b98c090124a51f3c1c4",
+      "status": "abstained",
+      "findings": [],
+      "analysis_ms": 0.699,
+      "evidence": {
+        "required": [
+          "content"
+        ],
+        "missing": [
+          "content"
+        ],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [],
+        "backends": []
+      }
+    },
+    {
+      "case_id": "repeated-retrieval-subset",
+      "rule_id": "repeated_result",
+      "rule_version": "1.0",
+      "trace_hash": "3f95f0fa51b55bd4377c355d30e54f6c8a9c6c6d60191a1c2543142b037cb26c",
+      "status": "emitted",
+      "findings": [
+        {
+          "affected_nodes": [
+            "rephrase",
+            "find-2"
+          ],
+          "assumptions": [
+            "Results that were already returned add nothing when returned again.",
+            "The listed producer calls have no other use than preparing these inputs."
+          ],
+          "confidence": "low",
+          "estimate": {
+            "assumptions": [
+              "Results that were already returned add nothing when returned again.",
+              "The listed producer calls have no other use than preparing these inputs.",
+              "The redundant calls and the calls that only prepared their inputs can be removed.",
+              "The removed calls ran serially, so their time comes off the runtime."
+            ],
+            "calibrated": false,
+            "confidence": "low",
+            "estimator_id": "repeated_result",
+            "estimator_version": "1.0",
+            "formula": "sum_duration_ms * latency_fraction",
+            "inputs": {
+              "cost_status": "complete",
+              "current_cost_usd": 0.002,
+              "max_duration_ms": 10.0,
+              "repeated_context_ratio": 0.0,
+              "span_count": 2,
+              "sum_duration_ms": 20.0,
+              "token_status": "exact"
+            },
+            "method": "heuristic",
+            "parameters": {
+              "latency_fraction": 1.0
+            },
+            "unmodeled_metrics": [
+              "cost"
+            ]
+          },
+          "estimate_formula": "sum(redundant and producer call durations) * latency_fraction",
+          "estimated_cost_savings_usd": 0.0,
+          "estimated_latency_savings_ms": 20.0,
+          "evidence_level": "deterministic_inference",
+          "observations": {
+            "basis": "content_fingerprint",
+            "later_calls_with_new_input": 1,
+            "producer_spans": [
+              "rephrase"
+            ],
+            "redundant_spans": [
+              "find-2"
+            ],
+            "span_name": "find",
+            "validation_criteria": "Run a paired replay without the step (or with it gated) and keep the change only if an independent task-quality scorer shows no regression on held-out tasks."
+          },
+          "ranking_requirements": [
+            "quality_risk",
+            "reversible",
+            "validation_cost_usd",
+            "validation_effort_minutes"
+          ],
+          "rewrite_hint": "Drop the extra lookup and any step that only prepares its input, or run it only when the first lookup comes back empty or weak.",
+          "rule_id": "repeated_result",
+          "rule_version": "1.0",
+          "title": "Remove the extra `find` call that found nothing new",
+          "type": "repeated_result",
+          "why": "1 of 1 later `find` calls with a different input returned only results that earlier calls had already returned (by keyed content fingerprint). 1 model call(s) produced only those inputs."
+        }
+      ],
+      "analysis_ms": 1.2042,
+      "evidence": {
+        "required": [
+          "content"
+        ],
+        "missing": [],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [],
+        "backends": []
+      }
+    },
+    {
+      "case_id": "repeated-retrieval-new-passage",
+      "rule_id": "repeated_result",
+      "rule_version": "1.0",
+      "trace_hash": "7922e6d15de1179450278733d17fa076eadd718ad661f32226a9c87f0aee0ba8",
+      "status": "abstained",
+      "findings": [],
+      "analysis_ms": 1.0439,
+      "evidence": {
+        "required": [
+          "content"
+        ],
+        "missing": [],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [],
+        "backends": []
+      }
+    },
+    {
+      "case_id": "repeated-retrieval-across-tasks",
+      "rule_id": "repeated_result",
+      "rule_version": "1.0",
+      "trace_hash": "0c0430efab59f49273e20927eb199817a309ed363d29ea6e006a4e5981a5d3dc",
+      "status": "abstained",
+      "findings": [],
+      "analysis_ms": 1.3851,
+      "evidence": {
+        "required": [
+          "content"
+        ],
+        "missing": [],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [],
+        "backends": []
+      }
+    },
+    {
+      "case_id": "repeated-retrieval-shared-query",
+      "rule_id": "repeated_result",
+      "rule_version": "1.0",
+      "trace_hash": "14a98b24702c5f80ff8bcc88ff08c943dcd691e305301e0a425fd408f55087d1",
+      "status": "emitted",
+      "findings": [
+        {
+          "affected_nodes": [
+            "find-2"
+          ],
+          "assumptions": [
+            "Results that were already returned add nothing when returned again.",
+            "The listed producer calls have no other use than preparing these inputs."
+          ],
+          "confidence": "low",
+          "estimate": {
+            "assumptions": [
+              "Results that were already returned add nothing when returned again.",
+              "The listed producer calls have no other use than preparing these inputs.",
+              "The redundant calls and the calls that only prepared their inputs can be removed.",
+              "The removed calls ran serially, so their time comes off the runtime."
+            ],
+            "calibrated": false,
+            "confidence": "low",
+            "estimator_id": "repeated_result",
+            "estimator_version": "1.0",
+            "formula": "sum_duration_ms * latency_fraction",
+            "inputs": {
+              "cost_status": "complete",
+              "current_cost_usd": 0.002,
+              "max_duration_ms": 10.0,
+              "repeated_context_ratio": 0.0,
+              "span_count": 1,
+              "sum_duration_ms": 10.0,
+              "token_status": "exact"
+            },
+            "method": "heuristic",
+            "parameters": {
+              "latency_fraction": 1.0
+            },
+            "unmodeled_metrics": [
+              "cost"
+            ]
+          },
+          "estimate_formula": "sum(redundant and producer call durations) * latency_fraction",
+          "estimated_cost_savings_usd": 0.0,
+          "estimated_latency_savings_ms": 10.0,
+          "evidence_level": "deterministic_inference",
+          "observations": {
+            "basis": "content_fingerprint",
+            "later_calls_with_new_input": 1,
+            "producer_spans": [],
+            "redundant_spans": [
+              "find-2"
+            ],
+            "span_name": "find",
+            "validation_criteria": "Run a paired replay without the step (or with it gated) and keep the change only if an independent task-quality scorer shows no regression on held-out tasks."
+          },
+          "ranking_requirements": [
+            "quality_risk",
+            "reversible",
+            "validation_cost_usd",
+            "validation_effort_minutes"
+          ],
+          "rewrite_hint": "Drop the extra lookup and any step that only prepares its input, or run it only when the first lookup comes back empty or weak.",
+          "rule_id": "repeated_result",
+          "rule_version": "1.0",
+          "title": "Remove the extra `find` call that found nothing new",
+          "type": "repeated_result",
+          "why": "1 of 1 later `find` calls with a different input returned only results that earlier calls had already returned (by keyed content fingerprint)."
+        }
+      ],
+      "analysis_ms": 1.2099,
+      "evidence": {
+        "required": [
+          "content"
+        ],
+        "missing": [],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [],
+        "backends": []
+      }
+    },
+    {
+      "case_id": "repeated-retrieval-no-fingerprints",
+      "rule_id": "repeated_result",
+      "rule_version": "1.0",
+      "trace_hash": "315888fdabd89783c084a9f04d5af40eaa4c0852c64970ce90c293c55827e2cd",
+      "status": "abstained",
+      "findings": [],
+      "analysis_ms": 0.8526,
+      "evidence": {
+        "required": [
+          "content"
+        ],
+        "missing": [
+          "content"
+        ],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [],
+        "backends": []
+      }
+    },
+    {
+      "case_id": "repeated-retrieval-reordered",
+      "rule_id": "repeated_result",
+      "rule_version": "1.0",
+      "trace_hash": "d7e8996d307fb00ce0893988e9daf4ec27a9450fd78fba61227d653a8417e0a7",
+      "status": "emitted",
+      "findings": [
+        {
+          "affected_nodes": [
+            "rephrase",
+            "find-2"
+          ],
+          "assumptions": [
+            "Results that were already returned add nothing when returned again.",
+            "The listed producer calls have no other use than preparing these inputs."
+          ],
+          "confidence": "low",
+          "estimate": {
+            "assumptions": [
+              "Results that were already returned add nothing when returned again.",
+              "The listed producer calls have no other use than preparing these inputs.",
+              "The redundant calls and the calls that only prepared their inputs can be removed.",
+              "The removed calls ran serially, so their time comes off the runtime."
+            ],
+            "calibrated": false,
+            "confidence": "low",
+            "estimator_id": "repeated_result",
+            "estimator_version": "1.0",
+            "formula": "sum_duration_ms * latency_fraction",
+            "inputs": {
+              "cost_status": "complete",
+              "current_cost_usd": 0.002,
+              "max_duration_ms": 10.0,
+              "repeated_context_ratio": 0.0,
+              "span_count": 2,
+              "sum_duration_ms": 20.0,
+              "token_status": "exact"
+            },
+            "method": "heuristic",
+            "parameters": {
+              "latency_fraction": 1.0
+            },
+            "unmodeled_metrics": [
+              "cost"
+            ]
+          },
+          "estimate_formula": "sum(redundant and producer call durations) * latency_fraction",
+          "estimated_cost_savings_usd": 0.0,
+          "estimated_latency_savings_ms": 20.0,
+          "evidence_level": "deterministic_inference",
+          "observations": {
+            "basis": "content_fingerprint",
+            "later_calls_with_new_input": 1,
+            "producer_spans": [
+              "rephrase"
+            ],
+            "redundant_spans": [
+              "find-2"
+            ],
+            "span_name": "find",
+            "validation_criteria": "Run a paired replay without the step (or with it gated) and keep the change only if an independent task-quality scorer shows no regression on held-out tasks."
+          },
+          "ranking_requirements": [
+            "quality_risk",
+            "reversible",
+            "validation_cost_usd",
+            "validation_effort_minutes"
+          ],
+          "rewrite_hint": "Drop the extra lookup and any step that only prepares its input, or run it only when the first lookup comes back empty or weak.",
+          "rule_id": "repeated_result",
+          "rule_version": "1.0",
+          "title": "Remove the extra `find` call that found nothing new",
+          "type": "repeated_result",
+          "why": "1 of 1 later `find` calls with a different input returned only results that earlier calls had already returned (by keyed content fingerprint). 1 model call(s) produced only those inputs."
+        }
+      ],
+      "analysis_ms": 1.1946,
+      "evidence": {
+        "required": [
+          "content"
+        ],
+        "missing": [],
+        "accounting": "recorded timing; exact token provenance; reported model billing; validated saved semantic investigations",
+        "semantic_statuses": [],
+        "backends": []
+      }
+    }
+  ],
+  "summary": {
+    "synthetic": true,
+    "unit": "exact family and affected-span finding; FPR is any emission per known-negative case",
+    "overall": {
+      "planned_cases": 13,
+      "emitted_cases": 5,
+      "abstained_cases": 8,
+      "error_cases": 0,
+      "missing_cases": 0,
+      "opportunity_cases": 4,
+      "negative_cases": 5,
+      "unknown_cases": 2,
+      "ambiguous_cases": 2,
+      "negative_cases_with_findings": 0,
+      "true_positive_findings": 4,
+      "false_positive_findings": 0,
+      "unscored_findings": 1,
+      "missed_opportunities": 0,
+      "complete_evidence_cases": 11,
+      "incomplete_evidence_findings": 0,
+      "precision": 1.0,
+      "false_positive_rate": 0.0,
+      "coverage": 0.38461538461538464,
+      "abstention_rate": 0.6153846153846154,
+      "evidence_completeness": 0.8461538461538461,
+      "confidence_counts": [],
+      "confidence_semantics": "See per-rule and evidence-basis strata; confidence is never pooled across rules.",
+      "analysis_timing": {
+        "scope": "native report including all canonical rules per selected trace",
+        "measured_cases": 13,
+        "total_ms": 50.4157,
+        "mean_ms": 3.8781307692307694
+      },
+      "backends": []
+    },
+    "per_rule": [
+      {
+        "rule_id": "repeated_result",
+        "rule_version": "1.0",
+        "planned_cases": 6,
+        "emitted_cases": 3,
+        "abstained_cases": 3,
+        "error_cases": 0,
+        "missing_cases": 0,
+        "opportunity_cases": 2,
+        "negative_cases": 2,
+        "unknown_cases": 1,
+        "ambiguous_cases": 1,
+        "negative_cases_with_findings": 0,
+        "true_positive_findings": 2,
+        "false_positive_findings": 0,
+        "unscored_findings": 1,
+        "missed_opportunities": 0,
+        "complete_evidence_cases": 5,
+        "incomplete_evidence_findings": 0,
+        "precision": 1.0,
+        "false_positive_rate": 0.0,
+        "coverage": 0.5,
+        "abstention_rate": 0.5,
+        "evidence_completeness": 0.8333333333333334,
+        "confidence_counts": [
+          {
+            "basis": "content_fingerprint",
+            "confidence": "low",
+            "true_positive_findings": 2,
+            "unscored_findings": 1
+          }
+        ],
+        "confidence_semantics": "ordinal per rule; not probabilities; numeric calibration unavailable",
+        "analysis_timing": {
+          "scope": "native report including all canonical rules per selected trace",
+          "measured_cases": 6,
+          "total_ms": 6.8903,
+          "mean_ms": 1.1483833333333333
+        },
+        "backends": []
+      },
+      {
+        "rule_id": "unchanged_output",
+        "rule_version": "1.0",
+        "planned_cases": 7,
+        "emitted_cases": 2,
+        "abstained_cases": 5,
+        "error_cases": 0,
+        "missing_cases": 0,
+        "opportunity_cases": 2,
+        "negative_cases": 3,
+        "unknown_cases": 1,
+        "ambiguous_cases": 1,
+        "negative_cases_with_findings": 0,
+        "true_positive_findings": 2,
+        "false_positive_findings": 0,
+        "unscored_findings": 0,
+        "missed_opportunities": 0,
+        "complete_evidence_cases": 6,
+        "incomplete_evidence_findings": 0,
+        "precision": 1.0,
+        "false_positive_rate": 0.0,
+        "coverage": 0.2857142857142857,
+        "abstention_rate": 0.7142857142857143,
+        "evidence_completeness": 0.8571428571428571,
+        "confidence_counts": [
+          {
+            "basis": "content_fingerprint",
+            "confidence": "low",
+            "true_positive_findings": 1
+          },
+          {
+            "basis": "content_fingerprint",
+            "confidence": "medium",
+            "true_positive_findings": 1
+          }
+        ],
+        "confidence_semantics": "ordinal per rule; not probabilities; numeric calibration unavailable",
+        "analysis_timing": {
+          "scope": "native report including all canonical rules per selected trace",
+          "measured_cases": 7,
+          "total_ms": 43.5254,
+          "mean_ms": 6.2179142857142855
+        },
+        "backends": []
+      }
+    ],
+    "limits": "Corpus-specific diagnostics, not universal precision or production savings. Abstention means no emitted finding, not a proven negative. Unknown and ambiguous labels are not correctness trials. Timings include saved evidence validation, not judge inference."
+  }
+}

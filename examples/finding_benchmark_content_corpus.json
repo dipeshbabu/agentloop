@@ -1,0 +1,2612 @@
+{
+  "cases": [
+    {
+      "group": "unchanged-verify-development",
+      "id": "unchanged-verify-development",
+      "label": "opportunity",
+      "label_ref": "repository:scripts/build_finding_corpus.py:content-fingerprint-labels",
+      "label_version": "1.0",
+      "opportunities": [
+        {
+          "family": "unchanged_output",
+          "spans": [
+            "verify"
+          ]
+        }
+      ],
+      "rationale": "The final check returned the draft answer unchanged; nothing requires it to run.",
+      "required_evidence": [
+        "content"
+      ],
+      "rule_id": "unchanged_output",
+      "scenario": "ordinary",
+      "split": "development",
+      "trace": {
+        "elapsed_ms": 1000.0,
+        "ended_at": "2026-01-01T00:00:01+00:00",
+        "events": [
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.010000+00:00",
+            "error": null,
+            "event_id": "draft",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "264c675e01fe99d629f71fd3df610b60"
+                },
+                "output": {
+                  "digest": "8d62977a5b07741cf1ad7a4c8206b014"
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "9d63e22da31fc9dd"
+              },
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "solve.draft",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": null,
+            "run_id": "unchanged-verify-development",
+            "started_at": "2026-01-01T00:00:00.000000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.020000+00:00",
+            "error": null,
+            "event_id": "verify",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "8d62977a5b07741cf1ad7a4c8206b014"
+                },
+                "output": {
+                  "digest": "8d62977a5b07741cf1ad7a4c8206b014"
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "9d63e22da31fc9dd"
+              },
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "solve.verify",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": null,
+            "run_id": "unchanged-verify-development",
+            "started_at": "2026-01-01T00:00:00.010000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          }
+        ],
+        "metadata": {
+          "synthetic": true
+        },
+        "name": "Synthetic content fingerprint fixture",
+        "run_id": "unchanged-verify-development",
+        "schema_version": "1.1",
+        "started_at": "2026-01-01T00:00:00+00:00"
+      },
+      "workload_ref": "synthetic:unchanged-verify-development:v1"
+    },
+    {
+      "group": "unchanged-verify-single",
+      "id": "unchanged-verify-single",
+      "label": "opportunity",
+      "label_ref": "repository:scripts/build_finding_corpus.py:content-fingerprint-labels",
+      "label_version": "1.0",
+      "opportunities": [
+        {
+          "family": "unchanged_output",
+          "spans": [
+            "verify"
+          ]
+        }
+      ],
+      "rationale": "The trailing verification call handed back its draft unchanged and is not required.",
+      "required_evidence": [
+        "content"
+      ],
+      "rule_id": "unchanged_output",
+      "scenario": "ordinary",
+      "split": "evaluation",
+      "trace": {
+        "elapsed_ms": 1000.0,
+        "ended_at": "2026-01-01T00:00:01+00:00",
+        "events": [
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.010000+00:00",
+            "error": null,
+            "event_id": "draft",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "8075341626d1cd95f27f6551dead3c7a"
+                },
+                "output": {
+                  "digest": "948ceaa7edbb47145ab80b48bdb427e9"
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "59fed1df634ae437"
+              },
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "solve.draft",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": null,
+            "run_id": "unchanged-verify-single",
+            "started_at": "2026-01-01T00:00:00.000000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.020000+00:00",
+            "error": null,
+            "event_id": "verify",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "948ceaa7edbb47145ab80b48bdb427e9"
+                },
+                "output": {
+                  "digest": "948ceaa7edbb47145ab80b48bdb427e9"
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "59fed1df634ae437"
+              },
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "solve.verify",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": null,
+            "run_id": "unchanged-verify-single",
+            "started_at": "2026-01-01T00:00:00.010000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          }
+        ],
+        "metadata": {
+          "synthetic": true
+        },
+        "name": "Synthetic content fingerprint fixture",
+        "run_id": "unchanged-verify-single",
+        "schema_version": "1.1",
+        "started_at": "2026-01-01T00:00:00+00:00"
+      },
+      "workload_ref": "synthetic:unchanged-verify-single:v1"
+    },
+    {
+      "group": "unchanged-verify-batch",
+      "id": "unchanged-verify-batch",
+      "label": "opportunity",
+      "label_ref": "repository:scripts/build_finding_corpus.py:content-fingerprint-labels",
+      "label_version": "1.0",
+      "opportunities": [
+        {
+          "family": "unchanged_output",
+          "spans": [
+            "t0-verify",
+            "t1-verify",
+            "t2-verify",
+            "t3-verify"
+          ]
+        }
+      ],
+      "rationale": "Across four tasks the verification call never changed the draft.",
+      "required_evidence": [
+        "content"
+      ],
+      "rule_id": "unchanged_output",
+      "scenario": "ordinary",
+      "split": "evaluation",
+      "trace": {
+        "elapsed_ms": 1000.0,
+        "ended_at": "2026-01-01T00:00:01+00:00",
+        "events": [
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.010000+00:00",
+            "error": null,
+            "event_id": "task-0",
+            "event_type": "tool_call",
+            "input_text": null,
+            "input_tokens": 0,
+            "metadata": {},
+            "model": null,
+            "name": "task",
+            "output_text": null,
+            "output_tokens": 0,
+            "parent_id": null,
+            "run_id": "unchanged-verify-batch",
+            "started_at": "2026-01-01T00:00:00.000000+00:00",
+            "status": "ok",
+            "token_provenance": "unavailable"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.020000+00:00",
+            "error": null,
+            "event_id": "t0-draft",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "933596253311b4edb6a61b56f59ca0e7"
+                },
+                "output": {
+                  "digest": "9c48594f4c9cf91c5016e18ccba88bca"
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "866a3acc8adb628d"
+              },
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "solve.draft",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": "task-0",
+            "run_id": "unchanged-verify-batch",
+            "started_at": "2026-01-01T00:00:00.010000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.030000+00:00",
+            "error": null,
+            "event_id": "t0-verify",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "9c48594f4c9cf91c5016e18ccba88bca"
+                },
+                "output": {
+                  "digest": "9c48594f4c9cf91c5016e18ccba88bca"
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "866a3acc8adb628d"
+              },
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "solve.verify",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": "task-0",
+            "run_id": "unchanged-verify-batch",
+            "started_at": "2026-01-01T00:00:00.020000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.040000+00:00",
+            "error": null,
+            "event_id": "task-1",
+            "event_type": "tool_call",
+            "input_text": null,
+            "input_tokens": 0,
+            "metadata": {},
+            "model": null,
+            "name": "task",
+            "output_text": null,
+            "output_tokens": 0,
+            "parent_id": null,
+            "run_id": "unchanged-verify-batch",
+            "started_at": "2026-01-01T00:00:00.030000+00:00",
+            "status": "ok",
+            "token_provenance": "unavailable"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.050000+00:00",
+            "error": null,
+            "event_id": "t1-draft",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "933596253311b4edb6a61b56f59ca0e7"
+                },
+                "output": {
+                  "digest": "e4297ab3f6c75cfe9d748f34364573b0"
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "866a3acc8adb628d"
+              },
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "solve.draft",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": "task-1",
+            "run_id": "unchanged-verify-batch",
+            "started_at": "2026-01-01T00:00:00.040000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.060000+00:00",
+            "error": null,
+            "event_id": "t1-verify",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "e4297ab3f6c75cfe9d748f34364573b0"
+                },
+                "output": {
+                  "digest": "e4297ab3f6c75cfe9d748f34364573b0"
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "866a3acc8adb628d"
+              },
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "solve.verify",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": "task-1",
+            "run_id": "unchanged-verify-batch",
+            "started_at": "2026-01-01T00:00:00.050000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.070000+00:00",
+            "error": null,
+            "event_id": "task-2",
+            "event_type": "tool_call",
+            "input_text": null,
+            "input_tokens": 0,
+            "metadata": {},
+            "model": null,
+            "name": "task",
+            "output_text": null,
+            "output_tokens": 0,
+            "parent_id": null,
+            "run_id": "unchanged-verify-batch",
+            "started_at": "2026-01-01T00:00:00.060000+00:00",
+            "status": "ok",
+            "token_provenance": "unavailable"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.080000+00:00",
+            "error": null,
+            "event_id": "t2-draft",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "933596253311b4edb6a61b56f59ca0e7"
+                },
+                "output": {
+                  "digest": "8236556b7f13e751efd48f16ef8c2147"
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "866a3acc8adb628d"
+              },
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "solve.draft",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": "task-2",
+            "run_id": "unchanged-verify-batch",
+            "started_at": "2026-01-01T00:00:00.070000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.090000+00:00",
+            "error": null,
+            "event_id": "t2-verify",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "8236556b7f13e751efd48f16ef8c2147"
+                },
+                "output": {
+                  "digest": "8236556b7f13e751efd48f16ef8c2147"
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "866a3acc8adb628d"
+              },
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "solve.verify",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": "task-2",
+            "run_id": "unchanged-verify-batch",
+            "started_at": "2026-01-01T00:00:00.080000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.100000+00:00",
+            "error": null,
+            "event_id": "task-3",
+            "event_type": "tool_call",
+            "input_text": null,
+            "input_tokens": 0,
+            "metadata": {},
+            "model": null,
+            "name": "task",
+            "output_text": null,
+            "output_tokens": 0,
+            "parent_id": null,
+            "run_id": "unchanged-verify-batch",
+            "started_at": "2026-01-01T00:00:00.090000+00:00",
+            "status": "ok",
+            "token_provenance": "unavailable"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.110000+00:00",
+            "error": null,
+            "event_id": "t3-draft",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "933596253311b4edb6a61b56f59ca0e7"
+                },
+                "output": {
+                  "digest": "d2b5e078dbd88008c7ad2d44d9d00ea3"
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "866a3acc8adb628d"
+              },
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "solve.draft",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": "task-3",
+            "run_id": "unchanged-verify-batch",
+            "started_at": "2026-01-01T00:00:00.100000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.120000+00:00",
+            "error": null,
+            "event_id": "t3-verify",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "d2b5e078dbd88008c7ad2d44d9d00ea3"
+                },
+                "output": {
+                  "digest": "d2b5e078dbd88008c7ad2d44d9d00ea3"
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "866a3acc8adb628d"
+              },
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "solve.verify",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": "task-3",
+            "run_id": "unchanged-verify-batch",
+            "started_at": "2026-01-01T00:00:00.110000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          }
+        ],
+        "metadata": {
+          "synthetic": true
+        },
+        "name": "Synthetic content fingerprint fixture",
+        "run_id": "unchanged-verify-batch",
+        "schema_version": "1.1",
+        "started_at": "2026-01-01T00:00:00+00:00"
+      },
+      "workload_ref": "synthetic:unchanged-verify-batch:v1"
+    },
+    {
+      "group": "unchanged-verify-fixes",
+      "id": "unchanged-verify-fixes",
+      "label": "no_opportunity",
+      "label_ref": "repository:scripts/build_finding_corpus.py:content-fingerprint-labels",
+      "label_version": "1.0",
+      "opportunities": [],
+      "rationale": "The verification call replaced the draft, so it changed the result.",
+      "required_evidence": [
+        "content"
+      ],
+      "rule_id": "unchanged_output",
+      "scenario": "invalid_opportunity",
+      "split": "evaluation",
+      "trace": {
+        "elapsed_ms": 1000.0,
+        "ended_at": "2026-01-01T00:00:01+00:00",
+        "events": [
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.010000+00:00",
+            "error": null,
+            "event_id": "draft",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "f2e77f546c7551a669a9648d21ea4686"
+                },
+                "output": {
+                  "digest": "e3790e6e44bce9f3c7713251c79f8da4"
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "e841905afbc20c70"
+              },
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "solve.draft",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": null,
+            "run_id": "unchanged-verify-fixes",
+            "started_at": "2026-01-01T00:00:00.000000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.020000+00:00",
+            "error": null,
+            "event_id": "verify",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "e3790e6e44bce9f3c7713251c79f8da4"
+                },
+                "output": {
+                  "digest": "c95c29000907e9167d3d3236d9a6ab1b"
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "e841905afbc20c70"
+              },
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "solve.verify",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": null,
+            "run_id": "unchanged-verify-fixes",
+            "started_at": "2026-01-01T00:00:00.010000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          }
+        ],
+        "metadata": {
+          "synthetic": true
+        },
+        "name": "Synthetic content fingerprint fixture",
+        "run_id": "unchanged-verify-fixes",
+        "schema_version": "1.1",
+        "started_at": "2026-01-01T00:00:00+00:00"
+      },
+      "workload_ref": "synthetic:unchanged-verify-fixes:v1"
+    },
+    {
+      "group": "unchanged-verify-required",
+      "id": "unchanged-verify-required",
+      "label": "no_opportunity",
+      "label_ref": "repository:scripts/build_finding_corpus.py:content-fingerprint-labels",
+      "label_version": "1.0",
+      "opportunities": [],
+      "rationale": "The caller declares this check mandatory even when it confirms the draft.",
+      "required_evidence": [
+        "content"
+      ],
+      "rule_id": "unchanged_output",
+      "scenario": "retained",
+      "split": "evaluation",
+      "trace": {
+        "elapsed_ms": 1000.0,
+        "ended_at": "2026-01-01T00:00:01+00:00",
+        "events": [
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.010000+00:00",
+            "error": null,
+            "event_id": "draft",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "86010a21f7c7fdb310604402c79f936e"
+                },
+                "output": {
+                  "digest": "7abfe4dbee3f7fabea8c6011760ae6e9"
+                },
+                "required": true,
+                "schema": "agentloop.content/v1",
+                "scope": "aee048cadfc74aaf"
+              },
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "solve.draft",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": null,
+            "run_id": "unchanged-verify-required",
+            "started_at": "2026-01-01T00:00:00.000000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.020000+00:00",
+            "error": null,
+            "event_id": "verify",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "7abfe4dbee3f7fabea8c6011760ae6e9"
+                },
+                "output": {
+                  "digest": "7abfe4dbee3f7fabea8c6011760ae6e9"
+                },
+                "required": true,
+                "schema": "agentloop.content/v1",
+                "scope": "aee048cadfc74aaf"
+              },
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "solve.verify",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": null,
+            "run_id": "unchanged-verify-required",
+            "started_at": "2026-01-01T00:00:00.010000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          }
+        ],
+        "metadata": {
+          "synthetic": true
+        },
+        "name": "Synthetic content fingerprint fixture",
+        "run_id": "unchanged-verify-required",
+        "schema_version": "1.1",
+        "started_at": "2026-01-01T00:00:00+00:00"
+      },
+      "workload_ref": "synthetic:unchanged-verify-required:v1"
+    },
+    {
+      "group": "unchanged-verify-mostly-fixes",
+      "id": "unchanged-verify-mostly-fixes",
+      "label": "no_opportunity",
+      "label_ref": "repository:scripts/build_finding_corpus.py:content-fingerprint-labels",
+      "label_version": "1.0",
+      "opportunities": [],
+      "rationale": "The check revised three of five drafts; removing it would change most results.",
+      "required_evidence": [
+        "content"
+      ],
+      "rule_id": "unchanged_output",
+      "scenario": "conflicting_evidence",
+      "split": "evaluation",
+      "trace": {
+        "elapsed_ms": 1000.0,
+        "ended_at": "2026-01-01T00:00:01+00:00",
+        "events": [
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.010000+00:00",
+            "error": null,
+            "event_id": "task-0",
+            "event_type": "tool_call",
+            "input_text": null,
+            "input_tokens": 0,
+            "metadata": {},
+            "model": null,
+            "name": "task",
+            "output_text": null,
+            "output_tokens": 0,
+            "parent_id": null,
+            "run_id": "unchanged-verify-mostly-fixes",
+            "started_at": "2026-01-01T00:00:00.000000+00:00",
+            "status": "ok",
+            "token_provenance": "unavailable"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.020000+00:00",
+            "error": null,
+            "event_id": "t0-draft",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "e1b0fad93d714a2086f4a2f31f510b9a"
+                },
+                "output": {
+                  "digest": "9a45665610724cac9ee7ce63e8cb007b"
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "8654cfe7f7b80e4c"
+              },
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "solve.draft",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": "task-0",
+            "run_id": "unchanged-verify-mostly-fixes",
+            "started_at": "2026-01-01T00:00:00.010000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.030000+00:00",
+            "error": null,
+            "event_id": "t0-verify",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "9a45665610724cac9ee7ce63e8cb007b"
+                },
+                "output": {
+                  "digest": "9a45665610724cac9ee7ce63e8cb007b"
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "8654cfe7f7b80e4c"
+              },
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "solve.verify",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": "task-0",
+            "run_id": "unchanged-verify-mostly-fixes",
+            "started_at": "2026-01-01T00:00:00.020000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.040000+00:00",
+            "error": null,
+            "event_id": "task-1",
+            "event_type": "tool_call",
+            "input_text": null,
+            "input_tokens": 0,
+            "metadata": {},
+            "model": null,
+            "name": "task",
+            "output_text": null,
+            "output_tokens": 0,
+            "parent_id": null,
+            "run_id": "unchanged-verify-mostly-fixes",
+            "started_at": "2026-01-01T00:00:00.030000+00:00",
+            "status": "ok",
+            "token_provenance": "unavailable"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.050000+00:00",
+            "error": null,
+            "event_id": "t1-draft",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "e1b0fad93d714a2086f4a2f31f510b9a"
+                },
+                "output": {
+                  "digest": "7e434cb8f3aad184e4b97faa075b14f1"
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "8654cfe7f7b80e4c"
+              },
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "solve.draft",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": "task-1",
+            "run_id": "unchanged-verify-mostly-fixes",
+            "started_at": "2026-01-01T00:00:00.040000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.060000+00:00",
+            "error": null,
+            "event_id": "t1-verify",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "7e434cb8f3aad184e4b97faa075b14f1"
+                },
+                "output": {
+                  "digest": "866b16f1c44f99a9e22b4f16cc7c4557"
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "8654cfe7f7b80e4c"
+              },
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "solve.verify",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": "task-1",
+            "run_id": "unchanged-verify-mostly-fixes",
+            "started_at": "2026-01-01T00:00:00.050000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.070000+00:00",
+            "error": null,
+            "event_id": "task-2",
+            "event_type": "tool_call",
+            "input_text": null,
+            "input_tokens": 0,
+            "metadata": {},
+            "model": null,
+            "name": "task",
+            "output_text": null,
+            "output_tokens": 0,
+            "parent_id": null,
+            "run_id": "unchanged-verify-mostly-fixes",
+            "started_at": "2026-01-01T00:00:00.060000+00:00",
+            "status": "ok",
+            "token_provenance": "unavailable"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.080000+00:00",
+            "error": null,
+            "event_id": "t2-draft",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "e1b0fad93d714a2086f4a2f31f510b9a"
+                },
+                "output": {
+                  "digest": "9b34d145889f0e9d84cf621775b4e0ad"
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "8654cfe7f7b80e4c"
+              },
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "solve.draft",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": "task-2",
+            "run_id": "unchanged-verify-mostly-fixes",
+            "started_at": "2026-01-01T00:00:00.070000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.090000+00:00",
+            "error": null,
+            "event_id": "t2-verify",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "9b34d145889f0e9d84cf621775b4e0ad"
+                },
+                "output": {
+                  "digest": "a6e060548a5f9229fa612c103c6a820a"
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "8654cfe7f7b80e4c"
+              },
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "solve.verify",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": "task-2",
+            "run_id": "unchanged-verify-mostly-fixes",
+            "started_at": "2026-01-01T00:00:00.080000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.100000+00:00",
+            "error": null,
+            "event_id": "task-3",
+            "event_type": "tool_call",
+            "input_text": null,
+            "input_tokens": 0,
+            "metadata": {},
+            "model": null,
+            "name": "task",
+            "output_text": null,
+            "output_tokens": 0,
+            "parent_id": null,
+            "run_id": "unchanged-verify-mostly-fixes",
+            "started_at": "2026-01-01T00:00:00.090000+00:00",
+            "status": "ok",
+            "token_provenance": "unavailable"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.110000+00:00",
+            "error": null,
+            "event_id": "t3-draft",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "e1b0fad93d714a2086f4a2f31f510b9a"
+                },
+                "output": {
+                  "digest": "2e260e6a515098b680726780a3093900"
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "8654cfe7f7b80e4c"
+              },
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "solve.draft",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": "task-3",
+            "run_id": "unchanged-verify-mostly-fixes",
+            "started_at": "2026-01-01T00:00:00.100000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.120000+00:00",
+            "error": null,
+            "event_id": "t3-verify",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "2e260e6a515098b680726780a3093900"
+                },
+                "output": {
+                  "digest": "d896070bc8be5855e2c4df55c932b201"
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "8654cfe7f7b80e4c"
+              },
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "solve.verify",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": "task-3",
+            "run_id": "unchanged-verify-mostly-fixes",
+            "started_at": "2026-01-01T00:00:00.110000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.130000+00:00",
+            "error": null,
+            "event_id": "task-4",
+            "event_type": "tool_call",
+            "input_text": null,
+            "input_tokens": 0,
+            "metadata": {},
+            "model": null,
+            "name": "task",
+            "output_text": null,
+            "output_tokens": 0,
+            "parent_id": null,
+            "run_id": "unchanged-verify-mostly-fixes",
+            "started_at": "2026-01-01T00:00:00.120000+00:00",
+            "status": "ok",
+            "token_provenance": "unavailable"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.140000+00:00",
+            "error": null,
+            "event_id": "t4-draft",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "e1b0fad93d714a2086f4a2f31f510b9a"
+                },
+                "output": {
+                  "digest": "32b2df7ee05ce9889b5cc1deb75ed281"
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "8654cfe7f7b80e4c"
+              },
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "solve.draft",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": "task-4",
+            "run_id": "unchanged-verify-mostly-fixes",
+            "started_at": "2026-01-01T00:00:00.130000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.150000+00:00",
+            "error": null,
+            "event_id": "t4-verify",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "32b2df7ee05ce9889b5cc1deb75ed281"
+                },
+                "output": {
+                  "digest": "32b2df7ee05ce9889b5cc1deb75ed281"
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "8654cfe7f7b80e4c"
+              },
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "solve.verify",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": "task-4",
+            "run_id": "unchanged-verify-mostly-fixes",
+            "started_at": "2026-01-01T00:00:00.140000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          }
+        ],
+        "metadata": {
+          "synthetic": true
+        },
+        "name": "Synthetic content fingerprint fixture",
+        "run_id": "unchanged-verify-mostly-fixes",
+        "schema_version": "1.1",
+        "started_at": "2026-01-01T00:00:00+00:00"
+      },
+      "workload_ref": "synthetic:unchanged-verify-mostly-fixes:v1"
+    },
+    {
+      "group": "unchanged-verify-case-only",
+      "id": "unchanged-verify-case-only",
+      "label": "ambiguous",
+      "label_ref": "repository:scripts/build_finding_corpus.py:content-fingerprint-labels",
+      "label_version": "1.0",
+      "opportunities": [],
+      "rationale": "The check changed only letter case; whether that matters depends on an unstated scorer.",
+      "required_evidence": [
+        "content"
+      ],
+      "rule_id": "unchanged_output",
+      "scenario": "disagreement",
+      "split": "evaluation",
+      "trace": {
+        "elapsed_ms": 1000.0,
+        "ended_at": "2026-01-01T00:00:01+00:00",
+        "events": [
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.010000+00:00",
+            "error": null,
+            "event_id": "draft",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "18815138b56c8af23228f8e2f5512183"
+                },
+                "output": {
+                  "digest": "d0e4f72f86fd59d1a0c9b8f9f8cf48d2"
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "a255cb6b65ba13fc"
+              },
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "solve.draft",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": null,
+            "run_id": "unchanged-verify-case-only",
+            "started_at": "2026-01-01T00:00:00.000000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.020000+00:00",
+            "error": null,
+            "event_id": "verify",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "d0e4f72f86fd59d1a0c9b8f9f8cf48d2"
+                },
+                "output": {
+                  "digest": "81484270104dc332ac4c32c28d8f69dd"
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "a255cb6b65ba13fc"
+              },
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "solve.verify",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": null,
+            "run_id": "unchanged-verify-case-only",
+            "started_at": "2026-01-01T00:00:00.010000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          }
+        ],
+        "metadata": {
+          "synthetic": true
+        },
+        "name": "Synthetic content fingerprint fixture",
+        "run_id": "unchanged-verify-case-only",
+        "schema_version": "1.1",
+        "started_at": "2026-01-01T00:00:00+00:00"
+      },
+      "workload_ref": "synthetic:unchanged-verify-case-only:v1"
+    },
+    {
+      "group": "unchanged-verify-no-fingerprints",
+      "id": "unchanged-verify-no-fingerprints",
+      "label": "unknown",
+      "label_ref": "repository:scripts/build_finding_corpus.py:content-fingerprint-labels",
+      "label_version": "1.0",
+      "opportunities": [],
+      "rationale": "No content fingerprints were recorded, so nothing shows whether the check changed the draft.",
+      "required_evidence": [
+        "content"
+      ],
+      "rule_id": "unchanged_output",
+      "scenario": "partial_telemetry",
+      "split": "evaluation",
+      "trace": {
+        "elapsed_ms": 1000.0,
+        "ended_at": "2026-01-01T00:00:01+00:00",
+        "events": [
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.010000+00:00",
+            "error": null,
+            "event_id": "draft",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "solve.draft",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": null,
+            "run_id": "unchanged-verify-no-fingerprints",
+            "started_at": "2026-01-01T00:00:00.000000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.020000+00:00",
+            "error": null,
+            "event_id": "verify",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "solve.verify",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": null,
+            "run_id": "unchanged-verify-no-fingerprints",
+            "started_at": "2026-01-01T00:00:00.010000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          }
+        ],
+        "metadata": {
+          "synthetic": true
+        },
+        "name": "Synthetic content fingerprint fixture",
+        "run_id": "unchanged-verify-no-fingerprints",
+        "schema_version": "1.1",
+        "started_at": "2026-01-01T00:00:00+00:00"
+      },
+      "workload_ref": "synthetic:unchanged-verify-no-fingerprints:v1"
+    },
+    {
+      "group": "repeated-retrieval-development",
+      "id": "repeated-retrieval-development",
+      "label": "opportunity",
+      "label_ref": "repository:scripts/build_finding_corpus.py:content-fingerprint-labels",
+      "label_version": "1.0",
+      "opportunities": [
+        {
+          "family": "repeated_result",
+          "spans": [
+            "rephrase",
+            "find-2"
+          ]
+        }
+      ],
+      "rationale": "The rephrased lookup returned a passage already found; the rephrase exists only to feed it.",
+      "required_evidence": [
+        "content"
+      ],
+      "rule_id": "repeated_result",
+      "scenario": "ordinary",
+      "split": "development",
+      "trace": {
+        "elapsed_ms": 1000.0,
+        "ended_at": "2026-01-01T00:00:01+00:00",
+        "events": [
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.010000+00:00",
+            "error": null,
+            "event_id": "find-1",
+            "event_type": "tool_call",
+            "input_text": null,
+            "input_tokens": 0,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "6faa5e045fea667a5446161a66e5af46"
+                },
+                "output": {
+                  "digest": "0aa9c8f18f099c32b08b11d48b5d54e7",
+                  "items": [
+                    "99695306099f6be3db088de4600ea39b",
+                    "f061bd99bb2d50888ab7b2081dbbb948"
+                  ]
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "9948c9ab472b7a78"
+              }
+            },
+            "model": null,
+            "name": "find",
+            "output_text": null,
+            "output_tokens": 0,
+            "parent_id": null,
+            "run_id": "repeated-retrieval-development",
+            "started_at": "2026-01-01T00:00:00.000000+00:00",
+            "status": "ok",
+            "token_provenance": "unavailable"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.020000+00:00",
+            "error": null,
+            "event_id": "rephrase",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "6faa5e045fea667a5446161a66e5af46"
+                },
+                "output": {
+                  "digest": "18ff723315bbfaa1c42ff521ff2f14ca"
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "9948c9ab472b7a78"
+              },
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "rephrase",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": null,
+            "run_id": "repeated-retrieval-development",
+            "started_at": "2026-01-01T00:00:00.010000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.030000+00:00",
+            "error": null,
+            "event_id": "find-2",
+            "event_type": "tool_call",
+            "input_text": null,
+            "input_tokens": 0,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "18ff723315bbfaa1c42ff521ff2f14ca"
+                },
+                "output": {
+                  "digest": "33fc9cd88a7b010616d4b38bc52da6b2",
+                  "items": [
+                    "99695306099f6be3db088de4600ea39b"
+                  ]
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "9948c9ab472b7a78"
+              }
+            },
+            "model": null,
+            "name": "find",
+            "output_text": null,
+            "output_tokens": 0,
+            "parent_id": null,
+            "run_id": "repeated-retrieval-development",
+            "started_at": "2026-01-01T00:00:00.020000+00:00",
+            "status": "ok",
+            "token_provenance": "unavailable"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.040000+00:00",
+            "error": null,
+            "event_id": "answer",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "1a9dd38c8e7a0a3b7dbdce2ce6d5f4a1"
+                },
+                "output": {
+                  "digest": "50daf012e42e44e0e79ee38bf1046227"
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "9948c9ab472b7a78"
+              },
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "answer",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": null,
+            "run_id": "repeated-retrieval-development",
+            "started_at": "2026-01-01T00:00:00.030000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          }
+        ],
+        "metadata": {
+          "synthetic": true
+        },
+        "name": "Synthetic content fingerprint fixture",
+        "run_id": "repeated-retrieval-development",
+        "schema_version": "1.1",
+        "started_at": "2026-01-01T00:00:00+00:00"
+      },
+      "workload_ref": "synthetic:repeated-retrieval-development:v1"
+    },
+    {
+      "group": "repeated-retrieval-subset",
+      "id": "repeated-retrieval-subset",
+      "label": "opportunity",
+      "label_ref": "repository:scripts/build_finding_corpus.py:content-fingerprint-labels",
+      "label_version": "1.0",
+      "opportunities": [
+        {
+          "family": "repeated_result",
+          "spans": [
+            "rephrase",
+            "find-2"
+          ]
+        }
+      ],
+      "rationale": "The second lookup found only a passage the first had already returned.",
+      "required_evidence": [
+        "content"
+      ],
+      "rule_id": "repeated_result",
+      "scenario": "ordinary",
+      "split": "evaluation",
+      "trace": {
+        "elapsed_ms": 1000.0,
+        "ended_at": "2026-01-01T00:00:01+00:00",
+        "events": [
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.010000+00:00",
+            "error": null,
+            "event_id": "find-1",
+            "event_type": "tool_call",
+            "input_text": null,
+            "input_tokens": 0,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "78d017ab46c880c335c66e765e558935"
+                },
+                "output": {
+                  "digest": "dd5e30dff5c1362836e30f0647fcdb26",
+                  "items": [
+                    "f846744cf55db43182890677a08e8558",
+                    "7a134d02f6cb49c5b15fe558d8dcf642",
+                    "a87543683a7ed323a1c99220507d7b1d"
+                  ]
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "e5986a50dbdfda30"
+              }
+            },
+            "model": null,
+            "name": "find",
+            "output_text": null,
+            "output_tokens": 0,
+            "parent_id": null,
+            "run_id": "repeated-retrieval-subset",
+            "started_at": "2026-01-01T00:00:00.000000+00:00",
+            "status": "ok",
+            "token_provenance": "unavailable"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.020000+00:00",
+            "error": null,
+            "event_id": "rephrase",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "78d017ab46c880c335c66e765e558935"
+                },
+                "output": {
+                  "digest": "50df313779125b81b037d9fb4275f8c7"
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "e5986a50dbdfda30"
+              },
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "rephrase",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": null,
+            "run_id": "repeated-retrieval-subset",
+            "started_at": "2026-01-01T00:00:00.010000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.030000+00:00",
+            "error": null,
+            "event_id": "find-2",
+            "event_type": "tool_call",
+            "input_text": null,
+            "input_tokens": 0,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "50df313779125b81b037d9fb4275f8c7"
+                },
+                "output": {
+                  "digest": "4e53af29bd9ad170cc7f583e9c80fdf6",
+                  "items": [
+                    "a87543683a7ed323a1c99220507d7b1d"
+                  ]
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "e5986a50dbdfda30"
+              }
+            },
+            "model": null,
+            "name": "find",
+            "output_text": null,
+            "output_tokens": 0,
+            "parent_id": null,
+            "run_id": "repeated-retrieval-subset",
+            "started_at": "2026-01-01T00:00:00.020000+00:00",
+            "status": "ok",
+            "token_provenance": "unavailable"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.040000+00:00",
+            "error": null,
+            "event_id": "answer",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "17f3c0cf50233d68d9a8b568370144dd"
+                },
+                "output": {
+                  "digest": "98931d4ad68819ad988e13c44677411a"
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "e5986a50dbdfda30"
+              },
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "answer",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": null,
+            "run_id": "repeated-retrieval-subset",
+            "started_at": "2026-01-01T00:00:00.030000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          }
+        ],
+        "metadata": {
+          "synthetic": true
+        },
+        "name": "Synthetic content fingerprint fixture",
+        "run_id": "repeated-retrieval-subset",
+        "schema_version": "1.1",
+        "started_at": "2026-01-01T00:00:00+00:00"
+      },
+      "workload_ref": "synthetic:repeated-retrieval-subset:v1"
+    },
+    {
+      "group": "repeated-retrieval-new-passage",
+      "id": "repeated-retrieval-new-passage",
+      "label": "no_opportunity",
+      "label_ref": "repository:scripts/build_finding_corpus.py:content-fingerprint-labels",
+      "label_version": "1.0",
+      "opportunities": [],
+      "rationale": "The rephrased lookup found a passage the first lookup missed.",
+      "required_evidence": [
+        "content"
+      ],
+      "rule_id": "repeated_result",
+      "scenario": "invalid_opportunity",
+      "split": "evaluation",
+      "trace": {
+        "elapsed_ms": 1000.0,
+        "ended_at": "2026-01-01T00:00:01+00:00",
+        "events": [
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.010000+00:00",
+            "error": null,
+            "event_id": "find-1",
+            "event_type": "tool_call",
+            "input_text": null,
+            "input_tokens": 0,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "25297f0da80ed75e368eb37d68b21645"
+                },
+                "output": {
+                  "digest": "b6c35ba47f250d3b6434fe75a74818c0",
+                  "items": [
+                    "a0ca00ae372a74229dfd0425e7bc416f"
+                  ]
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "fe8e5adcc7ae0e95"
+              }
+            },
+            "model": null,
+            "name": "find",
+            "output_text": null,
+            "output_tokens": 0,
+            "parent_id": null,
+            "run_id": "repeated-retrieval-new-passage",
+            "started_at": "2026-01-01T00:00:00.000000+00:00",
+            "status": "ok",
+            "token_provenance": "unavailable"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.020000+00:00",
+            "error": null,
+            "event_id": "rephrase",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "25297f0da80ed75e368eb37d68b21645"
+                },
+                "output": {
+                  "digest": "05d070f3aa75d2800ff2d033afabc7dd"
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "fe8e5adcc7ae0e95"
+              },
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "rephrase",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": null,
+            "run_id": "repeated-retrieval-new-passage",
+            "started_at": "2026-01-01T00:00:00.010000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.030000+00:00",
+            "error": null,
+            "event_id": "find-2",
+            "event_type": "tool_call",
+            "input_text": null,
+            "input_tokens": 0,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "05d070f3aa75d2800ff2d033afabc7dd"
+                },
+                "output": {
+                  "digest": "3155d885e5951dcd108cf803ab08f363",
+                  "items": [
+                    "a0ca00ae372a74229dfd0425e7bc416f",
+                    "4ceeefc221e7f290a22c5b32040bcace"
+                  ]
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "fe8e5adcc7ae0e95"
+              }
+            },
+            "model": null,
+            "name": "find",
+            "output_text": null,
+            "output_tokens": 0,
+            "parent_id": null,
+            "run_id": "repeated-retrieval-new-passage",
+            "started_at": "2026-01-01T00:00:00.020000+00:00",
+            "status": "ok",
+            "token_provenance": "unavailable"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.040000+00:00",
+            "error": null,
+            "event_id": "answer",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "c2578aba9dc0fb1a6efcd67f7015dd01"
+                },
+                "output": {
+                  "digest": "1f51c3e9b6053fb55545e37e3e5b7b23"
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "fe8e5adcc7ae0e95"
+              },
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "answer",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": null,
+            "run_id": "repeated-retrieval-new-passage",
+            "started_at": "2026-01-01T00:00:00.030000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          }
+        ],
+        "metadata": {
+          "synthetic": true
+        },
+        "name": "Synthetic content fingerprint fixture",
+        "run_id": "repeated-retrieval-new-passage",
+        "schema_version": "1.1",
+        "started_at": "2026-01-01T00:00:00+00:00"
+      },
+      "workload_ref": "synthetic:repeated-retrieval-new-passage:v1"
+    },
+    {
+      "group": "repeated-retrieval-across-tasks",
+      "id": "repeated-retrieval-across-tasks",
+      "label": "no_opportunity",
+      "label_ref": "repository:scripts/build_finding_corpus.py:content-fingerprint-labels",
+      "label_version": "1.0",
+      "opportunities": [],
+      "rationale": "Each task's second lookup found something new; passages repeat only across unrelated tasks.",
+      "required_evidence": [
+        "content"
+      ],
+      "rule_id": "repeated_result",
+      "scenario": "workload_shift",
+      "split": "evaluation",
+      "trace": {
+        "elapsed_ms": 1000.0,
+        "ended_at": "2026-01-01T00:00:01+00:00",
+        "events": [
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.010000+00:00",
+            "error": null,
+            "event_id": "task-0",
+            "event_type": "tool_call",
+            "input_text": null,
+            "input_tokens": 0,
+            "metadata": {},
+            "model": null,
+            "name": "task",
+            "output_text": null,
+            "output_tokens": 0,
+            "parent_id": null,
+            "run_id": "repeated-retrieval-across-tasks",
+            "started_at": "2026-01-01T00:00:00.000000+00:00",
+            "status": "ok",
+            "token_provenance": "unavailable"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.020000+00:00",
+            "error": null,
+            "event_id": "t0-find-1",
+            "event_type": "tool_call",
+            "input_text": null,
+            "input_tokens": 0,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "6705a0e0373216f2d72d4730397a2b65"
+                },
+                "output": {
+                  "digest": "d7b654633cd0207a555f3df8bb0374d5",
+                  "items": [
+                    "05a6dc0a69db732083644d9bf41b3f08"
+                  ]
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "bca893a654db909b"
+              }
+            },
+            "model": null,
+            "name": "find",
+            "output_text": null,
+            "output_tokens": 0,
+            "parent_id": "task-0",
+            "run_id": "repeated-retrieval-across-tasks",
+            "started_at": "2026-01-01T00:00:00.010000+00:00",
+            "status": "ok",
+            "token_provenance": "unavailable"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.030000+00:00",
+            "error": null,
+            "event_id": "t0-find-2",
+            "event_type": "tool_call",
+            "input_text": null,
+            "input_tokens": 0,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "8bd7f687ee6bd889eb253a80769bece4"
+                },
+                "output": {
+                  "digest": "7808db334f2fbebbc7c53b9d98c868b5",
+                  "items": [
+                    "b5b8a4af6a77257bcfbeff2b5072e9f5"
+                  ]
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "bca893a654db909b"
+              }
+            },
+            "model": null,
+            "name": "find",
+            "output_text": null,
+            "output_tokens": 0,
+            "parent_id": "task-0",
+            "run_id": "repeated-retrieval-across-tasks",
+            "started_at": "2026-01-01T00:00:00.020000+00:00",
+            "status": "ok",
+            "token_provenance": "unavailable"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.040000+00:00",
+            "error": null,
+            "event_id": "task-1",
+            "event_type": "tool_call",
+            "input_text": null,
+            "input_tokens": 0,
+            "metadata": {},
+            "model": null,
+            "name": "task",
+            "output_text": null,
+            "output_tokens": 0,
+            "parent_id": null,
+            "run_id": "repeated-retrieval-across-tasks",
+            "started_at": "2026-01-01T00:00:00.030000+00:00",
+            "status": "ok",
+            "token_provenance": "unavailable"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.050000+00:00",
+            "error": null,
+            "event_id": "t1-find-1",
+            "event_type": "tool_call",
+            "input_text": null,
+            "input_tokens": 0,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "5ef3f3a3771ac720d2727fc544c14bd4"
+                },
+                "output": {
+                  "digest": "d7b654633cd0207a555f3df8bb0374d5",
+                  "items": [
+                    "05a6dc0a69db732083644d9bf41b3f08"
+                  ]
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "bca893a654db909b"
+              }
+            },
+            "model": null,
+            "name": "find",
+            "output_text": null,
+            "output_tokens": 0,
+            "parent_id": "task-1",
+            "run_id": "repeated-retrieval-across-tasks",
+            "started_at": "2026-01-01T00:00:00.040000+00:00",
+            "status": "ok",
+            "token_provenance": "unavailable"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.060000+00:00",
+            "error": null,
+            "event_id": "t1-find-2",
+            "event_type": "tool_call",
+            "input_text": null,
+            "input_tokens": 0,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "96cebea4fabb26abca5443a8ac7aa738"
+                },
+                "output": {
+                  "digest": "40a9c1227e6dab57f062051db01f1461",
+                  "items": [
+                    "86bb1fa894a31b510b026eb7441fdbee"
+                  ]
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "bca893a654db909b"
+              }
+            },
+            "model": null,
+            "name": "find",
+            "output_text": null,
+            "output_tokens": 0,
+            "parent_id": "task-1",
+            "run_id": "repeated-retrieval-across-tasks",
+            "started_at": "2026-01-01T00:00:00.050000+00:00",
+            "status": "ok",
+            "token_provenance": "unavailable"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.070000+00:00",
+            "error": null,
+            "event_id": "task-2",
+            "event_type": "tool_call",
+            "input_text": null,
+            "input_tokens": 0,
+            "metadata": {},
+            "model": null,
+            "name": "task",
+            "output_text": null,
+            "output_tokens": 0,
+            "parent_id": null,
+            "run_id": "repeated-retrieval-across-tasks",
+            "started_at": "2026-01-01T00:00:00.060000+00:00",
+            "status": "ok",
+            "token_provenance": "unavailable"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.080000+00:00",
+            "error": null,
+            "event_id": "t2-find-1",
+            "event_type": "tool_call",
+            "input_text": null,
+            "input_tokens": 0,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "4becf8928a82dade0f6e8a2023d8839d"
+                },
+                "output": {
+                  "digest": "d7b654633cd0207a555f3df8bb0374d5",
+                  "items": [
+                    "05a6dc0a69db732083644d9bf41b3f08"
+                  ]
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "bca893a654db909b"
+              }
+            },
+            "model": null,
+            "name": "find",
+            "output_text": null,
+            "output_tokens": 0,
+            "parent_id": "task-2",
+            "run_id": "repeated-retrieval-across-tasks",
+            "started_at": "2026-01-01T00:00:00.070000+00:00",
+            "status": "ok",
+            "token_provenance": "unavailable"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.090000+00:00",
+            "error": null,
+            "event_id": "t2-find-2",
+            "event_type": "tool_call",
+            "input_text": null,
+            "input_tokens": 0,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "51f980a757fd126bcfa2f9bd65153364"
+                },
+                "output": {
+                  "digest": "7079fbf8c060e45be82d7ac470f8707a",
+                  "items": [
+                    "4d873973a17e5137aa766da3b76551ae"
+                  ]
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "bca893a654db909b"
+              }
+            },
+            "model": null,
+            "name": "find",
+            "output_text": null,
+            "output_tokens": 0,
+            "parent_id": "task-2",
+            "run_id": "repeated-retrieval-across-tasks",
+            "started_at": "2026-01-01T00:00:00.080000+00:00",
+            "status": "ok",
+            "token_provenance": "unavailable"
+          }
+        ],
+        "metadata": {
+          "synthetic": true
+        },
+        "name": "Synthetic content fingerprint fixture",
+        "run_id": "repeated-retrieval-across-tasks",
+        "schema_version": "1.1",
+        "started_at": "2026-01-01T00:00:00+00:00"
+      },
+      "workload_ref": "synthetic:repeated-retrieval-across-tasks:v1"
+    },
+    {
+      "group": "repeated-retrieval-shared-query",
+      "id": "repeated-retrieval-shared-query",
+      "label": "opportunity",
+      "label_ref": "repository:scripts/build_finding_corpus.py:content-fingerprint-labels",
+      "label_version": "1.0",
+      "opportunities": [
+        {
+          "family": "repeated_result",
+          "spans": [
+            "find-2"
+          ]
+        }
+      ],
+      "rationale": "The second lookup added nothing, but the answer step also uses the rephrased query, so only the lookup is removable.",
+      "required_evidence": [
+        "content"
+      ],
+      "rule_id": "repeated_result",
+      "scenario": "shared_state",
+      "split": "evaluation",
+      "trace": {
+        "elapsed_ms": 1000.0,
+        "ended_at": "2026-01-01T00:00:01+00:00",
+        "events": [
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.010000+00:00",
+            "error": null,
+            "event_id": "find-1",
+            "event_type": "tool_call",
+            "input_text": null,
+            "input_tokens": 0,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "09be18916a5e19fba852f6e657a64534"
+                },
+                "output": {
+                  "digest": "e6eff6e38f3dbe52331f82c16a3cec02",
+                  "items": [
+                    "720f6a04c0317807c5fd6cd12d7a146a"
+                  ]
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "c856130b3eac8be2"
+              }
+            },
+            "model": null,
+            "name": "find",
+            "output_text": null,
+            "output_tokens": 0,
+            "parent_id": null,
+            "run_id": "repeated-retrieval-shared-query",
+            "started_at": "2026-01-01T00:00:00.000000+00:00",
+            "status": "ok",
+            "token_provenance": "unavailable"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.020000+00:00",
+            "error": null,
+            "event_id": "rephrase",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "09be18916a5e19fba852f6e657a64534"
+                },
+                "output": {
+                  "digest": "b8f3b9d21baf3146ed89d5dd0b8583a9"
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "c856130b3eac8be2"
+              },
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "rephrase",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": null,
+            "run_id": "repeated-retrieval-shared-query",
+            "started_at": "2026-01-01T00:00:00.010000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.030000+00:00",
+            "error": null,
+            "event_id": "find-2",
+            "event_type": "tool_call",
+            "input_text": null,
+            "input_tokens": 0,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "b8f3b9d21baf3146ed89d5dd0b8583a9"
+                },
+                "output": {
+                  "digest": "e6eff6e38f3dbe52331f82c16a3cec02",
+                  "items": [
+                    "720f6a04c0317807c5fd6cd12d7a146a"
+                  ]
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "c856130b3eac8be2"
+              }
+            },
+            "model": null,
+            "name": "find",
+            "output_text": null,
+            "output_tokens": 0,
+            "parent_id": null,
+            "run_id": "repeated-retrieval-shared-query",
+            "started_at": "2026-01-01T00:00:00.020000+00:00",
+            "status": "ok",
+            "token_provenance": "unavailable"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.040000+00:00",
+            "error": null,
+            "event_id": "answer",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "b8f3b9d21baf3146ed89d5dd0b8583a9"
+                },
+                "output": {
+                  "digest": "efd8204d1a2923b50eb433ad1c7480d0"
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "c856130b3eac8be2"
+              },
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "answer",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": null,
+            "run_id": "repeated-retrieval-shared-query",
+            "started_at": "2026-01-01T00:00:00.030000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          }
+        ],
+        "metadata": {
+          "synthetic": true
+        },
+        "name": "Synthetic content fingerprint fixture",
+        "run_id": "repeated-retrieval-shared-query",
+        "schema_version": "1.1",
+        "started_at": "2026-01-01T00:00:00+00:00"
+      },
+      "workload_ref": "synthetic:repeated-retrieval-shared-query:v1"
+    },
+    {
+      "group": "repeated-retrieval-no-fingerprints",
+      "id": "repeated-retrieval-no-fingerprints",
+      "label": "unknown",
+      "label_ref": "repository:scripts/build_finding_corpus.py:content-fingerprint-labels",
+      "label_version": "1.0",
+      "opportunities": [],
+      "rationale": "No content fingerprints were recorded, so the lookups cannot be compared.",
+      "required_evidence": [
+        "content"
+      ],
+      "rule_id": "repeated_result",
+      "scenario": "partial_telemetry",
+      "split": "evaluation",
+      "trace": {
+        "elapsed_ms": 1000.0,
+        "ended_at": "2026-01-01T00:00:01+00:00",
+        "events": [
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.010000+00:00",
+            "error": null,
+            "event_id": "find-1",
+            "event_type": "tool_call",
+            "input_text": null,
+            "input_tokens": 0,
+            "metadata": {},
+            "model": null,
+            "name": "find",
+            "output_text": null,
+            "output_tokens": 0,
+            "parent_id": null,
+            "run_id": "repeated-retrieval-no-fingerprints",
+            "started_at": "2026-01-01T00:00:00.000000+00:00",
+            "status": "ok",
+            "token_provenance": "unavailable"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.020000+00:00",
+            "error": null,
+            "event_id": "rephrase",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "rephrase",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": null,
+            "run_id": "repeated-retrieval-no-fingerprints",
+            "started_at": "2026-01-01T00:00:00.010000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.030000+00:00",
+            "error": null,
+            "event_id": "find-2",
+            "event_type": "tool_call",
+            "input_text": null,
+            "input_tokens": 0,
+            "metadata": {},
+            "model": null,
+            "name": "find",
+            "output_text": null,
+            "output_tokens": 0,
+            "parent_id": null,
+            "run_id": "repeated-retrieval-no-fingerprints",
+            "started_at": "2026-01-01T00:00:00.020000+00:00",
+            "status": "ok",
+            "token_provenance": "unavailable"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.040000+00:00",
+            "error": null,
+            "event_id": "answer",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "answer",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": null,
+            "run_id": "repeated-retrieval-no-fingerprints",
+            "started_at": "2026-01-01T00:00:00.030000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          }
+        ],
+        "metadata": {
+          "synthetic": true
+        },
+        "name": "Synthetic content fingerprint fixture",
+        "run_id": "repeated-retrieval-no-fingerprints",
+        "schema_version": "1.1",
+        "started_at": "2026-01-01T00:00:00+00:00"
+      },
+      "workload_ref": "synthetic:repeated-retrieval-no-fingerprints:v1"
+    },
+    {
+      "group": "repeated-retrieval-reordered",
+      "id": "repeated-retrieval-reordered",
+      "label": "ambiguous",
+      "label_ref": "repository:scripts/build_finding_corpus.py:content-fingerprint-labels",
+      "label_version": "1.0",
+      "opportunities": [],
+      "rationale": "The second lookup returned the same passages in another order; whether order matters to the answer step is not recorded.",
+      "required_evidence": [
+        "content"
+      ],
+      "rule_id": "repeated_result",
+      "scenario": "disagreement",
+      "split": "evaluation",
+      "trace": {
+        "elapsed_ms": 1000.0,
+        "ended_at": "2026-01-01T00:00:01+00:00",
+        "events": [
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.010000+00:00",
+            "error": null,
+            "event_id": "find-1",
+            "event_type": "tool_call",
+            "input_text": null,
+            "input_tokens": 0,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "4cc0dc657a8bf18df7d0335787d694ac"
+                },
+                "output": {
+                  "digest": "095b9ee848266ac6390bd2c491c1d88f",
+                  "items": [
+                    "fd9e3626aebc428bea29cfed5cf80319",
+                    "68e40762c01750df8288e45aafa0588b"
+                  ]
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "c221c06ae3fb72a1"
+              }
+            },
+            "model": null,
+            "name": "find",
+            "output_text": null,
+            "output_tokens": 0,
+            "parent_id": null,
+            "run_id": "repeated-retrieval-reordered",
+            "started_at": "2026-01-01T00:00:00.000000+00:00",
+            "status": "ok",
+            "token_provenance": "unavailable"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.020000+00:00",
+            "error": null,
+            "event_id": "rephrase",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "4cc0dc657a8bf18df7d0335787d694ac"
+                },
+                "output": {
+                  "digest": "2558512f50b9b41479f4896623dae693"
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "c221c06ae3fb72a1"
+              },
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "rephrase",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": null,
+            "run_id": "repeated-retrieval-reordered",
+            "started_at": "2026-01-01T00:00:00.010000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.030000+00:00",
+            "error": null,
+            "event_id": "find-2",
+            "event_type": "tool_call",
+            "input_text": null,
+            "input_tokens": 0,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "2558512f50b9b41479f4896623dae693"
+                },
+                "output": {
+                  "digest": "eb9f6f29bd52354a1bae9a6a7b071729",
+                  "items": [
+                    "68e40762c01750df8288e45aafa0588b",
+                    "fd9e3626aebc428bea29cfed5cf80319"
+                  ]
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "c221c06ae3fb72a1"
+              }
+            },
+            "model": null,
+            "name": "find",
+            "output_text": null,
+            "output_tokens": 0,
+            "parent_id": null,
+            "run_id": "repeated-retrieval-reordered",
+            "started_at": "2026-01-01T00:00:00.020000+00:00",
+            "status": "ok",
+            "token_provenance": "unavailable"
+          },
+          {
+            "duration_ms": 10,
+            "ended_at": "2026-01-01T00:00:00.040000+00:00",
+            "error": null,
+            "event_id": "answer",
+            "event_type": "model_call",
+            "input_text": null,
+            "input_tokens": 10,
+            "metadata": {
+              "agentloop.content": {
+                "input": {
+                  "digest": "359f0466daf6301366f4394f77c2951b"
+                },
+                "output": {
+                  "digest": "8e211baa0bf8a641eba6ee30a19f9502"
+                },
+                "required": false,
+                "schema": "agentloop.content/v1",
+                "scope": "c221c06ae3fb72a1"
+              },
+              "provider_reported_cost_usd": 0.001
+            },
+            "model": "synthetic-large",
+            "name": "answer",
+            "output_text": null,
+            "output_tokens": 2,
+            "parent_id": null,
+            "run_id": "repeated-retrieval-reordered",
+            "started_at": "2026-01-01T00:00:00.030000+00:00",
+            "status": "ok",
+            "token_provenance": "provider"
+          }
+        ],
+        "metadata": {
+          "synthetic": true
+        },
+        "name": "Synthetic content fingerprint fixture",
+        "run_id": "repeated-retrieval-reordered",
+        "schema_version": "1.1",
+        "started_at": "2026-01-01T00:00:00+00:00"
+      },
+      "workload_ref": "synthetic:repeated-retrieval-reordered:v1"
+    }
+  ],
+  "name": "Synthetic content fingerprint finding regression",
+  "policy": {
+    "id": "content fingerprint rules",
+    "ref": "unchanged_output 1.0 and repeated_result 1.0; thresholds fixed before these labels were written",
+    "version": "1.0"
+  },
+  "provenance_ref": "repository:scripts/build_finding_corpus.py:content-v1",
+  "schema_version": "1.0",
+  "synthetic": true,
+  "version": "1.0"
+}

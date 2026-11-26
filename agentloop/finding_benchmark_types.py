@@ -107,7 +107,7 @@ class FindingBenchmark:
                 not isinstance(evidence, list)
                 or any(
                     not isinstance(item, str)
-                    or item not in {"timing", "tokens", "cost", "semantic"}
+                    or item not in {"timing", "tokens", "cost", "semantic", "content"}
                     for item in evidence
                 )
                 or len(set(evidence)) != len(evidence)

@@ -96,8 +96,14 @@ class AgentTrace:
         self._start_perf = time.perf_counter()
         self._timing_active = False
         self.finalize_result: dict[str, Any] | None = None
+        # Secret per-trace key for content fingerprints; never serialized.
+        self._content_keyring: Any = None
 
     def add_event(self, event: AgentEvent) -> None:
+        if self._content_keyring is not None:
+            from agentloop.content_fingerprints import attach_pending
+
+            attach_pending(self, event)
         self.events.append(event)
 
     def to_dict(self) -> dict[str, Any]:

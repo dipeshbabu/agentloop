@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
+from agentloop.content_fingerprints import content_metadata
 from agentloop.estimates import ESTIMATORS, Estimator
 from agentloop.events import AgentEvent
 from agentloop.findings import build_diagnosis, diagnosis_to_markdown
@@ -22,6 +23,12 @@ def all_rules_trace():
     specs += [("model_call", "extract", 100)] * 3
     specs += [("model_call", "synthesize", 100), ("retry", "repair", 0)]
     for index, (kind, name, tokens) in enumerate(specs):
+        metadata = {"retry_reason": "invalid_output_schema"} if kind == "retry" else {}
+        # Opt-in content fingerprints activate the two content rules.
+        if name == "extract":
+            metadata = content_metadata(input="draft", output="draft", trace=trace)
+        elif name == "search":
+            metadata = content_metadata(input=f"query {index}", output=["passage"], trace=trace)
         trace.add_event(
             AgentEvent(
                 event_id=f"span-{index}",
@@ -36,7 +43,7 @@ def all_rules_trace():
                 output_tokens=4000 if name == "synthesize" else (100 if tokens else 0),
                 input_text="shared context " * 200 if tokens else None,
                 token_provenance="user_supplied" if tokens else None,
-                metadata={"retry_reason": "invalid_output_schema"} if kind == "retry" else {},
+                metadata=metadata,
             )
         )
     trace.ended_at = (start + timedelta(milliseconds=5000)).isoformat()
