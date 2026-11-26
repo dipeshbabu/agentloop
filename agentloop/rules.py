@@ -279,9 +279,9 @@ def _routing_cards(graph: ExecutionGraph) -> list[FindingCandidate]:
             cards.append(
                 FindingCandidate(
                     type=RecommendationType.ROUTE_TO_SMALLER_MODEL,
-                    title=f"Route `{node.name}` to a cheaper model",
+                    title=f"Check quality before routing `{node.name}` to a smaller model",
                     why=f"`{node.name}` is a relatively small model step using {node.total_tokens} tokens on {node.model}.",
-                    rewrite_hint="Try a smaller model for planning, summarization, extraction, or verification steps and keep the larger model for final synthesis.",
+                    rewrite_hint="A quality check is required first: run the smaller model and the current one on your own labeled tasks, and switch only if no task gets worse. A smaller model can be much faster and still give wrong answers.",
                     confidence="low",
                     estimated_latency_savings_ms=node.duration_ms
                     * ESTIMATORS["route_to_smaller_model"].parameter("latency_fraction"),
@@ -403,7 +403,12 @@ BUILTIN_RULES = (
     FindingRule("cache_context", "1.1", lambda ctx: _context_cache_cards(ctx.report, ctx.graph)),
     FindingRule("add_schema_validation", "1.2", lambda ctx: _retry_cards(ctx.graph)),
     FindingRule("batch_model_calls", "1.2", lambda ctx: _batch_model_cards(ctx.graph)),
-    FindingRule("route_to_smaller_model", "1.2", lambda ctx: _routing_cards(ctx.graph)),
+    FindingRule(
+        "route_to_smaller_model",
+        "1.3",
+        lambda ctx: _routing_cards(ctx.graph),
+        ranking_requirements=("smaller_model_quality_check",),
+    ),
     FindingRule("split_large_step", "1.1", lambda ctx: _split_large_step_cards(ctx.graph)),
     FindingRule("runaway_loop", "1.1", lambda ctx: _runaway_loop_cards(ctx.graph)),
     FindingRule("tool_oscillation", "1.1", lambda ctx: _tool_oscillation_cards(ctx.graph)),
