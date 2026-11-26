@@ -235,15 +235,110 @@ def test_cancelled_requests_return_no_result(workspace):
     server.tools["list_traces"]["handler"] = slow
     holder = {}
     worker = threading.Thread(
-        target=lambda: holder.update(r=call(server, "list_traces", identity=9))
-    )
+        target=lambda: holder.update(
+            r=server.handle(
+                {"jsonrpc": "2.0", "id": 9, "method": "tools/call",
+                 "params": {"name": "list_traces", "arguments": {}}}
+            )
+        )
+    )  # fmt: skip
     worker.start()
     started.wait(2)
     server.handle(
         {"jsonrpc": "2.0", "method": "notifications/cancelled", "params": {"requestId": 9}}
     )
     worker.join(5)
-    assert holder["r"]["isError"] is True and "cancelled" in holder["r"]["content"][0]["text"]
+    # The MCP specification: a cancelled request gets no response.
+    assert holder["r"] is None
+
+
+class _ScriptedReader:
+    """Lines for serve(); each may wait for an event before it is read."""
+
+    def __init__(self, steps):
+        self.steps = steps
+
+    def __iter__(self):
+        for wait_for, message in self.steps:
+            if wait_for is not None:
+                assert wait_for.wait(5)
+            yield json.dumps(message) + "\n"
+
+
+class _Collector:
+    def __init__(self):
+        self.lines, self.lock = [], threading.Lock()
+
+    def write(self, text):
+        with self.lock:
+            self.lines.append(text)
+
+    def flush(self):
+        pass
+
+    def responses(self):
+        return [json.loads(line) for line in "".join(self.lines).splitlines()]
+
+
+def _init(identity=0):
+    return {"jsonrpc": "2.0", "id": identity, "method": "initialize", "params": {}}
+
+
+def _tool(identity, name="list_traces"):
+    return {"jsonrpc": "2.0", "id": identity, "method": "tools/call",
+            "params": {"name": name, "arguments": {}}}  # fmt: skip
+
+
+def test_serve_reads_cancellation_while_a_call_runs(workspace):
+    server = Server(workspace)
+    started, release = threading.Event(), threading.Event()
+
+    def slow(args):
+        started.set()
+        release.wait(5)
+        return {"value": 1}
+
+    server.tools["list_traces"]["handler"] = slow
+    cancelled = threading.Event()
+    reader = _ScriptedReader([
+        (None, _init()),
+        (None, _tool(7)),
+        (started, {"jsonrpc": "2.0", "method": "notifications/cancelled",
+                   "params": {"requestId": 7}}),
+        (None, {"jsonrpc": "2.0", "id": 8, "method": "ping"}),
+    ])  # fmt: skip
+    out = _Collector()
+
+    def run():
+        server.serve(reader, out)
+        cancelled.set()
+
+    thread = threading.Thread(target=run)
+    thread.start()
+    # ping is answered while the tool call is still running.
+    deadline = time.monotonic() + 5
+    while time.monotonic() < deadline and not any(r.get("id") == 8 for r in out.responses()):
+        time.sleep(0.01)
+    assert any(r.get("id") == 8 for r in out.responses())
+    release.set()
+    thread.join(10)
+    ids = [r.get("id") for r in out.responses()]
+    assert 7 not in ids and ids.count(0) == 1 and ids.count(8) == 1
+
+
+def test_serve_answers_completed_calls_and_ignores_stray_cancellations(workspace):
+    server = Server(workspace)
+    reader = _ScriptedReader([
+        (None, _init()),
+        (None, {"jsonrpc": "2.0", "method": "notifications/cancelled",
+                "params": {"requestId": 99}}),
+        (None, _tool(3)),
+    ])  # fmt: skip
+    out = _Collector()
+    server.serve(reader, out)
+    by_id = {r["id"]: r for r in out.responses()}
+    assert by_id[3]["result"]["isError"] is False
+    assert server._cancelled == set() and server._inflight == set()
 
 
 def test_handler_crashes_are_tool_errors(workspace):
