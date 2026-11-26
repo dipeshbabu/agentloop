@@ -283,12 +283,13 @@ def test_html_escapes_supplied_change_text(tmp_path, workload):
 
 
 def test_interruption_retains_cancelled_and_unstarted_attempts(tmp_path, workload, monkeypatch):
-    from agentloop import improvement
+    # capture() runs tasks through improvement_capture._invoke (#407).
+    from agentloop import improvement_capture
 
     def interrupt(*args, **kwargs):
         raise KeyboardInterrupt
 
-    monkeypatch.setattr(improvement, "_invoke", interrupt)
+    monkeypatch.setattr(improvement_capture, "_invoke", interrupt)
     tasks, worker = workload
     with pytest.raises(KeyboardInterrupt):
         capture(tasks, tmp_path / "capture", command(worker, "baseline"))

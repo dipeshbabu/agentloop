@@ -127,6 +127,13 @@ trace, study, receipt, API and database schema versions.
 
 ### Changed
 
+- `agentloop/improvement.py` is split by stage into `improvement_capture`,
+  `improvement_planning`, `improvement_decision` (`finish`) and
+  `improvement_compare`. `agentloop.improvement` re-exports every name as the
+  same object, and `improvement_cli` still calls each stage through it. Code
+  that patched `agentloop.improvement._invoke` should patch
+  `improvement_capture._invoke`. This completes the modularization in
+  [#407](https://github.com/dipeshbabu/agentloop/issues/407).
 - `dashboard/app.py` keeps page setup, sign-in and navigation. Shared data
   access, caching and rendering helpers moved to `dashboard/common.py`, and
   each of the 14 pages moved to its own `dashboard/views/` module with a
