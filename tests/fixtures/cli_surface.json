@@ -1,0 +1,5172 @@
+[
+  {
+    "path": "<root>",
+    "hidden": false,
+    "deprecated": false,
+    "help": "AgentLoop profiler CLI",
+    "params": [
+      {
+        "name": "install_completion",
+        "kind": "TyperOption",
+        "opts": [
+          "--install-completion"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": true,
+        "hidden": false,
+        "type": "boolean"
+      },
+      {
+        "name": "show_completion",
+        "kind": "TyperOption",
+        "opts": [
+          "--show-completion"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": true,
+        "hidden": false,
+        "type": "boolean"
+      }
+    ]
+  },
+  {
+    "path": "onboard",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Validate captured evidence and analyze existing telemetry without application changes.",
+    "params": [
+      {
+        "name": "path",
+        "kind": "TyperArgument",
+        "opts": [
+          "path"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "format",
+        "kind": "TyperOption",
+        "opts": [
+          "--format"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "'native'",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "out",
+        "kind": "TyperOption",
+        "opts": [
+          "--out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/onboarding.json')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "expected_operation",
+        "kind": "TyperOption",
+        "opts": [
+          "--expected-operation"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": true,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "analyze",
+        "kind": "TyperOption",
+        "opts": [
+          "--analyze"
+        ],
+        "secondary_opts": [
+          "--no-analyze"
+        ],
+        "required": false,
+        "default": "True",
+        "multiple": false,
+        "is_flag": true,
+        "hidden": false,
+        "type": "boolean"
+      }
+    ]
+  },
+  {
+    "path": "report",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "path",
+        "kind": "TyperArgument",
+        "opts": [
+          "path"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      }
+    ]
+  },
+  {
+    "path": "compare",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "baseline",
+        "kind": "TyperOption",
+        "opts": [
+          "--baseline"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/research_agent_baseline.json')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "optimized",
+        "kind": "TyperOption",
+        "opts": [
+          "--optimized"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/research_agent_optimized.json')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      }
+    ]
+  },
+  {
+    "path": "replay",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "baseline",
+        "kind": "TyperOption",
+        "opts": [
+          "--baseline"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/research_agent_baseline.json')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "candidate",
+        "kind": "TyperOption",
+        "opts": [
+          "--candidate"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/research_agent_optimized.json')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "out",
+        "kind": "TyperOption",
+        "opts": [
+          "--out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/replay_report.md')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "json_out",
+        "kind": "TyperOption",
+        "opts": [
+          "--json-out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "max_cost_regression_pct",
+        "kind": "TyperOption",
+        "opts": [
+          "--max-cost-regression-pct"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "0.0",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "float range"
+      },
+      {
+        "name": "max_latency_regression_pct",
+        "kind": "TyperOption",
+        "opts": [
+          "--max-latency-regression-pct"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "0.0",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "float range"
+      },
+      {
+        "name": "min_latency_improvement_pct",
+        "kind": "TyperOption",
+        "opts": [
+          "--min-latency-improvement-pct"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "0.0",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "float range"
+      },
+      {
+        "name": "min_cost_improvement_pct",
+        "kind": "TyperOption",
+        "opts": [
+          "--min-cost-improvement-pct"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "0.0",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "float range"
+      },
+      {
+        "name": "require_retry_non_increase",
+        "kind": "TyperOption",
+        "opts": [
+          "--require-retry-non-increase"
+        ],
+        "secondary_opts": [
+          "--no-require-retry-non-increase"
+        ],
+        "required": false,
+        "default": "True",
+        "multiple": false,
+        "is_flag": true,
+        "hidden": false,
+        "type": "boolean"
+      },
+      {
+        "name": "require_schema_valid",
+        "kind": "TyperOption",
+        "opts": [
+          "--require-schema-valid"
+        ],
+        "secondary_opts": [
+          "--no-require-schema-valid"
+        ],
+        "required": false,
+        "default": "False",
+        "multiple": false,
+        "is_flag": true,
+        "hidden": false,
+        "type": "boolean"
+      },
+      {
+        "name": "min_quality_score",
+        "kind": "TyperOption",
+        "opts": [
+          "--min-quality-score"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "float range"
+      },
+      {
+        "name": "quality_fixtures",
+        "kind": "TyperOption",
+        "opts": [
+          "--quality-fixtures"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "fail_on_gate",
+        "kind": "TyperOption",
+        "opts": [
+          "--fail-on-gate"
+        ],
+        "secondary_opts": [
+          "--no-fail-on-gate"
+        ],
+        "required": false,
+        "default": "True",
+        "multiple": false,
+        "is_flag": true,
+        "hidden": false,
+        "type": "boolean"
+      },
+      {
+        "name": "intervention_out",
+        "kind": "TyperOption",
+        "opts": [
+          "--intervention-out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "target_finding",
+        "kind": "TyperOption",
+        "opts": [
+          "--target-finding"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": true,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "intervention_type",
+        "kind": "TyperOption",
+        "opts": [
+          "--intervention-type"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "intervention_config",
+        "kind": "TyperOption",
+        "opts": [
+          "--intervention-config"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "intervention_metadata",
+        "kind": "TyperOption",
+        "opts": [
+          "--intervention-metadata"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "baseline_diagnosis",
+        "kind": "TyperOption",
+        "opts": [
+          "--baseline-diagnosis"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      }
+    ]
+  },
+  {
+    "path": "intervention-create",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "request",
+        "kind": "TyperArgument",
+        "opts": [
+          "request"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "out",
+        "kind": "TyperOption",
+        "opts": [
+          "--out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/intervention.json')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "project_id",
+        "kind": "TyperOption",
+        "opts": [
+          "--project-id"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "'default'",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "api_url",
+        "kind": "TyperOption",
+        "opts": [
+          "--api-url"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "api_key",
+        "kind": "TyperOption",
+        "opts": [
+          "--api-key"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      }
+    ]
+  },
+  {
+    "path": "intervention-get",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "intervention_id",
+        "kind": "TyperArgument",
+        "opts": [
+          "intervention_id"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "out",
+        "kind": "TyperOption",
+        "opts": [
+          "--out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/intervention.json')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "project_id",
+        "kind": "TyperOption",
+        "opts": [
+          "--project-id"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "'default'",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "api_url",
+        "kind": "TyperOption",
+        "opts": [
+          "--api-url"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "api_key",
+        "kind": "TyperOption",
+        "opts": [
+          "--api-key"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      }
+    ]
+  },
+  {
+    "path": "quality-report",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "fixtures",
+        "kind": "TyperArgument",
+        "opts": [
+          "fixtures"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "baseline",
+        "kind": "TyperOption",
+        "opts": [
+          "--baseline"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "candidate",
+        "kind": "TyperOption",
+        "opts": [
+          "--candidate"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "out",
+        "kind": "TyperOption",
+        "opts": [
+          "--out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/quality_report.md')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "json_out",
+        "kind": "TyperOption",
+        "opts": [
+          "--json-out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "min_score",
+        "kind": "TyperOption",
+        "opts": [
+          "--min-score"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "float range"
+      }
+    ]
+  },
+  {
+    "path": "ci",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "baseline",
+        "kind": "TyperOption",
+        "opts": [
+          "--baseline"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/research_agent_baseline.json')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "candidate",
+        "kind": "TyperOption",
+        "opts": [
+          "--candidate"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/research_agent_optimized.json')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "out",
+        "kind": "TyperOption",
+        "opts": [
+          "--out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/agentloop_ci.md')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "json_out",
+        "kind": "TyperOption",
+        "opts": [
+          "--json-out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "max_cost_regression_pct",
+        "kind": "TyperOption",
+        "opts": [
+          "--max-cost-regression-pct"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "0.0",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "float range"
+      },
+      {
+        "name": "max_latency_regression_pct",
+        "kind": "TyperOption",
+        "opts": [
+          "--max-latency-regression-pct"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "0.0",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "float range"
+      },
+      {
+        "name": "min_latency_improvement_pct",
+        "kind": "TyperOption",
+        "opts": [
+          "--min-latency-improvement-pct"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "0.0",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "float range"
+      },
+      {
+        "name": "min_cost_improvement_pct",
+        "kind": "TyperOption",
+        "opts": [
+          "--min-cost-improvement-pct"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "0.0",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "float range"
+      },
+      {
+        "name": "require_retry_non_increase",
+        "kind": "TyperOption",
+        "opts": [
+          "--require-retry-non-increase"
+        ],
+        "secondary_opts": [
+          "--no-require-retry-non-increase"
+        ],
+        "required": false,
+        "default": "True",
+        "multiple": false,
+        "is_flag": true,
+        "hidden": false,
+        "type": "boolean"
+      },
+      {
+        "name": "require_schema_valid",
+        "kind": "TyperOption",
+        "opts": [
+          "--require-schema-valid"
+        ],
+        "secondary_opts": [
+          "--no-require-schema-valid"
+        ],
+        "required": false,
+        "default": "False",
+        "multiple": false,
+        "is_flag": true,
+        "hidden": false,
+        "type": "boolean"
+      },
+      {
+        "name": "min_quality_score",
+        "kind": "TyperOption",
+        "opts": [
+          "--min-quality-score"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "float range"
+      },
+      {
+        "name": "quality_fixtures",
+        "kind": "TyperOption",
+        "opts": [
+          "--quality-fixtures"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "github_step_summary",
+        "kind": "TyperOption",
+        "opts": [
+          "--github-step-summary"
+        ],
+        "secondary_opts": [
+          "--no-github-step-summary"
+        ],
+        "required": false,
+        "default": "False",
+        "multiple": false,
+        "is_flag": true,
+        "hidden": false,
+        "type": "boolean"
+      },
+      {
+        "name": "fail_on_gate",
+        "kind": "TyperOption",
+        "opts": [
+          "--fail-on-gate"
+        ],
+        "secondary_opts": [
+          "--no-fail-on-gate"
+        ],
+        "required": false,
+        "default": "True",
+        "multiple": false,
+        "is_flag": true,
+        "hidden": false,
+        "type": "boolean"
+      }
+    ]
+  },
+  {
+    "path": "dump-report",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "path",
+        "kind": "TyperArgument",
+        "opts": [
+          "path"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "out",
+        "kind": "TyperArgument",
+        "opts": [
+          "out"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      }
+    ]
+  },
+  {
+    "path": "audit",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "path",
+        "kind": "TyperOption",
+        "opts": [
+          "--path"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/research_agent_baseline.json')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "out",
+        "kind": "TyperOption",
+        "opts": [
+          "--out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/agentloop_audit.md')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      }
+    ]
+  },
+  {
+    "path": "optimize",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "path",
+        "kind": "TyperOption",
+        "opts": [
+          "--path"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/research_agent_baseline.json')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "out",
+        "kind": "TyperOption",
+        "opts": [
+          "--out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/optimization_plan.md')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "json_out",
+        "kind": "TyperOption",
+        "opts": [
+          "--json-out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      }
+    ]
+  },
+  {
+    "path": "diagnose",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "path",
+        "kind": "TyperOption",
+        "opts": [
+          "--path"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/research_agent_baseline.json')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "out",
+        "kind": "TyperOption",
+        "opts": [
+          "--out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/diagnosis.md')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "json_out",
+        "kind": "TyperOption",
+        "opts": [
+          "--json-out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "otel",
+        "kind": "TyperOption",
+        "opts": [
+          "--otel"
+        ],
+        "secondary_opts": [
+          "--no-otel"
+        ],
+        "required": false,
+        "default": "False",
+        "multiple": false,
+        "is_flag": true,
+        "hidden": false,
+        "type": "boolean"
+      },
+      {
+        "name": "name",
+        "kind": "TyperOption",
+        "opts": [
+          "--name"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "sort_by",
+        "kind": "TyperOption",
+        "opts": [
+          "--sort-by"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "<RankingSort.PRIORITY: 'priority'>",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "choice"
+      }
+    ]
+  },
+  {
+    "path": "import-otel",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "path",
+        "kind": "TyperArgument",
+        "opts": [
+          "path"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "out",
+        "kind": "TyperArgument",
+        "opts": [
+          "out"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "name",
+        "kind": "TyperOption",
+        "opts": [
+          "--name"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      }
+    ]
+  },
+  {
+    "path": "export-otel",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "path",
+        "kind": "TyperArgument",
+        "opts": [
+          "path"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "out",
+        "kind": "TyperArgument",
+        "opts": [
+          "out"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      }
+    ]
+  },
+  {
+    "path": "patch",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "path",
+        "kind": "TyperOption",
+        "opts": [
+          "--path"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/research_agent_baseline.json')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "repo",
+        "kind": "TyperOption",
+        "opts": [
+          "--repo"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('.')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "out",
+        "kind": "TyperOption",
+        "opts": [
+          "--out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/patch_plan.md')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "json_out",
+        "kind": "TyperOption",
+        "opts": [
+          "--json-out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "otel",
+        "kind": "TyperOption",
+        "opts": [
+          "--otel"
+        ],
+        "secondary_opts": [
+          "--no-otel"
+        ],
+        "required": false,
+        "default": "False",
+        "multiple": false,
+        "is_flag": true,
+        "hidden": false,
+        "type": "boolean"
+      },
+      {
+        "name": "name",
+        "kind": "TyperOption",
+        "opts": [
+          "--name"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "dry_run",
+        "kind": "TyperOption",
+        "opts": [
+          "--dry-run"
+        ],
+        "secondary_opts": [
+          "--no-dry-run"
+        ],
+        "required": false,
+        "default": "True",
+        "multiple": false,
+        "is_flag": true,
+        "hidden": false,
+        "type": "boolean"
+      }
+    ]
+  },
+  {
+    "path": "value-report",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "path",
+        "kind": "TyperOption",
+        "opts": [
+          "--path"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/research_agent_baseline.json')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "out",
+        "kind": "TyperOption",
+        "opts": [
+          "--out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/value_report.json')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "runs_per_month",
+        "kind": "TyperOption",
+        "opts": [
+          "--runs-per-month"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "1000",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "int range"
+      },
+      {
+        "name": "engineer_hourly_rate_usd",
+        "kind": "TyperOption",
+        "opts": [
+          "--engineer-hourly-rate-usd"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "150.0",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "float range"
+      },
+      {
+        "name": "incident_cost_usd",
+        "kind": "TyperOption",
+        "opts": [
+          "--incident-cost-usd"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "500.0",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "float range"
+      }
+    ]
+  },
+  {
+    "path": "doctor",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "check_api",
+        "kind": "TyperOption",
+        "opts": [
+          "--check-api"
+        ],
+        "secondary_opts": [
+          "--no-check-api"
+        ],
+        "required": false,
+        "default": "True",
+        "multiple": false,
+        "is_flag": true,
+        "hidden": false,
+        "type": "boolean"
+      },
+      {
+        "name": "json_out",
+        "kind": "TyperOption",
+        "opts": [
+          "--json-out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      }
+    ]
+  },
+  {
+    "path": "production-check",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "check_api",
+        "kind": "TyperOption",
+        "opts": [
+          "--check-api"
+        ],
+        "secondary_opts": [
+          "--no-check-api"
+        ],
+        "required": false,
+        "default": "True",
+        "multiple": false,
+        "is_flag": true,
+        "hidden": false,
+        "type": "boolean"
+      },
+      {
+        "name": "check_store",
+        "kind": "TyperOption",
+        "opts": [
+          "--check-store"
+        ],
+        "secondary_opts": [
+          "--no-check-store"
+        ],
+        "required": false,
+        "default": "True",
+        "multiple": false,
+        "is_flag": true,
+        "hidden": false,
+        "type": "boolean"
+      },
+      {
+        "name": "allow_http",
+        "kind": "TyperOption",
+        "opts": [
+          "--allow-http"
+        ],
+        "secondary_opts": [
+          "--no-allow-http"
+        ],
+        "required": false,
+        "default": "False",
+        "multiple": false,
+        "is_flag": true,
+        "hidden": false,
+        "type": "boolean"
+      },
+      {
+        "name": "json_out",
+        "kind": "TyperOption",
+        "opts": [
+          "--json-out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      }
+    ]
+  },
+  {
+    "path": "detect-integrations",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Report which framework integrations are available in this environment.\n\nDetection only: it checks whether each integration's SDK is importable and\ndoes not instrument anything. Apply agentloop.integrations helpers from your\napplication startup to record traces.",
+    "params": [
+      {
+        "name": "json_out",
+        "kind": "TyperOption",
+        "opts": [
+          "--json-out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      }
+    ]
+  },
+  {
+    "path": "auto-instrument",
+    "hidden": true,
+    "deprecated": true,
+    "help": "Deprecated alias for `detect-integrations`; it only detects, never instruments.",
+    "params": [
+      {
+        "name": "json_out",
+        "kind": "TyperOption",
+        "opts": [
+          "--json-out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      }
+    ]
+  },
+  {
+    "path": "init-store",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": []
+  },
+  {
+    "path": "create-api-key",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "project_id",
+        "kind": "TyperOption",
+        "opts": [
+          "--project-id"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "'default'",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "name",
+        "kind": "TyperOption",
+        "opts": [
+          "--name"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "'default'",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      }
+    ]
+  },
+  {
+    "path": "list-api-keys",
+    "hidden": false,
+    "deprecated": false,
+    "help": "List a project's API key prefixes and last use; key values are never shown.",
+    "params": [
+      {
+        "name": "project_id",
+        "kind": "TyperOption",
+        "opts": [
+          "--project-id"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "'default'",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      }
+    ]
+  },
+  {
+    "path": "revoke-api-key",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Revoke a project's API key; it stops working immediately.",
+    "params": [
+      {
+        "name": "prefix",
+        "kind": "TyperOption",
+        "opts": [
+          "--prefix"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "project_id",
+        "kind": "TyperOption",
+        "opts": [
+          "--project-id"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "'default'",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      }
+    ]
+  },
+  {
+    "path": "delete-trace",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Delete a stored trace with its findings, usage and interventions.",
+    "params": [
+      {
+        "name": "run_id",
+        "kind": "TyperArgument",
+        "opts": [
+          "run_id"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "project_id",
+        "kind": "TyperOption",
+        "opts": [
+          "--project-id"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "'default'",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      }
+    ]
+  },
+  {
+    "path": "purge-traces",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Apply a retention period: delete traces stored longer ago than allowed.",
+    "params": [
+      {
+        "name": "older_than_days",
+        "kind": "TyperOption",
+        "opts": [
+          "--older-than-days"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "float range"
+      },
+      {
+        "name": "project_id",
+        "kind": "TyperOption",
+        "opts": [
+          "--project-id"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      }
+    ]
+  },
+  {
+    "path": "audit-log",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Show recent key, deletion and retention events from the store's audit log.",
+    "params": [
+      {
+        "name": "project_id",
+        "kind": "TyperOption",
+        "opts": [
+          "--project-id"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "limit",
+        "kind": "TyperOption",
+        "opts": [
+          "--limit"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "50",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "int range"
+      }
+    ]
+  },
+  {
+    "path": "store-trace",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "path",
+        "kind": "TyperOption",
+        "opts": [
+          "--path"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/research_agent_baseline.json')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "project_id",
+        "kind": "TyperOption",
+        "opts": [
+          "--project-id"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "'default'",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      }
+    ]
+  },
+  {
+    "path": "list-stored-traces",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "project_id",
+        "kind": "TyperOption",
+        "opts": [
+          "--project-id"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "limit",
+        "kind": "TyperOption",
+        "opts": [
+          "--limit"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "int"
+      },
+      {
+        "name": "cursor",
+        "kind": "TyperOption",
+        "opts": [
+          "--cursor"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "label",
+        "kind": "TyperOption",
+        "opts": [
+          "--label"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      }
+    ]
+  },
+  {
+    "path": "list-findings",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "project_id",
+        "kind": "TyperOption",
+        "opts": [
+          "--project-id"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "status",
+        "kind": "TyperOption",
+        "opts": [
+          "--status"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "limit",
+        "kind": "TyperOption",
+        "opts": [
+          "--limit"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "int"
+      },
+      {
+        "name": "cursor",
+        "kind": "TyperOption",
+        "opts": [
+          "--cursor"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      }
+    ]
+  },
+  {
+    "path": "update-finding-status",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Transition a stored finding's lifecycle status (detected/accepted/resolved/dismissed).",
+    "params": [
+      {
+        "name": "run_id",
+        "kind": "TyperArgument",
+        "opts": [
+          "run_id"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "finding_id",
+        "kind": "TyperArgument",
+        "opts": [
+          "finding_id"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "status",
+        "kind": "TyperArgument",
+        "opts": [
+          "status"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "project_id",
+        "kind": "TyperOption",
+        "opts": [
+          "--project-id"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "'default'",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      }
+    ]
+  },
+  {
+    "path": "remote-update-finding-status",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "run_id",
+        "kind": "TyperArgument",
+        "opts": [
+          "run_id"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "finding_id",
+        "kind": "TyperArgument",
+        "opts": [
+          "finding_id"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "status",
+        "kind": "TyperArgument",
+        "opts": [
+          "status"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "api_url",
+        "kind": "TyperOption",
+        "opts": [
+          "--api-url"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "'http://127.0.0.1:8000'",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "api_key",
+        "kind": "TyperOption",
+        "opts": [
+          "--api-key"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      }
+    ]
+  },
+  {
+    "path": "optimization-queue",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "project_id",
+        "kind": "TyperOption",
+        "opts": [
+          "--project-id"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "json_out",
+        "kind": "TyperOption",
+        "opts": [
+          "--json-out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "sort_by",
+        "kind": "TyperOption",
+        "opts": [
+          "--sort-by"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "<RankingSort.PRIORITY: 'priority'>",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "choice"
+      }
+    ]
+  },
+  {
+    "path": "github-issue-drafts",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "project_id",
+        "kind": "TyperOption",
+        "opts": [
+          "--project-id"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "out",
+        "kind": "TyperOption",
+        "opts": [
+          "--out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/agentloop_issue_drafts.md')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "json_out",
+        "kind": "TyperOption",
+        "opts": [
+          "--json-out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "limit",
+        "kind": "TyperOption",
+        "opts": [
+          "--limit"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "5",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "int range"
+      }
+    ]
+  },
+  {
+    "path": "usage-summary",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "project_id",
+        "kind": "TyperOption",
+        "opts": [
+          "--project-id"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      }
+    ]
+  },
+  {
+    "path": "upload",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Upload traces to an AgentLoop API, optionally labelled with CI context.",
+    "params": [
+      {
+        "name": "path",
+        "kind": "TyperOption",
+        "opts": [
+          "--path"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "[Path('runs/research_agent_baseline.json')]",
+        "multiple": true,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "label",
+        "kind": "TyperOption",
+        "opts": [
+          "--label"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": true,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "api_url",
+        "kind": "TyperOption",
+        "opts": [
+          "--api-url"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "'http://127.0.0.1:8000'",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "api_key",
+        "kind": "TyperOption",
+        "opts": [
+          "--api-key"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      }
+    ]
+  },
+  {
+    "path": "remote-delete-trace",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Delete a trace of the key's project on a remote server.",
+    "params": [
+      {
+        "name": "run_id",
+        "kind": "TyperArgument",
+        "opts": [
+          "run_id"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "api_url",
+        "kind": "TyperOption",
+        "opts": [
+          "--api-url"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "'http://127.0.0.1:8000'",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "api_key",
+        "kind": "TyperOption",
+        "opts": [
+          "--api-key"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      }
+    ]
+  },
+  {
+    "path": "remote-optimize",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "run_id",
+        "kind": "TyperArgument",
+        "opts": [
+          "run_id"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "api_url",
+        "kind": "TyperOption",
+        "opts": [
+          "--api-url"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "'http://127.0.0.1:8000'",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "api_key",
+        "kind": "TyperOption",
+        "opts": [
+          "--api-key"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "out",
+        "kind": "TyperOption",
+        "opts": [
+          "--out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/remote_optimization_plan.json')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      }
+    ]
+  },
+  {
+    "path": "remote-diagnose",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Recompute and persist findings for a stored remote trace.",
+    "params": [
+      {
+        "name": "run_id",
+        "kind": "TyperArgument",
+        "opts": [
+          "run_id"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "api_url",
+        "kind": "TyperOption",
+        "opts": [
+          "--api-url"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "'http://127.0.0.1:8000'",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "api_key",
+        "kind": "TyperOption",
+        "opts": [
+          "--api-key"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "out",
+        "kind": "TyperOption",
+        "opts": [
+          "--out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/remote_diagnosis.json')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      }
+    ]
+  },
+  {
+    "path": "remote-findings",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "api_url",
+        "kind": "TyperOption",
+        "opts": [
+          "--api-url"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "'http://127.0.0.1:8000'",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "api_key",
+        "kind": "TyperOption",
+        "opts": [
+          "--api-key"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "project_id",
+        "kind": "TyperOption",
+        "opts": [
+          "--project-id"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "status",
+        "kind": "TyperOption",
+        "opts": [
+          "--status"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "out",
+        "kind": "TyperOption",
+        "opts": [
+          "--out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/remote_findings.json')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      }
+    ]
+  },
+  {
+    "path": "remote-optimization-queue",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "api_url",
+        "kind": "TyperOption",
+        "opts": [
+          "--api-url"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "'http://127.0.0.1:8000'",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "api_key",
+        "kind": "TyperOption",
+        "opts": [
+          "--api-key"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "project_id",
+        "kind": "TyperOption",
+        "opts": [
+          "--project-id"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "out",
+        "kind": "TyperOption",
+        "opts": [
+          "--out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/remote_optimization_queue.json')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      }
+    ]
+  },
+  {
+    "path": "remote-github-issue-drafts",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "api_url",
+        "kind": "TyperOption",
+        "opts": [
+          "--api-url"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "'http://127.0.0.1:8000'",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "api_key",
+        "kind": "TyperOption",
+        "opts": [
+          "--api-key"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "project_id",
+        "kind": "TyperOption",
+        "opts": [
+          "--project-id"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "limit",
+        "kind": "TyperOption",
+        "opts": [
+          "--limit"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "5",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "int range"
+      },
+      {
+        "name": "out",
+        "kind": "TyperOption",
+        "opts": [
+          "--out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/remote_agentloop_issue_drafts.json')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      }
+    ]
+  },
+  {
+    "path": "remote-value-report",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "run_id",
+        "kind": "TyperArgument",
+        "opts": [
+          "run_id"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "api_url",
+        "kind": "TyperOption",
+        "opts": [
+          "--api-url"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "'http://127.0.0.1:8000'",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "api_key",
+        "kind": "TyperOption",
+        "opts": [
+          "--api-key"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "out",
+        "kind": "TyperOption",
+        "opts": [
+          "--out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/remote_value_report.json')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "runs_per_month",
+        "kind": "TyperOption",
+        "opts": [
+          "--runs-per-month"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "1000",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "int range"
+      },
+      {
+        "name": "engineer_hourly_rate_usd",
+        "kind": "TyperOption",
+        "opts": [
+          "--engineer-hourly-rate-usd"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "150.0",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "float range"
+      },
+      {
+        "name": "incident_cost_usd",
+        "kind": "TyperOption",
+        "opts": [
+          "--incident-cost-usd"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "500.0",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "float range"
+      }
+    ]
+  },
+  {
+    "path": "remote-usage",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "api_url",
+        "kind": "TyperOption",
+        "opts": [
+          "--api-url"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "'http://127.0.0.1:8000'",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "api_key",
+        "kind": "TyperOption",
+        "opts": [
+          "--api-key"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      }
+    ]
+  },
+  {
+    "path": "remote-create-api-key",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "project_id",
+        "kind": "TyperOption",
+        "opts": [
+          "--project-id"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "'default'",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "name",
+        "kind": "TyperOption",
+        "opts": [
+          "--name"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "'default'",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "api_url",
+        "kind": "TyperOption",
+        "opts": [
+          "--api-url"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "'http://127.0.0.1:8000'",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "admin_api_key",
+        "kind": "TyperOption",
+        "opts": [
+          "--admin-api-key"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      }
+    ]
+  },
+  {
+    "path": "remote-list-api-keys",
+    "hidden": false,
+    "deprecated": false,
+    "help": "List a project's API key prefixes on a remote server.",
+    "params": [
+      {
+        "name": "project_id",
+        "kind": "TyperOption",
+        "opts": [
+          "--project-id"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "'default'",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "api_url",
+        "kind": "TyperOption",
+        "opts": [
+          "--api-url"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "'http://127.0.0.1:8000'",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "admin_api_key",
+        "kind": "TyperOption",
+        "opts": [
+          "--admin-api-key"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      }
+    ]
+  },
+  {
+    "path": "remote-audit-log",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Show a remote server's audit log (admin key required).",
+    "params": [
+      {
+        "name": "project_id",
+        "kind": "TyperOption",
+        "opts": [
+          "--project-id"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "limit",
+        "kind": "TyperOption",
+        "opts": [
+          "--limit"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "50",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "int range"
+      },
+      {
+        "name": "api_url",
+        "kind": "TyperOption",
+        "opts": [
+          "--api-url"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "'http://127.0.0.1:8000'",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "admin_api_key",
+        "kind": "TyperOption",
+        "opts": [
+          "--admin-api-key"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      }
+    ]
+  },
+  {
+    "path": "remote-revoke-api-key",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Revoke a project's API key on a remote server.",
+    "params": [
+      {
+        "name": "prefix",
+        "kind": "TyperOption",
+        "opts": [
+          "--prefix"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "project_id",
+        "kind": "TyperOption",
+        "opts": [
+          "--project-id"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "'default'",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "api_url",
+        "kind": "TyperOption",
+        "opts": [
+          "--api-url"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "'http://127.0.0.1:8000'",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "admin_api_key",
+        "kind": "TyperOption",
+        "opts": [
+          "--admin-api-key"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      }
+    ]
+  },
+  {
+    "path": "demo",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "kind",
+        "kind": "TyperOption",
+        "opts": [
+          "--kind"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "'baseline'",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      }
+    ]
+  },
+  {
+    "path": "demo-all",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": []
+  },
+  {
+    "path": "server",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "host",
+        "kind": "TyperOption",
+        "opts": [
+          "--host"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "'127.0.0.1'",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "port",
+        "kind": "TyperOption",
+        "opts": [
+          "--port"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "8000",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "int"
+      },
+      {
+        "name": "reload",
+        "kind": "TyperOption",
+        "opts": [
+          "--reload"
+        ],
+        "secondary_opts": [
+          "--no-reload"
+        ],
+        "required": false,
+        "default": "False",
+        "multiple": false,
+        "is_flag": true,
+        "hidden": false,
+        "type": "boolean"
+      }
+    ]
+  },
+  {
+    "path": "mcp",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Run a local MCP server over stdio for coding agents.",
+    "params": [
+      {
+        "name": "root",
+        "kind": "TyperOption",
+        "opts": [
+          "--root"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('.')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "allow_execution",
+        "kind": "TyperOption",
+        "opts": [
+          "--allow-execution"
+        ],
+        "secondary_opts": [
+          "--no-allow-execution"
+        ],
+        "required": false,
+        "default": "False",
+        "multiple": false,
+        "is_flag": true,
+        "hidden": false,
+        "type": "boolean"
+      },
+      {
+        "name": "include_text",
+        "kind": "TyperOption",
+        "opts": [
+          "--include-text"
+        ],
+        "secondary_opts": [
+          "--no-include-text"
+        ],
+        "required": false,
+        "default": "False",
+        "multiple": false,
+        "is_flag": true,
+        "hidden": false,
+        "type": "boolean"
+      },
+      {
+        "name": "timeout",
+        "kind": "TyperOption",
+        "opts": [
+          "--timeout"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "60.0",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "float"
+      }
+    ]
+  },
+  {
+    "path": "quickstart",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Generate one offline trace and show useful findings with no account or API key.",
+    "params": [
+      {
+        "name": "out",
+        "kind": "TyperOption",
+        "opts": [
+          "--out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/agentloop_quickstart.json')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "json_out",
+        "kind": "TyperOption",
+        "opts": [
+          "--json-out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      }
+    ]
+  },
+  {
+    "path": "analyze",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Analyze one existing AgentLoop trace in a single command.",
+    "params": [
+      {
+        "name": "path",
+        "kind": "TyperArgument",
+        "opts": [
+          "path"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "json_out",
+        "kind": "TyperOption",
+        "opts": [
+          "--json-out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "html_out",
+        "kind": "TyperOption",
+        "opts": [
+          "--html"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "baseline",
+        "kind": "TyperOption",
+        "opts": [
+          "--baseline"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "quality_fixtures",
+        "kind": "TyperOption",
+        "opts": [
+          "--quality-fixtures"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "min_quality_score",
+        "kind": "TyperOption",
+        "opts": [
+          "--min-quality-score"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "float range"
+      },
+      {
+        "name": "include_content",
+        "kind": "TyperOption",
+        "opts": [
+          "--include-content"
+        ],
+        "secondary_opts": [
+          "--no-include-content"
+        ],
+        "required": false,
+        "default": "False",
+        "multiple": false,
+        "is_flag": true,
+        "hidden": false,
+        "type": "boolean"
+      },
+      {
+        "name": "sort_by",
+        "kind": "TyperOption",
+        "opts": [
+          "--sort-by"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "<RankingSort.PRIORITY: 'priority'>",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "choice"
+      }
+    ]
+  },
+  {
+    "path": "study",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Summarize offline studies and preserved intervention evidence.",
+    "params": []
+  },
+  {
+    "path": "study ablation",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "bundle",
+        "kind": "TyperArgument",
+        "opts": [
+          "bundle"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "out",
+        "kind": "TyperOption",
+        "opts": [
+          "--out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/ablation.md')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "json_out",
+        "kind": "TyperOption",
+        "opts": [
+          "--json-out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/ablation.json')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      }
+    ]
+  },
+  {
+    "path": "study calibrate",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "manifest",
+        "kind": "TyperArgument",
+        "opts": [
+          "manifest"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "out",
+        "kind": "TyperOption",
+        "opts": [
+          "--out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/calibration.md')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "json_out",
+        "kind": "TyperOption",
+        "opts": [
+          "--json-out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/calibration.json')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      }
+    ]
+  },
+  {
+    "path": "study summarize",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "manifest",
+        "kind": "TyperArgument",
+        "opts": [
+          "manifest"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "out",
+        "kind": "TyperOption",
+        "opts": [
+          "--out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/study.md')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "json_out",
+        "kind": "TyperOption",
+        "opts": [
+          "--json-out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/study.json')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      }
+    ]
+  },
+  {
+    "path": "aggregate",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Bounded-memory summaries of native traces and aggregate partitions.",
+    "params": []
+  },
+  {
+    "path": "aggregate traces",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Summarize one native trace file at a time, without graph/finding analysis.",
+    "params": [
+      {
+        "name": "inputs",
+        "kind": "TyperArgument",
+        "opts": [
+          "inputs"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "out",
+        "kind": "TyperOption",
+        "opts": [
+          "--out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/aggregate.json')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "manifest",
+        "kind": "TyperOption",
+        "opts": [
+          "--manifest"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "skip_invalid",
+        "kind": "TyperOption",
+        "opts": [
+          "--skip-invalid"
+        ],
+        "secondary_opts": [
+          "--no-skip-invalid"
+        ],
+        "required": false,
+        "default": "False",
+        "multiple": false,
+        "is_flag": true,
+        "hidden": false,
+        "type": "boolean"
+      },
+      {
+        "name": "max_bytes",
+        "kind": "TyperOption",
+        "opts": [
+          "--max-bytes"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "16777216",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "int range"
+      }
+    ]
+  },
+  {
+    "path": "aggregate merge",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Merge disjoint partitions with matching schemas, configurations and policies.",
+    "params": [
+      {
+        "name": "inputs",
+        "kind": "TyperArgument",
+        "opts": [
+          "inputs"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "out",
+        "kind": "TyperOption",
+        "opts": [
+          "--out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/merged-aggregate.json')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "manifest",
+        "kind": "TyperOption",
+        "opts": [
+          "--manifest"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      }
+    ]
+  },
+  {
+    "path": "drift",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Compare local evidence windows against immutable reviewed baselines.",
+    "params": []
+  },
+  {
+    "path": "drift collect",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Create a content-bound window from disjoint trace/aggregate records.",
+    "params": [
+      {
+        "name": "manifest",
+        "kind": "TyperArgument",
+        "opts": [
+          "manifest"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "out",
+        "kind": "TyperOption",
+        "opts": [
+          "--out"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      }
+    ]
+  },
+  {
+    "path": "drift baseline",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Freeze an explicit host-reviewed window and its thresholds; never overwrite.",
+    "params": [
+      {
+        "name": "window",
+        "kind": "TyperArgument",
+        "opts": [
+          "window"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "rules",
+        "kind": "TyperArgument",
+        "opts": [
+          "rules"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "review_ref",
+        "kind": "TyperOption",
+        "opts": [
+          "--review-ref"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "out",
+        "kind": "TyperOption",
+        "opts": [
+          "--out"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      }
+    ]
+  },
+  {
+    "path": "drift compare",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Write descriptive drift evidence; take no notification or deployment action.",
+    "params": [
+      {
+        "name": "baseline",
+        "kind": "TyperArgument",
+        "opts": [
+          "baseline"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "current",
+        "kind": "TyperArgument",
+        "opts": [
+          "current"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "baseline_sha256",
+        "kind": "TyperOption",
+        "opts": [
+          "--baseline-sha256"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "out",
+        "kind": "TyperOption",
+        "opts": [
+          "--out"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      }
+    ]
+  },
+  {
+    "path": "harbor",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Import completed Harbor artifacts offline.",
+    "params": []
+  },
+  {
+    "path": "harbor study",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Materialize completed source cohorts without running a benchmark job.",
+    "params": [
+      {
+        "name": "path",
+        "kind": "TyperArgument",
+        "opts": [
+          "path"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "out",
+        "kind": "TyperOption",
+        "opts": [
+          "--out"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      }
+    ]
+  },
+  {
+    "path": "harbor import",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "path",
+        "kind": "TyperArgument",
+        "opts": [
+          "path"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "out",
+        "kind": "TyperOption",
+        "opts": [
+          "--out"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "scoring",
+        "kind": "TyperOption",
+        "opts": [
+          "--scoring"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "condition",
+        "kind": "TyperOption",
+        "opts": [
+          "--condition"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "protocol_id",
+        "kind": "TyperOption",
+        "opts": [
+          "--protocol-id"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "context",
+        "kind": "TyperOption",
+        "opts": [
+          "--context"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "synthetic",
+        "kind": "TyperOption",
+        "opts": [
+          "--synthetic"
+        ],
+        "secondary_opts": [
+          "--no-synthetic"
+        ],
+        "required": false,
+        "default": "False",
+        "multiple": false,
+        "is_flag": true,
+        "hidden": false,
+        "type": "boolean"
+      }
+    ]
+  },
+  {
+    "path": "harbor inspect",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "path",
+        "kind": "TyperArgument",
+        "opts": [
+          "path"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "json_out",
+        "kind": "TyperOption",
+        "opts": [
+          "--json-out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "scoring",
+        "kind": "TyperOption",
+        "opts": [
+          "--scoring"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      }
+    ]
+  },
+  {
+    "path": "harbor import-atif",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Import ATIF v1.7/v1.8 and the documented v1.6 compatibility subset.",
+    "params": [
+      {
+        "name": "path",
+        "kind": "TyperArgument",
+        "opts": [
+          "path"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "out",
+        "kind": "TyperOption",
+        "opts": [
+          "--out"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "root",
+        "kind": "TyperOption",
+        "opts": [
+          "--root"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "continue_on_error",
+        "kind": "TyperOption",
+        "opts": [
+          "--continue-on-error"
+        ],
+        "secondary_opts": [
+          "--no-continue-on-error"
+        ],
+        "required": false,
+        "default": "False",
+        "multiple": false,
+        "is_flag": true,
+        "hidden": false,
+        "type": "boolean"
+      },
+      {
+        "name": "synthetic",
+        "kind": "TyperOption",
+        "opts": [
+          "--synthetic"
+        ],
+        "secondary_opts": [
+          "--no-synthetic"
+        ],
+        "required": false,
+        "default": "False",
+        "multiple": false,
+        "is_flag": true,
+        "hidden": false,
+        "type": "boolean"
+      }
+    ]
+  },
+  {
+    "path": "harbor inspect-atif",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Inspect a trajectory graph without creating native output artifacts.",
+    "params": [
+      {
+        "name": "path",
+        "kind": "TyperArgument",
+        "opts": [
+          "path"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "json_out",
+        "kind": "TyperOption",
+        "opts": [
+          "--json-out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "root",
+        "kind": "TyperOption",
+        "opts": [
+          "--root"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      }
+    ]
+  },
+  {
+    "path": "hermes",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Create a local, dependency-free Hermes observer plugin.",
+    "params": []
+  },
+  {
+    "path": "hermes export-plugin",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Create a fresh directory plugin for Hermes 0.21.6.",
+    "params": [
+      {
+        "name": "directory",
+        "kind": "TyperArgument",
+        "opts": [
+          "directory"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      }
+    ]
+  },
+  {
+    "path": "telemetry",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Import bounded OTLP JSON/JSONL evidence offline.",
+    "params": []
+  },
+  {
+    "path": "telemetry import-jsonl",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Stream a completed export and preserve every invalid/conflicting record.",
+    "params": [
+      {
+        "name": "path",
+        "kind": "TyperArgument",
+        "opts": [
+          "path"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "out",
+        "kind": "TyperOption",
+        "opts": [
+          "--out"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "source",
+        "kind": "TyperOption",
+        "opts": [
+          "--source"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "'otel'",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "strict",
+        "kind": "TyperOption",
+        "opts": [
+          "--strict"
+        ],
+        "secondary_opts": [
+          "--no-strict"
+        ],
+        "required": false,
+        "default": "False",
+        "multiple": false,
+        "is_flag": true,
+        "hidden": false,
+        "type": "boolean"
+      },
+      {
+        "name": "single_json",
+        "kind": "TyperOption",
+        "opts": [
+          "--single-json"
+        ],
+        "secondary_opts": [
+          "--no-single-json"
+        ],
+        "required": false,
+        "default": "False",
+        "multiple": false,
+        "is_flag": true,
+        "hidden": false,
+        "type": "boolean"
+      },
+      {
+        "name": "synthetic",
+        "kind": "TyperOption",
+        "opts": [
+          "--synthetic"
+        ],
+        "secondary_opts": [
+          "--no-synthetic"
+        ],
+        "required": false,
+        "default": "False",
+        "multiple": false,
+        "is_flag": true,
+        "hidden": false,
+        "type": "boolean"
+      }
+    ]
+  },
+  {
+    "path": "omnigent",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Import Omnigent OTLP files and inspect session evidence offline.",
+    "params": []
+  },
+  {
+    "path": "omnigent import-otel",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "path",
+        "kind": "TyperArgument",
+        "opts": [
+          "path"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "out",
+        "kind": "TyperOption",
+        "opts": [
+          "--out"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "strict",
+        "kind": "TyperOption",
+        "opts": [
+          "--strict"
+        ],
+        "secondary_opts": [
+          "--no-strict"
+        ],
+        "required": false,
+        "default": "False",
+        "multiple": false,
+        "is_flag": true,
+        "hidden": false,
+        "type": "boolean"
+      },
+      {
+        "name": "synthetic",
+        "kind": "TyperOption",
+        "opts": [
+          "--synthetic"
+        ],
+        "secondary_opts": [
+          "--no-synthetic"
+        ],
+        "required": false,
+        "default": "False",
+        "multiple": false,
+        "is_flag": true,
+        "hidden": false,
+        "type": "boolean"
+      }
+    ]
+  },
+  {
+    "path": "omnigent inspect",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "path",
+        "kind": "TyperArgument",
+        "opts": [
+          "path"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "json_out",
+        "kind": "TyperOption",
+        "opts": [
+          "--json-out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      }
+    ]
+  },
+  {
+    "path": "harness",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Inspect declared and behavior-verified harness capabilities.",
+    "params": []
+  },
+  {
+    "path": "harness bench",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Run trusted offline probes; optional/live features remain explicitly skipped.",
+    "params": [
+      {
+        "name": "adapter",
+        "kind": "TyperOption",
+        "opts": [
+          "--adapter"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "'python-wrapped'",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "mode",
+        "kind": "TyperOption",
+        "opts": [
+          "--mode"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "'offline'",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "out",
+        "kind": "TyperOption",
+        "opts": [
+          "--out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('runs/capability-bench')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "json_out",
+        "kind": "TyperOption",
+        "opts": [
+          "--json-out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "test_timestamp",
+        "kind": "TyperOption",
+        "opts": [
+          "--test-timestamp"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      }
+    ]
+  },
+  {
+    "path": "harness list-adapters",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": []
+  },
+  {
+    "path": "harness capabilities",
+    "hidden": false,
+    "deprecated": false,
+    "help": "",
+    "params": [
+      {
+        "name": "adapter",
+        "kind": "TyperOption",
+        "opts": [
+          "--adapter"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "json_out",
+        "kind": "TyperOption",
+        "opts": [
+          "--json-out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      }
+    ]
+  },
+  {
+    "path": "improve",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Capture fixed tasks, review baseline findings, and verify an applied change.",
+    "params": []
+  },
+  {
+    "path": "improve init",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Create task data, a Python or Node.js adapter, and an executable offline example.",
+    "params": [
+      {
+        "name": "out",
+        "kind": "TyperOption",
+        "opts": [
+          "--out"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('.')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "agent",
+        "kind": "TyperOption",
+        "opts": [
+          "--agent"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "name",
+        "kind": "TyperOption",
+        "opts": [
+          "--name"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "language",
+        "kind": "TyperOption",
+        "opts": [
+          "--language"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "'python'",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      }
+    ]
+  },
+  {
+    "path": "improve capture",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Run every declared task and retain failed, missing and interrupted attempts.",
+    "params": [
+      {
+        "name": "tasks",
+        "kind": "TyperOption",
+        "opts": [
+          "--tasks"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "project",
+        "kind": "TyperOption",
+        "opts": [
+          "--project"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('agentloop.toml')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "out",
+        "kind": "TyperOption",
+        "opts": [
+          "--out"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "timeout",
+        "kind": "TyperOption",
+        "opts": [
+          "--timeout"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "180",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "float range"
+      },
+      {
+        "name": "show_runner_output",
+        "kind": "TyperOption",
+        "opts": [
+          "--show-runner-output"
+        ],
+        "secondary_opts": [
+          "--no-show-runner-output"
+        ],
+        "required": false,
+        "default": "False",
+        "multiple": false,
+        "is_flag": true,
+        "hidden": false,
+        "type": "boolean"
+      },
+      {
+        "name": "control_arg",
+        "kind": "TyperOption",
+        "opts": [
+          "--control-arg"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": true,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "command",
+        "kind": "TyperArgument",
+        "opts": [
+          "command"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      }
+    ]
+  },
+  {
+    "path": "improve start",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Freeze task checks and original findings before editing the agent.",
+    "params": [
+      {
+        "name": "tasks",
+        "kind": "TyperOption",
+        "opts": [
+          "--tasks"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "project",
+        "kind": "TyperOption",
+        "opts": [
+          "--project"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('agentloop.toml')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "baseline",
+        "kind": "TyperOption",
+        "opts": [
+          "--baseline"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "out",
+        "kind": "TyperOption",
+        "opts": [
+          "--out"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "focus",
+        "kind": "TyperOption",
+        "opts": [
+          "--focus"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "objective",
+        "kind": "TyperOption",
+        "opts": [
+          "--objective"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "'latency'",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "minimum_improvement",
+        "kind": "TyperOption",
+        "opts": [
+          "--minimum-improvement"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "0",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "float range"
+      },
+      {
+        "name": "max_runner_regression_ms",
+        "kind": "TyperOption",
+        "opts": [
+          "--max-runner-regression-ms"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "float range"
+      },
+      {
+        "name": "decision",
+        "kind": "TyperOption",
+        "opts": [
+          "--decision"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "'per-pair'",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "verifier",
+        "kind": "TyperOption",
+        "opts": [
+          "--verifier"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "verifier_timeout",
+        "kind": "TyperOption",
+        "opts": [
+          "--verifier-timeout"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "30.0",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "float range"
+      }
+    ]
+  },
+  {
+    "path": "improve finish",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Compare every planned attempt and write JSON, Markdown and HTML results.",
+    "params": [
+      {
+        "name": "session",
+        "kind": "TyperOption",
+        "opts": [
+          "--session"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "candidate",
+        "kind": "TyperOption",
+        "opts": [
+          "--candidate"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "change",
+        "kind": "TyperOption",
+        "opts": [
+          "--change"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "out",
+        "kind": "TyperOption",
+        "opts": [
+          "--out"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "verifier",
+        "kind": "TyperOption",
+        "opts": [
+          "--verifier"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      }
+    ]
+  },
+  {
+    "path": "improve compare",
+    "hidden": false,
+    "deprecated": false,
+    "help": "Capture, freeze, interleave and compare an unchanged and a changed runner.",
+    "params": [
+      {
+        "name": "tasks",
+        "kind": "TyperOption",
+        "opts": [
+          "--tasks"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "project",
+        "kind": "TyperOption",
+        "opts": [
+          "--project"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "Path('agentloop.toml')",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "out",
+        "kind": "TyperOption",
+        "opts": [
+          "--out"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "before_arg",
+        "kind": "TyperOption",
+        "opts": [
+          "--before-arg"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": true,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "change",
+        "kind": "TyperOption",
+        "opts": [
+          "--change"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "timeout",
+        "kind": "TyperOption",
+        "opts": [
+          "--timeout"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "180",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "float range"
+      },
+      {
+        "name": "show_runner_output",
+        "kind": "TyperOption",
+        "opts": [
+          "--show-runner-output"
+        ],
+        "secondary_opts": [
+          "--no-show-runner-output"
+        ],
+        "required": false,
+        "default": "False",
+        "multiple": false,
+        "is_flag": true,
+        "hidden": false,
+        "type": "boolean"
+      },
+      {
+        "name": "focus",
+        "kind": "TyperOption",
+        "opts": [
+          "--focus"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "objective",
+        "kind": "TyperOption",
+        "opts": [
+          "--objective"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "'latency'",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "minimum_improvement",
+        "kind": "TyperOption",
+        "opts": [
+          "--minimum-improvement"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "0",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "float range"
+      },
+      {
+        "name": "max_runner_regression_ms",
+        "kind": "TyperOption",
+        "opts": [
+          "--max-runner-regression-ms"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "float range"
+      },
+      {
+        "name": "decision",
+        "kind": "TyperOption",
+        "opts": [
+          "--decision"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "'aggregate'",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      },
+      {
+        "name": "verifier",
+        "kind": "TyperOption",
+        "opts": [
+          "--verifier"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "path"
+      },
+      {
+        "name": "verifier_timeout",
+        "kind": "TyperOption",
+        "opts": [
+          "--verifier-timeout"
+        ],
+        "secondary_opts": [],
+        "required": false,
+        "default": "30.0",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "float range"
+      },
+      {
+        "name": "command",
+        "kind": "TyperArgument",
+        "opts": [
+          "command"
+        ],
+        "secondary_opts": [],
+        "required": true,
+        "default": "None",
+        "multiple": false,
+        "is_flag": false,
+        "hidden": false,
+        "type": "str"
+      }
+    ]
+  }
+]
