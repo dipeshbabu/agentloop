@@ -2220,7 +2220,7 @@
         ],
         "secondary_opts": [],
         "required": false,
-        "default": "[WindowsPath('runs/research_agent_baseline.json')]",
+        "default": "[Path('runs/research_agent_baseline.json')]",
         "multiple": true,
         "is_flag": false,
         "hidden": false,

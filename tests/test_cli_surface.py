@@ -22,11 +22,24 @@ SNAPSHOT = Path(__file__).parent / "fixtures" / "cli_surface.json"
 def _param(param) -> dict:
     default = param.default
     if callable(default):
-        default = "<callable>"
-    elif isinstance(default, PurePath):
-        # WindowsPath and PosixPath repr differently; record the path itself.
-        return _row(param, f"Path({default.as_posix()!r})")
-    return _row(param, repr(default))
+        return _row(param, repr("<callable>"))
+    return _row(param, _portable(default))
+
+
+def _portable(value) -> str:
+    """repr() with paths written the same way on every platform.
+
+    WindowsPath and PosixPath repr differently, so record Path('a/b') instead,
+    including inside lists and tuples.
+    """
+    if isinstance(value, PurePath):
+        return f"Path({value.as_posix()!r})"
+    if isinstance(value, list):
+        return "[" + ", ".join(_portable(item) for item in value) + "]"
+    if isinstance(value, tuple):
+        inner = ", ".join(_portable(item) for item in value)
+        return "(" + inner + ("," if len(value) == 1 else "") + ")"
+    return repr(value)
 
 
 def _row(param, default: str) -> dict:
