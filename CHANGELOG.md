@@ -19,6 +19,15 @@ trace, study, receipt, API and database schema versions.
   can't wrap a long path, so with a deep path the reason, such as "must contain
   at least one case" or the JSON error position, was cut off with an ellipsis.
 
+### Changed
+
+- `timing_sensitivity` no longer reruns its model for operations with slack:
+  their gains are exactly zero. It simulates operations without slack longest
+  first, up to `max_simulations` (default 64), and lists any others as not
+  simulated instead of estimating them. A 2,000-span trace takes 0.8 s instead
+  of 22 s, so `agentloop mcp` no longer times out on it. The execution IR's
+  duplicate-ID check is now linear.
+
 ## [0.3.0] - 2026-11-26
 
 ### Added

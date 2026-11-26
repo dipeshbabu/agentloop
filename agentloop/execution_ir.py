@@ -38,6 +38,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from collections import Counter
 from collections.abc import Iterable, Mapping
 from typing import Any
 
@@ -264,7 +265,7 @@ def _from_nodes(
 ) -> dict[str, Any]:
     unsupported: list[dict[str, Any]] = []
     ids = [node["node_id"] for node in nodes]
-    duplicates = sorted({node_id for node_id in ids if ids.count(node_id) > 1})
+    duplicates = sorted(node_id for node_id, n in Counter(ids).items() if n > 1)
     for node_id in duplicates:
         unsupported.append({"operation": node_id, "reason": "duplicate span id"})
     known = set(ids)

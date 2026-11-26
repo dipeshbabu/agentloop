@@ -33,6 +33,18 @@ For every leaf operation:
 Parents are marked `composite` and get no gain. To speed up a parent, change
 one of its children.
 
+Each simulation is one pass over the trace, so the work is bounded on large
+traces:
+- **Operations with slack** are off every longest path, so changing them can't
+  move the end of the run. Their gains are exactly zero, so they aren't
+  simulated.
+- **Operations without slack** are simulated longest first, up to
+  `max_simulations` (default 64). Any beyond that are listed with
+  `simulated: false` and a reason, not given an estimate.
+
+`simulations` in the result counts the operations without slack, and how many
+were simulated or skipped. Raise `max_simulations` to cover them all.
+
 ## The model
 
 The simulation uses the [execution IR](EXECUTION_IR.md) and holds everything it
