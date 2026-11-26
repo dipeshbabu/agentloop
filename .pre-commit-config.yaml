@@ -46,6 +46,14 @@ repos:
         types_or: [python, pyi]
         require_serial: true
 
+      - id: mypy
+        name: mypy type check
+        # Checks the modules listed under [tool.mypy] files in pyproject.toml.
+        entry: uv run --frozen mypy
+        language: system
+        pass_filenames: false
+        files: ^(agentloop/.*\.pyi?|pyproject\.toml)$
+
       - id: repository-policy
         name: repository metadata and local links
         entry: uv run --frozen python scripts/check_repo.py

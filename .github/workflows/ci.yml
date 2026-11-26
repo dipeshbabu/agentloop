@@ -240,7 +240,13 @@ jobs:
         run: uv sync --locked --all-extras --dev
 
       - name: Code quality
+        env:
+          # mypy runs as its own step below so type errors are reported apart.
+          SKIP: mypy
         run: uv run --frozen pre-commit run --all-files --show-diff-on-failure
+
+      - name: Type check
+        run: uv run --frozen mypy
 
       - name: Wait for Postgres readiness
         run: |

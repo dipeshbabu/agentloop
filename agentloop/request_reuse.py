@@ -364,7 +364,7 @@ def _run_summary(trace: Any) -> dict[str, Any]:
     tools = [e for e in events if getattr(e, "event_type", None) == "tool_call"]
     hits = [e for e in tools if ((e.metadata or {}).get(REUSE_KEY) or {}).get("hit") is True]
     models = [e for e in events if getattr(e, "event_type", None) == "model_call"]
-    costs = [(e.metadata or {}).get("cost_usd") for e in models]
+    costs: list[Any] = [(e.metadata or {}).get("cost_usd") for e in models]
     known_cost = all(isinstance(c, int | float) and not isinstance(c, bool) for c in costs)
     runtime = getattr(trace, "elapsed_ms", None)
     return {

@@ -99,6 +99,20 @@ uv run --frozen pre-commit install --hook-type pre-push
 Running `pre-commit install` without a hook type installs both hooks because the
 repository configures both as defaults.
 
+### Type checking
+
+mypy checks a growing list of modules, set under `[tool.mypy] files` in
+`pyproject.toml`; the pre-commit hook and CI both run it:
+
+```bash
+uv run --frozen mypy
+```
+
+Modules outside the list are read for their types but their own errors are not
+reported yet. To add one, put it in the list and fix what `mypy` reports. For
+calls that exist on one platform only, guard them with `if sys.platform ==
+"win32":` (or `!=`) so mypy checks each branch for the right platform.
+
 ## Choose and scope the change
 
 1. Search open and closed issues and pull requests for the same problem.

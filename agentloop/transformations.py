@@ -315,7 +315,7 @@ def _propose_memoize(repo: Path, request: Mapping[str, Any], trace: Any) -> dict
     operation = next((op for op in ir["operations"] if op["id"] == span_id), None)
     if operation is None:
         return _abstain([f"span {span_id!r} is not in the trace"])
-    reasons = []
+    reasons: list[str] = []
     flagged = [item["reason"] for item in ir["unsupported"] if item["operation"] == span_id]
     reasons.extend(f"span has unsupported evidence: {reason}" for reason in flagged)
     if operation["effect"] != {"value": "none", "basis": "declared", "source": "agentloop.effects"}:

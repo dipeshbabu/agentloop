@@ -38,12 +38,17 @@ INFERENCE_KEY = "agentloop.inference"
 
 
 def _linux_rss() -> tuple[int | None, str | None]:
-    try:
-        with open("/proc/self/statm", encoding="ascii") as handle:
-            pages = int(handle.read().split()[1])
-        return pages * os.sysconf("SC_PAGE_SIZE"), None
-    except (OSError, ValueError, IndexError):
+    if sys.platform == "win32":
+        # Unreachable in practice (only called on Linux). Windows has no
+        # /proc, so the open() below would fail the same way.
         return None, "proc_unreadable"
+    else:
+        try:
+            with open("/proc/self/statm", encoding="ascii") as handle:
+                pages = int(handle.read().split()[1])
+            return pages * os.sysconf("SC_PAGE_SIZE"), None
+        except (OSError, ValueError, IndexError):
+            return None, "proc_unreadable"
 
 
 def _linux_io() -> tuple[dict[str, int] | None, str | None]:
@@ -61,44 +66,52 @@ def _linux_io() -> tuple[dict[str, int] | None, str | None]:
 
 
 def _windows_memory() -> tuple[int | None, int | None, str | None]:
-    try:
-        import ctypes
-        from ctypes import wintypes
-
-        class Counters(ctypes.Structure):
-            _fields_ = [
-                ("cb", wintypes.DWORD),
-                ("PageFaultCount", wintypes.DWORD),
-                ("PeakWorkingSetSize", ctypes.c_size_t),
-                ("WorkingSetSize", ctypes.c_size_t),
-                ("QuotaPeakPagedPoolUsage", ctypes.c_size_t),
-                ("QuotaPagedPoolUsage", ctypes.c_size_t),
-                ("QuotaPeakNonPagedPoolUsage", ctypes.c_size_t),
-                ("QuotaNonPagedPoolUsage", ctypes.c_size_t),
-                ("PagefileUsage", ctypes.c_size_t),
-                ("PeakPagefileUsage", ctypes.c_size_t),
-            ]
-
-        counters = Counters()
-        counters.cb = ctypes.sizeof(Counters)
-        process = ctypes.windll.kernel32.GetCurrentProcess()  # type: ignore[attr-defined]
-        if not ctypes.windll.psapi.GetProcessMemoryInfo(  # type: ignore[attr-defined]
-            process, ctypes.byref(counters), counters.cb
-        ):
-            return None, None, "api_failed"
-        return int(counters.WorkingSetSize), int(counters.PeakWorkingSetSize), None
-    except (OSError, AttributeError, ImportError):
+    if sys.platform != "win32":
+        # ctypes.windll exists only on Windows; elsewhere the lookup below
+        # raises AttributeError, reported the same way.
         return None, None, "api_unavailable"
+    else:
+        try:
+            import ctypes
+            from ctypes import wintypes
+
+            class Counters(ctypes.Structure):
+                _fields_ = [
+                    ("cb", wintypes.DWORD),
+                    ("PageFaultCount", wintypes.DWORD),
+                    ("PeakWorkingSetSize", ctypes.c_size_t),
+                    ("WorkingSetSize", ctypes.c_size_t),
+                    ("QuotaPeakPagedPoolUsage", ctypes.c_size_t),
+                    ("QuotaPagedPoolUsage", ctypes.c_size_t),
+                    ("QuotaPeakNonPagedPoolUsage", ctypes.c_size_t),
+                    ("QuotaNonPagedPoolUsage", ctypes.c_size_t),
+                    ("PagefileUsage", ctypes.c_size_t),
+                    ("PeakPagefileUsage", ctypes.c_size_t),
+                ]
+
+            counters = Counters()
+            counters.cb = ctypes.sizeof(Counters)
+            process = ctypes.windll.kernel32.GetCurrentProcess()
+            if not ctypes.windll.psapi.GetProcessMemoryInfo(
+                process, ctypes.byref(counters), counters.cb
+            ):
+                return None, None, "api_failed"
+            return int(counters.WorkingSetSize), int(counters.PeakWorkingSetSize), None
+        except (OSError, AttributeError, ImportError):
+            return None, None, "api_unavailable"
 
 
 def _peak_rss_unix() -> int | None:
-    try:
-        import resource
-    except ImportError:
-        return None
-    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-    # Linux reports KiB, macOS bytes.
-    return int(peak) if sys.platform == "darwin" else int(peak) * 1024
+    if sys.platform == "win32":
+        return None  # The resource module is Unix-only.
+    else:
+        try:
+            import resource
+        except ImportError:
+            return None
+        peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        # Linux reports KiB, macOS bytes.
+        return int(peak) if sys.platform == "darwin" else int(peak) * 1024
 
 
 def sample_process() -> dict[str, Any]:

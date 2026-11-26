@@ -69,6 +69,7 @@ dev = [
   "bandit>=1.9.4,<2",
   "httpx2>=2.12.0",
   "pre-commit>=4.6.0,<5",
+  "mypy>=1.18.0,<2",
   "pytest>=8.0.0",
   "ruff>=0.12.0,<1",
   "filelock>=4.2.1",
@@ -108,6 +109,44 @@ docstring-code-format = true
 indent-style = "space"
 line-ending = "auto"
 quote-style = "double"
+
+[tool.mypy]
+# Gradual adoption: only the modules listed in `files` are checked, and they
+# are checked strictly enough to catch real mistakes. Modules they import are
+# followed for types but their own errors are not reported until they join the
+# list. Add a module here once `uv run --frozen mypy` passes with it included.
+python_version = "3.11"
+files = [
+  "agentloop/conditioned_calibration.py",
+  "agentloop/content_fingerprints.py",
+  "agentloop/content_rules.py",
+  "agentloop/execution_ir.py",
+  "agentloop/mcp_server.py",
+  "agentloop/optimization_search.py",
+  "agentloop/pilot_records.py",
+  "agentloop/request_reuse.py",
+  "agentloop/retry_passes.py",
+  "agentloop/schedule_compiler.py",
+  "agentloop/source_provenance.py",
+  "agentloop/store.py",
+  "agentloop/store_common.py",
+  "agentloop/store_keys.py",
+  "agentloop/store_postgres.py",
+  "agentloop/store_sqlite.py",
+  "agentloop/store_types.py",
+  "agentloop/system_telemetry.py",
+  "agentloop/timing_sensitivity.py",
+  "agentloop/transformations.py",
+]
+follow_imports = "silent"
+ignore_missing_imports = true
+check_untyped_defs = true
+no_implicit_optional = true
+strict_equality = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_unreachable = true
+extra_checks = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

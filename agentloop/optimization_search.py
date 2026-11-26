@@ -241,7 +241,7 @@ def _validated(raw: Any, spec: SearchSpec) -> dict[str, Any]:
     quality = _number(raw.get("quality"))
     if quality is None:
         return {"status": "invalid", "reason": "quality must be a finite number"}
-    metrics = {"quality": quality}
+    metrics: dict[str, float | None] = {"quality": quality}
     for objective in spec.objectives:
         metrics[objective.metric] = _number(raw.get(objective.metric))
     if "cost_usd" in raw and "cost_usd" not in metrics:
@@ -434,7 +434,7 @@ def _pareto(summaries, spec) -> list[tuple[str, ...]]:
 def _held_out_summary(held_out, spec) -> dict[str, Any]:
     base = _summarize(held_out["baseline"], None, spec)
     selected = _summarize(held_out["selected"], held_out["baseline"], spec)
-    gains = {}
+    gains: dict[str, float | None] = {}
     for objective in spec.objectives:
         b, s = base["means"].get(objective.metric), selected["means"].get(objective.metric)
         if b is None or s is None:
