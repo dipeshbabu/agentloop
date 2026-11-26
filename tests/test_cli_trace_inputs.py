@@ -17,9 +17,11 @@ def _clean(output: str) -> str:
     message to the terminal width, inserting box-drawing borders and padding
     between words. That can split a phrase (for example ``permission denied``)
     across box lines, so strip the box characters and collapse whitespace before
-    asserting on message text.
+    asserting on message text. CI also colours the output, and a wrapped
+    phrase then has colour codes between its words, so strip those too.
     """
-    return " ".join(re.sub(r"[│╭╮╰╯─]", " ", output).split())
+    plain = re.sub(r"\x1b\[[0-9;]*m", "", output)
+    return " ".join(re.sub(r"[│╭╮╰╯─]", " ", plain).split())
 
 
 TRACE_COMMANDS = [
