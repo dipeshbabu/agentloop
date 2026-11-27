@@ -8,11 +8,7 @@ from rich.table import Table
 from agentloop.cli import _build_quality_report_from_file, _load_trace, _write_json, app, console
 from agentloop.cli_paths import validate_output_paths
 from agentloop.events import AgentEvent
-from agentloop.findings import build_diagnosis
-from agentloop.html_report import analysis_to_html
-from agentloop.optimizer import build_optimization_plan
 from agentloop.ranking import RankingSort
-from agentloop.replay import ReplayGates, build_replay_report
 from agentloop.timing import format_duration_ms
 from agentloop.tracer import AgentTrace
 
@@ -109,6 +105,9 @@ def _print_analysis(trace: AgentTrace, diagnosis: dict, plan: dict) -> None:
 
 
 def _analysis_payload(trace: AgentTrace, *, sort_by="priority") -> dict:
+    from agentloop.findings import build_diagnosis
+    from agentloop.optimizer import build_optimization_plan
+
     report = trace.report()
     diagnosis = build_diagnosis(trace, sort_by=sort_by)
     plan = build_optimization_plan(trace, report=report)
@@ -167,6 +166,9 @@ def analyze_command(
     ),
 ) -> None:
     """Analyze one existing AgentLoop trace in a single command."""
+    from agentloop.html_report import analysis_to_html
+    from agentloop.replay import ReplayGates, build_replay_report
+
     validate_output_paths(
         sources=[path, baseline, quality_fixtures],
         outputs={"--json-out": json_out, "--html": html_out},

@@ -12,15 +12,7 @@ from pathlib import Path
 import typer
 
 from agentloop import cli
-from agentloop.ablation_protocol import AblationValidationError
-from agentloop.ablations import ablation_to_markdown, summarize_ablation
-from agentloop.calibration import (
-    CalibrationValidationError,
-    calibration_to_markdown,
-    summarize_calibration,
-)
 from agentloop.cli_paths import validate_output_paths
-from agentloop.studies import StudyValidationError, study_to_markdown, summarize_study
 
 
 @cli.app.command("onboard")
@@ -85,6 +77,9 @@ def study_ablation_command(
         Path("runs/ablation.json"), help="Full observations and denominators."
     ),
 ) -> None:
+    from agentloop.ablation_protocol import AblationValidationError
+    from agentloop.ablations import ablation_to_markdown, summarize_ablation
+
     try:
         report = summarize_ablation(bundle)
     except AblationValidationError as exc:
@@ -107,6 +102,12 @@ def study_calibrate_command(
         Path("runs/calibration.json"), help="Versioned calibration artifact."
     ),
 ) -> None:
+    from agentloop.calibration import (
+        CalibrationValidationError,
+        calibration_to_markdown,
+        summarize_calibration,
+    )
+
     try:
         report = summarize_calibration(manifest)
     except CalibrationValidationError as exc:
@@ -129,6 +130,8 @@ def study_summarize_command(
         Path("runs/study.json"), help="Full study results and unmatched runs."
     ),
 ) -> None:
+    from agentloop.studies import StudyValidationError, study_to_markdown, summarize_study
+
     try:
         report = summarize_study(manifest)
     except StudyValidationError as exc:

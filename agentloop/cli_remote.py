@@ -12,7 +12,6 @@ from pathlib import Path
 import typer
 
 from agentloop import cli
-from agentloop.plan_export import export_optimization_json
 
 
 @cli.app.command()
@@ -76,6 +75,8 @@ def remote_optimize(
     ),
     out: Path = Path("runs/remote_optimization_plan.json"),
 ) -> None:
+    from agentloop.plan_export import export_optimization_json
+
     client = cli._remote_client(api_url, api_key)
     plan = client.get_optimization_plan(run_id)
     export_optimization_json(plan, out)
