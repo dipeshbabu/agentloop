@@ -15,6 +15,12 @@ trace, study, receipt, API and database schema versions.
   called. Applications that only record traces no longer load the HTTP
   client, store, doctor or rules at startup. Public names, `dir(agentloop)`
   and `from agentloop import *` are unchanged.
+- Every `agentloop` command starts about twice as fast: importing the CLI
+  takes 0.36 s instead of 0.75 s, most of what remains being Typer and Rich.
+  Command groups (`improve`, `aggregate`, `drift`, `harbor`, `hermes`,
+  `telemetry`, `omnigent`, `harness`) load only when invoked, and commands
+  import their analysis engine, store or HTTP client only when they run.
+  Commands, options, defaults, help text and help order are unchanged.
 
 ### Fixed
 

@@ -15,34 +15,9 @@ import typer
 from rich.table import Table
 
 from agentloop import cli
-from agentloop.audit import estimate_improvement
-from agentloop.ci import build_ci_report, ci_report_to_markdown
 from agentloop.cli_paths import validate_output_paths
-from agentloop.client import AgentLoopClientError
 from agentloop.costs import format_cost_usd, is_cost_evaluable
-from agentloop.exporters import export_report_markdown
-from agentloop.findings import build_diagnosis, diagnosis_to_markdown
-from agentloop.intervention_service import create_stored_intervention
-from agentloop.interventions import (
-    InterventionConflictError,
-    InterventionReferenceError,
-    InterventionValidationError,
-    build_intervention,
-)
-from agentloop.optimizer import build_optimization_plan
-from agentloop.otel import trace_to_otel
-from agentloop.patches import build_patch_plan, patch_plan_to_markdown
-from agentloop.plan_export import export_optimization_json, export_optimization_markdown
-from agentloop.quality import (
-    QualityValidationError,
-    quality_report_to_markdown,
-)
 from agentloop.ranking import RankingSort
-from agentloop.replay import ReplayGates, build_replay_report, replay_report_to_markdown
-from agentloop.store import (
-    get_store,
-)
-from agentloop.value import build_value_report
 
 
 @cli.app.command()
@@ -140,6 +115,13 @@ def replay_command(
         None, help="Optional saved baseline diagnosis for historical prediction snapshots."
     ),
 ) -> None:
+    from agentloop.interventions import (
+        InterventionReferenceError,
+        InterventionValidationError,
+        build_intervention,
+    )
+    from agentloop.replay import ReplayGates, build_replay_report, replay_report_to_markdown
+
     validate_output_paths(
         sources=[
             baseline,
@@ -244,6 +226,16 @@ def intervention_create_command(
         None, help="Remote project API key; defaults to AGENTLOOP_API_KEY."
     ),
 ) -> None:
+    from agentloop.client import AgentLoopClientError
+    from agentloop.intervention_service import create_stored_intervention
+    from agentloop.interventions import (
+        InterventionConflictError,
+        InterventionReferenceError,
+        InterventionValidationError,
+    )
+    from agentloop.quality import QualityValidationError
+    from agentloop.store import get_store
+
     validate_output_paths(sources=[request], outputs={"--out": out})
     payload = _json_object_input(request, "request")
     try:
@@ -274,6 +266,9 @@ def intervention_get_command(
     api_url: str | None = typer.Option(None),
     api_key: str | None = typer.Option(None),
 ) -> None:
+    from agentloop.client import AgentLoopClientError
+    from agentloop.store import get_store
+
     try:
         record = (
             cli._remote_client(api_url, api_key).get_intervention(intervention_id)
@@ -299,6 +294,8 @@ def quality_report_command(
     ),
     min_score: float | None = typer.Option(None, min=0.0, max=1.0),
 ) -> None:
+    from agentloop.quality import quality_report_to_markdown
+
     validate_output_paths(
         sources=[fixtures, baseline, candidate], outputs={"--out": out, "--json-out": json_out}
     )
@@ -348,6 +345,9 @@ def ci_command(
     ),
     fail_on_gate: bool = typer.Option(True, help="Exit non-zero when CI gates fail."),
 ) -> None:
+    from agentloop.ci import build_ci_report, ci_report_to_markdown
+    from agentloop.replay import ReplayGates
+
     summary_path = os.getenv("GITHUB_STEP_SUMMARY") if github_step_summary else None
     validate_output_paths(
         sources=[baseline, candidate, quality_fixtures],
@@ -417,6 +417,9 @@ def audit(
     path: Path = Path("runs/research_agent_baseline.json"),
     out: Path = Path("runs/agentloop_audit.md"),
 ) -> None:
+    from agentloop.audit import estimate_improvement
+    from agentloop.exporters import export_report_markdown
+
     validate_output_paths(sources=[path], outputs={"--out": out})
     trace = cli._load_trace(path, param_hint="--path")
     report_data = trace.report()
@@ -437,6 +440,9 @@ def optimize(
     out: Path = Path("runs/optimization_plan.md"),
     json_out: Path | None = typer.Option(None, help="Optional JSON output path."),
 ) -> None:
+    from agentloop.optimizer import build_optimization_plan
+    from agentloop.plan_export import export_optimization_json, export_optimization_markdown
+
     validate_output_paths(sources=[path], outputs={"--out": out, "--json-out": json_out})
     trace = cli._load_trace(path, param_hint="--path")
     plan = build_optimization_plan(trace)
@@ -473,6 +479,8 @@ def diagnose(
         RankingSort.PRIORITY, help="Finding ranking dimension; unknown values stay explicit."
     ),
 ) -> None:
+    from agentloop.findings import build_diagnosis, diagnosis_to_markdown
+
     validate_output_paths(sources=[path], outputs={"--out": out, "--json-out": json_out})
     trace = cli._load_trace(path, otel=otel, name=name, param_hint="--path")
     diagnosis = build_diagnosis(trace, sort_by=sort_by.value)
@@ -515,6 +523,8 @@ def import_otel(
 
 @cli.app.command("export-otel")
 def export_otel(path: Path, out: Path) -> None:
+    from agentloop.otel import trace_to_otel
+
     validate_output_paths(sources=[path], outputs={"out": out})
     trace = cli._load_trace(path)
     cli._write_json(out, trace_to_otel(trace))
@@ -533,6 +543,8 @@ def patch_command(
         True, help="Only generate a patch plan. File edits are not supported yet."
     ),
 ) -> None:
+    from agentloop.patches import build_patch_plan, patch_plan_to_markdown
+
     validate_output_paths(sources=[path], outputs={"--out": out, "--json-out": json_out})
     if not dry_run:
         raise typer.BadParameter(
@@ -566,6 +578,8 @@ def value_report(
     engineer_hourly_rate_usd: float = typer.Option(150.0, min=0),
     incident_cost_usd: float = typer.Option(500.0, min=0),
 ) -> None:
+    from agentloop.value import build_value_report
+
     validate_output_paths(sources=[path], outputs={"--out": out})
     trace = cli._load_trace(path, param_hint="--path")
     value = build_value_report(

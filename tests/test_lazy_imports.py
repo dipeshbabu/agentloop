@@ -72,3 +72,91 @@ def test_report_still_works_from_a_trace():
         with trace_model_call("plan", input_tokens=5, output_tokens=2):
             pass
     assert trace.report()["model_call_count"] == 1
+
+
+CLI_ENGINES = (
+    *HEAVY,
+    "agentloop.improvement_cli",
+    "agentloop.aggregate_cli",
+    "agentloop.drift_cli",
+    "agentloop.html_report",
+    "agentloop.ablations",
+    "agentloop.calibration",
+    "agentloop.findings",
+)
+
+
+def test_cli_startup_loads_no_engine_or_command_group():
+    loaded = _fresh(
+        f"""
+        import sys
+        import agentloop.entrypoint
+        print(sorted(m for m in {CLI_ENGINES!r} if m in sys.modules))
+        """
+    )
+    assert loaded == "[]"
+
+
+def test_every_cli_command_and_group_still_loads():
+    import typer
+    import typer.main
+    from typer.testing import CliRunner
+
+    from agentloop.cli import LAZY_GROUPS
+    from agentloop.entrypoint import app
+
+    root = typer.main.get_command(app)
+    context = typer.Context(root)
+    paths = []
+
+    def walk(command, prefix):
+        if hasattr(command, "list_commands"):
+            for name in command.list_commands(context):
+                walk(command.get_command(context, name), [*prefix, name])
+        paths.append(prefix)
+
+    walk(root, [])
+    top = [path[0] for path in paths if len(path) == 1]
+    # Lazy groups keep their --help position: after every command and ``study``.
+    assert top[-len(LAZY_GROUPS) - 1 :] == ["study", *LAZY_GROUPS]
+    runner = CliRunner()
+    for path in paths:
+        result = runner.invoke(app, [*path, "--help"])
+        assert result.exit_code == 0, (path, result.output)
+
+
+def test_unknown_cli_command_is_still_an_error():
+    from typer.testing import CliRunner
+
+    from agentloop.entrypoint import app
+
+    result = CliRunner().invoke(app, ["no-such-command"])
+    assert result.exit_code == 2
+
+
+def test_cli_client_stays_replaceable():
+    from agentloop import cli
+    from agentloop.client import AgentLoopClient
+
+    assert cli.AgentLoopClient is AgentLoopClient
+    assert cli._remote_client("http://127.0.0.1:1", "al_test").__class__ is AgentLoopClient
+
+
+def test_bundlers_can_see_every_lazy_group():
+    # PyInstaller finds modules by scanning import statements; module names in
+    # strings are invisible to it. cli.py imports each lazy group under
+    # TYPE_CHECKING so the standalone CLI bundles them.
+    import ast
+    from pathlib import Path
+
+    from agentloop import cli
+    from agentloop.cli import LAZY_GROUPS
+
+    tree = ast.parse(Path(cli.__file__).read_text(encoding="utf-8"))
+    imported = {
+        alias.name
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Import)
+        for alias in node.names
+    }
+    assert {module for module, _ in LAZY_GROUPS.values()} <= imported

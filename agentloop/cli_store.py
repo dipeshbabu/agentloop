@@ -15,20 +15,14 @@ from rich.table import Table
 
 from agentloop import cli
 from agentloop.costs import format_cost_usd
-from agentloop.issues import build_issue_drafts, issue_drafts_to_markdown
 from agentloop.ranking import RankingSort, sort_ranked
-from agentloop.store import (
-    DEFAULT_PAGE_SIZE,
-    FindingNotFoundError,
-    FindingTransitionError,
-    get_store,
-    parse_label_filter,
-)
 from agentloop.timing import format_duration_ms
 
 
 @cli.app.command("init-store")
 def init_store() -> None:
+    from agentloop.store import get_store
+
     db = get_store()
     db.init()
     cli.console.print("Initialized AgentLoop store")
@@ -36,6 +30,8 @@ def init_store() -> None:
 
 @cli.app.command("create-api-key")
 def create_api_key(project_id: str = "default", name: str = "default") -> None:
+    from agentloop.store import get_store
+
     db = get_store()
     key = db.create_api_key(project_id=project_id, name=name, actor="cli")
     cli.console.print("Created API key. Save it now; it will not be shown again.")
@@ -45,6 +41,8 @@ def create_api_key(project_id: str = "default", name: str = "default") -> None:
 @cli.app.command("list-api-keys")
 def list_api_keys(project_id: str = "default") -> None:
     """List a project's API key prefixes and last use; key values are never shown."""
+    from agentloop.store import get_store
+
     cli.console.print_json(
         data={"project_id": project_id, "api_keys": get_store().list_api_keys(project_id)}
     )
@@ -56,6 +54,8 @@ def revoke_api_key(
     project_id: str = "default",
 ) -> None:
     """Revoke a project's API key; it stops working immediately."""
+    from agentloop.store import get_store
+
     try:
         revoked = get_store().revoke_api_key(project_id, prefix, actor="cli")
     except ValueError as exc:
@@ -74,6 +74,8 @@ def delete_trace(
     project_id: str = "default",
 ) -> None:
     """Delete a stored trace with its findings, usage and interventions."""
+    from agentloop.store import get_store
+
     deleted = get_store().delete_trace(run_id, project_id, actor="cli")
     if deleted is None:
         cli.console.print(f"No trace {run_id} in project {project_id}.", markup=False)
@@ -92,6 +94,8 @@ def purge_traces(
     project_id: str | None = typer.Option(None, help="Only purge this project."),
 ) -> None:
     """Apply a retention period: delete traces stored longer ago than allowed."""
+    from agentloop.store import get_store
+
     actor = "cli" if older_than_days is not None else "retention:AGENTLOOP_RETENTION_DAYS"
     if older_than_days is None:
         configured = os.getenv("AGENTLOOP_RETENTION_DAYS", "").strip()
@@ -128,6 +132,8 @@ def audit_log(
     limit: int = typer.Option(50, min=1, max=1000, help="Newest events to show."),
 ) -> None:
     """Show recent key, deletion and retention events from the store's audit log."""
+    from agentloop.store import get_store
+
     cli.console.print_json(
         data={
             "project_id": project_id,
@@ -141,6 +147,8 @@ def store_trace(
     path: Path = Path("runs/research_agent_baseline.json"),
     project_id: str = "default",
 ) -> None:
+    from agentloop.store import get_store
+
     trace = cli._load_trace(path, param_hint="--path")
     db = get_store()
     db.save_trace(trace, project_id=project_id)
@@ -158,6 +166,8 @@ def list_stored_traces(
         None, help="Only traces with this KEY=VALUE label, such as commit=abc123."
     ),
 ) -> None:
+    from agentloop.store import DEFAULT_PAGE_SIZE, get_store, parse_label_filter
+
     db = get_store()
     try:
         label_filter = parse_label_filter(label) if label is not None else None
@@ -212,6 +222,8 @@ def list_findings(
         None, help="Continuation cursor from a previous --limit call's printed next-cursor."
     ),
 ) -> None:
+    from agentloop.store import DEFAULT_PAGE_SIZE, get_store
+
     db = get_store()
     if limit is None and cursor is None:
         findings = db.list_findings(project_id=project_id, status=status)
@@ -254,6 +266,8 @@ def update_finding_status_command(
     project_id: str = "default",
 ) -> None:
     """Transition a stored finding's lifecycle status (detected/accepted/resolved/dismissed)."""
+    from agentloop.store import FindingNotFoundError, FindingTransitionError, get_store
+
     db = get_store()
     try:
         updated = db.update_finding_status(project_id, run_id, finding_id, status)
@@ -287,6 +301,8 @@ def optimization_queue(
         RankingSort.PRIORITY, help="Investigation ranking dimension."
     ),
 ) -> None:
+    from agentloop.store import get_store
+
     db = get_store()
     queue = sort_ranked(db.optimization_queue(project_id=project_id), sort_by.value)
     payload = {"project_id": project_id, "sort_by": sort_by.value, "queue": queue}
@@ -329,6 +345,9 @@ def github_issue_drafts(
     json_out: Path | None = typer.Option(None),
     limit: int = typer.Option(5, min=1, max=20),
 ) -> None:
+    from agentloop.issues import build_issue_drafts, issue_drafts_to_markdown
+    from agentloop.store import get_store
+
     db = get_store()
     drafts = build_issue_drafts(db.optimization_queue(project_id=project_id), limit=limit)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -341,6 +360,8 @@ def github_issue_drafts(
 
 @cli.app.command("usage-summary")
 def usage_summary(project_id: str | None = None) -> None:
+    from agentloop.store import get_store
+
     db = get_store()
     summary = db.usage_summary(project_id=project_id)
     table = Table(title="AgentLoop Usage Summary")

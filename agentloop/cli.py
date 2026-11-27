@@ -3,35 +3,81 @@ from __future__ import annotations
 import json
 import os
 import sys
+from importlib import import_module
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 import typer
 from rich.console import Console
 from rich.table import Table
+from typer.core import TyperGroup
 
-from agentloop.aggregate_cli import aggregate_app
-from agentloop.client import AgentLoopClient
 from agentloop.costs import format_cost_usd
-from agentloop.drift_cli import drift_app
-from agentloop.harness_bench.cli import harness_app
-from agentloop.improvement_cli import improve_app
-from agentloop.integrations.harbor.cli import harbor_app
-from agentloop.integrations.hermes_cli import hermes_app
-from agentloop.integrations.omnigent.cli import omnigent_app
-from agentloop.interoperability.cli import telemetry_app
-from agentloop.otel import trace_from_otel
-from agentloop.quality import (
-    QualityValidationError,
-    build_quality_report,
-    load_quality_fixtures,
-)
-from agentloop.store import (
-    LABEL_KEY_PATTERN,
-    MAX_LABEL_VALUE_LENGTH,
-)
 from agentloop.tracer import AgentTrace
 
-app = typer.Typer(help="AgentLoop profiler CLI")
+if TYPE_CHECKING:
+    # Never runs, but bundlers such as PyInstaller scan these imports, so the
+    # standalone CLI still includes every group in LAZY_GROUPS below. Keep
+    # the two lists in sync (tests/test_lazy_imports.py checks).
+    import agentloop.aggregate_cli
+    import agentloop.drift_cli
+    import agentloop.harness_bench.cli
+    import agentloop.improvement_cli
+    import agentloop.integrations.harbor.cli
+    import agentloop.integrations.hermes_cli
+    import agentloop.integrations.omnigent.cli
+    import agentloop.interoperability.cli  # noqa: F401
+    from agentloop.client import AgentLoopClient
+
+
+def __getattr__(name: str) -> Any:
+    # The HTTP client (urllib, http.client) loads only for remote commands.
+    # It stays a module attribute so callers and tests can replace it.
+    if name == "AgentLoopClient":
+        from agentloop.client import AgentLoopClient
+
+        globals()[name] = AgentLoopClient
+        return AgentLoopClient
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def _client_class() -> type[AgentLoopClient]:
+    return sys.modules[__name__].AgentLoopClient
+
+
+# Sub-command groups load when they are invoked (or when --help lists them),
+# so a plain command does not import every group's engine at startup. Order
+# here is the order --help lists them in, after ``study``.
+LAZY_GROUPS: dict[str, tuple[str, str]] = {
+    "aggregate": ("agentloop.aggregate_cli", "aggregate_app"),
+    "drift": ("agentloop.drift_cli", "drift_app"),
+    "harbor": ("agentloop.integrations.harbor.cli", "harbor_app"),
+    "hermes": ("agentloop.integrations.hermes_cli", "hermes_app"),
+    "telemetry": ("agentloop.interoperability.cli", "telemetry_app"),
+    "omnigent": ("agentloop.integrations.omnigent.cli", "omnigent_app"),
+    "harness": ("agentloop.harness_bench.cli", "harness_app"),
+    "improve": ("agentloop.improvement_cli", "improve_app"),
+}
+
+
+class _LazyGroups(TyperGroup):
+    """The root command group, adding each LAZY_GROUPS entry on first lookup."""
+
+    def list_commands(self, ctx: typer.Context) -> list[str]:
+        names = super().list_commands(ctx)
+        return names + [name for name in LAZY_GROUPS if name not in names]
+
+    def get_command(self, ctx: typer.Context, cmd_name: str) -> Any:
+        command = super().get_command(ctx, cmd_name)
+        if command is None and cmd_name in LAZY_GROUPS:
+            module, attribute = LAZY_GROUPS[cmd_name]
+            command = typer.main.get_group(getattr(import_module(module), attribute))
+            command.name = cmd_name
+            self.add_command(command, cmd_name)
+        return command
+
+
+app = typer.Typer(help="AgentLoop profiler CLI", cls=_LazyGroups)
 console = Console()
 
 
@@ -61,26 +107,18 @@ def _main() -> None:
 
 study_app = typer.Typer(help="Summarize offline studies and preserved intervention evidence.")
 app.add_typer(study_app, name="study")
-app.add_typer(aggregate_app, name="aggregate")
-app.add_typer(drift_app, name="drift")
-app.add_typer(harbor_app, name="harbor")
-app.add_typer(hermes_app, name="hermes")
-app.add_typer(telemetry_app, name="telemetry")
-app.add_typer(omnigent_app, name="omnigent")
-app.add_typer(harness_app, name="harness")
-app.add_typer(improve_app, name="improve")
 
 
 def _remote_client(api_url: str, api_key: str | None) -> AgentLoopClient:
     resolved_api_key = api_key if api_key is not None else os.getenv("AGENTLOOP_API_KEY")
-    return AgentLoopClient(base_url=api_url, api_key=resolved_api_key)
+    return _client_class()(base_url=api_url, api_key=resolved_api_key)
 
 
 def _remote_admin_client(api_url: str, admin_api_key: str | None) -> AgentLoopClient:
     resolved_admin_key = (
         admin_api_key if admin_api_key is not None else os.getenv("AGENTLOOP_ADMIN_API_KEY")
     )
-    return AgentLoopClient(base_url=api_url, admin_api_key=resolved_admin_key)
+    return _client_class()(base_url=api_url, admin_api_key=resolved_admin_key)
 
 
 def _os_reason(exc: BaseException) -> str:
@@ -139,6 +177,8 @@ def _load_trace(
     name: str | None = None,
     param_hint: str = "path",
 ) -> AgentTrace:
+    from agentloop.otel import trace_from_otel
+
     payload = _read_json_input(path, param_hint=param_hint)
     format_name = "OpenTelemetry" if otel else "AgentLoop"
     try:
@@ -164,6 +204,12 @@ def _build_quality_report_from_file(
     candidate_trace: AgentTrace | None = None,
     min_score: float | None = None,
 ) -> dict:
+    from agentloop.quality import (
+        QualityValidationError,
+        build_quality_report,
+        load_quality_fixtures,
+    )
+
     try:
         fixtures = load_quality_fixtures(path)
         return build_quality_report(
@@ -228,6 +274,8 @@ def _print_doctor(result: dict) -> None:
 
 
 def _parse_labels(values: list[str] | None) -> dict[str, str]:
+    from agentloop.store import LABEL_KEY_PATTERN, MAX_LABEL_VALUE_LENGTH
+
     labels: dict[str, str] = {}
     for value in values or []:
         key, separator, text = value.partition("=")

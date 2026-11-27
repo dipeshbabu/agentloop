@@ -12,6 +12,7 @@ import json
 import os
 from pathlib import Path, PurePath
 
+import typer
 import typer.main
 
 from agentloop.entrypoint import app
@@ -67,10 +68,13 @@ def _walk(command, path: list[str]) -> list[dict]:
             "params": [_param(p) for p in command.params],
         }
     ]
-    # Typer may bundle its own Click, so check for a group by shape, in
-    # registration order (the order --help lists them).
-    for name, child in getattr(command, "commands", {}).items():
-        rows.extend(_walk(child, [*path, name]))
+    # Typer may bundle its own Click, so check for a group by shape. Go through
+    # list_commands/get_command, as --help and dispatch do: some groups load
+    # only on lookup, so they are not in .commands until then.
+    if hasattr(command, "list_commands"):
+        context = typer.Context(command)
+        for name in command.list_commands(context):
+            rows.extend(_walk(command.get_command(context, name), [*path, name]))
     return rows
 
 

@@ -12,13 +12,14 @@ from pathlib import Path
 import typer
 
 from agentloop import cli
-from agentloop.demo import run_baseline, run_langgraph_style, run_optimized, run_proof_pair
 
 
 @cli.app.command()
 def demo(
     kind: str = typer.Option("baseline", help="baseline, optimized, langgraph, or proof"),
 ) -> None:
+    from agentloop.demo import run_baseline, run_langgraph_style, run_optimized, run_proof_pair
+
     if kind == "baseline":
         path = run_baseline()
     elif kind == "optimized":
@@ -37,6 +38,8 @@ def demo(
 
 @cli.app.command("demo-all")
 def demo_all() -> None:
+    from agentloop.demo import run_baseline, run_langgraph_style, run_optimized, run_proof_pair
+
     base = run_baseline()
     opt = run_optimized()
     lg = run_langgraph_style()

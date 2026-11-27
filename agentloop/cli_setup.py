@@ -12,8 +12,6 @@ from pathlib import Path
 import typer
 
 from agentloop import cli
-from agentloop.autoinstrument import detect_integrations
-from agentloop.doctor import run_doctor, run_production_check
 
 
 @cli.app.command("doctor")
@@ -23,6 +21,8 @@ def doctor_command(
         None, help="Optional path for machine-readable doctor output."
     ),
 ) -> None:
+    from agentloop.doctor import run_doctor
+
     result = run_doctor(check_api=check_api)
     if json_out:
         cli._write_json(json_out, result)
@@ -41,6 +41,8 @@ def production_check_command(
         None, help="Optional path for machine-readable check output."
     ),
 ) -> None:
+    from agentloop.doctor import run_production_check
+
     result = run_production_check(
         check_api=check_api, check_store=check_store, allow_http=allow_http
     )
@@ -58,6 +60,8 @@ def detect_integrations_command(json_out: Path | None = typer.Option(None)) -> N
     does not instrument anything. Apply agentloop.integrations helpers from your
     application startup to record traces.
     """
+    from agentloop.autoinstrument import detect_integrations
+
     result = detect_integrations().to_dict()
     if json_out:
         cli._write_json(json_out, result)
