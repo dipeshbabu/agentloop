@@ -16,6 +16,17 @@ from agentloop.costs import format_cost_usd
 from agentloop.tracer import AgentTrace
 
 if TYPE_CHECKING:
+    # Never runs, but bundlers such as PyInstaller scan these imports, so the
+    # standalone CLI still includes every group in LAZY_GROUPS below. Keep
+    # the two lists in sync (tests/test_lazy_imports.py checks).
+    import agentloop.aggregate_cli
+    import agentloop.drift_cli
+    import agentloop.harness_bench.cli
+    import agentloop.improvement_cli
+    import agentloop.integrations.harbor.cli
+    import agentloop.integrations.hermes_cli
+    import agentloop.integrations.omnigent.cli
+    import agentloop.interoperability.cli  # noqa: F401
     from agentloop.client import AgentLoopClient
 
 

@@ -140,3 +140,23 @@ def test_cli_client_stays_replaceable():
 
     assert cli.AgentLoopClient is AgentLoopClient
     assert cli._remote_client("http://127.0.0.1:1", "al_test").__class__ is AgentLoopClient
+
+
+def test_bundlers_can_see_every_lazy_group():
+    # PyInstaller finds modules by scanning import statements; module names in
+    # strings are invisible to it. cli.py imports each lazy group under
+    # TYPE_CHECKING so the standalone CLI bundles them.
+    import ast
+    from pathlib import Path
+
+    from agentloop import cli
+    from agentloop.cli import LAZY_GROUPS
+
+    tree = ast.parse(Path(cli.__file__).read_text(encoding="utf-8"))
+    imported = {
+        alias.name
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Import)
+        for alias in node.names
+    }
+    assert {module for module, _ in LAZY_GROUPS.values()} <= imported
