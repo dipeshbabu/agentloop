@@ -51,6 +51,17 @@ plugins:
 hooks:
   - scripts/docs_hooks.py
 
+extra:
+  # Icon for each top tab, keyed by the tab's title (see overrides/partials/tabs-item.html).
+  tab_icons:
+    Home: octicons/home-16
+    Getting started: octicons/rocket-16
+    Guides: octicons/book-16
+    Integrations: octicons/plug-16
+    Reference: octicons/code-16
+    Evidence: octicons/beaker-16
+    Development: octicons/tools-16
+
 extra_css:
   - https://fonts.googleapis.com/css2?family=Inter:wght@800&display=swap
   - stylesheets/agentloop.css

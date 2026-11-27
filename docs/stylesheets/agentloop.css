@@ -77,6 +77,63 @@ body {
   max-width: 80rem;
 }
 
+/* ---------- Page gutters ----------
+   One side gutter for the header, tabs, page and footer, so text never sits
+   against the screen edge. Material leaves .8rem on phones and tablets. */
+
+:root {
+  --al-gutter: 1.2rem;
+}
+
+@media (min-width: 45em) {
+  :root {
+    --al-gutter: 1.6rem;
+  }
+}
+
+@media (min-width: 76.25em) {
+  :root {
+    --al-gutter: 1.8rem;
+  }
+}
+
+.md-content__inner {
+  margin-inline: var(--al-gutter);
+}
+
+/* Header buttons carry .6rem of their own padding and margin; trim it so the
+   logo lines up with the page text. */
+.md-header__inner {
+  padding-inline: calc(var(--al-gutter) - .6rem);
+}
+
+/* Tab items carry .6rem of padding; same alignment. The extra class outranks
+   Material's [dir=ltr] .md-tabs__list margin. */
+.md-tabs .md-tabs__list {
+  margin-inline: calc(var(--al-gutter) - .6rem);
+}
+
+.md-footer__inner,
+.md-footer-meta__inner {
+  padding-inline: calc(var(--al-gutter) - .6rem);
+}
+
+/* Material pulls code blocks to the screen edge on phones. Ours have rounded
+   borders, so keep them inside the gutter instead. */
+@media (max-width: 44.9375em) {
+  .md-content__inner > pre,
+  .md-content__inner > .highlight,
+  .md-content__inner > .highlight + .result,
+  .md-typeset div.arithmatex {
+    margin-inline: 0;
+  }
+
+  .md-content__inner > .tabbed-set .tabbed-labels {
+    margin-inline: 0;
+    scroll-padding-inline-start: 0;
+  }
+}
+
 /* ---------- Header and section tabs ---------- */
 
 .md-header,
@@ -126,6 +183,29 @@ body {
 .md-tabs__item--active .md-tabs__link {
   box-shadow: inset 0 -.12rem 0 var(--al-coral);
   font-weight: 600;
+}
+
+/* Every tab carries an icon (overrides/partials/tabs-item.html). */
+.md-tabs__link {
+  align-items: center;
+  display: inline-flex;
+  gap: .35rem;
+}
+
+.md-tabs__link svg {
+  flex: none;
+  height: 1.15em;
+  margin: 0;
+  width: 1.15em;
+}
+
+.md-tabs__link:not(:hover) svg {
+  opacity: .8;
+}
+
+.md-tabs__item--active .md-tabs__link svg {
+  color: var(--al-coral);
+  opacity: 1;
 }
 
 /* Search reads as a field, not a dark slab. */
@@ -883,10 +963,12 @@ body {
 /* ---------- Home page ---------- */
 
 /* The home page hides both sidebars. Centre it as one column instead of
-   letting it run the full width against the left edge. */
+   letting it run the full width against the left edge. Auto margins drop the
+   side gutter, so it comes back as padding. */
 .md-content__inner:has(.al-intro) {
   margin-inline: auto;
   max-width: 50rem;
+  padding-inline: var(--al-gutter);
 }
 
 
@@ -959,13 +1041,58 @@ body {
 
 }
 
-@media (max-width: 44.9375em) {
+/* ---------- Type per device ----------
+   Desktop keeps the sizes above. Tablets step headings down a little and
+   phones a little more, so long titles wrap less and body text stays at 16px. */
+
+@media (max-width: 59.9375em) {
   .md-typeset .al-intro h1 {
-    font-size: 2.375em;
+    font-size: 2.15em;
   }
 
   .md-typeset h1 {
-    font-size: 1.8em;
+    font-size: 1.85em;
+  }
+
+  .md-typeset h2 {
+    font-size: 1.4em;
+  }
+
+  .al-intro .al-lead {
+    font-size: 1.15em;
+  }
+}
+
+@media (max-width: 44.9375em) {
+  .md-typeset {
+    font-size: .8rem;
+    line-height: 1.7;
+  }
+
+  .md-typeset .al-intro h1 {
+    font-size: 1.9em;
+    line-height: 1.2;
+  }
+
+  .md-typeset h1 {
+    font-size: 1.6em;
+    line-height: 1.25;
+  }
+
+  .md-typeset h2 {
+    font-size: 1.3em;
+  }
+
+  .md-typeset h3 {
+    font-size: 1.1em;
+  }
+
+  .al-intro .al-lead {
+    font-size: 1.08em;
+  }
+
+  .md-typeset table:not([class]) {
+    font-size: .7rem;
   }
 }
 

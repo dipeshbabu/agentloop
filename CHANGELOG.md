@@ -21,6 +21,14 @@ trace, study, receipt, API and database schema versions.
 
 ### Changed
 
+- Every top tab on the documentation site now has an icon, not just Home.
+- Documentation pages keep a wider side margin on every page: 24px on phones,
+  32px on tablets and 36px on desktops. The header, tabs and footer line up
+  with it. Code blocks on phones stay inside that margin instead of running to
+  the screen edge, and the home page no longer sits flush against the left
+  edge on phones.
+- Headings and body text on the documentation site step down on tablets and
+  phones, so titles wrap less on small screens.
 - `timing_sensitivity` no longer reruns its model for operations with slack:
   their gains are exactly zero. It simulates operations without slack longest
   first, up to `max_simulations` (default 64), and lists any others as not
