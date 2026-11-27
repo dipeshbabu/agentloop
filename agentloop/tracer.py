@@ -15,7 +15,6 @@ from agentloop.events import (
     new_run_id,
     utc_now_iso,
 )
-from agentloop.metrics import build_report
 from agentloop.schema import SCHEMA_VERSION, validate_elapsed_ms, validate_trace_dict
 from agentloop.tokens import (
     ESTIMATED_WORDS,
@@ -172,6 +171,9 @@ class AgentTrace:
         return out
 
     def report(self) -> dict[str, Any]:
+        # The analysis engine is heavy; recording a trace never needs it.
+        from agentloop.metrics import build_report
+
         return build_report(self)
 
     def print_report(self) -> None:
