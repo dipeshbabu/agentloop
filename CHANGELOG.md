@@ -7,6 +7,15 @@ trace, study, receipt, API and database schema versions.
 
 ## [Unreleased]
 
+### Performance
+
+- `import agentloop` takes 7 ms instead of 380 ms, and `import agentloop.tracer`
+  70 ms instead of 340 ms. The package now loads each public name on first
+  use, and the tracer loads the analysis engine only when `trace.report()` is
+  called. Applications that only record traces no longer load the HTTP
+  client, store, doctor or rules at startup. Public names, `dir(agentloop)`
+  and `from agentloop import *` are unchanged.
+
 ### Fixed
 
 - `agentloop mcp` now honours `notifications/cancelled` for a running tool call.
