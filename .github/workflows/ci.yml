@@ -396,13 +396,16 @@ jobs:
       # The lowest Typer and Rich our requirements allow, with the newest of
       # everything else (such as click), on the oldest supported Python. Old
       # Typer with new click once crashed at startup while every pin passed.
+      # The pins come from the wheel's own metadata, so they follow the floor.
       - name: Smoke CLI with the lowest allowed dependencies
         shell: bash
         run: |
           wheel="$PWD/$(find dist -maxdepth 1 -name '*.whl' -print -quit)"
+          python3 scripts/lowest_requirements.py "$wheel" > "$RUNNER_TEMP/lowest.txt"
+          cat "$RUNNER_TEMP/lowest.txt"
           uv venv --python 3.11 .lowest-smoke
-          uv pip install --python .lowest-smoke/bin/python --resolution lowest-direct "$wheel"
-          .lowest-smoke/bin/python -c "import importlib.metadata as m; print({p: m.version(p) for p in ('typer', 'rich', 'click')})"
+          uv pip install --python .lowest-smoke/bin/python "$wheel" -r "$RUNNER_TEMP/lowest.txt"
+          uv pip list --python .lowest-smoke/bin/python | grep -Ei '^(typer|rich|click) '
           cli="$PWD/.lowest-smoke/bin/agentloop"
           smoke="$RUNNER_TEMP/lowest-smoke"
           mkdir -p "$smoke"
