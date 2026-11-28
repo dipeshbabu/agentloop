@@ -393,6 +393,26 @@ jobs:
           .package-smoke/bin/python -I scripts/smoke_installed_wheel.py \
             --expected-version "$(uv version --short)"
 
+      # The lowest Typer and Rich our requirements allow, with the newest of
+      # everything else (such as click), on the oldest supported Python. Old
+      # Typer with new click once crashed at startup while every pin passed.
+      - name: Smoke CLI with the lowest allowed dependencies
+        shell: bash
+        run: |
+          wheel="$PWD/$(find dist -maxdepth 1 -name '*.whl' -print -quit)"
+          uv venv --python 3.11 .lowest-smoke
+          uv pip install --python .lowest-smoke/bin/python --resolution lowest-direct "$wheel"
+          .lowest-smoke/bin/python -c "import importlib.metadata as m; print({p: m.version(p) for p in ('typer', 'rich', 'click')})"
+          cli="$PWD/.lowest-smoke/bin/agentloop"
+          smoke="$RUNNER_TEMP/lowest-smoke"
+          mkdir -p "$smoke"
+          cd "$smoke"
+          "$cli" --help > /dev/null
+          "$cli" improve --help > /dev/null
+          "$cli" quickstart --out quickstart.json
+          "$cli" analyze quickstart.json --html report.html
+          test -s report.html
+
       - name: Upload validated release artifact
         id: upload-package
         if: ${{ inputs.upload_release_artifact || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}

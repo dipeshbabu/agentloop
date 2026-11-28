@@ -24,6 +24,12 @@ trace, study, receipt, API and database schema versions.
 
 ### Fixed
 
+- The CLI no longer crashes at startup when an older Typer is installed
+  with click 8.2 or newer ("Secondary flag is not valid for non-boolean
+  flag"). AgentLoop allowed Typer 0.12 to 0.15.3, which break with current
+  click; it now requires `typer>=0.16.0`, and every Typer release from 0.16.0
+  to 0.29.3 was checked against the newest click it allows. CI now also
+  smoke-tests the CLI with the lowest allowed Typer and Rich on Python 3.11.
 - `agentloop mcp` now honours `notifications/cancelled` for a running tool call.
   The stdio loop used to run each call to completion before reading the next
   message, so a cancellation arrived only after the call had finished. Tool
